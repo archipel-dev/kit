@@ -1,0 +1,541 @@
+//! Themes: every color a component paints, for one look (dark or light).
+//!
+//! A [`Theme`] is plain data. [`crate::install`] stores it in the [`egui::Context`] and every
+//! component reads it back with [`Theme::current`], so two contexts (two windows, two tests
+//! running in parallel) can use different themes at the same time.
+//!
+//! The built-in palettes [`Theme::dark`] and [`Theme::light`] are derived from public,
+//! Apache-2.0 theme data (see `NOTICE.md`). Applications can start from one and override
+//! single fields:
+//!
+//! ```
+//! use archipel_kit::{Theme, egui::Color32};
+//!
+//! let mut theme = Theme::dark();
+//! theme.colors.accent = Color32::from_rgb(0xE0, 0x88, 0x55);
+//! ```
+
+use egui::Color32;
+use std::sync::Arc;
+
+const fn rgb(value: u32) -> Color32 {
+    Color32::from_rgb((value >> 16) as u8, (value >> 8) as u8, value as u8)
+}
+
+fn rgba(value: u32) -> Color32 {
+    Color32::from_rgba_unmultiplied(
+        (value >> 24) as u8,
+        (value >> 16) as u8,
+        (value >> 8) as u8,
+        value as u8,
+    )
+}
+
+/// A complete look: workbench and editor colors.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Theme {
+    /// Display name, e.g. `"Archipel Dark"`.
+    pub name: String,
+    /// Whether this is a dark theme (selects egui's dark base visuals and native window chrome).
+    pub dark: bool,
+    /// Workbench colors.
+    pub colors: Colors,
+    /// Code editor colors.
+    pub editor: EditorColors,
+    /// How language file icons look (an app setting; see `docs/icons/languages.md`).
+    pub language_icons: archipel_icons::LanguageStyle,
+    /// Cursor over controls that perform an action (buttons, checkboxes, toggles,
+    /// dropdowns, close buttons). Default: the pointing hand. Rows, tabs and menu items
+    /// keep the arrow. See `docs/cursors.md`.
+    pub action_cursor: egui::CursorIcon,
+}
+
+/// Background and border of a banner or callout of one severity.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Tint {
+    /// Fill color.
+    pub background: Color32,
+    /// 1 px outline color.
+    pub border: Color32,
+}
+
+/// Workbench colors: surfaces, text, interaction states and semantic accents.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Colors {
+    // Surfaces.
+    /// Window background behind the islands: main toolbar, status bar, stripes.
+    pub frame: Color32,
+    /// Island (panel, tool window, editor) background.
+    pub island: Color32,
+    /// Popup, menu and dialog background.
+    pub popup: Color32,
+    /// Popup, menu and dialog outline.
+    pub popup_border: Color32,
+    /// Text field and other input backgrounds.
+    pub field: Color32,
+    /// Notification balloon background.
+    pub notification: Color32,
+    /// Tooltip background.
+    pub tooltip: Color32,
+
+    // Text.
+    /// Default text.
+    pub text: Color32,
+    /// Emphasized text: titles, selected rows.
+    pub text_strong: Color32,
+    /// Secondary labels: status bar widgets, row details.
+    pub text_secondary: Color32,
+    /// Hints, placeholders and captions.
+    pub text_placeholder: Color32,
+    /// Disabled text.
+    pub text_disabled: Color32,
+    /// Text drawn on the accent color (primary button label, selected toggle).
+    pub text_on_accent: Color32,
+
+    // Interaction.
+    /// Hover fill of flat controls (toolbar buttons, rows, menu items).
+    pub hover: Color32,
+    /// Pressed fill of flat controls.
+    pub pressed: Color32,
+    /// Selected row in a focused list or tree.
+    pub selection: Color32,
+    /// Selected row in completion-style popups.
+    pub selection_popup: Color32,
+    /// Accent: primary buttons, focus, selected toggles.
+    pub accent: Color32,
+    /// Primary button fill when disabled.
+    pub accent_disabled: Color32,
+    /// Keyboard focus ring around inputs and buttons.
+    pub focus_ring: Color32,
+    /// Outline of buttons, inputs and checkboxes.
+    pub border: Color32,
+    /// Toolbar and menu separators.
+    pub separator: Color32,
+    /// Selected editor tab fill.
+    pub tab_selected: Color32,
+    /// Selected editor tab underline.
+    pub tab_selected_border: Color32,
+    /// Fill of a switched-on toggle.
+    pub toggle_on: Color32,
+    /// Track of a switched-off toggle.
+    pub toggle_off: Color32,
+    /// Outline and knob of a switched-off toggle.
+    pub toggle_off_knob: Color32,
+    /// Outline of unchecked checkboxes and radio buttons.
+    pub control_border: Color32,
+    /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
+    pub row_hover: Color32,
+    /// Fill of non-editable dropdowns.
+    pub combo: Color32,
+    /// Dropdown arrow.
+    pub combo_arrow: Color32,
+    /// Fill of the selected segment of a segmented control.
+    pub segment_selected: Color32,
+    /// Outline of the selected segment.
+    pub segment_selected_border: Color32,
+    /// Track of progress bars.
+    pub progress_track: Color32,
+    /// Counter badge fill.
+    pub counter: Color32,
+    /// Counter badge text.
+    pub counter_text: Color32,
+    /// Tag (chip) fill.
+    pub tag: Color32,
+
+    // Semantic.
+    /// Errors: messages, invalid input outlines, error icons.
+    pub error: Color32,
+    /// Warnings.
+    pub warning: Color32,
+    /// Success.
+    pub success: Color32,
+    /// Hyperlinks.
+    pub link: Color32,
+    /// Info banner tint.
+    pub banner_info: Tint,
+    /// Warning banner tint.
+    pub banner_warning: Tint,
+    /// Error banner tint.
+    pub banner_error: Tint,
+    /// Success banner tint.
+    pub banner_success: Tint,
+
+    // Domain accents shared by developer tools.
+    /// Run actions (play icon, run widget).
+    pub run: Color32,
+    /// Stop actions.
+    pub stop: Color32,
+    /// Modified files (VCS).
+    pub vcs_modified: Color32,
+    /// Added files (VCS).
+    pub vcs_added: Color32,
+    /// Untracked files (VCS).
+    pub vcs_untracked: Color32,
+    /// Ignored files and other muted text.
+    pub vcs_ignored: Color32,
+
+    // Icons.
+    /// Default icon stroke.
+    pub icon: Color32,
+    /// Folder icon fill.
+    pub folder_fill: Color32,
+}
+
+/// Code editor colors.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EditorColors {
+    /// Editor background.
+    pub background: Color32,
+    /// Default code text.
+    pub text: Color32,
+    /// Caret.
+    pub caret: Color32,
+    /// Line containing the caret.
+    pub caret_row: Color32,
+    /// Gutter line numbers.
+    pub line_number: Color32,
+    /// Line number of the caret line.
+    pub line_number_caret: Color32,
+    /// Text selection.
+    pub selection: Color32,
+    /// Find bar and other panels inside the editor.
+    pub background_panel: Color32,
+    /// Search match highlight.
+    pub search_result: Color32,
+    /// Occurrences during rename.
+    pub rename_occurrence: Color32,
+    /// Matching brace highlight.
+    pub matched_brace: Color32,
+    /// Indent guides.
+    pub indent_guide: Color32,
+    /// Error squiggle.
+    pub error_effect: Color32,
+    /// Warning squiggle.
+    pub warning_effect: Color32,
+    /// Weak warning squiggle.
+    pub weak_warning_effect: Color32,
+    /// Breakpoint line tint.
+    pub breakpoint_line: Color32,
+    /// Suspended execution line tint.
+    pub execution_line: Color32,
+    /// Inline debugger values.
+    pub inline_value: Color32,
+    /// Error marks in the scrollbar stripe.
+    pub error_stripe: Color32,
+    /// Warning marks in the scrollbar stripe.
+    pub warning_stripe: Color32,
+}
+
+impl Default for Theme {
+    fn default() -> Self {
+        Self::dark()
+    }
+}
+
+impl Theme {
+    /// Archipel Dark: dark islands on a slightly lighter frame.
+    pub fn dark() -> Self {
+        Self {
+            name: "Archipel Dark".into(),
+            dark: true,
+            colors: Colors {
+                frame: rgb(0x26282C),
+                island: rgb(0x191A1C),
+                popup: rgb(0x26282C),
+                popup_border: rgb(0x33353B),
+                field: rgb(0x191A1C),
+                notification: rgb(0x33353B),
+                tooltip: rgb(0x33353B),
+                text: rgb(0xD1D3D9),
+                text_strong: rgb(0xDFE1E5),
+                text_secondary: rgb(0x9FA2A8),
+                text_placeholder: rgb(0x73767C),
+                text_disabled: rgb(0x4C4F56),
+                text_on_accent: rgb(0xFFFFFF),
+                hover: rgba(0xFFFFFF17),
+                pressed: rgba(0xFFFFFF29),
+                selection: rgb(0x2A4371),
+                selection_popup: rgb(0x113A5C),
+                accent: rgb(0x3871E1),
+                accent_disabled: rgb(0x4E5157),
+                focus_ring: rgb(0x3D6185),
+                border: rgb(0x40434A),
+                separator: rgba(0xFFFFFF21),
+                tab_selected: rgb(0x233558),
+                tab_selected_border: rgb(0x2E4D89),
+                toggle_on: rgb(0x338555),
+                toggle_off: rgb(0x191A1C),
+                toggle_off_knob: rgb(0x5F6269),
+                control_border: rgb(0x6F737A),
+                row_hover: rgba(0xFFFFFF10),
+                combo: rgb(0x26282C),
+                combo_arrow: rgb(0x9A9DA1),
+                segment_selected: rgb(0x26282C),
+                segment_selected_border: rgb(0x5F6269),
+                progress_track: rgb(0x40434A),
+                counter: rgb(0x73767C),
+                counter_text: rgb(0x000000),
+                tag: rgb(0x26282C),
+                error: rgb(0xF57E84),
+                warning: rgb(0xD59637),
+                success: rgb(0x6DB083),
+                link: rgb(0x71A1FE),
+                banner_info: Tint {
+                    background: rgb(0x233558),
+                    border: rgb(0x2E4D89),
+                },
+                banner_warning: Tint {
+                    background: rgb(0x44321D),
+                    border: rgb(0x694820),
+                },
+                banner_error: Tint {
+                    background: rgb(0x56272B),
+                    border: rgb(0x80383E),
+                },
+                banner_success: Tint {
+                    background: rgb(0x203B2A),
+                    border: rgb(0x29583C),
+                },
+                run: rgb(0x4E9D6C),
+                stop: rgb(0xC54E58),
+                vcs_modified: rgb(0x71A1FE),
+                vcs_added: rgb(0x73BD79),
+                vcs_untracked: rgb(0xE37774),
+                vcs_ignored: rgb(0x6F737A),
+                icon: rgb(0xCED0D6),
+                folder_fill: rgb(0x43454A),
+            },
+            language_icons: archipel_icons::LanguageStyle::FileBand,
+            action_cursor: egui::CursorIcon::PointingHand,
+            editor: EditorColors {
+                background: rgb(0x191A1C),
+                text: rgb(0xBCBEC4),
+                caret: rgb(0xCED0D6),
+                caret_row: rgb(0x1F2024),
+                line_number: rgb(0x4B5059),
+                line_number_caret: rgb(0xA1A3AB),
+                selection: rgb(0x214283),
+                background_panel: rgb(0x212326),
+                search_result: rgb(0x114957),
+                rename_occurrence: rgb(0x373B39),
+                matched_brace: rgb(0x43454A),
+                indent_guide: rgb(0x323438),
+                error_effect: rgb(0xFA6675),
+                warning_effect: rgb(0xF2C55C),
+                weak_warning_effect: rgb(0x857042),
+                breakpoint_line: rgb(0x40252B),
+                execution_line: rgb(0x2A5091),
+                inline_value: rgb(0x666D75),
+                error_stripe: rgb(0xD64D5B),
+                warning_stripe: rgb(0xC29E4A),
+            },
+        }
+    }
+
+    /// Archipel Light: white islands on a light gray frame.
+    pub fn light() -> Self {
+        Self {
+            name: "Archipel Light".into(),
+            dark: false,
+            colors: Colors {
+                frame: rgb(0xE9EAEE),
+                island: rgb(0xFFFFFF),
+                popup: rgb(0xFFFFFF),
+                popup_border: rgb(0xD1D3D9),
+                field: rgb(0xFFFFFF),
+                notification: rgb(0xFFFFFF),
+                tooltip: rgb(0xFFFFFF),
+                text: rgb(0x000000),
+                text_strong: rgb(0x000000),
+                text_secondary: rgb(0x5F6269),
+                text_placeholder: rgb(0x73767C),
+                text_disabled: rgb(0x9FA2A8),
+                text_on_accent: rgb(0xFFFFFF),
+                hover: rgba(0x00000012),
+                pressed: rgba(0x00000020),
+                selection: rgb(0xD0DFFE),
+                selection_popup: rgb(0xC5DFFC),
+                accent: rgb(0x3871E1),
+                accent_disabled: rgb(0xDDDFE4),
+                focus_ring: rgb(0x97C3F3),
+                border: rgb(0xD1D3D9),
+                separator: rgba(0x00000020),
+                tab_selected: rgb(0xE3EBFE),
+                tab_selected_border: rgb(0xA7C5FF),
+                toggle_on: rgb(0x4E9D6C),
+                toggle_off: rgb(0xF7F8F9),
+                toggle_off_knob: rgb(0xC3C5CB),
+                control_border: rgb(0xA8ADBD),
+                row_hover: rgba(0x00000008),
+                combo: rgb(0xFFFFFF),
+                combo_arrow: rgb(0x6E6E6E),
+                segment_selected: rgb(0xFFFFFF),
+                segment_selected_border: rgb(0xB5B7BD),
+                progress_track: rgb(0xDDDFE4),
+                counter: rgb(0x8B8E94),
+                counter_text: rgb(0xFFFFFF),
+                tag: rgb(0xEBECF0),
+                error: rgb(0xC54E58),
+                warning: rgb(0xA56906),
+                success: rgb(0x338555),
+                link: rgb(0x2F5EB9),
+                banner_info: Tint {
+                    background: rgb(0xF7F8FF),
+                    border: rgb(0xBDD3FF),
+                },
+                banner_warning: Tint {
+                    background: rgb(0xFFF6E9),
+                    border: rgb(0xF4CD9A),
+                },
+                banner_error: Tint {
+                    background: rgb(0xFFF6F5),
+                    border: rgb(0xFFC4C5),
+                },
+                banner_success: Tint {
+                    background: rgb(0xF5FAF3),
+                    border: rgb(0xBBDBC2),
+                },
+                run: rgb(0x369650),
+                stop: rgb(0xE4656E),
+                vcs_modified: rgb(0x2F5EB9),
+                vcs_added: rgb(0x067D17),
+                vcs_untracked: rgb(0xB23247),
+                vcs_ignored: rgb(0x818594),
+                icon: rgb(0x73767C),
+                folder_fill: rgb(0xEBECF0),
+            },
+            language_icons: archipel_icons::LanguageStyle::FileBand,
+            action_cursor: egui::CursorIcon::PointingHand,
+            editor: EditorColors {
+                background: rgb(0xFFFFFF),
+                text: rgb(0x080808),
+                caret: rgb(0x000000),
+                caret_row: rgb(0xF5F8FE),
+                line_number: rgb(0xAEB3C2),
+                line_number_caret: rgb(0x767A8A),
+                selection: rgb(0xA6D2FF),
+                background_panel: rgb(0xF7F8F9),
+                search_result: rgb(0xFCD47E),
+                rename_occurrence: rgb(0xEDEBFC),
+                matched_brace: rgb(0x93D9D9),
+                indent_guide: rgb(0xEBECF0),
+                error_effect: rgb(0xFF0000),
+                warning_effect: rgb(0xF2BF57),
+                weak_warning_effect: rgb(0xCCCCCC),
+                breakpoint_line: rgb(0xFAEAE6),
+                execution_line: rgb(0x2154A6),
+                inline_value: rgb(0x868686),
+                error_stripe: rgb(0xCF5B56),
+                warning_stripe: rgb(0xF2BF57),
+            },
+        }
+    }
+
+    /// The theme installed in `ctx`, or [`Theme::dark`] if [`crate::install`] was never called.
+    pub fn current(ctx: &egui::Context) -> Arc<Theme> {
+        ctx.data(|data| data.get_temp::<Arc<Theme>>(theme_id()))
+            .unwrap_or_else(|| {
+                static FALLBACK: std::sync::LazyLock<Arc<Theme>> =
+                    std::sync::LazyLock::new(|| Arc::new(Theme::dark()));
+                FALLBACK.clone()
+            })
+    }
+
+    /// Workbench colors of the theme installed in `ctx`.
+    pub fn colors(ctx: &egui::Context) -> Colors {
+        Self::current(ctx).colors
+    }
+
+    /// Makes this the active theme of `ctx` and rebuilds egui's visuals from it. Fonts and
+    /// spacing are untouched; call [`crate::install`] once at startup for those.
+    pub fn apply(self, ctx: &egui::Context) {
+        let theme = Arc::new(self);
+        crate::style::apply_visuals(ctx, &theme);
+        ctx.data_mut(|data| data.insert_temp(theme_id(), theme));
+    }
+}
+
+fn theme_id() -> egui::Id {
+    egui::Id::new("archipel_kit::theme")
+}
+
+/// Stable avatar color for a name (project and user badges).
+pub fn avatar_color(name: &str) -> Color32 {
+    const AVATAR_COLORS: [Color32; 9] = [
+        rgb(0xE08855),
+        rgb(0xB08B14),
+        rgb(0xA1A359),
+        rgb(0x3B92B8),
+        rgb(0x3574F0),
+        rgb(0xC84D8F),
+        rgb(0x955AE0),
+        rgb(0x24A394),
+        rgb(0x5FAD65),
+    ];
+    let hash = name.bytes().fold(0u32, |acc, byte| {
+        acc.wrapping_mul(31).wrapping_add(byte as u32)
+    });
+    AVATAR_COLORS[hash as usize % AVATAR_COLORS.len()]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rgba_keeps_alpha() {
+        assert_eq!(rgba(0xFFFFFF17).a(), 0x17);
+        assert_eq!(rgb(0x26282C), Color32::from_rgb(0x26, 0x28, 0x2C));
+    }
+
+    #[test]
+    fn current_falls_back_to_dark_and_follows_apply() {
+        let ctx = egui::Context::default();
+        assert!(Theme::current(&ctx).dark);
+        Theme::light().apply(&ctx);
+        assert!(!Theme::current(&ctx).dark);
+        assert_eq!(Theme::colors(&ctx).island, Theme::light().colors.island);
+    }
+
+    #[test]
+    fn themes_are_independent_per_context() {
+        let (a, b) = (egui::Context::default(), egui::Context::default());
+        Theme::light().apply(&a);
+        Theme::dark().apply(&b);
+        assert_ne!(Theme::colors(&a).island, Theme::colors(&b).island);
+    }
+
+    #[test]
+    fn text_contrasts_with_islands() {
+        for theme in [Theme::dark(), Theme::light()] {
+            let ratio = contrast(theme.colors.text, theme.colors.island);
+            assert!(ratio >= 7.0, "{}: text contrast {ratio:.1}", theme.name);
+            let secondary = contrast(theme.colors.text_secondary, theme.colors.island);
+            assert!(secondary >= 4.5, "{}: secondary {secondary:.1}", theme.name);
+            let on_accent = contrast(theme.colors.text_on_accent, theme.colors.accent);
+            assert!(on_accent >= 4.5, "{}: on accent {on_accent:.1}", theme.name);
+        }
+    }
+
+    #[test]
+    fn avatar_color_is_stable() {
+        assert_eq!(avatar_color("archipel"), avatar_color("archipel"));
+    }
+
+    /// WCAG 2 contrast ratio.
+    fn contrast(a: Color32, b: Color32) -> f32 {
+        fn luminance(c: Color32) -> f32 {
+            let channel = |v: u8| {
+                let v = v as f32 / 255.0;
+                if v <= 0.03928 {
+                    v / 12.92
+                } else {
+                    ((v + 0.055) / 1.055).powf(2.4)
+                }
+            };
+            0.2126 * channel(c.r()) + 0.7152 * channel(c.g()) + 0.0722 * channel(c.b())
+        }
+        let (la, lb) = (luminance(a), luminance(b));
+        (la.max(lb) + 0.05) / (la.min(lb) + 0.05)
+    }
+}

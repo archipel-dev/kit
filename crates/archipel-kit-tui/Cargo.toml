@@ -1,0 +1,19 @@
+[package]
+name = "archipel-kit-tui"
+description = "Archipel Kit for the terminal: the same theme, icons and components, drawn with ratatui."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+keywords = ["tui", "ratatui", "terminal", "components"]
+categories = ["command-line-interface"]
+
+[dependencies]
+archipel-icons = { path = "../archipel-icons" }
+archipel-kit = { path = "../archipel-kit" }
+ratatui = "0.30"
+unicode-width = "0.2"
+
+[lints]
+workspace = true

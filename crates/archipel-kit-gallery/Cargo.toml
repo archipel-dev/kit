@@ -1,0 +1,19 @@
+[package]
+name = "archipel-kit-gallery"
+description = "Interactive gallery of every Archipel Kit component, in every state."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+archipel-kit = { path = "../archipel-kit" }
+eframe.workspace = true
+
+[dev-dependencies]
+archipel-kit = { path = "../archipel-kit", features = ["testing"] }
+
+[lints]
+workspace = true
