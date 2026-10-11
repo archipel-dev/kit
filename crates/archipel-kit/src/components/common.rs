@@ -50,3 +50,18 @@ pub(crate) use crate::parts::row_pill;
 pub(crate) fn enabled_text(enabled: bool, color: Color32, colors: &Colors) -> Color32 {
     if enabled { color } else { colors.text_disabled }
 }
+
+/// Lays out `text` on one line in `font`, truncated with an ellipsis at `max_width`.
+pub(crate) fn galley_truncated(
+    ui: &Ui,
+    text: impl Into<WidgetText>,
+    font: FontId,
+    max_width: f32,
+) -> Arc<Galley> {
+    text.into().into_galley(
+        ui,
+        Some(egui::TextWrapMode::Truncate),
+        max_width,
+        egui::FontSelection::FontId(font),
+    )
+}

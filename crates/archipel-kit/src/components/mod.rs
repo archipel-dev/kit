@@ -8,12 +8,13 @@
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
-//! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
+//! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`], [`Histogram`], [`Sparkline`] |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
 mod button;
+mod chart;
 mod choice;
 mod collections;
 pub(crate) mod common;
@@ -29,6 +30,7 @@ mod text_field;
 
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
+pub use chart::{Bucket, ChartColor, Histogram, HistogramResponse, Sparkline};
 pub use choice::{Checkbox, Radio, Toggle};
 pub use collections::{
     Cell, CellEdit, CollectionResponse, Column, SortOrder, Table, Tree, TreeRow, TreeTable,

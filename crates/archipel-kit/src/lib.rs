@@ -73,6 +73,7 @@ mod docs {
         Badges = "components/badges.md";
         Banner = "components/banner.md";
         Button = "components/button.md";
+        Chart = "components/chart.md";
         Choice = "components/choice.md";
         Dropdown = "components/dropdown.md";
         EmptyState = "components/empty-state.md";

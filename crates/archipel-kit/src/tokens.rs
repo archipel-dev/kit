@@ -41,6 +41,12 @@ pub mod size {
     pub const ISLAND_GAP: f32 = 4.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Default height of a vertical histogram.
+    pub const CHART_HEIGHT: f32 = 120.0;
+    /// Height of a sparkline: it sits inline with text.
+    pub const SPARKLINE_HEIGHT: f32 = 20.0;
+    /// Default width of a sparkline.
+    pub const SPARKLINE_WIDTH: f32 = 96.0;
 
     /// Distance from a row's left edge to the first column at `depth`.
     pub fn indent(depth: usize) -> f32 {
