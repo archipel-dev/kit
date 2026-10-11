@@ -8,13 +8,14 @@
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`], [`KeyValueTable`] |
-//! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
+//! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`], [`Histogram`], [`Sparkline`] |
 //! | Code | [`CodeView`], [`CodeEditor`], and the [`code::Highlighter`]s |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
 mod button;
+mod chart;
 mod choice;
 pub mod code;
 mod collections;
@@ -34,6 +35,7 @@ mod text_field;
 
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
+pub use chart::{Bucket, ChartColor, Histogram, HistogramResponse, Sparkline};
 pub use choice::{Checkbox, Radio, Toggle};
 pub use code::{CodeEditor, CodeView};
 pub use collections::{
