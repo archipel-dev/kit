@@ -340,7 +340,9 @@ impl<'a> View<'a> {
                 300.0
             }
         });
-        let (outer, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
+        // A layout that has run out of room must not make egui allocate a negative size.
+        let size = vec2(ui.available_width(), height).max(egui::Vec2::ZERO);
+        let (outer, _) = ui.allocate_exact_size(size, Sense::hover());
         paint_background(ui, outer);
         let inner = outer.shrink(1.0);
         let folding = self.spec.folding;

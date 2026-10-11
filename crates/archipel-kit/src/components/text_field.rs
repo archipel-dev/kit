@@ -241,7 +241,8 @@ impl TextField<'_> {
     /// <kbd>Enter</kbd> submitted it, besides the response.
     pub fn show(self, ui: &mut Ui) -> TextFieldOutput {
         let colors = Theme::colors(ui.ctx());
-        let width = self.width.unwrap_or_else(|| ui.available_width());
+        // A layout that has run out of room must not make egui allocate a negative size.
+        let width = self.width.unwrap_or_else(|| ui.available_width()).max(0.0);
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing.y = 4.0;
             let label_id = self.label.as_ref().map(|label| {
