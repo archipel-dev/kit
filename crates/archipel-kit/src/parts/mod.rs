@@ -32,4 +32,4 @@ pub use row::{IconPainter, RowContent};
 pub use slot::Slot;
 pub use state::{State, focus_ring, row_pill};
 pub use surface::{Surface, desktop, scroll_vertical};
-pub use tone::Tone;
+pub use tone::{Tone, ValueKind};

@@ -9,11 +9,11 @@ use archipel_kit::components::{
     Avatar, Banner, Button, Cell, Checkbox, Column, Counter, Dialog, Dropdown, EmptyState,
     IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid,
     Radio, SectionHeader, SegmentedControl, Separator, Severity, SortOrder, Spinner, Tab, TabBar,
-    Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
+    Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::parts::Slot;
-use archipel_kit::{Glyph, Icon, Theme, Tone, cursor, egui, tokens};
+use archipel_kit::{Glyph, Icon, Theme, Tone, ValueKind, cursor, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
 const GAP: i8 = tokens::size::ISLAND_GAP as i8;
@@ -98,7 +98,138 @@ struct Gallery {
     last_action: String,
     columns: Vec<Column>,
     row: Option<usize>,
+    /// The sorted (data column, direction); columns can be reordered, so not a position.
     sort: Option<(usize, SortOrder)>,
+    /// The data column shown at each position of the table.
+    column_order: Vec<usize>,
+    /// Edited request texts of the table, by row.
+    requests: std::collections::HashMap<usize, String>,
+    documents: Documents,
+}
+
+/// Documents in the tree table page, and fields per document: 1 000 × (1 + 99) rows.
+const DOCUMENTS: usize = 1_000;
+const FIELDS: usize = 99;
+
+/// The TreeTable page's data: 1 000 documents of 99 fields (100 000 rows while all are
+/// open). The gallery owns it like an app would: the expanded state, the edited texts and the
+/// flattened visible rows, rebuilt when one of them changes.
+struct Documents {
+    columns: Vec<Column>,
+    selected: Option<usize>,
+    open: Vec<bool>,
+    /// Edited keys and values by (document, field).
+    keys: std::collections::HashMap<(usize, usize), String>,
+    values: std::collections::HashMap<(usize, usize), String>,
+    rows: Vec<TreeRow>,
+    /// The (document, field) of each visible row; `None` is the document itself.
+    index: Vec<(usize, Option<usize>)>,
+    last: String,
+}
+
+impl Documents {
+    fn new() -> Self {
+        let mut documents = Self {
+            columns: vec![
+                Column::new("Key", 220.0),
+                Column::new("Value", 260.0).mono(),
+                Column::new("Type", 90.0),
+            ],
+            selected: None,
+            open: vec![true; DOCUMENTS],
+            keys: Default::default(),
+            values: Default::default(),
+            rows: Vec::new(),
+            index: Vec::new(),
+            last: "Select a row and press F2 or Enter, or double-click a value".into(),
+        };
+        documents.rebuild();
+        documents
+    }
+
+    fn key(&self, doc: usize, field: usize) -> String {
+        self.keys
+            .get(&(doc, field))
+            .cloned()
+            .unwrap_or_else(|| format!("field{field}"))
+    }
+
+    fn value(&self, doc: usize, field: usize) -> String {
+        self.values
+            .get(&(doc, field))
+            .cloned()
+            .unwrap_or_else(|| match field % 3 {
+                0 => format!("{}", doc * 1000 + field),
+                1 => format!("value-{doc}-{field}"),
+                _ => field.is_multiple_of(2).to_string(),
+            })
+    }
+
+    fn rebuild(&mut self) {
+        self.rows.clear();
+        self.index.clear();
+        for doc in 0..DOCUMENTS {
+            self.rows.push(
+                TreeRow::new(format!("doc{doc}"), 0)
+                    .icon(Glyph::Folder)
+                    .parent(self.open[doc]),
+            );
+            self.index.push((doc, None));
+            if self.open[doc] {
+                for field in 0..FIELDS {
+                    self.rows
+                        .push(TreeRow::new(self.key(doc, field), 1).editable(true));
+                    self.index.push((doc, Some(field)));
+                }
+            }
+        }
+    }
+
+    fn show(&mut self, ui: &mut egui::Ui) {
+        // Taken out so the cell callback can read `self` while the widget edits the rest.
+        let mut columns = std::mem::take(&mut self.columns);
+        let mut selected = self.selected;
+        let out = TreeTable::new(
+            "gallery-tree-table",
+            &mut columns,
+            &self.rows,
+            &mut selected,
+        )
+        .name("Documents")
+        .height(220.0)
+        .show(ui, |row, col| match self.index[row] {
+            (_, None) if col == 1 => Cell::new(format!("{{ {FIELDS} fields }}")).muted(),
+            (_, None) => Cell::new("Object").muted(),
+            (doc, Some(field)) if col == 1 => Cell::new(self.value(doc, field)).editable(true),
+            (_, Some(field)) => Cell::new(["Int32", "String", "Boolean"][field % 3]).muted(),
+        });
+        self.columns = columns;
+        self.selected = selected;
+        if let Some(row) = out.activated {
+            self.last = format!("Activated {}", self.rows[row].label());
+        }
+        if let Some(edit) = out.edited
+            && let (doc, Some(field)) = self.index[edit.row]
+        {
+            self.last = format!(
+                "Edited row {} column {}: {:?}",
+                edit.row, edit.column, edit.text
+            );
+            if edit.column == 0 {
+                self.keys.insert((doc, field), edit.text);
+                self.rebuild();
+            } else {
+                self.values.insert((doc, field), edit.text);
+            }
+        }
+        // Last: it rebuilds the rows, and `row` above refers to the rows drawn this frame.
+        if let Some(row) = out.toggled {
+            let (doc, _) = self.index[row];
+            self.open[doc] = !self.open[doc];
+            self.rebuild();
+        }
+        ui.label(egui::RichText::new(&self.last).color(Theme::colors(ui.ctx()).text_secondary));
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -145,6 +276,9 @@ impl Default for Gallery {
             ],
             row: None,
             sort: None,
+            column_order: vec![0, 1, 2, 3],
+            requests: Default::default(),
+            documents: Documents::new(),
         }
     }
 }
@@ -563,20 +697,34 @@ impl Gallery {
             _ => {}
         }
         if self.page == Page::Lists {
-            ui.add(SectionHeader::new("Virtualized table: 100 000 rows"));
+            ui.add(SectionHeader::new(
+                "Virtualized table: 100 000 rows, drag headers to reorder, edit requests",
+            ));
             let len = 100_000;
             let descending = self
                 .sort
                 .is_some_and(|(_, order)| order == SortOrder::Descending);
+            let order = self.column_order.clone();
+            let shown_sort = self
+                .sort
+                .and_then(|(data, order_)| Some((order.iter().position(|d| *d == data)?, order_)));
+            let requests = &self.requests;
             let out = Table::new("gallery-table", &mut self.columns, len, &mut self.row)
-                .sort(self.sort)
+                .sort(shown_sort)
+                .reorderable(true)
                 .height(220.0)
-                .show(ui, |row, col| {
+                .show(ui, |row, position| {
                     let n = if descending { len - 1 - row } else { row };
                     let status = [200, 201, 404, 200, 500, 304][n % 6];
-                    match col {
+                    match order[position] {
                         0 => Cell::new(n.to_string()).muted(),
-                        1 => Cell::new(format!("GET /api/users/{n}")),
+                        1 => Cell::new(
+                            requests
+                                .get(&n)
+                                .cloned()
+                                .unwrap_or_else(|| format!("GET /api/users/{n}")),
+                        )
+                        .editable(true),
                         2 => Cell::new(status.to_string()).tone(match status {
                             500.. => Tone::Error,
                             400.. => Tone::Warning,
@@ -585,12 +733,28 @@ impl Gallery {
                         _ => Cell::new(format!("{} ms", 12 + n * 37 % 300)).muted(),
                     }
                 });
-            if let Some(col) = out.sort_clicked {
+            if let Some(position) = out.sort_clicked {
+                let data = order[position];
                 self.sort = Some(match self.sort {
-                    Some((c, order)) if c == col => (col, order.reversed()),
-                    _ => (col, SortOrder::Ascending),
+                    Some((c, o)) if c == data => (data, o.reversed()),
+                    _ => (data, SortOrder::Ascending),
                 });
             }
+            if let Some(edit) = out.edited {
+                let n = if descending {
+                    len - 1 - edit.row
+                } else {
+                    edit.row
+                };
+                self.requests.insert(n, edit.text);
+            }
+            // The table reports the new order; the gallery owns the columns and applies it.
+            if let Some(new) = out.column_order {
+                self.columns = new.iter().map(|&i| self.columns[i].clone()).collect();
+                self.column_order = new.iter().map(|&i| order[i]).collect();
+            }
+            ui.add(SectionHeader::new("Tree table: 100 000 rows, inline edit"));
+            self.documents.show(ui);
         }
         match self.page {
             Page::Feedback => {
@@ -664,6 +828,7 @@ impl Gallery {
                     }
                     ui.add(Avatar::new("Ada Lovelace").size(24.0).round(true));
                 });
+                data_colors(ui);
                 ui.add(SectionHeader::new("Property grid"));
                 PropertyGrid::new("props")
                     .row("Status", "200 OK")
@@ -839,6 +1004,45 @@ impl Gallery {
             _ => {}
         }
     }
+}
+
+/// Typed-value, chart, ramp and method/status colors.
+fn data_colors(ui: &mut egui::Ui) {
+    ui.add(SectionHeader::new("Data colors"));
+    let theme = Theme::current(ui.ctx());
+    ui.horizontal_wrapped(|ui| {
+        for kind in ValueKind::ALL {
+            ui.label(
+                egui::RichText::new(kind.label())
+                    .monospace()
+                    .color(kind.color(&theme)),
+            );
+        }
+    });
+    ui.horizontal(|ui| {
+        for index in 0..8 {
+            swatch(ui, theme.chart(index));
+        }
+    });
+    ui.horizontal(|ui| {
+        for step in 0..=10 {
+            swatch(ui, theme.colors.ramp(step as f32 / 10.0));
+        }
+    });
+    ui.horizontal(|ui| {
+        for method in ["GET", "POST", "PUT", "PATCH", "DELETE"] {
+            ui.add(Tag::new(method).tone(Tone::method(method)));
+        }
+        for code in [200, 301, 404, 503] {
+            ui.add(Tag::new(code.to_string()).tone(Tone::status(code)));
+        }
+    });
+}
+
+fn swatch(ui: &mut egui::Ui, color: egui::Color32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), egui::Sense::hover());
+    ui.painter()
+        .rect_filled(rect, tokens::radius::CONTROL, color);
 }
 
 #[cfg(test)]
