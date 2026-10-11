@@ -883,7 +883,11 @@ impl Gallery {
                         .label("Resize sidebar")
                         .collapsible(Side::First, &mut self.sidebar_collapsed)
                         .enabled(enabled)
-                        .with(Tooltip::new("Resize sidebar").hint("Double-click to reset"))
+                        .with(
+                            Tooltip::new("Resize sidebar").hint(
+                                "Double-click to reset the width, or to expand when collapsed",
+                            ),
+                        )
                         .show(
                             ui,
                             |ui| split_island(ui, "Collections", "src/\ntests/"),

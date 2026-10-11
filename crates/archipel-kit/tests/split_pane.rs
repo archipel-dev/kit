@@ -670,17 +670,18 @@ fn collapsed_state_starts_collapsed_with_a_grabbable_edge() {
 
 #[test]
 fn dragging_past_the_minimum_collapses() {
+    // Just past the minimum (80) but within the threshold: still open, at the minimum.
     let mut harness = collapsible(Side::First, 0.4, false);
     let start = divider_x(&harness);
-    // Just past the minimum (80) but within the threshold: still open, at the minimum.
     drag_divider_to(&mut harness, start - (0.4 * AVAIL - 80.0) - 20.0);
     assert!(!harness.state().collapsed);
     assert!((harness.state().ratio - 80.0 / AVAIL).abs() < 1e-3);
-    // Far past it: collapsed, and the ratio is the last open one.
-    let now = divider_x(&harness);
-    drag_divider_to(&mut harness, now - 200.0);
+
+    // Far past it: collapsed, and the ratio is the one from before the drag.
+    let mut harness = collapsible(Side::First, 0.4, false);
+    drag_divider_to(&mut harness, start - 200.0);
     assert!(harness.state().collapsed);
-    assert!((harness.state().ratio - 80.0 / AVAIL).abs() < 1e-3);
+    assert_eq!(harness.state().ratio, 0.4);
     assert!(harness.state().changed > 0);
     assert!(divider_x(&harness) < origin() + 6.0);
 }
@@ -798,7 +799,7 @@ fn the_second_side_collapses_to_the_far_edge() {
         "{}",
         divider_x(&harness)
     );
-    assert!((harness.state().ratio - (AVAIL - 80.0) / AVAIL).abs() < 1e-3);
+    assert_eq!(harness.state().ratio, 0.5, "from before the drag");
     drag_divider_to(&mut harness, 250.0);
     assert!(!harness.state().collapsed);
     // Keys: ArrowLeft (toward the content) expands, Enter collapses.
@@ -960,4 +961,112 @@ fn collapsed_snapshot() {
         ));
     }
     results.unwrap();
+}
+
+#[test]
+fn collapsing_by_dragging_restores_the_size_from_before_the_drag() {
+    let mut harness = collapsible(Side::First, 0.4, false);
+    let start = divider_x(&harness);
+    drag_divider_to(&mut harness, start - 250.0);
+    assert!(harness.state().collapsed);
+    assert_eq!(
+        harness.state().ratio,
+        0.4,
+        "not the minimum it was dragged to"
+    );
+    // Expanding by the keyboard, by code or by a double click brings back that size.
+    harness.get_by_label("Resize sidebar").focus();
+    harness.run();
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert!(!harness.state().collapsed);
+    assert!((divider_x(&harness) - start).abs() < 1.0, "back at {start}");
+    assert_eq!(harness.state().ratio, 0.4);
+}
+
+#[test]
+fn double_click_resets_an_open_pane_but_only_expands_a_collapsed_one() {
+    let mut harness = collapsible(Side::First, 0.6, false);
+    let center = harness.get_by_label("Resize sidebar").rect().center();
+    harness.hover_at(center);
+    harness.run();
+    for _ in 0..2 {
+        harness.drag_at(center);
+        harness.run();
+        harness.drop_at(center);
+        harness.run();
+    }
+    assert!(!harness.state().collapsed);
+    assert!((harness.state().ratio - 0.5).abs() < 1e-3, "default ratio");
+}
+
+/// Snapshots the collapsed edge in one interaction state, at 2×, in both themes.
+fn snapshot_collapsed_state(name: &str, act: impl Fn(&mut Harness<'_, f32>, egui::Pos2)) {
+    let mut results = testing::SnapshotResults::new();
+    for theme in [Theme::dark(), Theme::light()] {
+        let suffix = if theme.dark { "dark" } else { "light" };
+        let mut pending = Some(theme);
+        let mut harness = testing::builder::<f32>()
+            .with_pixels_per_point(2.0)
+            .with_size(vec2(340.0, 160.0))
+            .build_ui_state(
+                move |ui, ratio| {
+                    if let Some(theme) = pending.take() {
+                        archipel_kit::install(ui.ctx(), theme);
+                        ui.ctx().request_repaint();
+                        return;
+                    }
+                    let colors = Theme::colors(ui.ctx());
+                    ui.painter().rect_filled(ui.max_rect(), 0.0, colors.frame);
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.add_space(8.0);
+                        let mut collapsed = true;
+                        ui.allocate_ui(vec2(300.0, 132.0), |ui| {
+                            let pane = |ui: &mut egui::Ui, text: &str| {
+                                let (rect, _) = ui
+                                    .allocate_exact_size(ui.available_size(), egui::Sense::hover());
+                                ui.painter().rect_filled(rect, 6.0, colors.field);
+                                ui.painter().text(
+                                    rect.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    text,
+                                    egui::FontId::proportional(13.0),
+                                    colors.text,
+                                );
+                            };
+                            SplitPane::horizontal("collapsed", ratio)
+                                .min_size(60.0)
+                                .collapsible(Side::First, &mut collapsed)
+                                .show(ui, |ui| pane(ui, "Sidebar"), |ui| pane(ui, "Request"));
+                        });
+                    });
+                },
+                0.4,
+            );
+        harness.run_ok();
+        let divider = harness.get_by_label("Resize panes").rect().center() / 2.0;
+        act(&mut harness, divider);
+        results.add(harness.try_snapshot_options(
+            format!("{name}.{suffix}"),
+            &SnapshotOptions::new().output_path(common::IMG),
+        ));
+    }
+    results.unwrap();
+}
+
+#[test]
+fn snapshot_collapsed_hover() {
+    snapshot_collapsed_state("split_pane_collapsed_hover", |harness, divider| {
+        harness.hover_at(divider);
+        harness.run_ok();
+    });
+}
+
+#[test]
+fn snapshot_collapsed_focus() {
+    snapshot_collapsed_state("split_pane_collapsed_focus", |harness, _| {
+        harness.get_by_label("Resize panes").focus();
+        harness.run_ok();
+    });
 }

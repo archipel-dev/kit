@@ -106,7 +106,8 @@ user change.
 - **Drag**: the divider follows the pointer, wherever on it was grabbed. The cursor is
   `ResizeHorizontal` or `ResizeVertical` (see [cursors](../cursors.md)) and stays while
   dragging, even if the pointer leaves the thin divider.
-- **Double click** resets to the default ratio.
+- **Double click** resets to the default ratio. On a collapsed pane it only expands it, to
+  the size it had; it never resets that.
 - **Keyboard**: <kbd>Tab</kbd> focuses the divider (focus ring). The arrow keys along the
   split (<kbd>←</kbd> <kbd>→</kbd> side by side, <kbd>↑</kbd> <kbd>↓</kbd> stacked) move it by
   16 points; <kbd>Home</kbd> and <kbd>End</kbd> jump to the minimum and maximum. The arrow
@@ -125,8 +126,10 @@ user change.
   close to it and follows the pointer from there, with no flicker in between), double-click
   it, press <kbd>Enter</kbd>/<kbd>Space</kbd> on the focused divider, or the arrow toward the
   content. Other keys do nothing while collapsed.
-- **The ratio** is never written while collapsed, so expanding by code, key or double click
-  restores the last open size. Dragging out sets the ratio to where the pointer lets go.
+- **The ratio** is never written while collapsed, and collapsing by dragging puts back the
+  ratio from before the drag (not the minimum the pane was dragged down to), so expanding by
+  code, key or double click restores the size you started from. Dragging out sets the ratio
+  to where the pointer lets go.
   There is no animation: the kit has no animation token.
 - **Look**: a 1-point divider line in the separator color that grows to 2 points on hover
   and takes the accent color while pressed or dragged. The divider occupies the 4-point
@@ -137,7 +140,16 @@ user change.
   <img alt="A split whose first pane is collapsed: a thin edge at the left of the second pane" src="img/split_pane_collapsed.light.png" width="170">
 </picture>
 
-Collapsed: the divider stays as a thin edge in the control border color.
+Collapsed: the divider stays as a thin edge in the control border color. It takes the accent
+color on hover (an open divider only gets a stronger line), so it shows it can be grabbed,
+and has the same pressed and focus states as an open one.
+
+<table>
+<tr>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="img/split_pane_collapsed_hover.dark.png"><img alt="Hovered collapsed edge" src="img/split_pane_collapsed_hover.light.png" width="170"></picture><br>Collapsed, hover</td>
+<td><picture><source media="(prefers-color-scheme: dark)" srcset="img/split_pane_collapsed_focus.dark.png"><img alt="Focused collapsed edge with a focus ring" src="img/split_pane_collapsed_focus.light.png" width="170"></picture><br>Collapsed, focused</td>
+</tr>
+</table>
 
 <table>
 <tr>

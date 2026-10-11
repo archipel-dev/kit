@@ -14,6 +14,7 @@ use std::hash::Hash;
 
 /// How a [`SplitPane`] arranges its two panes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Orientation {
     /// Side by side: left and right panes, a vertical divider.
     Horizontal,
@@ -23,6 +24,7 @@ pub enum Orientation {
 
 /// One side of a [`SplitPane`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Side {
     /// The left pane (side by side) or the top pane (stacked).
     First,
@@ -149,8 +151,11 @@ impl<'a> SplitPane<'a> {
     /// <kbd>Enter</kbd> or <kbd>Space</kbd> on the focused divider. Collapsed, the pane's
     /// closure still runs (hidden, so keep it cheap) and the divider stays at the edge;
     /// dragging it out, double-clicking it or pressing the arrow key toward the content
-    /// expands the pane. The ratio is never written while collapsed, so expanding with
-    /// code, <kbd>Enter</kbd> or a double click restores it; dragging out follows the pointer.
+    /// expands the pane. A double click on an open pane still resets the ratio to the
+    /// default; on a collapsed one it only expands. The ratio is never written while
+    /// collapsed, and a collapse by dragging puts back the ratio from before the drag, so
+    /// expanding with code, <kbd>Enter</kbd> or a double click restores that size; dragging
+    /// out follows the pointer.
     /// One side per split: calling this again replaces the earlier one.
     pub fn collapsible(mut self, side: Side, collapsed: &'a mut bool) -> Self {
         self.collapse = Some(Collapse { side, collapsed });
@@ -248,6 +253,10 @@ impl<'a> SplitPane<'a> {
                 // the pointer has moved a little), so the divider doesn't jump.
                 ui.data_mut(|d| d.insert_temp(divider_id, along(pressed) - center));
             }
+            if response.drag_started() {
+                // The ratio from before the drag, which a collapse by dragging restores.
+                ui.data_mut(|d| d.insert_temp(divider_id.with("ratio"), *self.ratio));
+            }
             if response.dragged()
                 && let Some(pointer) = response.interact_pointer_pos()
             {
@@ -331,6 +340,13 @@ impl<'a> SplitPane<'a> {
             *collapse.collapsed = collapsed;
             response.mark_changed();
             ui.ctx().request_repaint();
+        }
+        if collapsed && !was_collapsed && response.dragged() {
+            // Dragging into the collapse moved the ratio down to the minimum on the way:
+            // put back the size from before the drag, so expanding restores that.
+            if let Some(before) = ui.data(|d| d.get_temp::<f32>(divider_id.with("ratio"))) {
+                *self.ratio = before;
+            }
         }
         let mut shown_size = if collapsed == was_collapsed {
             first_size
@@ -430,7 +446,16 @@ impl<'a> SplitPane<'a> {
             let (thickness, color) = if active {
                 (2.0, colors.accent)
             } else if self.enabled && response.hovered() {
-                (2.0, colors.control_border)
+                // A collapsed edge already looks like a hovered divider: take the accent
+                // color, so it shows it can be grabbed.
+                (
+                    2.0,
+                    if collapsed {
+                        colors.accent
+                    } else {
+                        colors.control_border
+                    },
+                )
             } else if collapsed {
                 // A collapsed pane's edge must stay easy to see.
                 (2.0, colors.control_border)
