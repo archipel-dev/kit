@@ -5,7 +5,9 @@
 //! ```
 
 mod pages;
-use archipel_kit::components::{Avatar, ListRow, Panel, Separator, Tag, Toggle};
+use archipel_kit::components::{
+    Avatar, ListRow, Panel, Separator, Tag, Toggle, WindowChrome, WindowToolbar,
+};
 use archipel_kit::{Theme, egui, tokens};
 use pages::{Page, Pages};
 
@@ -14,9 +16,12 @@ const GAP: i8 = tokens::size::ISLAND_GAP as i8;
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Archipel Kit Gallery")
-            .with_inner_size([1100.0, 760.0]),
+        viewport: WindowChrome::Integrated.viewport(
+            egui::ViewportBuilder::default()
+                .with_title("Archipel Kit Gallery")
+                .with_inner_size([1100.0, 760.0])
+                .with_min_inner_size([800.0, 500.0]),
+        ),
         ..Default::default()
     };
     eframe::run_native(
@@ -34,6 +39,7 @@ struct Gallery {
     dark: bool,
     enabled: bool,
     pages: Pages,
+    chrome: WindowChrome,
 }
 impl Default for Gallery {
     fn default() -> Self {
@@ -42,12 +48,15 @@ impl Default for Gallery {
             dark: true,
             enabled: true,
             pages: Pages::default(),
+            chrome: WindowChrome::Integrated,
         }
     }
 }
 
 impl eframe::App for Gallery {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.chrome
+            .align_native_controls("Archipel Kit Gallery", ctx);
         self.show(ctx);
     }
 }
@@ -55,14 +64,8 @@ impl eframe::App for Gallery {
 impl Gallery {
     fn show(&mut self, ctx: &egui::Context) {
         let colors = Theme::colors(ctx);
-        egui::TopBottomPanel::top("toolbar")
-            .show_separator_line(false)
-            .exact_height(40.0)
-            .frame(
-                egui::Frame::new()
-                    .fill(colors.frame)
-                    .inner_margin(egui::Margin::symmetric(12, 0)),
-            )
+        WindowToolbar::new("toolbar")
+            .chrome(self.chrome)
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.add(Avatar::new("Archipel Kit"));
@@ -168,6 +171,7 @@ mod tests {
                 let mut gallery = Gallery {
                     page,
                     dark,
+                    chrome: WindowChrome::Native,
                     ..Gallery::default()
                 };
                 let mut installed = false;

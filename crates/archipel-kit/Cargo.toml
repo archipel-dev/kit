@@ -18,11 +18,18 @@ testing = ["dep:egui_kittest"]
 archipel-icons = { path = "../archipel-icons", features = ["egui"] }
 egui = { workspace = true, features = ["accesskit"] }
 egui_kittest = { workspace = true, optional = true }
+serde = { version = "1", features = ["derive"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSWindow", "NSButton", "NSView", "NSResponder", "NSControl", "NSGraphics", "NSColor", "objc2-core-foundation"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSGeometry"] }
 
 [dev-dependencies]
 archipel-kit = { path = ".", features = ["testing"] }
 eframe.workspace = true
 egui_kittest.workspace = true
+serde_json = "1"
 
 [lints]
 workspace = true

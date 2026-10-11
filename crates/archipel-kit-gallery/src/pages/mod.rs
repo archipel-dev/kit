@@ -25,6 +25,7 @@ mod layout;
 mod lists;
 mod navigation;
 mod overlays;
+mod workbench;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Page {
@@ -40,10 +41,11 @@ pub(super) enum Page {
     Overlays,
     Code,
     Icons,
+    Workbench,
 }
 
 impl Page {
-    pub(super) const ALL: [(Page, &'static str, Glyph); 12] = [
+    pub(super) const ALL: [(Page, &'static str, Glyph); 13] = [
         (Page::Buttons, "Buttons", Glyph::Run),
         (Page::Inputs, "Text fields", Glyph::Search),
         (Page::Choices, "Choices", Glyph::Success),
@@ -56,6 +58,7 @@ impl Page {
         (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
         (Page::Code, "Code", Glyph::Code),
         (Page::Icons, "Icons", Glyph::Sparkle),
+        (Page::Workbench, "Workbench", Glyph::Layers),
     ];
 }
 
@@ -73,11 +76,12 @@ pub(super) struct Pages {
     code: code::State,
     icons: icons::State,
     charts: charts::State,
+    workbench: workbench::State,
 }
 
 impl Pages {
     pub(super) fn show(&mut self, page: Page, ui: &mut egui::Ui, enabled: bool) {
-        match page {
+        ui.add_enabled_ui(enabled, |ui| match page {
             Page::Buttons => buttons::show(ui, &mut self.buttons, enabled),
             Page::Inputs => inputs::show(ui, &mut self.inputs, enabled),
             Page::Choices => choices::show(ui, &mut self.choices, enabled),
@@ -90,6 +94,7 @@ impl Pages {
             Page::Code => code::show(ui, &mut self.code, enabled),
             Page::Icons => icons::show(ui, &mut self.icons, enabled),
             Page::Charts => charts::show(ui, &mut self.charts, enabled),
-        }
+            Page::Workbench => workbench::show(ui, &mut self.workbench, enabled),
+        });
     }
 }

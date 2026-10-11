@@ -60,11 +60,11 @@ focus, disabled and popup rules, rather than pretending an exact reference was o
 
 | Work | Tracking | Proof / next acceptance |
 |---|---|---|
-| Picker, field, tree and segment corrections | [#13](https://github.com/archipel-dev/kit/issues/13), [#14](https://github.com/archipel-dev/kit/issues/14), [#15](https://github.com/archipel-dev/kit/issues/15), [#16](https://github.com/archipel-dev/kit/issues/16) | Behavior/a11y regressions and both-theme snapshots; gallery demonstrations. |
-| Histogram/Sparkline | [PR #12](https://github.com/archipel-dev/kit/pull/12) | Fix count totals and caller-tooltip detection before merging; CI required. |
+| Picker, field, tree and segment corrections | [#13](https://github.com/archipel-dev/kit/issues/13), [#14](https://github.com/archipel-dev/kit/issues/14), [#15](https://github.com/archipel-dev/kit/issues/15), [#16](https://github.com/archipel-dev/kit/issues/16) | Merged in PR #27 with behavior/a11y regressions, both-theme snapshots and gallery demonstrations. |
+| Histogram/Sparkline | [PR #12](https://github.com/archipel-dev/kit/pull/12) | Merged in PR #12 after count-total and caller-tooltip fixes; CI passed. |
 | Streaming, rich cells and numbers | [#20](https://github.com/archipel-dev/kit/issues/20) | Follow-tail releases on user scroll; jump-to-latest; slot cells preserve virtualization; bounded numeric stepping and invalid state. |
-| Shared island shell | [#24](https://github.com/archipel-dev/kit/issues/24) | Common toolbar/title integration and docked island layout; caller-owned state; snapshots, conformance, small-window geometry. SDK/app migrations require follow-up in their own repositories. |
-| Independent gallery pages | [#25](https://github.com/archipel-dev/kit/issues/25) | Each page owns its state and rendering; snapshots unchanged by extraction. |
+| Shared island shell | [#24](https://github.com/archipel-dev/kit/issues/24) | WindowChrome/WindowToolbar and docked Workbench implemented with caller-owned serializable state, keyboard splitters, hide/maximize/restore, both-theme snapshots and small-window audits. Native macOS traffic lights centered in the full toolbar band and tested live. Tool-window stripes, multiple tools/floating modes and SDK/app migrations remain follow-ups. |
+| Independent gallery pages | [#25](https://github.com/archipel-dev/kit/issues/25) | Each page owns its state and rendering; extraction preserved snapshots. The new Workbench entry intentionally extends the gallery navigation. |
 
 Completion requires the contribution checklist, fmt/clippy/workspace tests, inspecting
 changed docs snapshots, and native interaction against the actual gallery. Snapshots are

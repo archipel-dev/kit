@@ -3,6 +3,8 @@
 
 /// Spacing and sizes, in points.
 pub mod size {
+    /// Minimum central work area before docked tool windows are temporarily hidden.
+    pub const WORKBENCH_CENTER_MIN: f32 = 200.0;
     /// Left/right inset of panel content.
     pub const CONTENT_INSET: f32 = 12.0;
     /// Horizontal inset of the selection/hover pill inside a row.
@@ -21,6 +23,10 @@ pub mod size {
     pub const SECONDARY_GAP: f32 = 8.0;
     /// Panel title bar height.
     pub const HEADER_HEIGHT: f32 = 31.0;
+    /// Shared main toolbar / integrated window title height.
+    pub const WINDOW_TOOLBAR_HEIGHT: f32 = 40.0;
+    /// macOS native traffic-light region, including the gap before app content.
+    pub const NATIVE_WINDOW_CONTROLS: f32 = 80.0;
     /// Square icon button edge.
     pub const ICON_BUTTON: f32 = 26.0;
     /// Square edge of a small icon button: actions inside rows and tabs.

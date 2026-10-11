@@ -32,6 +32,8 @@ mod segmented;
 mod split_pane;
 mod status_bar;
 mod text_field;
+mod window;
+mod workbench;
 
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
@@ -56,3 +58,5 @@ pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
 pub use status_bar::StatusBarItem;
 pub use text_field::{TextField, TextFieldOutput};
+pub use window::{WindowChrome, WindowToolbar};
+pub use workbench::{Workbench, WorkbenchRegion, WorkbenchState};
