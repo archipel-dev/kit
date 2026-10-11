@@ -57,6 +57,16 @@ pub mod size {
     pub const STATUS_ITEM_PADDING: f32 = 6.0;
     /// Height of a status bar item's hover pill (21 pt in Android Studio).
     pub const STATUS_ITEM_HEIGHT: f32 = 21.0;
+    /// Height of a one-line banner (Android Studio's editor notifications: 39 pt).
+    pub const BANNER_HEIGHT: f32 = 39.0;
+    /// Space inside a banner before its icon.
+    pub const BANNER_PADDING: f32 = 16.0;
+    /// Space inside a banner after its last action.
+    pub const BANNER_PADDING_END: f32 = 20.0;
+    /// Space between a banner's icon and its text.
+    pub const BANNER_ICON_GAP: f32 = 10.0;
+    /// Space between a banner's action links.
+    pub const BANNER_ACTION_GAP: f32 = 22.0;
     /// Width of a notification card (370 pt in Android Studio).
     pub const NOTIFICATION_WIDTH: f32 = 370.0;
     /// Space inside a notification card.

@@ -110,6 +110,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Tooltip linger | Help tooltips stay about 0.5 s after the pointer leaves, so links in them can be reached | Not reproduced: kit tooltips have no links |
 | Status bar | 30 pt on the frame, 8 pt from the left; items 21 pt hover pills, text `text_secondary`, full strength on hover | `Workbench::status`, `StatusBarItem` |
 | Scroll bars | A 7 pt thumb, 2 pt from the edge, visible at rest (`#3C3D3E` on a dark island), brighter under the pointer (`#565657`); a faint track appears on hover | `tokens::scroll` (no track) |
+| Editor banner | 39 pt, inset 6 pt in the editor island under the tabs; 16 pt before the icon, 10 pt to the text; actions are links 22 pt apart, underlined on hover; 20 pt at the end; info `#233558` / `#2E4D89` | `Banner`, `tokens::size::BANNER_*` |
 | Notifications | 370 pt card, 12 pt padding, icon on the title line, semibold title, body in the text color, links below; dismiss button in the corner on hover | `Toast`, `tokens::size::NOTIFICATION_*` |
 | Navigation path | Crumbs with icons, 4 pt padding, dimmed chevrons between | `Breadcrumbs` |
 

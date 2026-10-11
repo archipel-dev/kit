@@ -1,6 +1,6 @@
 //! Messages: inline banners and toast notifications.
 
-use super::{Button, IconButton};
+use super::IconButton;
 use crate::icons::{self, Glyph};
 use crate::theme::{Colors, Theme, Tint};
 use crate::tokens::{radius, size, typography};
@@ -106,15 +106,26 @@ impl Banner {
         let colors = Theme::colors(ui.ctx());
         let tint = self.severity.tint(&colors);
         let mut out = MessageResponse::default();
+        let line = ui.text_style_height(&egui::TextStyle::Body).max(size::ICON);
+        let vertical = ((size::BANNER_HEIGHT - 2.0 - line) / 2.0).max(0.0) as i8;
         egui::Frame::new()
             .fill(tint.background)
             .stroke(Stroke::new(1.0_f32, tint.border))
             .corner_radius(CornerRadius::same(radius::BANNER))
-            .inner_margin(egui::Margin::symmetric(10, 6))
+            // Measured on Android Studio's editor notifications: 40 pt high, 16 pt before
+            // the icon, 10 pt to the text, links 22 pt apart, 16 pt at the end.
+            .inner_margin(egui::Margin {
+                left: size::BANNER_PADDING as i8,
+                right: size::BANNER_PADDING_END as i8,
+                top: vertical,
+                bottom: vertical,
+            })
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
+                // One text line high: links and the icon do not stretch the row.
+                ui.spacing_mut().interact_size.y = line;
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 8.0;
+                    ui.spacing_mut().item_spacing.x = size::BANNER_ICON_GAP;
                     icons::show(
                         ui,
                         self.severity.icon(),
@@ -122,20 +133,22 @@ impl Banner {
                         self.severity.icon_color(&colors),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.spacing_mut().item_spacing.x = size::BANNER_ACTION_GAP;
                         if self.dismissible
-                            && ui.add(IconButton::new(Glyph::Close, "Dismiss")).clicked()
+                            && ui
+                                .add(IconButton::new(Glyph::Close, "Dismiss").small(true))
+                                .clicked()
                         {
                             out.dismissed = true;
                         }
+                        // Actions are links, as in Android Studio's editor notifications.
                         for (index, label) in self.actions.iter().enumerate().rev() {
-                            if ui
-                                .add(Button::secondary(label.as_str()).small(true).min_width(0.0))
-                                .clicked()
-                            {
+                            if ui.add(super::Link::new(label.as_str())).clicked() {
                                 out.action = Some(index);
                             }
                         }
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.spacing_mut().item_spacing.x = size::BANNER_ICON_GAP;
                             ui.add(
                                 egui::Label::new(
                                     egui::RichText::new(&self.text).color(colors.text),
