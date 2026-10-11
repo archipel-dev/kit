@@ -131,6 +131,7 @@ impl<F: Fn(&str) -> TemplateToken, H: Highlighter> Highlighter for TemplateHighl
 /// The template variable at the caret: where it is, so the caller can replace it, and what
 /// has been typed of its name.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct TemplateAt {
     /// Byte range of the whole token in the text: `{{`, the name and the closing `}}` when
     /// present. [`insert_completion`](Self::insert_completion) replaces exactly this.

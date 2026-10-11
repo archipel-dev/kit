@@ -25,7 +25,7 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 
 | Builder | Effect |
 |---|---|
-| `TextField::new(&mut String)` | Edits the string in place. |
+| `TextField::new(&mut String)` | Edits the string in place. `.id(Id)` sets the text edit's id (like `egui::TextEdit::id`): `response.id == id`, so `ctx.memory_mut(\|m\| m.request_focus(id))` focuses the field. |
 | `TextField::search(&mut String)` | Magnifier icon, "Search" placeholder, clear button. |
 | `.label(str)` | Visible label above the input, also its accessible name. |
 | `.placeholder(str)` | Hint shown while empty. |

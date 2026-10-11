@@ -7,7 +7,7 @@ use crate::theme::Theme;
 use crate::tokens::{size, typography};
 use egui::{
     Align, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo, WidgetType,
-    vec2,
+    pos2, vec2,
 };
 
 /// A text link: underlined on hover, pointer cursor.
@@ -199,17 +199,37 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
 /// });
 /// # });
 /// ```
+///
+/// [`submenu`](Self::submenu) turns the item into a parent: a chevron at the right end, and
+/// a menu to its right that opens on hover, <kbd>→</kbd> or <kbd>Enter</kbd> and closes on
+/// <kbd>←</kbd>, <kbd>Escape</kbd> or when the pointer moves to another item. Clicking an
+/// item of the submenu closes the whole menu.
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::components::MenuItem;
+///
+/// ui.add(MenuItem::new("New").submenu(|ui| {
+///     ui.add(MenuItem::new("File…"));
+///     ui.add(MenuItem::new("Directory…"));
+/// }));
+/// # });
+/// ```
 #[must_use = "add it with `ui.add(item)`"]
-pub struct MenuItem {
+pub struct MenuItem<'a> {
     label: String,
     icon: Option<Icon>,
     shortcut: Option<String>,
     enabled: bool,
     checked: Option<bool>,
     highlighted: bool,
+    submenu: Option<Submenu<'a>>,
 }
 
-impl MenuItem {
+/// The content of a submenu.
+type Submenu<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
+
+impl<'a> MenuItem<'a> {
     /// An item reading `label`.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
@@ -219,7 +239,15 @@ impl MenuItem {
             enabled: true,
             checked: None,
             highlighted: false,
+            submenu: None,
         }
+    }
+
+    /// Makes the item open a submenu drawn by `add` (with [`MenuItem`]s). A chevron
+    /// replaces the shortcut.
+    pub fn submenu(mut self, add: impl FnOnce(&mut Ui) + 'a) -> Self {
+        self.submenu = Some(Box::new(add));
+        self
     }
 
     /// Icon in the left column.
@@ -254,7 +282,7 @@ impl MenuItem {
     }
 }
 
-impl Widget for MenuItem {
+impl Widget for MenuItem<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let (icon, icon_tone) = match (self.checked, self.icon) {
@@ -269,11 +297,19 @@ impl Widget for MenuItem {
             label: &self.label,
             label_tone: Tone::Default,
             secondary: None,
-            trailing: self.shortcut.as_deref(),
+            trailing: self.shortcut.as_deref().filter(|_| self.submenu.is_none()),
         };
         let width = ui
             .available_width()
-            .max(content.min_width(ui) + 10.0)
+            .max(
+                content.min_width(ui)
+                    + 10.0
+                    + if self.submenu.is_some() {
+                        size::ICON
+                    } else {
+                        0.0
+                    },
+            )
             .max(180.0);
         let sense = if self.enabled {
             Sense::click()
@@ -293,6 +329,28 @@ impl Widget for MenuItem {
             state.hovered |= self.highlighted && self.enabled;
             common::row_pill(ui.painter(), rect, state.menu_fill(&colors));
             content.paint(ui, rect, rect.left() + 4.0, state);
+            if self.submenu.is_some() {
+                let chevron = Rect::from_min_size(
+                    pos2(
+                        rect.right() - size::ROW_PILL_INSET - size::ICON,
+                        rect.center().y - size::ICON / 2.0,
+                    ),
+                    vec2(size::ICON, size::ICON),
+                );
+                icons::paint(
+                    ui.painter(),
+                    chevron,
+                    Glyph::ChevronRight,
+                    state.icon(Tone::Icon, &colors),
+                );
+            }
+        }
+        match self.submenu {
+            Some(submenu) if self.enabled => show_submenu(ui, &response, submenu),
+            Some(_) => {}
+            // A click on an item closes the menu it is in.
+            None if response.clicked() => ui.close(),
+            None => {}
         }
         response
     }
@@ -443,4 +501,79 @@ impl PropertyGrid {
             })
             .response
     }
+}
+
+/// Open state of a submenu: whether it is open, and the frame the item was last drawn in
+/// (a menu that was closed forgets which submenu was open).
+#[derive(Clone, Copy, Default)]
+struct SubmenuState {
+    open: bool,
+    seen: u64,
+}
+
+/// Opens, shows and closes the submenu of the item `response`.
+fn show_submenu(ui: &mut Ui, response: &Response, add: Submenu<'_>) {
+    let ctx = ui.ctx().clone();
+    // The state outlives the menu, which stops drawing its items when it closes: nothing
+    // tells the item it was closed. So the item records the frame it was last drawn in, and
+    // an item that was not drawn in the previous frame (its menu was closed and has just
+    // reopened) starts closed instead of showing a stale open submenu.
+    let frame = ctx.cumulative_frame_nr();
+    let mut state: SubmenuState = ctx.data(|d| d.get_temp(response.id)).unwrap_or_default();
+    if frame > state.seen + 1 {
+        state.open = false;
+    }
+    state.seen = frame;
+    let popup_id = response.id.with("submenu");
+    let submenu_rect = ctx.memory(|m| m.area_rect(egui::Id::new(popup_id)));
+
+    // (Not inside `ctx.input`: the context's lock is not reentrant.)
+    let focused = response.has_focus();
+    let keyed = (focused || response.hovered())
+        && ctx.input_mut(|i| {
+            i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowRight)
+                || (focused && i.consume_key(egui::Modifiers::NONE, egui::Key::Enter))
+        });
+    let was_open = state.open;
+    // Hover opens when the pointer moves onto the item, so Left can close it under a still
+    // pointer.
+    let moving = ctx.input(|i| i.pointer.delta() != egui::Vec2::ZERO);
+    if (response.hovered() && moving) || response.clicked() || keyed {
+        state.open = true;
+    }
+    if state.open {
+        // Left closes; so does moving the pointer to something that is neither this item
+        // nor its submenu. (Escape is handled by the popover.)
+        let left = ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowLeft));
+        let away = ctx.input(|i| {
+            i.pointer.delta() != egui::Vec2::ZERO
+                && i.pointer.hover_pos().is_some_and(|p| {
+                    !response.rect.contains(p) && !submenu_rect.is_some_and(|r| r.contains(p))
+                })
+        });
+        if left || away {
+            state.open = false;
+            if left {
+                response.request_focus();
+            }
+        }
+    }
+    let mut open = state.open;
+    let shown = crate::parts::Popover::right_of(popup_id, response)
+        .width(size::SUBMENU_WIDTH)
+        .show(&ctx, &mut open, add);
+    if state.open && !open {
+        // Escape (or a click outside) closed it: keep the item focused for the next key.
+        response.request_focus();
+    }
+    if shown.is_some() && keyed && !was_open {
+        // Into the submenu: the first item is the next widget in the focus order.
+        ui.memory_mut(|m| m.move_focus(egui::FocusDirection::Next));
+    }
+    state.open = open;
+    ctx.data_mut(|d| d.insert_temp(response.id, state));
+    ctx.accesskit_node_builder(response.id, |node| {
+        node.set_expanded(state.open);
+        node.set_has_popup(egui::accesskit::HasPopup::Menu);
+    });
 }

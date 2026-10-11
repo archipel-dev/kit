@@ -7,7 +7,7 @@ use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
 use egui::text::{CCursor, CCursorRange};
-use egui::{Color32, CornerRadius, Rect, Response, Stroke, Ui, Widget, pos2, vec2};
+use egui::{Color32, CornerRadius, Id, Rect, Response, Stroke, Ui, Widget, pos2, vec2};
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -53,10 +53,12 @@ pub struct TextField<'t> {
     enabled: bool,
     monospace: bool,
     width: Option<f32>,
+    id: Option<Id>,
     highlighter: Option<&'t dyn Highlighter>,
 }
 
 /// What [`TextField::show`] reports besides the usual [`Response`].
+#[non_exhaustive]
 pub struct TextFieldOutput {
     /// The text edit's response: `changed()` after every edit, `lost_focus()` on leaving.
     pub response: Response,
@@ -111,6 +113,7 @@ impl<'t> TextField<'t> {
             enabled: true,
             monospace: false,
             width: None,
+            id: None,
             highlighter: None,
         }
     }
@@ -169,6 +172,14 @@ impl<'t> TextField<'t> {
     /// Uses the code font (for paths, URLs, identifiers).
     pub fn monospace(mut self, monospace: bool) -> Self {
         self.monospace = monospace;
+        self
+    }
+
+    /// The id of the text edit, like [`egui::TextEdit::id`]: the response's `id` is exactly
+    /// this one, so a caller can move focus to the field with
+    /// `ctx.memory_mut(|m| m.request_focus(id))` or `ui.memory_mut(...)`.
+    pub fn id(mut self, id: Id) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -235,6 +246,9 @@ impl TextField<'_> {
                 .text_color(common::enabled_text(self.enabled, colors.text, &colors))
                 .desired_width(content.available_width() - clear_width)
                 .margin(vec2(0.0, 0.0));
+            if let Some(id) = self.id {
+                edit = edit.id(id);
+            }
             let font = if self.monospace {
                 edit = edit.font(egui::TextStyle::Monospace);
                 egui::TextStyle::Monospace.resolve(content.style())
