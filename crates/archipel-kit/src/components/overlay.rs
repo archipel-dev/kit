@@ -162,6 +162,8 @@ pub enum DialogAction {
     Primary,
     /// The secondary button.
     Secondary,
+    /// The tertiary button (left-aligned, e.g. "Reset").
+    Tertiary,
     /// <kbd>Escape</kbd>, the close button or a click outside.
     Dismissed,
 }
@@ -199,6 +201,7 @@ pub struct Dialog<'a> {
     icon: Option<Glyph>,
     primary: Option<String>,
     secondary: Option<String>,
+    tertiary: Option<String>,
     danger: bool,
     primary_enabled: bool,
     width: f32,
@@ -215,6 +218,7 @@ impl<'a> Dialog<'a> {
             icon: None,
             primary: None,
             secondary: None,
+            tertiary: None,
             danger: false,
             primary_enabled: true,
             width: 400.0,
@@ -250,6 +254,14 @@ impl<'a> Dialog<'a> {
     /// The secondary button (left of the primary).
     pub fn secondary(mut self, label: impl Into<String>) -> Self {
         self.secondary = Some(label.into());
+        self
+    }
+
+    /// A tertiary action, a secondary-style button at the left edge (e.g. "Reset").
+    /// [`Dialog::show`] reports [`DialogAction::Tertiary`] and the dialog stays yours to
+    /// close or keep open.
+    pub fn tertiary(mut self, label: impl Into<String>) -> Self {
+        self.tertiary = Some(label.into());
         self
     }
 
@@ -356,6 +368,13 @@ impl<'a> Dialog<'a> {
                         && ui.add(Button::secondary(secondary.as_str())).clicked()
                     {
                         action = Some(DialogAction::Secondary);
+                    }
+                    if let Some(tertiary) = &self.tertiary {
+                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                            if ui.add(Button::secondary(tertiary.as_str())).clicked() {
+                                action = Some(DialogAction::Tertiary);
+                            }
+                        });
                     }
                 });
             });

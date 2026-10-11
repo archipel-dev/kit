@@ -24,6 +24,11 @@ and blocked while it is open.
   <img alt="A Select files dialog with a long list: the rows scroll, the title and buttons stay" src="img/dialog_scroll.light.png" width="520">
 </picture>
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dialog_tertiary.dark.png">
+  <img alt="A Select files dialog with Reset at the left edge and Cancel and Open at the right" src="img/dialog_tertiary.light.png" width="520">
+</picture>
+
 ## Usage
 
 The dialog is stateless. Show it while your `open` flag is set, and clear the flag when it
@@ -76,11 +81,12 @@ fn new_branch(ctx: &egui::Context, state: &mut NewBranch) -> Option<String> {
 | `.content(FnOnce(&mut Ui))` | none | Fields or lists below the message. |
 | `.primary(label)` | none | The rightmost, accent button. |
 | `.secondary(label)` | none | The button left of it. |
+| `.tertiary(label)` | none | A secondary-style button at the left edge (e.g. "Reset"); reports `Tertiary`. |
 | `.danger(bool)` | `false` | Makes the primary button red. |
 | `.primary_enabled(bool)` | `true` | Disables the primary button and <kbd>Enter</kbd>. |
 | `.width(f32)` | 400 | Width in points. |
 | `.max_height(f32)` | 80% of the window | Tallest the dialog grows; beyond it the message and content scroll. |
-| `.show(ctx)` | | Returns `Option<DialogAction>`: `Primary`, `Secondary` or `Dismissed`. |
+| `.show(ctx)` | | Returns `Option<DialogAction>`: `Primary`, `Secondary`, `Tertiary` or `Dismissed`. |
 
 ## Behavior
 

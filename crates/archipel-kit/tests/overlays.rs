@@ -408,3 +408,57 @@ fn dialog_short_content_snapshot() {
         },
     );
 }
+
+#[test]
+fn dialog_tertiary_button_reports_and_sits_left() {
+    let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
+        if let Some(done) = tertiary_dialog(ui, 2) {
+            action.get_or_insert(done);
+        }
+    });
+    harness.set_size(egui::vec2(520.0, 400.0));
+    harness.run_steps(3);
+    let reset = harness.get_by_label("Reset").rect();
+    let cancel = harness.get_by_label("Cancel").rect();
+    assert!(reset.right() < cancel.left(), "{reset:?} {cancel:?}");
+    harness.get_by_label("Reset").click();
+    harness.run_steps(3);
+    assert_eq!(*harness.state(), Some(DialogAction::Tertiary));
+}
+
+#[test]
+fn dialog_tertiary_stays_reachable_when_content_scrolls() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = tertiary_dialog(ui, 60);
+    });
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run_steps(3);
+    let reset = harness.get_by_label("Reset").rect();
+    assert!(reset.bottom() <= 300.0 && reset.top() >= 0.0, "{reset:?}");
+}
+
+fn tertiary_dialog(ui: &mut egui::Ui, lines: usize) -> Option<DialogAction> {
+    Dialog::new("Select files")
+        .content(|ui| {
+            for i in 0..lines {
+                ui.label(format!("file-{i}.rs"));
+            }
+        })
+        .tertiary("Reset")
+        .primary("Open")
+        .secondary("Cancel")
+        .show(ui.ctx())
+}
+
+#[test]
+fn dialog_tertiary_snapshot() {
+    testing::snapshot_themes_sized(
+        "dialog_tertiary",
+        common::IMG,
+        egui::vec2(520.0, 300.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            let _ = tertiary_dialog(ui, 60);
+        },
+    );
+}
