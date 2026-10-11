@@ -515,3 +515,36 @@ fn dialog_enter_confirms_with_a_custom_widget_holding_focus() {
     harness.run_steps(2);
     assert_eq!(*harness.state(), Some(DialogAction::Primary));
 }
+
+/// The first frame a dialog is visible must already be final: no jump of the buttons or
+/// of the dialog itself when it opens.
+#[test]
+fn dialog_first_visible_frame_is_the_final_frame() {
+    for theme in [Theme::dark(), Theme::light()] {
+        let mut harness = testing::harness(theme, |ui| {
+            let _ = tertiary_dialog(ui, 3);
+        });
+        harness.set_size(egui::vec2(520.0, 400.0));
+        let mut first = None;
+        for _ in 0..10 {
+            harness.step();
+            if first.is_none() && harness.query_by_label("Open").is_some() {
+                first = Some((
+                    harness.render().expect("render"),
+                    harness.get_by_label("Open").rect(),
+                ));
+            }
+        }
+        let (image, open) = first.expect("the dialog became visible");
+        assert_eq!(
+            harness.get_by_label("Open").rect(),
+            open,
+            "the buttons moved"
+        );
+        let settled = harness.render().expect("render");
+        assert!(
+            image == settled,
+            "the first visible frame differs from the settled one"
+        );
+    }
+}

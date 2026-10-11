@@ -100,14 +100,9 @@ impl Button {
     }
 }
 
-impl Widget for Button {
-    fn ui(self, ui: &mut Ui) -> Response {
-        let colors = Theme::colors(ui.ctx());
-        let height = if self.small {
-            size::CONTROL_HEIGHT_SMALL
-        } else {
-            size::CONTROL_HEIGHT
-        };
+impl Button {
+    /// The width the button will have in `ui`, for laying out neighbours before drawing.
+    pub(crate) fn width(&self, ui: &Ui) -> f32 {
         let padding = if self.small {
             size::BUTTON_PADDING - 4.0
         } else {
@@ -124,7 +119,30 @@ impl Widget for Button {
         } else {
             0.0
         };
-        let width = (galley.size().x + icon_width + 2.0 * padding).max(self.min_width);
+        (galley.size().x + icon_width + 2.0 * padding).max(self.min_width)
+    }
+}
+
+impl Widget for Button {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let colors = Theme::colors(ui.ctx());
+        let height = if self.small {
+            size::CONTROL_HEIGHT_SMALL
+        } else {
+            size::CONTROL_HEIGHT
+        };
+        let galley = self.label.clone().into_galley(
+            ui,
+            Some(egui::TextWrapMode::Extend),
+            f32::INFINITY,
+            egui::TextStyle::Button,
+        );
+        let icon_width = if self.icon.is_some() {
+            size::ICON + size::ICON_TEXT_GAP
+        } else {
+            0.0
+        };
+        let width = self.width(ui);
         let sense = if self.enabled {
             Sense::click()
         } else {

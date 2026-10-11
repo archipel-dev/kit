@@ -295,7 +295,6 @@ impl<'a> Dialog<'a> {
         let id = egui::Id::new(("archipel-dialog", &self.title));
         let frame = Surface::Dialog.frame(ctx);
         let frame_height = frame.total_margin().sum().y;
-        let buttons_id = id.with("buttons");
         let mut action = None;
         let primary_enabled = self.primary_enabled;
         let max_height = self
@@ -368,8 +367,28 @@ impl<'a> Dialog<'a> {
                 ui.add_space(size::SECTION_SPACING);
                 // A fixed-height row: `with_layout` would take all the height left over.
                 // Drawn left to right so Tab follows reading order: tertiary, secondary,
-                // primary. The secondary and primary buttons sit at the right edge: the
-                // spacer uses their width from the last frame.
+                // primary. The secondary and primary buttons sit at the right edge: their
+                // widths are measured first, so the first frame is already right.
+                let secondary = self
+                    .secondary
+                    .as_deref()
+                    .map(|label| Button::secondary(label));
+                let primary = self.primary.as_deref().map(|label| {
+                    let button = if self.danger {
+                        Button::danger(label)
+                    } else {
+                        Button::primary(label)
+                    };
+                    button.enabled(primary_enabled)
+                });
+                let gap = ui.spacing().item_spacing.x;
+                let mut group = 0.0;
+                for button in [&secondary, &primary].into_iter().flatten() {
+                    group += button.width(ui);
+                }
+                if secondary.is_some() && primary.is_some() {
+                    group += gap;
+                }
                 let row = vec2(ui.available_width(), size::CONTROL_HEIGHT);
                 ui.allocate_ui_with_layout(row, Layout::left_to_right(Align::Center), |ui| {
                     if let Some(tertiary) = &self.tertiary
@@ -377,28 +396,16 @@ impl<'a> Dialog<'a> {
                     {
                         action = Some(DialogAction::Tertiary);
                     }
-                    let group: f32 = ui.data(|d| d.get_temp(buttons_id)).unwrap_or(0.0);
                     ui.add_space((ui.available_width() - group).max(0.0));
-                    let start = ui.cursor().min.x;
-                    if let Some(secondary) = &self.secondary
-                        && ui.add(Button::secondary(secondary.as_str())).clicked()
+                    if let Some(secondary) = secondary
+                        && ui.add(secondary).clicked()
                     {
                         action = Some(DialogAction::Secondary);
                     }
-                    if let Some(primary) = &self.primary {
-                        let button = if self.danger {
-                            Button::danger(primary.as_str())
-                        } else {
-                            Button::primary(primary.as_str())
-                        };
-                        if ui.add(button.enabled(primary_enabled)).clicked() {
-                            action = Some(DialogAction::Primary);
-                        }
-                    }
-                    let width = ui.min_rect().right().max(start) - start;
-                    if (width - group).abs() > 0.5 {
-                        ui.data_mut(|d| d.insert_temp(buttons_id, width));
-                        ui.ctx().request_repaint();
+                    if let Some(primary) = primary
+                        && ui.add(primary).clicked()
+                    {
+                        action = Some(DialogAction::Primary);
                     }
                 });
             });
