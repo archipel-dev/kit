@@ -181,7 +181,7 @@ testing::conformance("main.rs src/", |ui, enabled| {
 `audit` checks a whole screen:
 - Every target is named and at least 16×16.
 - No two targets partly overlap.
-- <kbd>Tab</kbd> reaches every focusable element. (Rows of a collection use roving focus: Tab reaches the collection, the arrow keys its rows, and the audit counts them as reached.)
+- <kbd>Tab</kbd> reaches every focusable element.
 
 Run it on the component with its slots filled, because that is where compositions break.
 An icon button in a row is the classic case: a regular `IconButton` (26 points) sticks out

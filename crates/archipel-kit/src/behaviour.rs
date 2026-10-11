@@ -37,6 +37,12 @@ pub trait Behaviour {
     /// Adds the behaviour to `response`, the widget's response this frame, and returns it
     /// (possibly with more sense, e.g. dragging).
     fn attach(self, ui: &mut Ui, response: Response) -> Response;
+
+    /// Whether this behaviour shows a tooltip, so a component with a tooltip of its own
+    /// (an elided label) leaves it to the caller's.
+    fn is_tooltip(&self) -> bool {
+        false
+    }
 }
 
 impl<F: FnOnce(&mut Ui, Response) -> Response> Behaviour for F {
@@ -49,11 +55,17 @@ impl<F: FnOnce(&mut Ui, Response) -> Response> Behaviour for F {
 pub trait BoxedBehaviour {
     /// [`Behaviour::attach`] on a boxed behaviour.
     fn attach_boxed(self: Box<Self>, ui: &mut Ui, response: Response) -> Response;
+    /// [`Behaviour::is_tooltip`] on a boxed behaviour.
+    fn is_tooltip(&self) -> bool;
 }
 
 impl<B: Behaviour> BoxedBehaviour for B {
     fn attach_boxed(self: Box<Self>, ui: &mut Ui, response: Response) -> Response {
         (*self).attach(ui, response)
+    }
+
+    fn is_tooltip(&self) -> bool {
+        Behaviour::is_tooltip(self)
     }
 }
 
@@ -70,6 +82,11 @@ impl<'a> Behaviours<'a> {
     /// Whether there are none.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Whether one of the behaviours is a tooltip.
+    pub fn has_tooltip(&self) -> bool {
+        self.0.iter().any(|b| b.is_tooltip())
     }
 
     /// Attaches every behaviour to `response`, in the order they were added.
@@ -112,11 +129,15 @@ impl Behaviour for Tooltip {
         self.show_for(&response);
         response
     }
+
+    fn is_tooltip(&self) -> bool {
+        true
+    }
 }
 
 /// A context menu on secondary click (right click, or Ctrl+click on macOS), on the popup
-/// surface. Fill it with [`MenuItem`](crate::components::MenuItem)s; a click on an item
-/// closes it.
+/// surface. Fill it with [`MenuItem`](crate::components::MenuItem)s; a click on a `MenuItem`
+/// closes it (call `ui.close()` for other widgets).
 pub struct ContextMenu<'a> {
     add: Box<dyn FnOnce(&mut Ui) + 'a>,
 }
@@ -133,6 +154,9 @@ impl Behaviour for ContextMenu<'_> {
         let frame = Surface::Popup.frame(&response.ctx);
         egui::Popup::context_menu(&response)
             .frame(frame)
+            // Clicks inside stay open so a submenu item can open its menu; a `MenuItem` closes
+            // the menu itself when it is clicked (other widgets: call `ui.close()`).
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
             .show(|ui| (self.add)(ui));
         response
     }

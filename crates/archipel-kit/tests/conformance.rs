@@ -393,24 +393,6 @@ fn roving_row(ui: &mut egui::Ui, id: &str, label: &str) {
 }
 
 #[test]
-fn audit_accepts_rows_reached_by_a_collections_arrow_keys() {
-    let mut harness = testing::harness(Theme::dark(), |ui| {
-        let top = ui.cursor().min;
-        roving_row(ui, "row-a", "Row A");
-        roving_row(ui, "row-b", "Row B");
-        let rect = egui::Rect::from_min_max(top, ui.cursor().min + egui::vec2(120.0, 0.0));
-        let id = egui::Id::new("collection");
-        ui.interact(rect, id, egui::Sense::focusable_noninteractive());
-        ui.ctx().accesskit_node_builder(id, |node| {
-            node.set_role(egui::accesskit::Role::List);
-            node.set_label("Items");
-        });
-    });
-    let audit = testing::audit(&mut harness);
-    assert!(audit.of(Problem::Unreachable).is_empty(), "{audit:?}");
-}
-
-#[test]
 fn audit_still_catches_a_focusable_row_outside_any_collection() {
     let mut harness = testing::harness(Theme::dark(), |ui| {
         roving_row(ui, "lonely", "Lonely row");

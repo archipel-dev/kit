@@ -22,7 +22,7 @@ Use the semantic colors in your own widgets so they follow the theme:
 
 | Group | Colors |
 |---|---|
-| Surfaces | `frame`, `island`, `popup`, `popup_border`, `field`, `notification`, `tooltip` |
+| Surfaces | `frame`, `island`, `popup`, `popup_border`, `field`, `notification`, `tooltip` (`Surface::Chrome` paints the workbench frame, toolbars and the status bar in `frame`) |
 | Text | `text`, `text_strong`, `text_secondary`, `text_placeholder`, `text_disabled`, `text_on_accent`, `text_on_accent_disabled` |
 | Interaction | `hover`, `pressed`, `selection`, `accent`, `focus_ring`, `border`, `separator` |
 | Semantic | `error`, `warning`, `success`, `link`, `banner_*` |
