@@ -7,7 +7,7 @@
 //! | Inputs | [`TextField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
-//! | Collections | [`VirtualList`], [`Tree`], [`Table`] |
+//! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
@@ -31,7 +31,8 @@ pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
 pub use choice::{Checkbox, Radio, Toggle};
 pub use collections::{
-    Cell, CollectionResponse, Column, SortOrder, Table, Tree, TreeRow, VirtualList,
+    Cell, CellEdit, CollectionResponse, Column, SortOrder, Table, Tree, TreeRow, TreeTable,
+    VirtualList,
 };
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
 pub use icon_button::IconButton;

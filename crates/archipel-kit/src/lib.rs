@@ -66,6 +66,7 @@ mod docs {
         Behaviours = "behaviours.md";
         BuildingComponents = "building-components.md";
         Collections = "components/collections.md";
+        TreeTable = "components/tree-table.md";
         Tooltip = "components/tooltip.md";
         DialogPage = "components/dialog.md";
         IconKit = "icons/README.md";

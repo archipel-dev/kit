@@ -1,5 +1,7 @@
 # VirtualList, Tree, Table
 
+> Need a tree with columns, or editable cells? See [`TreeTable`](tree-table.md).
+
 Collections that draw **only the visible rows**, so they stay fast with hundreds of
 thousands of items: request history, project and structure trees, query results.
 
@@ -120,7 +122,7 @@ fn results(
 | `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
 | `Cell::new(text)` | `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
-| `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked` |
+| `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited` |
 
 ## Behavior
 
@@ -140,5 +142,5 @@ Rows are selectable labels, named by their text, with their selected state. A ta
 named by its cells joined with commas, for example `GET, /api/users/1, 201, 49 ms`. Table
 headers are buttons. Only visible rows are in the accessibility tree, like the pixels.
 
-Source: [`components/collections.rs`](../../crates/archipel-kit/src/components/collections.rs) ·
+Source: [`components/collections/`](../../crates/archipel-kit/src/components/collections/mod.rs) ·
 Tests: [`tests/collections.rs`](../../crates/archipel-kit/tests/collections.rs)

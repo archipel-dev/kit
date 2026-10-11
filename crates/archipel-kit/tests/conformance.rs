@@ -4,10 +4,10 @@
 mod common;
 
 use archipel_kit::components::{
-    Button, Checkbox, Column, Dropdown, IconButton, Link, ListRow, MenuItem, Radio,
-    SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow, VirtualList,
+    Button, Cell, Checkbox, Column, Dropdown, IconButton, Link, ListRow, MenuItem, Radio,
+    SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow, TreeTable, VirtualList,
 };
-use archipel_kit::testing::{self, Problem};
+use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
 
 #[test]
@@ -109,6 +109,63 @@ fn dropdown_conforms() {
     .run();
 }
 
+fn tree_table_rows() -> Vec<TreeRow> {
+    vec![
+        TreeRow::new("name", 0).editable(true),
+        TreeRow::new("address", 0).icon(Glyph::Folder).parent(true),
+        TreeRow::new("city", 1),
+    ]
+}
+
+/// The collection holds the focus as a whole (Tab reaches it once); its rows are pointer
+/// targets and its keys are the arrows, not Enter/Space.
+#[test]
+fn tree_table_conforms() {
+    let rows = tree_table_rows();
+    let mut columns = vec![Column::new("Key", 120.0), Column::new("Value", 120.0)];
+    let mut selected = None;
+    testing::conformance("Document", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            TreeTable::new("doc", &mut columns, &rows, &mut selected)
+                .name("Document")
+                .height(96.0)
+                .show(ui, |_, _| Cell::new("value").editable(true))
+                .response
+        })
+        .inner
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+/// The audit passes at rest, and with the editor open the field is named, big enough and
+/// clear of other targets.
+#[test]
+fn tree_table_passes_the_audit_while_editing() {
+    let rows = tree_table_rows();
+    let mut columns = vec![Column::new("Key", 120.0), Column::new("Value", 120.0)];
+    let mut selected = Some(0);
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = TreeTable::new("doc", &mut columns, &rows, &mut selected)
+            .name("Document")
+            .height(96.0)
+            .show(ui, |_, _| Cell::new("value").editable(true));
+    });
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    harness.get_by_label("Document").focus();
+    harness.key_press(egui::Key::F2);
+    harness.run();
+    assert!(harness.query_by_label("Edit Key").is_some());
+    // Tab leaves (and so commits) the field, so reachability is not meaningful while it is
+    // open; the field must still be named, big enough and clear of the other targets.
+    let audit = testing::audit(&mut harness);
+    for problem in [Problem::MissingName, Problem::SmallTarget, Problem::Overlap] {
+        assert!(audit.of(problem).is_empty(), "{problem:?}: {audit:?}");
+    }
+}
+
 #[test]
 fn screens_with_navigation_and_collections_pass_the_audit() {
     let mut selected = 1;
@@ -125,6 +182,8 @@ fn screens_with_navigation_and_collections_pass_the_audit() {
         Column::new("Size", 80.0).right(),
     ];
     let mut table_row = None;
+    let mut tree_columns = columns.clone();
+    let mut tree_table_row = None;
     let mut harness = testing::harness(Theme::dark(), |ui| {
         ui.add(SegmentedControl::new(
             &mut selected,
@@ -139,6 +198,9 @@ fn screens_with_navigation_and_collections_pass_the_audit() {
             .show(ui);
         let _ = Table::new("table", &mut columns, 20, &mut table_row)
             .height(72.0)
+            .show(ui, |r, c| format!("{r}:{c}").into());
+        let _ = TreeTable::new("tree-table", &mut tree_columns, &rows, &mut tree_table_row)
+            .height(48.0)
             .show(ui, |r, c| format!("{r}:{c}").into());
     });
     testing::audit(&mut harness).assert_clean();
