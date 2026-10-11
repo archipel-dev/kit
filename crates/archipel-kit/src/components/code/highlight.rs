@@ -43,18 +43,18 @@ impl TokenKind {
     pub fn color(self, colors: &EditorColors) -> Color32 {
         match self {
             TokenKind::Plain => colors.text,
-            TokenKind::Keyword => colors.syntax_keyword,
-            TokenKind::String => colors.syntax_string,
-            TokenKind::Number => colors.syntax_number,
-            TokenKind::Comment => colors.syntax_comment,
-            TokenKind::Punctuation => colors.syntax_punctuation,
-            TokenKind::Property => colors.syntax_property,
-            TokenKind::Tag => colors.syntax_tag,
-            TokenKind::Attribute => colors.syntax_attribute,
-            TokenKind::Variable => colors.syntax_variable,
-            TokenKind::Error | TokenKind::Unresolved => colors.syntax_error,
-            TokenKind::Resolved => colors.syntax_variable,
-            TokenKind::Secret => colors.syntax_string,
+            TokenKind::Keyword => colors.keyword,
+            TokenKind::String => colors.string,
+            TokenKind::Number => colors.number,
+            TokenKind::Comment => colors.comment,
+            TokenKind::Punctuation => colors.punctuation,
+            TokenKind::Property => colors.property,
+            TokenKind::Tag => colors.tag,
+            TokenKind::Attribute => colors.attribute,
+            TokenKind::Variable => colors.variable,
+            TokenKind::Error | TokenKind::Unresolved => colors.invalid,
+            TokenKind::Resolved => colors.variable,
+            TokenKind::Secret => colors.string,
         }
     }
 }

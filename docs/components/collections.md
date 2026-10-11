@@ -1,5 +1,7 @@
 # VirtualList, Tree, Table
 
+> Need a tree with columns, or editable cells? See [`TreeTable`](tree-table.md).
+
 Collections that draw **only the visible rows**, so they stay fast with hundreds of
 thousands of items: request history, project and structure trees, query results.
 
@@ -17,6 +19,70 @@ thousands of items: request history, project and structure trees, query results.
   <source media="(prefers-color-scheme: dark)" srcset="img/table.dark.png">
   <img alt="A table of requests with method, URL, colored status and time, sorted by time" src="img/table.light.png" width="460">
 </picture>
+
+### Table: edit cells and reorder columns
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/table_edit.dark.png">
+  <img alt="A table with the URL cell of the selected row open for editing" src="img/table_edit.light.png" width="460">
+</picture>
+
+Two opt-in extensions, both backward compatible (a table that uses neither behaves as before):
+
+- **Inline edit**, the same as in [`TreeTable`](tree-table.md): mark cells `Cell::editable(true)`;
+  <kbd>F2</kbd>, <kbd>Enter</kbd> or a double-click opens a field in the cell, <kbd>Enter</kbd>
+  commits, <kbd>Escape</kbd> cancels. A commit arrives as `CollectionResponse::edited`
+  (`CellEdit` with row, column and text). The table never changes your data.
+- **Column reorder**: `Table::reorderable(true)` makes the headers drag sources and drop
+  targets (`behaviour::DragSource` / `DropTarget`). Dropping a header on another one reports
+  the new order in `CollectionResponse::column_order` (`order[new_position] = old_index`).
+  You own the column order: apply it to your columns, and map the column indices your cell
+  callback receives (they are positions) to your data. Clicking still sorts and the edge
+  still resizes.
+
+```rust
+use archipel_kit::components::{Cell, Column, Table};
+use archipel_kit::egui;
+
+struct Grid {
+    columns: Vec<Column>,
+    /// The data column shown at each position.
+    order: Vec<usize>,
+    selected: Option<usize>,
+    names: Vec<String>,
+}
+
+fn grid(ui: &mut egui::Ui, grid: &mut Grid) {
+    let order = grid.order.clone();
+    let names = grid.names.clone();
+    let out = Table::new("grid", &mut grid.columns, names.len(), &mut grid.selected)
+        .reorderable(true)
+        .show(ui, |row, position| match order[position] {
+            0 => Cell::new(row.to_string()).muted(),
+            _ => Cell::new(names[row].as_str()).editable(true),
+        });
+    if let Some(edit) = out.edited {
+        grid.names[edit.row] = edit.text;
+    }
+    if let Some(new) = out.column_order {
+        grid.columns = new.iter().map(|&i| grid.columns[i].clone()).collect();
+        grid.order = new.iter().map(|&i| grid.order[i]).collect();
+    }
+}
+```
+
+### Typed values
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/table_value_kinds.dark.png">
+  <img alt="A table with one row per value kind, each value in its editor syntax color" src="img/table_value_kinds.light.png" width="460">
+</picture>
+
+`Cell::value_kind(ValueKind)` colors a cell like the code editor colors the same kind of value
+(`String`, `Number`, `Boolean`, `Null`, `Date`, `Id`, `Binary`, `Key`, `Punctuation`; see
+[theming](../theming.md)): for document and JSON views, in `Table` and `TreeTable`. Like
+`.tone(Tone)` the color stays when the row is selected, and the last of the two calls wins.
+Use a tone for meaning (a 500 in red) and a kind for the type of data.
 
 ## The model
 
@@ -117,10 +183,10 @@ fn results(
 | `VirtualList::new(id, len, &mut selected)` | `.height(f32)`, `.show(ui, \|index\| ListRow)` |
 | `Tree::new(id, &rows, &mut selected)` | `.height(f32)`, `.show(ui)` |
 | `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.secondary(str)` |
-| `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
+| `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.reorderable(bool)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
-| `Cell::new(text)` | `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
-| `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked` |
+| `Cell::new(text)` | `.value_kind(ValueKind)`, `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
+| `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited`, `column_order` |
 
 ## Behavior
 
@@ -130,7 +196,10 @@ fn results(
   a double-click on a parent toggle it too. Each of these reports `toggled`.
 - **Tables.** Clicking a header reports `sort_clicked`. You sort the data and pass the order
   back with `.sort`, which draws the arrow. Drag a header edge to resize a column (minimum
-  40 points). Right-aligned columns are for numbers. Cells clip at the column edge.
+  40 points). Right-aligned columns are for numbers. Cells clip at the column edge. With
+  `.reorderable(true)` the header shows the open hand on hover and the closed hand while
+  dragging (the kit's drag cursors) instead of the pointing hand, and the drop target is
+  outlined.
 - **Rows** are 24 points high. Only the rows in view are laid out and painted, and the scroll
   bar reflects all rows.
 
@@ -140,5 +209,5 @@ Rows are selectable labels, named by their text, with their selected state. A ta
 named by its cells joined with commas, for example `GET, /api/users/1, 201, 49 ms`. Table
 headers are buttons. Only visible rows are in the accessibility tree, like the pixels.
 
-Source: [`components/collections.rs`](../../crates/archipel-kit/src/components/collections.rs) ·
+Source: [`components/collections/`](../../crates/archipel-kit/src/components/collections/mod.rs) ·
 Tests: [`tests/collections.rs`](../../crates/archipel-kit/tests/collections.rs)

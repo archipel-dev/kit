@@ -137,7 +137,7 @@ behind a "too large to edit" notice.
 
 A `Highlighter` maps a line to styled `Span`s by `TokenKind` (keyword, string, number, comment,
 punctuation, property, tag, attribute, variable, error). Colors come from the theme's
-`EditorColors` (`syntax_keyword`, `syntax_string`, … in dark and light), never from the
+`EditorColors` (`keyword`, `string`, … in dark and light), never from the
 highlighter. Built in: `Json`, `Xml` (also HTML), `GraphQl`, `JavaScript` and `PlainText`, all
 small hand-written tokenizers without dependencies. Plug in your own, for example the IDE's
 tree-sitter:

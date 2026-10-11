@@ -41,7 +41,7 @@ pub mod testing;
 
 pub use egui;
 pub use icons::{Glyph, Icon};
-pub use parts::Tone;
+pub use parts::{Tone, ValueKind};
 pub use style::install;
 pub use theme::Theme;
 
@@ -66,6 +66,7 @@ mod docs {
         Behaviours = "behaviours.md";
         BuildingComponents = "building-components.md";
         Collections = "components/collections.md";
+        TreeTable = "components/tree-table.md";
         Tooltip = "components/tooltip.md";
         DialogPage = "components/dialog.md";
         IconKit = "icons/README.md";
@@ -83,6 +84,7 @@ mod docs {
         Panel = "components/panel.md";
         Progress = "components/progress.md";
         SegmentedControl = "components/segmented-control.md";
+        SplitPane = "components/split-pane.md";
         TabBar = "components/tab-bar.md";
         TextField = "components/text-field.md";
         Toast = "components/toast.md";

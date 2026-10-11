@@ -651,7 +651,7 @@ impl<'a> View<'a> {
                             egui::Align2::CENTER_CENTER,
                             "…",
                             font.clone(),
-                            editor.syntax_comment,
+                            editor.comment,
                         );
                     }
                     painted.push(RowPaint {

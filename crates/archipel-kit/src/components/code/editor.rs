@@ -252,9 +252,9 @@ impl Widget for CodeEditor<'_> {
             enabled,
             highlighter.name(),
             editor.text,
-            editor.syntax_keyword,
-            editor.syntax_string,
-            editor.syntax_comment,
+            editor.keyword,
+            editor.string,
+            editor.comment,
             font.size.to_bits(),
         ));
         let mut layouter = |ui: &Ui, buf: &dyn TextBuffer, wrap_width: f32| -> Arc<egui::Galley> {

@@ -6,7 +6,7 @@ use archipel_kit::components::{
     Avatar, Counter, IconButton, Kbd, Panel, PropertyGrid, SectionHeader, Separator, Tag,
 };
 use archipel_kit::testing::{self, Queryable};
-use archipel_kit::{Glyph, Theme, Tone};
+use archipel_kit::{Glyph, Theme, Tone, ValueKind, tokens};
 
 #[test]
 fn badges_snapshot() {
@@ -84,4 +84,55 @@ fn panel_title_and_actions_are_accessible() {
     harness.get_by_label("Copy").click();
     harness.run();
     assert!(*harness.state());
+}
+
+#[test]
+fn data_colors_snapshot() {
+    testing::snapshot_themes("data-colors", common::IMG, |ui| {
+        ui.set_width(360.0);
+        ui.add(SectionHeader::new("Data colors"));
+        let theme = Theme::current(ui.ctx());
+        ui.horizontal_wrapped(|ui| {
+            for kind in ValueKind::ALL {
+                ui.label(
+                    egui::RichText::new(kind.label())
+                        .monospace()
+                        .color(kind.color(&theme)),
+                );
+            }
+        });
+        ui.horizontal(|ui| {
+            for index in 0..8 {
+                swatch(ui, theme.chart(index));
+            }
+        });
+        ui.horizontal(|ui| {
+            for step in 0..=10 {
+                swatch(ui, theme.colors.ramp(step as f32 / 10.0));
+            }
+        });
+        ui.horizontal(|ui| {
+            for method in ["GET", "POST", "PUT", "PATCH", "DELETE"] {
+                ui.add(Tag::new(method).tone(Tone::method(method)));
+            }
+            for code in [200, 301, 404, 503] {
+                ui.add(Tag::new(code.to_string()).tone(Tone::status(code)));
+            }
+        });
+    });
+}
+
+fn swatch(ui: &mut egui::Ui, color: egui::Color32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), egui::Sense::hover());
+    ui.painter()
+        .rect_filled(rect, tokens::radius::CONTROL, color);
+}
+
+#[test]
+fn value_kinds_follow_the_theme_of_the_context() {
+    let dark = testing::harness(Theme::dark(), |_| {});
+    let light = testing::harness(Theme::light(), |_| {});
+    let kind = ValueKind::String;
+    assert_eq!(kind.resolve(&dark.ctx), Theme::dark().editor.string);
+    assert_eq!(kind.resolve(&light.ctx), Theme::light().editor.string);
 }
