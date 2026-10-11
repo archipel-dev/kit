@@ -128,6 +128,34 @@ pub fn snapshot_themes(name: &str, dir: impl AsRef<Path>, mut app: impl FnMut(&m
     results.unwrap();
 }
 
+/// Like [`snapshot_themes`], with `act` run on each harness before the image is taken: press
+/// keys, focus a widget, type, for states a still image can't be built from (an open find
+/// bar, a selection). The canvas re-fits its content after `act`.
+///
+/// # Panics
+/// If an image differs from its snapshot (or none exists and `UPDATE_SNAPSHOTS` is unset).
+#[track_caller]
+pub fn snapshot_themes_after(
+    name: &str,
+    dir: impl AsRef<Path>,
+    mut app: impl FnMut(&mut egui::Ui),
+    mut act: impl FnMut(&mut Harness<'_, ()>),
+) {
+    let mut results = SnapshotResults::new();
+    for theme in [Theme::dark(), Theme::light()] {
+        let suffix = if theme.dark { "dark" } else { "light" };
+        let mut harness = build(theme, (), |ui, _| app(ui), SNAPSHOT_SCALE);
+        act(&mut harness);
+        harness.run_ok();
+        harness.fit_contents();
+        results.add(harness.try_snapshot_options(
+            format!("{name}.{suffix}"),
+            &SnapshotOptions::new().output_path(dir.as_ref()),
+        ));
+    }
+    results.unwrap();
+}
+
 /// Like [`snapshot_themes`] on a canvas of fixed `size` (in points) instead of one fitted
 /// to the content: for overlays such as dialogs, which float above the island.
 ///

@@ -74,6 +74,7 @@ mod docs {
         Banner = "components/banner.md";
         Button = "components/button.md";
         Choice = "components/choice.md";
+        Code = "components/code.md";
         Dropdown = "components/dropdown.md";
         EmptyState = "components/empty-state.md";
         IconButton = "components/icon-button.md";
