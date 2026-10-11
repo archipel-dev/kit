@@ -57,6 +57,8 @@ pub mod size {
     pub const SPLIT_GRAB: f32 = 2.0;
     /// Distance an arrow key moves a split pane's divider.
     pub const SPLIT_KEY_STEP: f32 = 16.0;
+    /// How far past its minimum size a split pane is dragged before it collapses.
+    pub const SPLIT_COLLAPSE: f32 = 40.0;
     /// Default minimum size of each side of a split pane.
     pub const SPLIT_MIN_PANE: f32 = 120.0;
 
