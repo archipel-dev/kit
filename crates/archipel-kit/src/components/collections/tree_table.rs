@@ -269,7 +269,22 @@ impl<'a> TreeTable<'a> {
                         };
                         icons::paint(clip.painter(), chevron, glyph, colors.text_secondary);
                     }
-                    let content_x = chevron.right() + 2.0;
+                    let mut content_x = chevron.right() + 2.0;
+                    if tree_row.busy {
+                        let name = format!("Loading {}", tree_row.label);
+                        crate::parts::Slot::ui_width(size::ICON, move |ui| {
+                            ui.add(crate::components::Spinner::new().label(name));
+                        })
+                        .show(
+                            &mut clip,
+                            Rect::from_min_size(
+                                pos2(content_x, key_rect.top()),
+                                vec2(size::ICON, key_rect.height()),
+                            ),
+                            state,
+                        );
+                        content_x += size::ICON + size::ROW_LEADING_GAP;
+                    }
                     let label_x = content_x
                         + if tree_row.icon.is_some() {
                             size::ICON + size::ICON_TEXT_GAP
@@ -279,6 +294,7 @@ impl<'a> TreeTable<'a> {
                     let key_editing = editing.is_editing(index, 0);
                     let content = RowContent {
                         icon: tree_row.icon,
+                        icon_tone: tree_row.icon_tone,
                         label: if key_editing { "" } else { &tree_row.label },
                         secondary: tree_row.secondary.as_deref().filter(|_| !key_editing),
                         ..RowContent::new("")

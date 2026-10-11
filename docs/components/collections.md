@@ -1,5 +1,13 @@
 # VirtualList, Tree, Table
 
+Loading tree rows retain selection and expansion keys while showing a named spinner.
+Double-clicking a parent toggles it and gives the tree keyboard focus.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/tree_busy.dark.png">
+  <img alt="A loading tree parent with a themed icon" src="img/tree_busy.light.png" width="360">
+</picture>
+
 > Need a tree with columns, or editable cells? See [`TreeTable`](tree-table.md).
 
 Collections that draw **only the visible rows**, so they stay fast with hundreds of
@@ -183,7 +191,7 @@ fn results(
 | `VirtualList::new(id, len, &mut selected)` | `.height(f32)`, `.show(ui, \|index\| ListRow)` |
 | `VirtualList` as a tree | Rows with `.expanded(Some(..))` report `toggled` on <kbd>→</kbd> (collapsed) and <kbd>←</kbd> (expanded). |
 | `Tree::new(id, &rows, &mut selected)` | `.height(f32)`, `.show(ui)`, `.show_with(ui, \|index, row\| row)` |
-| `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.secondary(str)` |
+| `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.icon_tone(Tone)`, `.busy(bool)`, `.secondary(str)` |
 | `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.reorderable(bool)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
 | `Cell::new(text)` | `.value_kind(ValueKind)`, `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
