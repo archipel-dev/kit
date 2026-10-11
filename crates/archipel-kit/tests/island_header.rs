@@ -232,3 +232,52 @@ fn the_title_switches_views_like_project_in_android_studio() {
     h.run();
     assert!(h.query_by_label("Tests").is_some());
 }
+
+#[test]
+fn tabs_that_do_not_fit_go_behind_a_chevron() {
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(320.0, 200.0))
+        .build_state(
+            |ctx, selected| {
+                archipel_kit::install(ctx, Theme::dark());
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    let tabs: Vec<String> =
+                        ["Params", "Body", "Auth", "Headers", "Tests", "Settings"]
+                            .map(String::from)
+                            .to_vec();
+                    Panel::new("Request")
+                        .tabs(&tabs, selected)
+                        .actions(|ui| {
+                            ui.add(archipel_kit::components::IconButton::new(
+                                archipel_kit::Glyph::Code,
+                                "Generate code",
+                            ));
+                        })
+                        .show(ui, |ui| {
+                            ui.label("body");
+                        });
+                });
+            },
+            0usize,
+        );
+    h.run();
+    assert!(
+        h.query_by_label("Settings").is_none(),
+        "Settings does not fit"
+    );
+    let audit = testing::audit(&mut h);
+    let overlaps: Vec<_> = audit
+        .findings
+        .iter()
+        .filter(|f| f.problem == testing::Problem::Overlap)
+        .collect();
+    assert!(overlaps.is_empty(), "{overlaps:?}");
+    h.get_by_label("More tabs").click();
+    h.run();
+    h.get_by_label("Settings").click();
+    h.run();
+    h.run();
+    assert_eq!(*h.state(), 5);
+    // The selected tab is shown in the header now.
+    assert!(h.query_by_label("Settings").is_some());
+}

@@ -311,14 +311,28 @@ impl<'a> Panel<'a> {
                     }
                     if let Some((tabs, selected)) = self.tabs {
                         let clip = content_rect.intersect(ui.clip_rect());
-                        let mut x = left + title_width + tab::CONTENT_TITLE_GAP;
-                        for (index, label) in tabs.iter().enumerate() {
-                            let galley = common::galley(
-                                ui,
-                                label.as_str(),
-                                typography::body(typography::BODY),
-                            );
-                            let width = galley.size().x + 2.0 * tab::CONTENT_PADDING;
+                        let start = left + title_width + tab::CONTENT_TITLE_GAP;
+                        let measured: Vec<_> = tabs
+                            .iter()
+                            .map(|label| {
+                                let galley = common::galley(
+                                    ui,
+                                    label.as_str(),
+                                    typography::body(typography::BODY),
+                                );
+                                let width = galley.size().x + 2.0 * tab::CONTENT_PADDING;
+                                (galley, width)
+                            })
+                            .collect();
+                        let visible = visible_tabs(
+                            &measured.iter().map(|(_, w)| *w).collect::<Vec<_>>(),
+                            *selected,
+                            content_rect.right() - start,
+                        );
+                        let mut x = start;
+                        for &index in &visible {
+                            let (galley, width) = measured[index].clone();
+                            let label = &tabs[index];
                             let rect = egui::Rect::from_center_size(
                                 egui::pos2(x + width / 2.0, header.center().y),
                                 vec2(width, tab::HEIGHT),
@@ -370,6 +384,45 @@ impl<'a> Panel<'a> {
                                 galley,
                                 colors.text,
                             );
+                        }
+                        // Tabs that don't fit are listed behind a chevron after the last one,
+                        // as in Android Studio.
+                        if visible.len() < tabs.len() {
+                            let rect = egui::Rect::from_min_size(
+                                egui::pos2(x, header.center().y - size::ICON_BUTTON / 2.0),
+                                vec2(size::ICON_BUTTON, size::ICON_BUTTON),
+                            );
+                            let more = ui.put(
+                                rect,
+                                super::IconButton::new(Glyph::ChevronDown, "More tabs")
+                                    .with(Tooltip::new("More tabs")),
+                            );
+                            let open_id = panel_id.with("more-tabs");
+                            let mut open: bool =
+                                ui.ctx().data(|d| d.get_temp(open_id)).unwrap_or(false);
+                            if more.clicked() {
+                                open = !open;
+                            }
+                            let mut picked = None;
+                            crate::parts::Popover::below(open_id.with("popup"), &more).show(
+                                ui.ctx(),
+                                &mut open,
+                                |ui| {
+                                    for (index, label) in tabs.iter().enumerate() {
+                                        if visible.contains(&index) {
+                                            continue;
+                                        }
+                                        if ui.add(super::MenuItem::new(label.as_str())).clicked() {
+                                            picked = Some(index);
+                                        }
+                                    }
+                                },
+                            );
+                            if let Some(index) = picked {
+                                *selected = index;
+                                open = false;
+                            }
+                            ui.ctx().data_mut(|d| d.insert_temp(open_id, open));
                         }
                     }
                 }
@@ -568,5 +621,73 @@ impl Widget for Separator {
                 .hline(rect.x_range(), rect.center().y.round() + 0.5, stroke);
         }
         response
+    }
+}
+
+/// The content tabs that fit in `room` (their `widths` are known), in order, with room for
+/// the overflow chevron when some don't; the selected tab is always among them, in the
+/// place of the last one that fits.
+fn visible_tabs(widths: &[f32], selected: usize, room: f32) -> Vec<usize> {
+    let total: f32 =
+        widths.iter().sum::<f32>() + tab::CONTENT_GAP * widths.len().saturating_sub(1) as f32;
+    if total <= room {
+        return (0..widths.len()).collect();
+    }
+    let room = room - size::ICON_BUTTON - tab::CONTENT_GAP;
+    let mut shown = Vec::new();
+    let mut used = 0.0;
+    for (index, width) in widths.iter().enumerate() {
+        let next = used
+            + width
+            + if shown.is_empty() {
+                0.0
+            } else {
+                tab::CONTENT_GAP
+            };
+        if next > room {
+            break;
+        }
+        used = next;
+        shown.push(index);
+    }
+    if !shown.contains(&selected) && selected < widths.len() {
+        // Make room for the selected tab at the end.
+        while !shown.is_empty() {
+            let extra = widths[selected]
+                + if shown.is_empty() {
+                    0.0
+                } else {
+                    tab::CONTENT_GAP
+                };
+            if used + extra <= room {
+                break;
+            }
+            if let Some(last) = shown.pop() {
+                used -= widths[last]
+                    + if shown.is_empty() {
+                        0.0
+                    } else {
+                        tab::CONTENT_GAP
+                    };
+            }
+        }
+        shown.push(selected);
+    }
+    shown
+}
+
+#[cfg(test)]
+mod visible_tab_tests {
+    use super::*;
+
+    #[test]
+    fn all_fit_or_the_selected_one_stays() {
+        let widths = [60.0, 60.0, 60.0, 60.0];
+        assert_eq!(visible_tabs(&widths, 0, 1000.0), vec![0, 1, 2, 3]);
+        let few = visible_tabs(&widths, 0, 200.0);
+        assert!(few.len() < 4 && few[0] == 0);
+        let with_selected = visible_tabs(&widths, 3, 200.0);
+        assert_eq!(with_selected.last(), Some(&3));
+        assert!(with_selected.len() < 4);
     }
 }

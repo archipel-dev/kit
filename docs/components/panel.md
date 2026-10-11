@@ -122,7 +122,9 @@ Panel::new("Inspector")
 
 `Panel::tabs(&tabs, &mut selected)` puts content tabs after the title, like Android Studio's
 Problems tool window ("File", "Project Errors"), and draws the header hairline. Measured
-there: 22 pt after the title, 10 pt inside each tab, 10 pt between tabs, 28 pt pills. The
+there: 22 pt after the title, 10 pt inside each tab, 10 pt between tabs, 28 pt pills. Tabs
+that don't fit before the header actions go behind a "More tabs" chevron (the selected one
+stays in the header). The
 selected tab is blue while the tool window is active (keyboard focus inside it) and outlined
 gray otherwise; the others show a hover fill.
 
