@@ -9,12 +9,14 @@
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
+//! | Code | [`CodeView`], [`CodeEditor`], and the [`code::Highlighter`]s |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
 mod button;
 mod choice;
+pub mod code;
 mod collections;
 pub(crate) mod common;
 mod feedback;
@@ -30,6 +32,7 @@ mod text_field;
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
 pub use choice::{Checkbox, Radio, Toggle};
+pub use code::{CodeEditor, CodeView};
 pub use collections::{
     Cell, CollectionResponse, Column, SortOrder, Table, Tree, TreeRow, VirtualList,
 };

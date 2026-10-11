@@ -224,6 +224,28 @@ pub struct EditorColors {
     pub error_stripe: Color32,
     /// Warning marks in the scrollbar stripe.
     pub warning_stripe: Color32,
+    /// Keywords.
+    pub syntax_keyword: Color32,
+    /// String literals.
+    pub syntax_string: Color32,
+    /// Numbers and constants.
+    pub syntax_number: Color32,
+    /// Comments.
+    pub syntax_comment: Color32,
+    /// Brackets, commas and operators.
+    pub syntax_punctuation: Color32,
+    /// Property names: JSON keys, object fields.
+    pub syntax_property: Color32,
+    /// Markup tags.
+    pub syntax_tag: Color32,
+    /// Markup attributes.
+    pub syntax_attribute: Color32,
+    /// Variables and identifiers with meaning.
+    pub syntax_variable: Color32,
+    /// Invalid or unterminated tokens.
+    pub syntax_error: Color32,
+    /// The current find match, stronger than `search_result`.
+    pub search_result_current: Color32,
 }
 
 impl Default for Theme {
@@ -328,6 +350,17 @@ impl Theme {
                 inline_value: rgb(0x666D75),
                 error_stripe: rgb(0xD64D5B),
                 warning_stripe: rgb(0xC29E4A),
+                syntax_keyword: rgb(0xCF8E6D),
+                syntax_string: rgb(0x6AAB73),
+                syntax_number: rgb(0x2AACB8),
+                syntax_comment: rgb(0x7A7E85),
+                syntax_punctuation: rgb(0xA1A3AB),
+                syntax_property: rgb(0xC77DBB),
+                syntax_tag: rgb(0xE8BA36),
+                syntax_attribute: rgb(0xB3AE60),
+                syntax_variable: rgb(0x56A8F5),
+                syntax_error: rgb(0xFA6675),
+                search_result_current: rgb(0x1F7C94),
             },
         }
     }
@@ -427,6 +460,17 @@ impl Theme {
                 inline_value: rgb(0x868686),
                 error_stripe: rgb(0xCF5B56),
                 warning_stripe: rgb(0xF2BF57),
+                syntax_keyword: rgb(0x0033B3),
+                syntax_string: rgb(0x067D17),
+                syntax_number: rgb(0x1750EB),
+                syntax_comment: rgb(0x8C8C8C),
+                syntax_punctuation: rgb(0x5C5F6B),
+                syntax_property: rgb(0x871094),
+                syntax_tag: rgb(0x0033B3),
+                syntax_attribute: rgb(0x174AD4),
+                syntax_variable: rgb(0x00627A),
+                syntax_error: rgb(0xF50000),
+                search_result_current: rgb(0xF2A33A),
             },
         }
     }

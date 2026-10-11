@@ -39,6 +39,10 @@ pub mod size {
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
     pub const ISLAND_GAP: f32 = 4.0;
+    /// Line height of code views and editors.
+    pub const CODE_LINE_HEIGHT: f32 = 20.0;
+    /// Padding inside code views and editors, and between gutter and text.
+    pub const CODE_PADDING: f32 = 8.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
 
