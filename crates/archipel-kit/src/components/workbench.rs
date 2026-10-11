@@ -58,6 +58,24 @@ pub struct WorkbenchState {
     pub bottom_hidden: bool,
     /// A maximized tool window, or the regular docked layout.
     pub maximized: Option<WorkbenchRegion>,
+    /// The selected content tab of the left, right and bottom tool windows (see
+    /// [`Workbench::tool_tabs`]).
+    pub tool_tabs: [usize; 3],
+}
+
+impl WorkbenchState {
+    /// The selected content tab of `region`'s tool window.
+    pub fn tool_tab(&self, region: WorkbenchRegion) -> usize {
+        self.tool_tabs[region_index(region)]
+    }
+}
+
+fn region_index(region: WorkbenchRegion) -> usize {
+    match region {
+        WorkbenchRegion::Left => 0,
+        WorkbenchRegion::Right => 1,
+        WorkbenchRegion::Bottom => 2,
+    }
 }
 
 impl Default for WorkbenchState {
@@ -70,6 +88,7 @@ impl Default for WorkbenchState {
             right_hidden: false,
             bottom_hidden: false,
             maximized: None,
+            tool_tabs: [0; 3],
         }
     }
 }
@@ -79,6 +98,7 @@ struct Region<'a> {
     title: String,
     content: Option<Content<'a>>,
     actions: Option<Content<'a>>,
+    tabs: Option<Vec<String>>,
     padded: bool,
     icon: Option<Icon>,
 }
@@ -214,6 +234,17 @@ impl<'a> Workbench<'a> {
         self
     }
 
+    /// Content tabs in `region`'s tool window header, after its title, like Android
+    /// Studio's Problems tool window ("File", "Project Errors"). A click selects one; the
+    /// selection is [`WorkbenchState::tool_tab`] (kept with the layout), and the next frame
+    /// shows it. Call it after declaring the region.
+    pub fn tool_tabs(mut self, region: WorkbenchRegion, tabs: Vec<String>) -> Self {
+        if let Some(slot) = self.slot(region) {
+            slot.tabs = Some(tabs);
+        }
+        self
+    }
+
     /// Declares the window toolbar; its content comes from [`show_with`](Self::show_with)
     /// as [`WorkbenchPlace::Toolbar`].
     pub fn with_toolbar(mut self, chrome: WindowChrome) -> Self {
@@ -311,6 +342,7 @@ impl<'a> Workbench<'a> {
                     Box::new(move |ui: &mut Ui| fill(WorkbenchPlace::ToolActions(place), ui))
                 })),
                 title: r.title,
+                tabs: r.tabs,
                 padded: r.padded,
                 icon: r.icon,
             })
@@ -403,6 +435,8 @@ impl<'a> Workbench<'a> {
         } = self;
         let hide = Cell::new(None);
         let maximize = Cell::new(None);
+        let tab_pick = Cell::new(None);
+        let tabs_now = state.tool_tabs;
         let full = ui.available_rect_before_wrap();
         ui.painter()
             .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
@@ -490,6 +524,10 @@ impl<'a> Workbench<'a> {
                         true,
                         &hide,
                         &maximize,
+                        (
+                            tabs_now[region_index(maximized.unwrap_or(WorkbenchRegion::Left))],
+                            &tab_pick,
+                        ),
                     );
                     return;
                 }
@@ -535,6 +573,11 @@ impl<'a> Workbench<'a> {
                                                     false,
                                                     &hide,
                                                     &maximize,
+                                                    (
+                                                        tabs_now
+                                                            [region_index(WorkbenchRegion::Right)],
+                                                        &tab_pick,
+                                                    ),
                                                 );
                                             }
                                         },
@@ -573,6 +616,10 @@ impl<'a> Workbench<'a> {
                                             false,
                                             &hide,
                                             &maximize,
+                                            (
+                                                tabs_now[region_index(WorkbenchRegion::Left)],
+                                                &tab_pick,
+                                            ),
                                         );
                                     }
                                 },
@@ -602,6 +649,7 @@ impl<'a> Workbench<'a> {
                                     false,
                                     &hide,
                                     &maximize,
+                                    (tabs_now[region_index(WorkbenchRegion::Bottom)], &tab_pick),
                                 );
                             }
                         });
@@ -613,6 +661,9 @@ impl<'a> Workbench<'a> {
                 }
             })
             .response;
+        if let Some((region, tab)) = tab_pick.get() {
+            state.tool_tabs[region_index(region)] = tab;
+        }
         if let Some(region) = hide.get() {
             match region {
                 WorkbenchRegion::Left => state.left_hidden = true,
@@ -637,6 +688,7 @@ impl<'a> Region<'a> {
             title: title.into(),
             content: Some(Box::new(content)),
             actions: None,
+            tabs: None,
             padded: false,
             icon: None,
         }
@@ -647,6 +699,7 @@ impl<'a> Region<'a> {
             title: title.into(),
             content: None,
             actions: None,
+            tabs: None,
             padded: false,
             icon: None,
         }
@@ -660,6 +713,7 @@ impl<'a> Region<'a> {
         maximized: bool,
         hide: &Cell<Option<WorkbenchRegion>>,
         maximize: &Cell<Option<WorkbenchRegion>>,
+        tab: (usize, &Cell<Option<(WorkbenchRegion, usize)>>),
     ) {
         let label = format!(
             "{} {}",
@@ -668,7 +722,14 @@ impl<'a> Region<'a> {
         );
         // As in the IntelliJ Islands UI, the header actions fade in while the pointer is
         // anywhere over the tool window (or focus is inside it) and fade out when it leaves.
-        Panel::new(self.title)
+        let (mut selected, pick) = tab;
+        let before = selected;
+        let tabs = self.tabs.unwrap_or_default();
+        let mut panel = Panel::new(self.title);
+        if !tabs.is_empty() {
+            panel = panel.tabs(&tabs, &mut selected);
+        }
+        panel
             .hover_actions(true)
             .padded(self.padded)
             .on_hide(|| hide.set(Some(region)))
@@ -693,6 +754,10 @@ impl<'a> Region<'a> {
                         }
                     });
             });
+        if selected != before {
+            pick.set(Some((region, selected)));
+            ui.ctx().request_repaint();
+        }
         // Where the island is, to tell next frame whether the focus is in it.
         let rect = ui.min_rect();
         ui.ctx()

@@ -421,3 +421,37 @@ fn show_with_fills_every_place_from_one_state() {
     assert_eq!(h.state().clicks, 1);
     assert!(h.query_by_label("1 sent").is_some());
 }
+
+#[test]
+fn tool_tabs_select_and_remember_the_content() {
+    use archipel_kit::components::WorkbenchPlace;
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(1000.0, 520.0))
+        .build_state(
+            |ctx, layout: &mut WorkbenchState| {
+                let tab = layout.tool_tab(WorkbenchRegion::Right);
+                Workbench::new("tabs", layout)
+                    .tool(WorkbenchRegion::Right, "Response", Glyph::Structure)
+                    .tool_tabs(
+                        WorkbenchRegion::Right,
+                        vec!["Preview".into(), "Raw".into(), "Headers".into()],
+                    )
+                    .show_with(ctx, &mut (), |place, ui, _| {
+                        if place == WorkbenchPlace::Tool(WorkbenchRegion::Right) {
+                            ui.label(["Preview body", "Raw body", "Header list"][tab]);
+                        }
+                    });
+            },
+            WorkbenchState {
+                center_ratio: 0.45,
+                ..WorkbenchState::default()
+            },
+        );
+    h.run();
+    assert!(h.query_by_label("Preview body").is_some());
+    h.get_by_label("Raw").click();
+    h.run();
+    h.run();
+    assert_eq!(h.state().tool_tab(WorkbenchRegion::Right), 1);
+    assert!(h.query_by_label("Raw body").is_some());
+}

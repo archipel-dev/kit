@@ -54,6 +54,10 @@ fn window(ctx: &egui::Context, app: &mut App) {
 }
 ```
 
+`.tool_tabs(region, labels)` puts content tabs in a tool window's header, after its title,
+like Android Studio's Problems tool window; the selection is `WorkbenchState::tool_tab(region)`,
+kept with the layout, and the next frame shows it.
+
 `WorkbenchPlace` is `Center`, `Tool(region)`, `ToolActions(region)` (header buttons of that tool window, before Maximize and Hide), `Toolbar` or `Status`.
 
 ## Islands behavior
