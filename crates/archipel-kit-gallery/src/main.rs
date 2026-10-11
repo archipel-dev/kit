@@ -8,8 +8,8 @@ use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::{
     Avatar, Banner, Button, Cell, Checkbox, Column, Counter, Dialog, Dropdown, EmptyState,
     IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid,
-    Radio, SectionHeader, SegmentedControl, Separator, Severity, SortOrder, Spinner, Tab, TabBar,
-    Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
+    Radio, SectionHeader, SegmentedControl, Separator, Severity, SortOrder, Spinner, SplitPane,
+    Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::parts::Slot;
@@ -100,6 +100,7 @@ struct Gallery {
     row: Option<usize>,
     /// The sorted (data column, direction); columns can be reordered, so not a position.
     sort: Option<(usize, SortOrder)>,
+    splits: [f32; 3],
     /// The data column shown at each position of the table.
     column_order: Vec<usize>,
     /// Edited request texts of the table, by row.
@@ -276,6 +277,7 @@ impl Default for Gallery {
             ],
             row: None,
             sort: None,
+            splits: [0.25, 0.5, 0.5],
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
             documents: Documents::new(),
@@ -820,6 +822,44 @@ impl Gallery {
                         ui.add(MenuItem::new("Rename…").shortcut("Shift+F6"));
                         ui.add(MenuItem::new("Delete").shortcut("Delete"));
                     });
+                ui.add(SectionHeader::new("Split pane"));
+                ui.label("Drag the dividers, double-click to reset, or Tab to one and use the arrow keys.");
+                let size = egui::vec2(ui.available_width(), 260.0);
+                let enabled = self.enabled;
+                let [sidebar, request, response] = &mut self.splits;
+                ui.allocate_ui(size, |ui| {
+                    SplitPane::horizontal("gallery-sidebar", sidebar)
+                        .default_ratio(0.25)
+                        .min_size(100.0)
+                        .label("Resize sidebar")
+                        .enabled(enabled)
+                        .with(Tooltip::new("Resize sidebar").hint("Double-click to reset"))
+                        .show(
+                            ui,
+                            |ui| split_island(ui, "Collections", "src/\ntests/"),
+                            |ui| {
+                                SplitPane::vertical("gallery-stack", request)
+                                    .min_size(60.0)
+                                    .label("Resize response")
+                                    .enabled(enabled)
+                                    .show(
+                                        ui,
+                                        |ui| split_island(ui, "Request", "GET /api/users"),
+                                        |ui| {
+                                            SplitPane::horizontal("gallery-response", response)
+                                                .min_size(60.0)
+                                                .label("Resize headers")
+                                                .enabled(enabled)
+                                                .show(
+                                                    ui,
+                                                    |ui| split_island(ui, "Body", "200 OK"),
+                                                    |ui| split_island(ui, "Headers", "ETag"),
+                                                );
+                                        },
+                                    );
+                            },
+                        );
+                });
             }
             Page::Overlays => {
                 ui.add(SectionHeader::new("Tooltips"));
@@ -964,6 +1004,18 @@ impl Gallery {
             _ => {}
         }
     }
+}
+
+/// A pane of the split demo: an island filling it, with a title and some text.
+fn split_island(ui: &mut egui::Ui, title: &str, text: &str) {
+    Panel::new(title).show(ui, |ui| {
+        ui.set_min_size(ui.available_size());
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.add_space(tokens::size::CONTENT_INSET);
+            ui.label(text);
+        });
+    });
 }
 
 /// Typed-value, chart, ramp and method/status colors.

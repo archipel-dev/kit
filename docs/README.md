@@ -30,6 +30,7 @@
 | [EmptyState](components/empty-state.md) | <img src="components/img/empty_state.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
+| [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |
 | [MenuItem, MenuSeparator, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
 | [Tooltip](components/tooltip.md) | <img src="components/img/tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
 | [Dialog](components/dialog.md) | <img src="components/img/dialog.dark.png" width="160"> | Decisions and short forms. |
