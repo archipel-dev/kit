@@ -20,8 +20,8 @@ use std::path::{Path, PathBuf};
 /// Cell size in SVG pixels.
 const CELL_W: f32 = 8.4;
 const CELL_H: f32 = 18.0;
-/// Icon size: Nerd Font icons are about 1.7 cells wide and draw into the next cell.
-const ICON: f32 = 14.0;
+/// Icon size: Nerd Font icons are about 1.5 cells wide and draw into the next cell.
+const ICON: f32 = 12.5;
 
 /// A buffer of `width` × `height` cells drawn by `draw`.
 pub fn render(width: u16, height: u16, draw: impl FnOnce(Rect, &mut Buffer)) -> Buffer {
@@ -74,6 +74,58 @@ fn block(symbol: &str) -> Option<&'static [(f32, f32, f32, f32)]> {
         "▙" => &[(0.0, 0.0, 0.5, 1.0), (0.5, 0.5, 0.5, 0.5)],
         "▜" => &[(0.0, 0.0, 1.0, 0.5), (0.5, 0.5, 0.5, 0.5)],
         "▛" => &[(0.0, 0.0, 1.0, 0.5), (0.0, 0.5, 0.5, 0.5)],
+        _ => return None,
+    })
+}
+
+/// The box-drawing character `symbol` as an SVG stroke path, so lines join across cells
+/// as they do in a terminal.
+fn box_path(symbol: &str, px: f32, py: f32) -> Option<(String, f32)> {
+    let (w, h) = (CELL_W, CELL_H);
+    let (cx, cy) = (px + w / 2.0, py + h / 2.0);
+    let (r, b) = (px + w, py + h);
+    let r4 = w / 2.0;
+    Some(match symbol {
+        "─" => (format!("M{px:.1} {cy:.1}H{r:.1}"), 1.0),
+        "━" => (format!("M{px:.1} {cy:.1}H{r:.1}"), 2.5),
+        "│" => (format!("M{cx:.1} {py:.1}V{b:.1}"), 1.0),
+        "▏" => (
+            format!("M{:.1} {:.1}V{:.1}", px + 1.0, py + 2.0, b - 2.0),
+            1.5,
+        ),
+        "▔" => (format!("M{px:.1} {:.1}H{r:.1}", py + 1.0), 2.0),
+        "╭" => (
+            format!(
+                "M{r:.1} {cy:.1}H{:.1}A{r4:.1} {r4:.1} 0 0 0 {cx:.1} {:.1}V{b:.1}",
+                cx + r4,
+                cy + r4
+            ),
+            1.0,
+        ),
+        "╮" => (
+            format!(
+                "M{px:.1} {cy:.1}H{:.1}A{r4:.1} {r4:.1} 0 0 1 {cx:.1} {:.1}V{b:.1}",
+                cx - r4,
+                cy + r4
+            ),
+            1.0,
+        ),
+        "╰" => (
+            format!(
+                "M{cx:.1} {py:.1}V{:.1}A{r4:.1} {r4:.1} 0 0 0 {:.1} {cy:.1}H{r:.1}",
+                cy - r4,
+                cx + r4
+            ),
+            1.0,
+        ),
+        "╯" => (
+            format!(
+                "M{cx:.1} {py:.1}V{:.1}A{r4:.1} {r4:.1} 0 0 1 {:.1} {cy:.1}H{px:.1}",
+                cy - r4,
+                cx - r4
+            ),
+            1.0,
+        ),
         _ => return None,
     })
 }
@@ -147,6 +199,34 @@ fn nerd_preview(ch: char, px: f32, py: f32, fg: u32, bg: u32) -> Option<String> 
                     y + s / 2.0
                 );
             }
+            return shape(body);
+        }
+        glyphs::TOGGLE_ON | glyphs::TOGGLE_OFF => {
+            let (x, y) = (ix, iy + 3.0);
+            let (tw, th) = (ICON + 2.0, ICON - 6.0);
+            let body = if ch == glyphs::TOGGLE_ON {
+                format!(
+                    "<rect x=\"{x:.1}\" y=\"{y:.1}\" width=\"{tw:.1}\" height=\"{th:.1}\" rx=\"{r:.1}\" fill=\"{color}\"/>\
+                     <circle cx=\"{:.1}\" cy=\"{:.1}\" r=\"{:.1}\" fill=\"{back}\"/>",
+                    x + tw - th / 2.0,
+                    y + th / 2.0,
+                    th / 2.0 - 1.5,
+                    r = th / 2.0
+                )
+            } else {
+                format!(
+                    "<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"{:.1}\" rx=\"{r:.1}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"1.3\"/>\
+                     <circle cx=\"{:.1}\" cy=\"{:.1}\" r=\"{:.1}\" fill=\"{color}\"/>",
+                    x + 0.65,
+                    y + 0.65,
+                    tw - 1.3,
+                    th - 1.3,
+                    x + th / 2.0,
+                    y + th / 2.0,
+                    th / 2.0 - 2.0,
+                    r = th / 2.0 - 0.65
+                )
+            };
             return shape(body);
         }
         glyphs::RADIO_ON | glyphs::RADIO_OFF => {
@@ -245,6 +325,11 @@ pub fn to_svg(buf: &Buffer) -> String {
                         bh * CELL_H,
                     );
                 }
+            } else if let Some((d, stroke)) = box_path(symbol, px, py) {
+                let _ = writeln!(
+                    svg,
+                    "<path d=\"{d}\" fill=\"none\" stroke=\"#{fg:06X}\" stroke-width=\"{stroke}\" shape-rendering=\"geometricPrecision\"/>"
+                );
             } else if let Some(preview) = single.and_then(|ch| nerd_preview(ch, px, py, fg, bg)) {
                 svg.push_str(&preview);
                 svg.push('\n');

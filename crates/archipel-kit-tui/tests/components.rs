@@ -12,12 +12,14 @@ fn looks() -> [(&'static str, Look); 2] {
     [("dark", Look::dark()), ("light", Look::light())]
 }
 
-/// Renders `draw` on an island in both themes and checks the snapshots `<name>.<theme>`.
+/// Renders `draw` in a panel in both themes and checks the snapshots `<name>.<theme>`.
 fn sheet(name: &str, width: u16, height: u16, draw: impl Fn(&Look, Rect, &mut Buffer)) {
     for (theme, look) in looks() {
         let buf = render(width, height, |area, buf| {
-            Island::new(&look).render(area, buf);
-            draw(&look, Rect::new(2, 1, width - 4, height - 2), buf);
+            let island = Island::new(&look);
+            let inner = island.inner(area);
+            island.render(area, buf);
+            draw(&look, inner, buf);
         });
         snapshot(&format!("{name}.{theme}"), &buf);
     }
@@ -27,56 +29,62 @@ fn row(area: Rect, n: u16) -> Rect {
     Rect::new(area.x, area.y + n, area.width, 1)
 }
 
+/// Renders `buttons` left to right on row `y`.
+fn button_row(area: Rect, y: u16, buttons: Vec<Button>, buf: &mut Buffer) {
+    let mut x = area.x;
+    for button in buttons {
+        let width = button.width();
+        button.render(Rect::new(x, area.y + y, width, 1), buf);
+        x += width;
+    }
+}
+
 #[test]
 fn buttons() {
     sheet("button", 64, 5, |look, area, buf| {
-        let mut x = area.x;
-        for button in [
-            Button::primary(look, "Run").icon(Glyph::Run),
-            Button::secondary(look, "Cancel"),
+        let buttons = vec![
+            Button::primary(look, "Run").icon(Glyph::Run).key('r'),
+            Button::secondary(look, "Cancel").key('c'),
             Button::ghost(look, "Details"),
             Button::danger(look, "Delete"),
-        ] {
-            let width = button.width();
-            button.render(Rect::new(x, area.y, width, 1), buf);
-            x += width + 1;
-        }
-        let mut x = area.x;
-        for button in [
+        ];
+        button_row(area, 0, buttons, buf);
+        let buttons = vec![
             Button::primary(look, "Focused").focused(true),
             Button::primary(look, "Disabled").enabled(false),
-            Button::secondary(look, "Disabled").enabled(false),
-        ] {
-            let width = button.width();
-            button.render(Rect::new(x, area.y + 2, width, 1), buf);
-            x += width + 1;
-        }
+            Button::ghost(look, "Disabled").enabled(false),
+        ];
+        button_row(area, 2, buttons, buf);
     });
 }
 
 #[test]
-fn button_width_fits_label_and_icon() {
+fn button_width_and_focus_markers() {
     let look = Look::dark();
     assert_eq!(Button::primary(&look, "Run").width(), 7);
     assert_eq!(Button::primary(&look, "Run").icon(Glyph::Run).width(), 9);
-    let buf = render(12, 1, |area, buf| {
-        Button::secondary(&look, "OK").render(area, buf)
-    });
-    assert_eq!(lines(&buf), ["\u{e0b6} OK \u{e0b4}"]);
+    let text = |button: Button| lines(&render(12, 1, |area, buf| button.render(area, buf)));
+    assert_eq!(text(Button::secondary(&look, "OK")), ["  OK"]);
+    assert_eq!(
+        text(Button::secondary(&look, "OK").focused(true)),
+        ["❯ OK ❮"]
+    );
 }
 
 #[test]
 fn choices() {
-    sheet("choice", 44, 8, |look, area, buf| {
+    sheet("choice", 48, 8, |look, area, buf| {
         Checkbox::new(look, true, "Checked").render(row(area, 0), buf);
-        Checkbox::new(look, false, "Unchecked").render(row(area, 1), buf);
+        Checkbox::new(look, false, "Unchecked")
+            .focused(true)
+            .render(row(area, 1), buf);
         Checkbox::new(look, false, "Mixed")
             .mixed(true)
             .render(row(area, 2), buf);
         Checkbox::new(look, true, "Disabled")
             .enabled(false)
             .render(row(area, 3), buf);
-        let half = Rect::new(area.x + 20, area.y, 20, area.height);
+        let half = Rect::new(area.x + 22, area.y, 20, area.height);
         Radio::new(look, true, "Selected").render(row(half, 0), buf);
         Radio::new(look, false, "Option").render(row(half, 1), buf);
         Toggle::new(look, true, "On").render(row(half, 3), buf);
@@ -106,65 +114,69 @@ fn checkbox_marks() {
 #[test]
 fn text_fields() {
     sheet("text-field", 44, 9, |look, area, buf| {
-        let field = TextField::new(look, "").placeholder("Search everywhere");
-        field.render(row(area, 0), buf);
-        let field = TextField::new(look, "archipel").focused(true);
-        field.render(row(area, 2), buf);
-        let field = TextField::new(look, "8o80")
+        let field = |n: u16, h: u16| Rect::new(area.x, area.y + n, area.width, h);
+        TextField::new(look, "")
+            .placeholder("Search everywhere")
+            .render(field(0, 1), buf);
+        TextField::new(look, "archipel")
+            .label("Name")
+            .focused(true)
+            .render(field(2, 1), buf);
+        TextField::new(look, "8o80")
             .label("Port")
-            .error(Some("Must be a number"));
-        let height = field.height();
-        field.render(Rect::new(area.x, area.y + 4, area.width, height), buf);
+            .error(Some("Must be a number"))
+            .render(field(4, 2), buf);
     });
 }
 
 #[test]
-fn text_field_height_counts_label_and_error() {
+fn text_field_shows_label_value_and_error() {
     let look = Look::dark();
-    assert_eq!(TextField::new(&look, "").height(), 1);
-    assert_eq!(
-        TextField::new(&look, "")
-            .label("L")
-            .error(Some("E"))
-            .height(),
-        3
-    );
+    let field = TextField::new(&look, "8o80")
+        .label("Port")
+        .error(Some("Must be a number"));
+    assert_eq!(field.height(), 2);
+    let buf = render(30, 2, |area, buf| field.render(area, buf));
+    let text = lines(&buf);
+    assert!(text[0].contains(" Port  8o80"), "{text:?}");
+    assert!(text[1].ends_with("Must be a number"), "{text:?}");
 }
 
 #[test]
 fn list_rows() {
     sheet("list-row", 40, 9, |look, area, buf| {
+        let full = Rect::new(area.x - 1, area.y, area.width + 2, area.height);
         ListRow::new(look, "kit")
             .icon(Glyph::Folder)
             .expanded(Some(true))
             .secondary("~/archipel")
-            .render(row(area, 0), buf);
+            .render(row(full, 0), buf);
         ListRow::new(look, "src")
             .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(true))
-            .render(row(area, 1), buf);
+            .render(row(full, 1), buf);
         ListRow::new(look, "main.rs")
             .icon(Language::Rust)
             .depth(2)
             .selected(true)
-            .render(row(area, 2), buf);
+            .render(row(full, 2), buf);
         ListRow::new(look, "theme.py")
             .icon(Language::Python)
             .depth(2)
-            .render(row(area, 3), buf);
+            .render(row(full, 3), buf);
         ListRow::new(look, "tests")
             .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(false))
-            .render(row(area, 4), buf);
+            .render(row(full, 4), buf);
         ListRow::new(look, "Theme")
             .icon(Symbol::new(SymbolKind::Class))
-            .render(row(area, 5), buf);
+            .render(row(full, 5), buf);
         ListRow::new(look, "apply(ctx)")
             .icon(Symbol::new(SymbolKind::Method))
             .depth(1)
-            .render(row(area, 6), buf);
+            .render(row(full, 6), buf);
     });
 }
 
@@ -175,9 +187,13 @@ fn tab_bars() {
         (Some(Language::Toml.into()), "Cargo.toml", true),
         (Some(Glyph::FileText.into()), "README.md", false),
     ];
-    sheet("tab-bar", 64, 3, |look, area, buf| {
-        TabBar::new(look, &tabs, 0).render(area, buf);
-    });
+    for (theme, look) in looks() {
+        let buf = render(60, 3, |area, buf| {
+            Island::new(&look).render(area, buf);
+            TabBar::new(&look, &tabs, 0).render(Rect::new(0, 0, 60, 1), buf);
+        });
+        snapshot(&format!("tab-bar.{theme}"), &buf);
+    }
 }
 
 #[test]
@@ -194,7 +210,7 @@ fn banners() {
 
 #[test]
 fn misc() {
-    sheet("misc", 48, 9, |look, area, buf| {
+    sheet("misc", 52, 9, |look, area, buf| {
         SegmentedControl::new(look, &["Tree", "List", "Graph"], 1).render(row(area, 0), buf);
         ProgressBar::new(look, 0.6).render(row(area, 2), buf);
         Kbd::new(look, &["Ctrl", "Shift", "A"]).render(row(area, 4), buf);
@@ -208,10 +224,24 @@ fn misc() {
                 archipel_kit::egui::Color32::from_rgb(0xDE, 0xA5, 0x84),
             ),
         ] {
-            chip.render(Rect::new(x, area.y + 6, 12, 1), buf);
-            x += 9;
+            let width = chip.width();
+            chip.render(Rect::new(x, area.y + 6, width, 1), buf);
+            x += width + 1;
         }
     });
+}
+
+#[test]
+fn status_bars() {
+    for (theme, look) in looks() {
+        let buf = render(72, 1, |area, buf| {
+            StatusBar::new(&look, &[("⏎", "open"), ("/", "search"), ("q", "quit")])
+                .mode("NORMAL")
+                .right("main  Ln 12, Col 4  UTF-8")
+                .render(area, buf);
+        });
+        snapshot(&format!("status-bar.{theme}"), &buf);
+    }
 }
 
 #[test]
@@ -233,12 +263,8 @@ fn icons() {
         }
         let (mut x, y) = (area.x, y + 2);
         for glyph in Glyph::ALL.iter().copied().take(22) {
-            buf.set_string(
-                x,
-                y,
-                look.glyph(glyph),
-                look.body().fg(look.glyph_color(glyph)),
-            );
+            let style = look.body().fg(look.glyph_color(glyph));
+            buf.set_string(x, y, look.glyph(glyph), style);
             x += 3;
         }
     });
@@ -273,15 +299,21 @@ fn dark_language_colors_stay_readable() {
 #[test]
 fn widgets_clip_to_tiny_areas() {
     let look = Look::dark();
-    for (w, h) in [(0, 0), (1, 1), (3, 1)] {
+    for (w, h) in [(0, 0), (1, 1), (3, 1), (5, 2)] {
         render(w.max(1), h.max(1), |_, buf| {
             let area = Rect::new(0, 0, w, h);
+            Island::new(&look).title("A long title").render(area, buf);
             Button::primary(&look, "A long label").render(area, buf);
             TextField::new(&look, "value")
+                .label("Label")
                 .error(Some("error"))
                 .render(area, buf);
             Banner::new(&look, Severity::Error, "text", &["Action"]).render(area, buf);
             ProgressBar::new(&look, 0.5).render(area, buf);
+            StatusBar::new(&look, &[("q", "quit")])
+                .mode("N")
+                .right("r")
+                .render(area, buf);
             ListRow::new(&look, "row")
                 .depth(9)
                 .icon(Language::Rust)
@@ -294,83 +326,94 @@ fn widgets_clip_to_tiny_areas() {
 #[test]
 fn ide_screen() {
     for (theme, look) in looks() {
-        let buf = render(96, 24, |area, buf| {
+        let buf = render(100, 26, |area, buf| {
             Frame::new(&look).render(area, buf);
-            let project = Rect::new(1, 1, 30, 22);
-            let island = Island::new(&look).title("Project");
+            let c = &look.theme.colors;
+            // Project tree, focused.
+            let project = Rect::new(0, 0, 30, 25);
+            let island = Island::new(&look).title("Project").focused(true);
             let inner = island.inner(project);
             island.render(project, buf);
-            let rows: [(&str, u16, Option<bool>, RowIcon); 8] = [
+            let rows: [(&str, u16, Option<bool>, RowIcon); 9] = [
                 ("kit", 0, Some(true), Glyph::Folder.into()),
                 ("crates", 1, Some(true), Glyph::Folder.into()),
                 ("archipel-kit", 2, Some(false), Glyph::Folder.into()),
                 ("archipel-kit-tui", 2, Some(true), Glyph::Folder.into()),
+                ("components.rs", 3, None, Language::Rust.into()),
                 ("lib.rs", 3, None, Language::Rust.into()),
-                ("testing.rs", 3, None, Language::Rust.into()),
                 ("Cargo.toml", 1, None, Language::Toml.into()),
                 ("README.md", 1, None, Language::Markdown.into()),
+                ("flake.nix", 1, None, Language::Nix.into()),
             ];
             for (i, (label, depth, expanded, icon)) in rows.into_iter().enumerate() {
                 ListRow::new(&look, label)
                     .depth(depth)
                     .expanded(expanded)
                     .icon(icon)
-                    .selected(i == 4)
+                    .selected(i == 5)
                     .render(
                         Rect::new(project.x, inner.y + i as u16, project.width, 1),
                         buf,
                     );
             }
-            let editor = Rect::new(32, 1, 63, 15);
-            Island::new(&look).render(editor, buf);
+            // Tab line and editor.
             let tabs = [
                 (Some(Language::Rust.into()), "lib.rs", false),
-                (Some(Language::Rust.into()), "testing.rs", true),
+                (Some(Language::Rust.into()), "components.rs", true),
+                (Some(Language::Toml.into()), "Cargo.toml", false),
             ];
-            TabBar::new(&look, &tabs, 0).render(Rect::new(33, 2, 61, 1), buf);
-            let c = &look.theme.colors;
+            TabBar::new(&look, &tabs, 0).render(Rect::new(31, 0, 69, 1), buf);
+            let editor = Rect::new(31, 1, 69, 15);
+            Island::new(&look).render(editor, buf);
             let code = [
                 ("pub struct ", "Look", " {"),
                 ("    pub ", "theme", ": Theme,"),
-                ("    pub ", "dark", ": bool,"),
+                ("}", "", ""),
+                ("", "", ""),
+                ("impl ", "Look", " {"),
+                ("    pub fn ", "dark", "() -> Self {"),
+                ("        Self::new(Theme::dark())", "", ""),
+                ("    }", "", ""),
                 ("}", "", ""),
             ];
             for (i, (a, b, d)) in code.iter().enumerate() {
-                let y = 4 + i as u16;
-                buf.set_string(
-                    34,
-                    y,
-                    format!("{:>2}", i + 1),
-                    look.text(c.text_placeholder),
-                );
-                let x = 38;
+                let y = 2 + i as u16;
+                let number = format!("{:>3}", i + 1);
+                buf.set_string(32, y, number, look.text(c.text_placeholder));
+                let x = 37;
                 buf.set_string(x, y, *a, look.text(c.text));
                 buf.set_string(x + a.len() as u16, y, *b, look.strong());
                 buf.set_string(x + (a.len() + b.len()) as u16, y, *d, look.text(c.text));
             }
-            Banner::new(&look, Severity::Info, "Index ready", &["Open"])
-                .render(Rect::new(32, 14, 63, 1), buf);
-            let run = Rect::new(32, 17, 63, 6);
+            Banner::new(&look, Severity::Info, "Index ready", &["Open log"])
+                .render(Rect::new(32, 14, 67, 1), buf);
+            // Run tool window.
+            let run = Rect::new(31, 17, 69, 8);
             let island = Island::new(&look).title("Run");
             let inner = island.inner(run);
             island.render(run, buf);
-            let mut x = inner.x;
-            for button in [
-                Button::primary(&look, "Run").icon(Glyph::Run),
-                Button::secondary(&look, "Stop").icon(Glyph::Stop),
-            ] {
-                let width = button.width();
-                button.render(Rect::new(x, inner.y, width, 1), buf);
-                x += width + 1;
-            }
+            let buttons = vec![
+                Button::primary(&look, "Rerun").icon(Glyph::Run).key('r'),
+                Button::secondary(&look, "Stop").icon(Glyph::Stop).key('s'),
+            ];
+            button_row(inner, 0, buttons, buf);
             ProgressBar::new(&look, 0.7)
-                .render(Rect::new(x + 1, inner.y, inner.right() - x - 1, 1), buf);
-            buf.set_string(
-                inner.x,
-                inner.y + 2,
-                "Compiling archipel-kit-tui v0.1.0",
-                look.text(c.text_secondary),
-            );
+                .render(Rect::new(inner.x + 22, inner.y, inner.width - 22, 1), buf);
+            for (i, line) in [
+                "   Compiling archipel-kit-tui v0.1.0",
+                "    Finished `dev` profile in 2.41s",
+                "     Running `target/debug/examples/gallery`",
+            ]
+            .iter()
+            .enumerate()
+            {
+                let color = if i == 1 { c.success } else { c.text_secondary };
+                buf.set_string(inner.x, inner.y + 2 + i as u16, *line, look.text(color));
+            }
+            StatusBar::new(&look, &[("⏎", "open"), ("/", "search"), ("?", "help")])
+                .mode("PROJECT")
+                .right("main  12:4  UTF-8")
+                .render(Rect::new(0, 25, 100, 1), buf);
         });
         snapshot(&format!("ide.{theme}"), &buf);
     }

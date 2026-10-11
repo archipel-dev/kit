@@ -17,17 +17,18 @@
 //! Button::primary(&look, "Run").render(inner, &mut buf);
 //! ```
 //!
-//! How the GUI maps to cells:
+//! The look is the GUI's (theme colors, icons, Islands layout) in the flat style of modern
+//! Neovim setups such as NvChad:
 //!
-//! - **Islands** are areas filled with the island color on the frame color, one cell apart:
-//!   no borders, like the GUI.
+//! - **Islands** are flat blocks of the island color one cell apart on the frame color, with
+//!   a title pill, in the accent when the panel has focus. No borders.
 //! - **Colors** come from the kit [`Theme`] as 24-bit color; translucent colors (hover,
 //!   selection) are blended over the island.
 //! - **Icons** are Nerd Font characters: kit [`Glyph`]s map to codicons, languages to their
 //!   logos in the language color, symbols to codicon symbols in the symbol color. Use a Nerd
 //!   Font in the terminal; JetBrainsMono Nerd Font matches the GUI's code font.
-//! - **Rounded shapes** (buttons, chips, the selected row) end in Powerline half circles,
-//!   and islands get notched corners from quadrant blocks.
+//!
+//! The guide with images is `docs/tui/README.md`.
 
 pub mod components;
 pub mod glyphs;

@@ -1,5 +1,7 @@
-//! The components, as ratatui [`Widget`]s. Names and options follow the GUI kit, so a
-//! screen can be built twice from the same description.
+//! The components, as ratatui [`Widget`]s. They keep the GUI kit's names, options and
+//! colors and take the flat look of modern Neovim setups (NvChad and the like): blocks of
+//! color without borders, title pills, a tab line of buffers, a status line with a mode
+//! block, prompt-style inputs.
 //!
 //! Icons are Nerd Font characters followed by a space: Nerd Font icons are wider than one
 //! cell and draw into it.
@@ -35,45 +37,62 @@ fn fill(buf: &mut Buffer, area: Rect, x: u16, y: u16, width: u16, style: Style) 
     }
 }
 
-/// A pill: `width` cells of `bg` with half-circle caps at both ends, on `under`.
-/// Returns the first column inside the left cap.
-fn pill(buf: &mut Buffer, area: Rect, x: u16, y: u16, width: u16, bg: Color, under: Color) -> u16 {
-    if width < 2 {
-        return x;
-    }
+/// A pill at (`x`, `y`): `text` on `bg` between half-circle caps, on `under`. Returns the
+/// column after it.
+fn pill(
+    buf: &mut Buffer,
+    area: Rect,
+    x: u16,
+    y: u16,
+    text: &str,
+    style: Style,
+    under: Color,
+) -> u16 {
+    let bg = style.bg.unwrap_or(under);
     let cap = Style::default().fg(bg).bg(under);
-    put(buf, area, x, y, &CAP_LEFT.to_string(), cap);
-    fill(buf, area, x + 1, y, width - 2, Style::default().bg(bg));
-    put(buf, area, x + width - 1, y, &CAP_RIGHT.to_string(), cap);
-    x + 1
+    let x = put(buf, area, x, y, &CAP_LEFT.to_string(), cap);
+    let x = put(buf, area, x, y, text, style);
+    put(buf, area, x, y, &CAP_RIGHT.to_string(), cap)
 }
 
-/// An island: an area filled with the island color with notched corners and an optional
-/// bold title row. Place islands one cell apart on a [`Frame`].
+/// A panel: a flat block of the island color, no border. A title sits in a pill on the
+/// first row, in the accent when the panel has focus (like a Telescope title). Place panels
+/// one cell apart on a [`Frame`], as in the GUI's Islands layout.
 pub struct Island<'a> {
     look: &'a Look,
     title: Option<&'a str>,
+    focused: bool,
 }
 
 impl<'a> Island<'a> {
-    /// An untitled island.
+    /// An untitled panel.
     pub fn new(look: &'a Look) -> Self {
-        Self { look, title: None }
+        Self {
+            look,
+            title: None,
+            focused: false,
+        }
     }
 
-    /// A title on the first row.
+    /// A title pill on the first row.
     pub fn title(mut self, title: &'a str) -> Self {
         self.title = Some(title);
         self
     }
 
-    /// The content area: inset by two columns, below the title row.
+    /// Keyboard focus: an accent title pill.
+    pub fn focused(mut self, focused: bool) -> Self {
+        self.focused = focused;
+        self
+    }
+
+    /// The content area: one column of padding, below the title row and a blank row.
     pub fn inner(&self, area: Rect) -> Rect {
         let top = if self.title.is_some() { 2 } else { 1 };
         Rect::new(
-            area.x + 2,
+            area.x + 1,
             area.y + top,
-            area.width.saturating_sub(4),
+            area.width.saturating_sub(2),
             area.height.saturating_sub(top + 1),
         )
     }
@@ -82,30 +101,36 @@ impl<'a> Island<'a> {
 impl Widget for Island<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
+        let look = self.look;
         for y in area.top()..area.bottom() {
-            fill(buf, area, area.x, y, area.width, self.look.body());
-        }
-        if area.width >= 2 && area.height >= 2 {
-            let corner = Style::default()
-                .fg(self.look.color(c.island))
-                .bg(self.look.color_over(c.frame, c.frame));
-            let (right, bottom) = (area.right() - 1, area.bottom() - 1);
-            for (x, y, quadrants) in [
-                (area.x, area.y, "▟"),
-                (right, area.y, "▙"),
-                (area.x, bottom, "▜"),
-                (right, bottom, "▛"),
-            ] {
-                put(buf, area, x, y, quadrants, corner);
-            }
+            fill(buf, area, area.x, y, area.width, look.body());
         }
         if let Some(title) = self.title {
-            put(buf, area, area.x + 2, area.y, title, self.look.strong());
+            let style = if self.focused {
+                Style::default()
+                    .bg(look.color(c.accent))
+                    .fg(look.color(c.text_on_accent))
+            } else {
+                Style::default()
+                    .bg(look.color(c.border))
+                    .fg(look.color(c.text_strong))
+            };
+            let text = format!(" {title} ");
+            let island = look.color(c.island);
+            pill(
+                buf,
+                area,
+                area.x + 1,
+                area.y,
+                &text,
+                style.add_modifier(Modifier::BOLD),
+                island,
+            );
         }
     }
 }
 
-/// Fills `area` with the frame color: the background islands sit on.
+/// Fills `area` with the frame color: the background behind panels and the status bar.
 pub struct Frame<'a> {
     look: &'a Look,
 }
@@ -129,12 +154,14 @@ impl Widget for Frame<'_> {
     }
 }
 
-/// A push button: a pill with an optional icon and the label.
+/// A push button: the label on a fill, one cell of padding each side. A `key` is
+/// underlined in the label, the way terminal apps show mnemonics.
 pub struct Button<'a> {
     look: &'a Look,
     label: &'a str,
     variant: ButtonVariant,
     icon: Option<Glyph>,
+    key: Option<char>,
     focused: bool,
     enabled: bool,
 }
@@ -147,6 +174,7 @@ impl<'a> Button<'a> {
             label,
             variant,
             icon: None,
+            key: None,
             focused: false,
             enabled: true,
         }
@@ -178,7 +206,13 @@ impl<'a> Button<'a> {
         self
     }
 
-    /// Keyboard focus: bold, underlined label.
+    /// The shortcut key, underlined where it first appears in the label.
+    pub fn key(mut self, key: char) -> Self {
+        self.key = Some(key);
+        self
+    }
+
+    /// Keyboard focus: `❯` markers around the button.
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
         self
@@ -190,7 +224,7 @@ impl<'a> Button<'a> {
         self
     }
 
-    /// Width in cells.
+    /// Width in cells, focus markers included.
     pub fn width(&self) -> u16 {
         let icon = if self.icon.is_some() { 2 } else { 0 };
         (self.label.width() + icon + 4) as u16
@@ -205,35 +239,41 @@ impl Widget for Button<'_> {
         let (bg, fg) = match (self.variant, self.enabled) {
             (ButtonVariant::Primary, true) => (look.color(c.accent), look.color(c.text_on_accent)),
             (ButtonVariant::Danger, true) => (look.color(c.stop), look.color(c.text_on_accent)),
-            // Disabled fills are neutral with dim text that stays legible in cells.
-            (ButtonVariant::Primary | ButtonVariant::Danger | ButtonVariant::Secondary, false) => {
-                (look.color(c.border), look.color(c.text_placeholder))
-            }
             (ButtonVariant::Secondary, true) => (look.color(c.border), look.color(c.text_strong)),
-            (ButtonVariant::Ghost, enabled) => (
-                island,
-                look.color(if enabled { c.text } else { c.text_disabled }),
-            ),
+            (ButtonVariant::Ghost, true) => (island, look.color(c.link)),
+            (ButtonVariant::Ghost, false) => (island, look.color(c.text_disabled)),
+            (_, false) => (look.color(c.border), look.color(c.text_placeholder)),
         };
-        let width = self.width();
-        let x = pill(buf, area, area.x, area.y, width, bg, island) + 1;
+        let marker = look.text(c.accent).add_modifier(Modifier::BOLD);
+        let focus = if self.focused { "❯" } else { " " };
+        put(buf, area, area.x, area.y, focus, marker);
         let style = Style::default().bg(bg).fg(fg);
-        let x = match self.icon {
-            Some(icon) => {
-                let color = if self.enabled && self.variant == ButtonVariant::Ghost {
-                    look.glyph_color(icon)
-                } else {
-                    fg
-                };
-                put(buf, area, x, area.y, &look.glyph(icon), style.fg(color)) + 1
-            }
-            None => x,
-        };
-        let mut label = style;
-        if self.focused {
-            label = label.add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+        fill(buf, area, area.x + 1, area.y, self.width() - 2, style);
+        let mut x = area.x + 2;
+        if let Some(icon) = self.icon {
+            let color = if self.enabled && self.variant == ButtonVariant::Ghost {
+                look.glyph_color(icon)
+            } else {
+                fg
+            };
+            x = put(buf, area, x, area.y, &look.glyph(icon), style.fg(color)) + 1;
         }
-        put(buf, area, x, area.y, self.label, label);
+        let key_at = self.key.and_then(|key| {
+            self.label
+                .char_indices()
+                .find(|(_, ch)| ch.eq_ignore_ascii_case(&key))
+                .map(|(i, _)| i)
+        });
+        for (i, ch) in self.label.char_indices() {
+            let mut cell = style;
+            if Some(i) == key_at && self.enabled {
+                cell = cell.add_modifier(Modifier::UNDERLINED | Modifier::BOLD);
+            }
+            x = put(buf, area, x, area.y, ch.encode_utf8(&mut [0; 4]), cell);
+        }
+        let focus = if self.focused { "❮" } else { " " };
+        let end = area.x + self.width() - 1;
+        put(buf, area, end, area.y, focus, marker);
     }
 }
 
@@ -266,7 +306,7 @@ impl<'a> Checkbox<'a> {
         self
     }
 
-    /// Keyboard focus: bold label.
+    /// Keyboard focus: highlighted row.
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
         self
@@ -279,6 +319,46 @@ impl<'a> Checkbox<'a> {
     }
 }
 
+/// A mark icon and a label, on the hover color when `focused`.
+#[allow(clippy::too_many_arguments)]
+fn mark_row(
+    look: &Look,
+    buf: &mut Buffer,
+    area: Rect,
+    mark: char,
+    color: Color,
+    label: &str,
+    text: Color,
+    focused: bool,
+) {
+    let c = &look.theme.colors;
+    let bg = look.color(if focused { c.row_hover } else { c.island });
+    // The switch icon is wider than the box and ring icons.
+    let gap = if mark == glyphs::TOGGLE_ON || mark == glyphs::TOGGLE_OFF {
+        3
+    } else {
+        2
+    };
+    let width = label.width() as u16 + gap + 2;
+    fill(buf, area, area.x, area.y, width, Style::default().bg(bg));
+    put(
+        buf,
+        area,
+        area.x,
+        area.y,
+        &mark.to_string(),
+        Style::default().fg(color).bg(bg),
+    );
+    put(
+        buf,
+        area,
+        area.x + gap,
+        area.y,
+        label,
+        Style::default().fg(text).bg(bg),
+    );
+}
+
 impl Widget for Checkbox<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
@@ -286,26 +366,15 @@ impl Widget for Checkbox<'_> {
         let (mark, color) = match (self.mixed, self.checked) {
             (true, _) => (glyphs::CHECKBOX_MIXED, c.accent),
             (false, true) => (glyphs::CHECKBOX_ON, c.accent),
-            (false, false) => (glyphs::CHECKBOX_OFF, c.control_border),
+            (false, false) => (glyphs::CHECKBOX_OFF, c.text_secondary),
         };
-        let color = if self.enabled { color } else { c.text_disabled };
-        put(
-            buf,
-            area,
-            area.x,
-            area.y,
-            &mark.to_string(),
-            look.text(color),
-        );
-        let mut label = look.text(if self.enabled {
-            c.text
+        let (color, text) = if self.enabled {
+            (color, c.text)
         } else {
-            c.text_disabled
-        });
-        if self.focused {
-            label = label.add_modifier(Modifier::BOLD);
-        }
-        put(buf, area, area.x + 2, area.y, self.label, label);
+            (c.text_disabled, c.text_disabled)
+        };
+        let (color, text) = (look.color(color), look.color(text));
+        mark_row(look, buf, area, mark, color, self.label, text, self.focused);
     }
 }
 
@@ -314,6 +383,7 @@ pub struct Radio<'a> {
     look: &'a Look,
     selected: bool,
     label: &'a str,
+    focused: bool,
     enabled: bool,
 }
 
@@ -324,8 +394,15 @@ impl<'a> Radio<'a> {
             look,
             selected,
             label,
+            focused: false,
             enabled: true,
         }
+    }
+
+    /// Keyboard focus: highlighted row.
+    pub fn focused(mut self, focused: bool) -> Self {
+        self.focused = focused;
+        self
     }
 
     /// Disabled options are dimmed.
@@ -342,37 +419,41 @@ impl Widget for Radio<'_> {
         let (mark, color) = if self.selected {
             (glyphs::RADIO_ON, c.accent)
         } else {
-            (glyphs::RADIO_OFF, c.control_border)
+            (glyphs::RADIO_OFF, c.text_secondary)
         };
-        let color = if self.enabled { color } else { c.text_disabled };
-        put(
-            buf,
-            area,
-            area.x,
-            area.y,
-            &mark.to_string(),
-            look.text(color),
-        );
-        let text = if self.enabled {
-            c.text
+        let (color, text) = if self.enabled {
+            (color, c.text)
         } else {
-            c.text_disabled
+            (c.text_disabled, c.text_disabled)
         };
-        put(buf, area, area.x + 2, area.y, self.label, look.text(text));
+        let (color, text) = (look.color(color), look.color(text));
+        mark_row(look, buf, area, mark, color, self.label, text, self.focused);
     }
 }
 
-/// An on/off switch: a pill track with the knob at the right when on.
+/// An on/off switch icon, green when on, then the label.
 pub struct Toggle<'a> {
     look: &'a Look,
     on: bool,
     label: &'a str,
+    focused: bool,
 }
 
 impl<'a> Toggle<'a> {
     /// A switch showing `on`.
     pub fn new(look: &'a Look, on: bool, label: &'a str) -> Self {
-        Self { look, on, label }
+        Self {
+            look,
+            on,
+            label,
+            focused: false,
+        }
+    }
+
+    /// Keyboard focus: highlighted row.
+    pub fn focused(mut self, focused: bool) -> Self {
+        self.focused = focused;
+        self
     }
 }
 
@@ -380,27 +461,19 @@ impl Widget for Toggle<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
-        let (track, knob, text) = if self.on {
-            (c.toggle_on, archipel_kit::egui::Color32::WHITE, " ●")
+        let (mark, color) = if self.on {
+            (glyphs::TOGGLE_ON, c.toggle_on)
         } else {
-            (c.control_border, c.toggle_off_knob, "● ")
+            (glyphs::TOGGLE_OFF, c.text_secondary)
         };
-        let track = look.color(track);
-        let x = pill(buf, area, area.x, area.y, 4, track, look.color(c.island));
-        put(
-            buf,
-            area,
-            x,
-            area.y,
-            text,
-            Style::default().bg(track).fg(look.color(knob)),
-        );
-        put(buf, area, area.x + 5, area.y, self.label, look.body());
+        let (color, text) = (look.color(color), look.color(c.text));
+        mark_row(look, buf, area, mark, color, self.label, text, self.focused);
     }
 }
 
-/// A single-line input: the value in a pill, a placeholder while empty, a cursor and
-/// accent caps while focused, red caps and a message below on error.
+/// A prompt-style text input: one row on the field color with the label as a pill at the
+/// left (or a search icon), the value, and a cursor while focused. The pill turns accent on
+/// focus and red on error; the error message goes on the row below.
 pub struct TextField<'a> {
     look: &'a Look,
     value: &'a str,
@@ -429,27 +502,27 @@ impl<'a> TextField<'a> {
         self
     }
 
-    /// A label row above the field.
+    /// The label, in a pill at the left.
     pub fn label(mut self, label: &'a str) -> Self {
         self.label = Some(label);
         self
     }
 
-    /// A validation message below the field.
+    /// A validation message, on the row below.
     pub fn error(mut self, error: Option<&'a str>) -> Self {
         self.error = error;
         self
     }
 
-    /// Keyboard focus: accent caps and a cursor.
+    /// Keyboard focus: accent pill and a cursor.
     pub fn focused(mut self, focused: bool) -> Self {
         self.focused = focused;
         self
     }
 
-    /// Rows the field needs (label, field, error).
+    /// Rows the field needs: the field and, with an error, the message.
     pub fn height(&self) -> u16 {
-        1 + u16::from(self.label.is_some()) + u16::from(self.error.is_some())
+        1 + u16::from(self.error.is_some())
     }
 }
 
@@ -457,48 +530,53 @@ impl Widget for TextField<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
-        let mut y = area.y;
-        if let Some(label) = self.label {
-            put(buf, area, area.x, y, label, look.body());
-            y += 1;
-        }
-        // The combo fill, or the frame color where the combo fill is the island color.
-        let field = look.color(if c.combo == c.island {
-            c.frame
-        } else {
-            c.combo
-        });
-        pill(
-            buf,
-            area,
-            area.x,
-            y,
-            area.width,
-            field,
-            look.color(c.island),
-        );
-        let edge = if self.error.is_some() {
-            Some(c.error)
+        let island = look.color(c.island);
+        let field = look.color(c.row_hover);
+        let y = area.y;
+        let row = Rect::new(area.x, y, area.width, 1.min(area.height));
+        let mark = if self.error.is_some() {
+            c.error
         } else if self.focused {
-            Some(c.accent)
+            c.accent
         } else {
-            None
+            c.text_secondary
         };
-        if let Some(edge) = edge {
-            let caps = look.text(edge);
-            put(buf, area, area.x, y, &CAP_LEFT.to_string(), caps);
-            if area.width > 1 {
-                put(buf, area, area.right() - 1, y, &CAP_RIGHT.to_string(), caps);
+        // The field is a pill of the field color; the label pill sits inside its left end.
+        let cap = Style::default().fg(field).bg(island);
+        put(buf, row, area.x, y, &CAP_LEFT.to_string(), cap);
+        fill(
+            buf,
+            row,
+            area.x + 1,
+            y,
+            area.width.saturating_sub(2),
+            Style::default().bg(field),
+        );
+        if area.width >= 2 {
+            put(buf, row, area.right() - 1, y, &CAP_RIGHT.to_string(), cap);
+        }
+        let mut x = area.x + 1;
+        match self.label {
+            Some(label) => {
+                let style = if self.error.is_some() || self.focused {
+                    Style::default()
+                        .bg(look.color(mark))
+                        .fg(look.color(c.text_on_accent))
+                } else {
+                    Style::default()
+                        .bg(look.color(c.border))
+                        .fg(look.color(c.text_strong))
+                };
+                let text = format!(" {label} ");
+                x = put(buf, row, x, y, &text, style.add_modifier(Modifier::BOLD)) + 1;
+            }
+            None => {
+                let style = Style::default().bg(field).fg(look.color(mark));
+                x = put(buf, row, x, y, &look.glyph(Glyph::Search), style) + 1;
             }
         }
-        let inner = Rect::new(
-            area.x + 1,
-            area.y,
-            area.width.saturating_sub(2),
-            area.height,
-        );
-        let text = Style::default().bg(field).fg(look.color(c.text_strong));
-        let x = area.x + 2;
+        let inner = Rect::new(x, y, area.right().saturating_sub(x + 1), 1.min(area.height));
+        let text = Style::default().bg(field);
         if self.value.is_empty() && !self.focused {
             put(
                 buf,
@@ -509,13 +587,28 @@ impl Widget for TextField<'_> {
                 text.fg(look.color(c.text_placeholder)),
             );
         } else {
-            let end = put(buf, inner, x, y, self.value, text);
+            let end = put(
+                buf,
+                inner,
+                x,
+                y,
+                self.value,
+                text.fg(look.color(c.text_strong)),
+            );
             if self.focused {
                 put(buf, inner, end, y, "▏", text.fg(look.color(c.accent)));
             }
         }
         if let Some(error) = self.error {
-            put(buf, area, area.x + 1, y + 1, error, look.text(c.error));
+            let x = put(
+                buf,
+                area,
+                area.x + 1,
+                y + 1,
+                &look.glyph(Glyph::Error),
+                look.text(c.error),
+            );
+            put(buf, area, x + 1, y + 1, error, look.text(c.error));
         }
     }
 }
@@ -587,7 +680,8 @@ fn draw_icon(
     put(buf, area, x, y, " ", Style::default().bg(bg))
 }
 
-/// One row of a list or tree; the selected row is an inset pill.
+/// One row of a list or tree. The selected row is a full-width bar in the selection color;
+/// in an unfocused list it is a quieter tint.
 pub struct ListRow<'a> {
     look: &'a Look,
     label: &'a str,
@@ -596,6 +690,7 @@ pub struct ListRow<'a> {
     depth: u16,
     expanded: Option<bool>,
     selected: bool,
+    active: bool,
 }
 
 impl<'a> ListRow<'a> {
@@ -609,6 +704,7 @@ impl<'a> ListRow<'a> {
             depth: 0,
             expanded: None,
             selected: false,
+            active: true,
         }
     }
 
@@ -641,36 +737,35 @@ impl<'a> ListRow<'a> {
         self.selected = selected;
         self
     }
+
+    /// Whether the list has focus (default `true`).
+    pub fn active(mut self, active: bool) -> Self {
+        self.active = active;
+        self
+    }
 }
 
 impl Widget for ListRow<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
-        let island = look.color(c.island);
-        let bg = if self.selected {
-            pill(
-                buf,
-                area,
-                area.x,
-                area.y,
-                area.width,
-                look.color(c.selection),
-                island,
-            );
-            look.color(c.selection)
-        } else {
-            fill(
-                buf,
-                area,
-                area.x,
-                area.y,
-                area.width,
-                Style::default().bg(island),
-            );
-            island
+        let bg = match (self.selected, self.active) {
+            (true, true) => look.color(c.selection),
+            (true, false) => look.color(c.row_hover),
+            (false, _) => look.color(c.island),
         };
         let base = Style::default().bg(bg);
+        fill(buf, area, area.x, area.y, area.width, base);
+        if self.selected && self.active {
+            put(
+                buf,
+                area,
+                area.x,
+                area.y,
+                "▌",
+                base.fg(look.color(c.accent)),
+            );
+        }
         let mut x = area.x.saturating_add(1 + self.depth * 2);
         if let Some(expanded) = self.expanded {
             let chevron = if expanded {
@@ -706,7 +801,9 @@ impl Widget for ListRow<'_> {
     }
 }
 
-/// Editor tabs on one row; the selected tab is a tinted pill with a close button.
+/// A tab line of open buffers, as in NvChad: tabs are blocks on the frame color; the
+/// selected one has the island color, so it joins the editor below, bold text and a close
+/// icon. Modified buffers show a dot.
 pub struct TabBar<'a> {
     look: &'a Look,
     tabs: &'a [(Option<RowIcon>, &'a str, bool)],
@@ -727,10 +824,9 @@ impl<'a> TabBar<'a> {
         }
     }
 
-    fn tab_width(icon: Option<RowIcon>, label: &str, modified: bool, selected: bool) -> u16 {
+    fn tab_width(icon: Option<RowIcon>, label: &str) -> u16 {
         let icon = if icon.is_some() { 2 } else { 0 };
-        let marks = if modified { 2 } else { 0 } + if selected { 2 } else { 0 };
-        (4 + icon + label.width() + marks) as u16
+        (2 + icon + label.width() + 2 + 1) as u16
     }
 }
 
@@ -738,25 +834,25 @@ impl Widget for TabBar<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
-        let island = look.color(c.island);
+        let frame = look.color_over(c.frame, c.frame);
+        fill(
+            buf,
+            area,
+            area.x,
+            area.y,
+            area.width,
+            Style::default().bg(frame),
+        );
         let mut x = area.x;
         for (index, (icon, label, modified)) in self.tabs.iter().enumerate() {
             let selected = index == self.selected;
-            let width = Self::tab_width(*icon, label, *modified, selected);
+            let width = Self::tab_width(*icon, label);
             let bg = if selected {
-                pill(
-                    buf,
-                    area,
-                    x,
-                    area.y,
-                    width,
-                    look.color(c.tab_selected),
-                    island,
-                );
-                look.color(c.tab_selected)
+                look.color(c.island)
             } else {
-                island
+                frame
             };
+            fill(buf, area, x, area.y, width, Style::default().bg(bg));
             let mut cx = x + 2;
             if let Some(icon) = icon {
                 cx = draw_icon(look, buf, area, cx, area.y, *icon, bg);
@@ -764,25 +860,32 @@ impl Widget for TabBar<'_> {
             let mut text = Style::default().bg(bg).fg(look.color(if selected {
                 c.text_strong
             } else {
-                c.text_secondary
+                c.text_placeholder
             }));
             if selected {
                 text = text.add_modifier(Modifier::BOLD);
             }
             cx = put(buf, area, cx, area.y, label, text);
-            let dim = Style::default().bg(bg).fg(look.color(c.text_secondary));
-            if *modified {
-                cx = put(buf, area, cx + 1, area.y, "●", dim);
-            }
-            if selected {
-                put(buf, area, cx + 1, area.y, &look.glyph(Glyph::Close), dim);
-            }
-            x += width + 1;
+            let (mark, color) = match (*modified, selected) {
+                (true, _) => ("●".to_owned(), c.success),
+                (false, true) => (look.glyph(Glyph::Close), c.error),
+                (false, false) => (look.glyph(Glyph::Close), c.text_placeholder),
+            };
+            put(
+                buf,
+                area,
+                cx + 1,
+                area.y,
+                &mark,
+                Style::default().bg(bg).fg(look.color(color)),
+            );
+            x += width;
         }
     }
 }
 
-/// A full-width message pill with an icon, text and action pills on the right.
+/// A one-row message: an edge in the severity color, the icon and text on a tint, and the
+/// actions as bold links on the right.
 pub struct Banner<'a> {
     look: &'a Look,
     severity: Severity,
@@ -813,46 +916,30 @@ impl Widget for Banner<'_> {
             Severity::Error => (c.banner_error, Glyph::Error),
         };
         let bg = look.color(tint.background);
-        pill(
-            buf,
-            area,
-            area.x,
-            area.y,
-            area.width,
-            bg,
-            look.color(c.island),
-        );
         let base = Style::default().bg(bg).fg(look.color(c.text_strong));
+        fill(buf, area, area.x, area.y, area.width, base);
+        let color = look.glyph_color(glyph);
+        put(buf, area, area.x, area.y, "▌", base.fg(color));
         let x = put(
             buf,
             area,
             area.x + 2,
             area.y,
             &look.glyph(glyph),
-            base.fg(look.glyph_color(glyph)),
+            base.fg(color),
         );
         put(buf, area, x + 1, area.y, self.text, base);
-        let mut right = area.right().saturating_sub(2);
+        let mut right = area.right().saturating_sub(1);
         for action in self.actions.iter().rev() {
-            let width = action.width() as u16 + 4;
-            right = right.saturating_sub(width);
-            let x = pill(buf, area, right, area.y, width, look.color(tint.border), bg);
-            put(
-                buf,
-                area,
-                x + 1,
-                area.y,
-                action,
-                Style::default()
-                    .bg(look.color(tint.border))
-                    .fg(look.color(c.text_strong)),
-            );
-            right = right.saturating_sub(1);
+            right = right.saturating_sub(action.width() as u16);
+            let link = base.fg(look.color(c.link)).add_modifier(Modifier::BOLD);
+            put(buf, area, right, area.y, action, link);
+            right = right.saturating_sub(2);
         }
     }
 }
 
-/// Options in a row; the selected one is a pill.
+/// Options in a row separated by thin bars; the selected one is bold on a tint.
 pub struct SegmentedControl<'a> {
     look: &'a Look,
     options: &'a [&'a str],
@@ -874,30 +961,29 @@ impl Widget for SegmentedControl<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
-        let island = look.color(c.island);
         let mut x = area.x;
         for (index, option) in self.options.iter().enumerate() {
-            let width = option.width() as u16 + 4;
+            if index > 0 {
+                x = put(buf, area, x, area.y, "│", look.text(c.border));
+            }
             let style = if index == self.selected {
-                let bg = look.color(c.segment_selected_border);
-                pill(buf, area, x, area.y, width, bg, island);
                 Style::default()
-                    .bg(bg)
+                    .bg(look.color(c.segment_selected_border))
                     .fg(look.color(c.text_strong))
                     .add_modifier(Modifier::BOLD)
             } else {
                 look.text(c.text_secondary)
             };
-            put(buf, area, x + 2, area.y, option, style);
-            x += width;
+            x = put(buf, area, x, area.y, &format!(" {option} "), style);
         }
     }
 }
 
-/// A thin progress bar: filled in the accent, the rest in the track color.
+/// A progress bar: a heavy accent line on a light track, and the percentage.
 pub struct ProgressBar<'a> {
     look: &'a Look,
     fraction: f32,
+    label: bool,
 }
 
 impl<'a> ProgressBar<'a> {
@@ -906,25 +992,35 @@ impl<'a> ProgressBar<'a> {
         Self {
             look,
             fraction: fraction.clamp(0.0, 1.0),
+            label: true,
         }
+    }
+
+    /// Whether to show the percentage after the bar (default `true`).
+    pub fn label(mut self, label: bool) -> Self {
+        self.label = label;
+        self
     }
 }
 
 impl Widget for ProgressBar<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
-        let filled = (area.width as f32 * self.fraction).round() as u16;
+        let look = self.look;
+        let percent = format!(" {:>3.0}%", self.fraction * 100.0);
+        let width = if self.label {
+            area.width.saturating_sub(percent.width() as u16)
+        } else {
+            area.width
+        };
+        let filled = (width as f32 * self.fraction).round() as u16;
         let bar = "━".repeat(filled as usize);
-        let rest = "━".repeat((area.width - filled) as usize);
-        let x = put(buf, area, area.x, area.y, &bar, self.look.text(c.accent));
-        put(
-            buf,
-            area,
-            x,
-            area.y,
-            &rest,
-            self.look.text(c.progress_track),
-        );
+        let x = put(buf, area, area.x, area.y, &bar, look.text(c.accent));
+        let rest = "─".repeat((width - filled) as usize);
+        let x = put(buf, area, x, area.y, &rest, look.text(c.border));
+        if self.label {
+            put(buf, area, x, area.y, &percent, look.text(c.text_secondary));
+        }
     }
 }
 
@@ -953,21 +1049,98 @@ impl<'a> Kbd<'a> {
 impl Widget for Kbd<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
-        let look = self.look;
-        let bg = look.color(c.border);
+        let cap = Style::default()
+            .bg(self.look.color(c.border))
+            .fg(self.look.color(c.text_strong));
         let mut x = area.x;
         for key in self.keys {
-            let width = key.width() as u16 + 2;
-            let inner = pill(buf, area, x, area.y, width, bg, look.color(c.island));
-            put(
+            x = put(buf, area, x, area.y, &format!(" {key} "), cap) + 1;
+        }
+    }
+}
+
+/// The status line, as in NvChad: a mode block in the accent ending in a half circle, key
+/// hints on the frame color, and on the right a status block (branch, position) behind a
+/// half circle.
+pub struct StatusBar<'a> {
+    look: &'a Look,
+    mode: Option<&'a str>,
+    hints: &'a [(&'a str, &'a str)],
+    right: &'a str,
+}
+
+impl<'a> StatusBar<'a> {
+    /// A status line with `hints` as (key, action).
+    pub fn new(look: &'a Look, hints: &'a [(&'a str, &'a str)]) -> Self {
+        Self {
+            look,
+            mode: None,
+            hints,
+            right: "",
+        }
+    }
+
+    /// The mode block at the left (`NORMAL`, `PROJECT`), in the accent.
+    pub fn mode(mut self, mode: &'a str) -> Self {
+        self.mode = Some(mode);
+        self
+    }
+
+    /// The status block at the right edge (branch, position, encoding).
+    pub fn right(mut self, text: &'a str) -> Self {
+        self.right = text;
+        self
+    }
+}
+
+impl Widget for StatusBar<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let c = &self.look.theme.colors;
+        let look = self.look;
+        let frame = look.color_over(c.frame, c.frame);
+        let base = Style::default().bg(frame).fg(look.color(c.text_secondary));
+        fill(buf, area, area.x, area.y, area.width, base);
+        let mut x = area.x;
+        if let Some(mode) = self.mode {
+            let accent = look.color(c.accent);
+            let block = Style::default()
+                .bg(accent)
+                .fg(look.color(c.text_on_accent))
+                .add_modifier(Modifier::BOLD);
+            x = put(
                 buf,
                 area,
-                inner,
+                x,
                 area.y,
-                key,
-                Style::default().bg(bg).fg(look.color(c.text_strong)),
+                &format!(" {} {mode} ", look.glyph(Glyph::Terminal)),
+                block,
             );
-            x += width + 1;
+            x = put(
+                buf,
+                area,
+                x,
+                area.y,
+                &CAP_RIGHT.to_string(),
+                Style::default().fg(accent).bg(frame),
+            ) + 1;
+        }
+        for (key, action) in self.hints {
+            let key_style = base
+                .fg(look.color(c.text_strong))
+                .add_modifier(Modifier::BOLD);
+            x = put(buf, area, x, area.y, key, key_style) + 1;
+            x = put(buf, area, x, area.y, action, base) + 2;
+        }
+        if !self.right.is_empty() {
+            let block_bg = look.color(c.border);
+            let width = self.right.width() as u16 + 3;
+            let start = area.right().saturating_sub(width);
+            if start > x {
+                let cap = Style::default().fg(block_bg).bg(frame);
+                let cx = put(buf, area, start, area.y, &CAP_LEFT.to_string(), cap);
+                let block = Style::default().bg(block_bg).fg(look.color(c.text_strong));
+                put(buf, area, cx, area.y, &format!(" {} ", self.right), block);
+            }
         }
     }
 }
@@ -1026,9 +1199,9 @@ impl Widget for Chip<'_> {
             (None, true) => (look.color(c.accent), look.color(c.text_on_accent)),
             (None, false) => (look.color(c.border), look.color(c.text_secondary)),
         };
-        let width = self.width();
-        let x = pill(buf, area, area.x, area.y, width, bg, look.color(c.island));
-        put(
+        let cap = Style::default().fg(bg).bg(look.color(c.island));
+        let x = put(buf, area, area.x, area.y, &CAP_LEFT.to_string(), cap);
+        let x = put(
             buf,
             area,
             x,
@@ -1036,6 +1209,7 @@ impl Widget for Chip<'_> {
             self.text,
             Style::default().bg(bg).fg(fg),
         );
+        put(buf, area, x, area.y, &CAP_RIGHT.to_string(), cap);
     }
 }
 

@@ -249,3 +249,7 @@ pub const CHECKBOX_MIXED: char = '\u{f0375}'; // md-minus_box
 pub const RADIO_ON: char = '\u{f043e}'; // md-radiobox_marked
 /// See [`RADIO_ON`].
 pub const RADIO_OFF: char = '\u{f043d}'; // md-radiobox_blank
+/// Switch states.
+pub const TOGGLE_ON: char = '\u{f0521}'; // md-toggle_switch
+/// See [`TOGGLE_ON`].
+pub const TOGGLE_OFF: char = '\u{f0a19}'; // md-toggle_switch_off_outline

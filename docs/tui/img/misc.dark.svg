@@ -1,129 +1,115 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="403.2" height="162.0" viewBox="0 0 403.2 162.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
-<rect x="0.0" y="0.0" width="8.4" height="18" fill="#26282C"/>
-<rect x="8.4" y="0.0" width="386.4" height="18" fill="#191A1C"/>
-<rect x="394.8" y="0.0" width="8.4" height="18" fill="#26282C"/>
-<rect x="4.2" y="0.0" width="4.2" height="18.0" fill="#191A1C"/>
-<rect x="0.0" y="9.0" width="4.2" height="9.0" fill="#191A1C"/>
-<rect x="394.8" y="0.0" width="4.2" height="18.0" fill="#191A1C"/>
-<rect x="399.0" y="9.0" width="4.2" height="9.0" fill="#191A1C"/>
-<rect x="0.0" y="18.0" width="92.4" height="18" fill="#191A1C"/>
-<rect x="92.4" y="18.0" width="50.4" height="18" fill="#5F6269"/>
-<rect x="142.8" y="18.0" width="260.4" height="18" fill="#191A1C"/>
-<text x="33.6" y="31.5" fill="#9FA2A8">T</text>
-<text x="42.0" y="31.5" fill="#9FA2A8">r</text>
-<text x="50.4" y="31.5" fill="#9FA2A8">e</text>
-<text x="58.8" y="31.5" fill="#9FA2A8">e</text>
-<g shape-rendering="geometricPrecision"><path d="M92.7 18.0 A8.4 9.0 0 0 0 92.7 36.0 Z" fill="#5F6269"/></g>
-<text x="100.8" y="31.5" fill="#DFE1E5" font-weight="bold">L</text>
-<text x="109.2" y="31.5" fill="#DFE1E5" font-weight="bold">i</text>
-<text x="117.6" y="31.5" fill="#DFE1E5" font-weight="bold">s</text>
-<text x="126.0" y="31.5" fill="#DFE1E5" font-weight="bold">t</text>
-<g shape-rendering="geometricPrecision"><path d="M142.5 18.0 A8.4 9.0 0 0 1 142.5 36.0 Z" fill="#5F6269"/></g>
-<text x="168.0" y="31.5" fill="#9FA2A8">G</text>
-<text x="176.4" y="31.5" fill="#9FA2A8">r</text>
-<text x="184.8" y="31.5" fill="#9FA2A8">a</text>
-<text x="193.2" y="31.5" fill="#9FA2A8">p</text>
-<text x="201.6" y="31.5" fill="#9FA2A8">h</text>
-<rect x="0.0" y="36.0" width="403.2" height="18" fill="#191A1C"/>
-<rect x="0.0" y="54.0" width="403.2" height="18" fill="#191A1C"/>
-<text x="16.8" y="67.5" fill="#3871E1">━</text>
-<text x="25.2" y="67.5" fill="#3871E1">━</text>
-<text x="33.6" y="67.5" fill="#3871E1">━</text>
-<text x="42.0" y="67.5" fill="#3871E1">━</text>
-<text x="50.4" y="67.5" fill="#3871E1">━</text>
-<text x="58.8" y="67.5" fill="#3871E1">━</text>
-<text x="67.2" y="67.5" fill="#3871E1">━</text>
-<text x="75.6" y="67.5" fill="#3871E1">━</text>
-<text x="84.0" y="67.5" fill="#3871E1">━</text>
-<text x="92.4" y="67.5" fill="#3871E1">━</text>
-<text x="100.8" y="67.5" fill="#3871E1">━</text>
-<text x="109.2" y="67.5" fill="#3871E1">━</text>
-<text x="117.6" y="67.5" fill="#3871E1">━</text>
-<text x="126.0" y="67.5" fill="#3871E1">━</text>
-<text x="134.4" y="67.5" fill="#3871E1">━</text>
-<text x="142.8" y="67.5" fill="#3871E1">━</text>
-<text x="151.2" y="67.5" fill="#3871E1">━</text>
-<text x="159.6" y="67.5" fill="#3871E1">━</text>
-<text x="168.0" y="67.5" fill="#3871E1">━</text>
-<text x="176.4" y="67.5" fill="#3871E1">━</text>
-<text x="184.8" y="67.5" fill="#3871E1">━</text>
-<text x="193.2" y="67.5" fill="#3871E1">━</text>
-<text x="201.6" y="67.5" fill="#3871E1">━</text>
-<text x="210.0" y="67.5" fill="#3871E1">━</text>
-<text x="218.4" y="67.5" fill="#3871E1">━</text>
-<text x="226.8" y="67.5" fill="#3871E1">━</text>
-<text x="235.2" y="67.5" fill="#40434A">━</text>
-<text x="243.6" y="67.5" fill="#40434A">━</text>
-<text x="252.0" y="67.5" fill="#40434A">━</text>
-<text x="260.4" y="67.5" fill="#40434A">━</text>
-<text x="268.8" y="67.5" fill="#40434A">━</text>
-<text x="277.2" y="67.5" fill="#40434A">━</text>
-<text x="285.6" y="67.5" fill="#40434A">━</text>
-<text x="294.0" y="67.5" fill="#40434A">━</text>
-<text x="302.4" y="67.5" fill="#40434A">━</text>
-<text x="310.8" y="67.5" fill="#40434A">━</text>
-<text x="319.2" y="67.5" fill="#40434A">━</text>
-<text x="327.6" y="67.5" fill="#40434A">━</text>
-<text x="336.0" y="67.5" fill="#40434A">━</text>
-<text x="344.4" y="67.5" fill="#40434A">━</text>
-<text x="352.8" y="67.5" fill="#40434A">━</text>
-<text x="361.2" y="67.5" fill="#40434A">━</text>
-<text x="369.6" y="67.5" fill="#40434A">━</text>
-<text x="378.0" y="67.5" fill="#40434A">━</text>
-<rect x="0.0" y="72.0" width="403.2" height="18" fill="#191A1C"/>
-<rect x="0.0" y="90.0" width="25.2" height="18" fill="#191A1C"/>
-<rect x="25.2" y="90.0" width="33.6" height="18" fill="#40434A"/>
-<rect x="58.8" y="90.0" width="25.2" height="18" fill="#191A1C"/>
-<rect x="84.0" y="90.0" width="42.0" height="18" fill="#40434A"/>
-<rect x="126.0" y="90.0" width="25.2" height="18" fill="#191A1C"/>
-<rect x="151.2" y="90.0" width="8.4" height="18" fill="#40434A"/>
-<rect x="159.6" y="90.0" width="243.6" height="18" fill="#191A1C"/>
-<g shape-rendering="geometricPrecision"><path d="M25.5 90.0 A8.4 9.0 0 0 0 25.5 108.0 Z" fill="#40434A"/></g>
-<text x="25.2" y="103.5" fill="#DFE1E5">C</text>
-<text x="33.6" y="103.5" fill="#DFE1E5">t</text>
-<text x="42.0" y="103.5" fill="#DFE1E5">r</text>
-<text x="50.4" y="103.5" fill="#DFE1E5">l</text>
-<g shape-rendering="geometricPrecision"><path d="M58.5 90.0 A8.4 9.0 0 0 1 58.5 108.0 Z" fill="#40434A"/></g>
-<g shape-rendering="geometricPrecision"><path d="M84.3 90.0 A8.4 9.0 0 0 0 84.3 108.0 Z" fill="#40434A"/></g>
-<text x="84.0" y="103.5" fill="#DFE1E5">S</text>
-<text x="92.4" y="103.5" fill="#DFE1E5">h</text>
-<text x="100.8" y="103.5" fill="#DFE1E5">i</text>
-<text x="109.2" y="103.5" fill="#DFE1E5">f</text>
-<text x="117.6" y="103.5" fill="#DFE1E5">t</text>
-<g shape-rendering="geometricPrecision"><path d="M125.7 90.0 A8.4 9.0 0 0 1 125.7 108.0 Z" fill="#40434A"/></g>
-<g shape-rendering="geometricPrecision"><path d="M151.5 90.0 A8.4 9.0 0 0 0 151.5 108.0 Z" fill="#40434A"/></g>
-<text x="151.2" y="103.5" fill="#DFE1E5">A</text>
-<g shape-rendering="geometricPrecision"><path d="M159.3 90.0 A8.4 9.0 0 0 1 159.3 108.0 Z" fill="#40434A"/></g>
-<rect x="0.0" y="108.0" width="403.2" height="18" fill="#191A1C"/>
-<rect x="0.0" y="126.0" width="25.2" height="18" fill="#191A1C"/>
-<rect x="25.2" y="126.0" width="42.0" height="18" fill="#40434A"/>
-<rect x="67.2" y="126.0" width="33.6" height="18" fill="#191A1C"/>
-<rect x="100.8" y="126.0" width="16.8" height="18" fill="#3871E1"/>
-<rect x="117.6" y="126.0" width="58.8" height="18" fill="#191A1C"/>
-<rect x="176.4" y="126.0" width="33.6" height="18" fill="#443833"/>
-<rect x="210.0" y="126.0" width="193.2" height="18" fill="#191A1C"/>
-<g shape-rendering="geometricPrecision"><path d="M25.5 126.0 A8.4 9.0 0 0 0 25.5 144.0 Z" fill="#40434A"/></g>
-<text x="25.2" y="139.5" fill="#9FA2A8">d</text>
-<text x="33.6" y="139.5" fill="#9FA2A8">r</text>
-<text x="42.0" y="139.5" fill="#9FA2A8">a</text>
-<text x="50.4" y="139.5" fill="#9FA2A8">f</text>
-<text x="58.8" y="139.5" fill="#9FA2A8">t</text>
-<g shape-rendering="geometricPrecision"><path d="M66.9 126.0 A8.4 9.0 0 0 1 66.9 144.0 Z" fill="#40434A"/></g>
-<g shape-rendering="geometricPrecision"><path d="M101.1 126.0 A8.4 9.0 0 0 0 101.1 144.0 Z" fill="#3871E1"/></g>
-<text x="100.8" y="139.5" fill="#FFFFFF">1</text>
-<text x="109.2" y="139.5" fill="#FFFFFF">2</text>
-<g shape-rendering="geometricPrecision"><path d="M117.3 126.0 A8.4 9.0 0 0 1 117.3 144.0 Z" fill="#3871E1"/></g>
-<g shape-rendering="geometricPrecision"><path d="M176.7 126.0 A8.4 9.0 0 0 0 176.7 144.0 Z" fill="#443833"/></g>
-<text x="176.4" y="139.5" fill="#DEA584">r</text>
-<text x="184.8" y="139.5" fill="#DEA584">u</text>
-<text x="193.2" y="139.5" fill="#DEA584">s</text>
-<text x="201.6" y="139.5" fill="#DEA584">t</text>
-<g shape-rendering="geometricPrecision"><path d="M209.7 126.0 A8.4 9.0 0 0 1 209.7 144.0 Z" fill="#443833"/></g>
-<rect x="0.0" y="144.0" width="8.4" height="18" fill="#26282C"/>
-<rect x="8.4" y="144.0" width="386.4" height="18" fill="#191A1C"/>
-<rect x="394.8" y="144.0" width="8.4" height="18" fill="#26282C"/>
-<rect x="0.0" y="144.0" width="8.4" height="9.0" fill="#191A1C"/>
-<rect x="4.2" y="153.0" width="4.2" height="9.0" fill="#191A1C"/>
-<rect x="394.8" y="144.0" width="8.4" height="9.0" fill="#191A1C"/>
-<rect x="394.8" y="153.0" width="4.2" height="9.0" fill="#191A1C"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="436.8" height="162.0" viewBox="0 0 436.8 162.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="436.8" height="18" fill="#191A1C"/>
+<rect x="0.0" y="18.0" width="67.2" height="18" fill="#191A1C"/>
+<rect x="67.2" y="18.0" width="50.4" height="18" fill="#5F6269"/>
+<rect x="117.6" y="18.0" width="319.2" height="18" fill="#191A1C"/>
+<text x="16.8" y="31.5" fill="#9FA2A8">T</text>
+<text x="25.2" y="31.5" fill="#9FA2A8">r</text>
+<text x="33.6" y="31.5" fill="#9FA2A8">e</text>
+<text x="42.0" y="31.5" fill="#9FA2A8">e</text>
+<path d="M63.0 18.0V36.0" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="75.6" y="31.5" fill="#DFE1E5" font-weight="bold">L</text>
+<text x="84.0" y="31.5" fill="#DFE1E5" font-weight="bold">i</text>
+<text x="92.4" y="31.5" fill="#DFE1E5" font-weight="bold">s</text>
+<text x="100.8" y="31.5" fill="#DFE1E5" font-weight="bold">t</text>
+<path d="M121.8 18.0V36.0" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="134.4" y="31.5" fill="#9FA2A8">G</text>
+<text x="142.8" y="31.5" fill="#9FA2A8">r</text>
+<text x="151.2" y="31.5" fill="#9FA2A8">a</text>
+<text x="159.6" y="31.5" fill="#9FA2A8">p</text>
+<text x="168.0" y="31.5" fill="#9FA2A8">h</text>
+<rect x="0.0" y="36.0" width="436.8" height="18" fill="#191A1C"/>
+<rect x="0.0" y="54.0" width="436.8" height="18" fill="#191A1C"/>
+<path d="M8.4 63.0H16.8" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M16.8 63.0H25.2" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M25.2 63.0H33.6" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M33.6 63.0H42.0" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M42.0 63.0H50.4" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M50.4 63.0H58.8" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M58.8 63.0H67.2" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M67.2 63.0H75.6" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M75.6 63.0H84.0" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M84.0 63.0H92.4" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M92.4 63.0H100.8" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M100.8 63.0H109.2" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M109.2 63.0H117.6" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M117.6 63.0H126.0" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M126.0 63.0H134.4" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M134.4 63.0H142.8" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M142.8 63.0H151.2" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M151.2 63.0H159.6" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M159.6 63.0H168.0" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M168.0 63.0H176.4" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M176.4 63.0H184.8" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M184.8 63.0H193.2" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M193.2 63.0H201.6" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M201.6 63.0H210.0" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M210.0 63.0H218.4" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M218.4 63.0H226.8" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M226.8 63.0H235.2" fill="none" stroke="#3871E1" stroke-width="2.5" shape-rendering="geometricPrecision"/>
+<path d="M235.2 63.0H243.6" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M243.6 63.0H252.0" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M252.0 63.0H260.4" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M260.4 63.0H268.8" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M268.8 63.0H277.2" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M277.2 63.0H285.6" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M285.6 63.0H294.0" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M294.0 63.0H302.4" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M302.4 63.0H310.8" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M310.8 63.0H319.2" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M319.2 63.0H327.6" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M327.6 63.0H336.0" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M336.0 63.0H344.4" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M344.4 63.0H352.8" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M352.8 63.0H361.2" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M361.2 63.0H369.6" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M369.6 63.0H378.0" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M378.0 63.0H386.4" fill="none" stroke="#40434A" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="403.2" y="67.5" fill="#9FA2A8">6</text>
+<text x="411.6" y="67.5" fill="#9FA2A8">0</text>
+<text x="420.0" y="67.5" fill="#9FA2A8">%</text>
+<rect x="0.0" y="72.0" width="436.8" height="18" fill="#191A1C"/>
+<rect x="0.0" y="90.0" width="8.4" height="18" fill="#191A1C"/>
+<rect x="8.4" y="90.0" width="50.4" height="18" fill="#40434A"/>
+<rect x="58.8" y="90.0" width="8.4" height="18" fill="#191A1C"/>
+<rect x="67.2" y="90.0" width="58.8" height="18" fill="#40434A"/>
+<rect x="126.0" y="90.0" width="8.4" height="18" fill="#191A1C"/>
+<rect x="134.4" y="90.0" width="25.2" height="18" fill="#40434A"/>
+<rect x="159.6" y="90.0" width="277.2" height="18" fill="#191A1C"/>
+<text x="16.8" y="103.5" fill="#DFE1E5">C</text>
+<text x="25.2" y="103.5" fill="#DFE1E5">t</text>
+<text x="33.6" y="103.5" fill="#DFE1E5">r</text>
+<text x="42.0" y="103.5" fill="#DFE1E5">l</text>
+<text x="75.6" y="103.5" fill="#DFE1E5">S</text>
+<text x="84.0" y="103.5" fill="#DFE1E5">h</text>
+<text x="92.4" y="103.5" fill="#DFE1E5">i</text>
+<text x="100.8" y="103.5" fill="#DFE1E5">f</text>
+<text x="109.2" y="103.5" fill="#DFE1E5">t</text>
+<text x="142.8" y="103.5" fill="#DFE1E5">A</text>
+<rect x="0.0" y="108.0" width="436.8" height="18" fill="#191A1C"/>
+<rect x="0.0" y="126.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="126.0" width="42.0" height="18" fill="#40434A"/>
+<rect x="58.8" y="126.0" width="25.2" height="18" fill="#191A1C"/>
+<rect x="84.0" y="126.0" width="16.8" height="18" fill="#3871E1"/>
+<rect x="100.8" y="126.0" width="25.2" height="18" fill="#191A1C"/>
+<rect x="126.0" y="126.0" width="33.6" height="18" fill="#443833"/>
+<rect x="159.6" y="126.0" width="277.2" height="18" fill="#191A1C"/>
+<g shape-rendering="geometricPrecision"><path d="M17.1 126.0 A8.4 9.0 0 0 0 17.1 144.0 Z" fill="#40434A"/></g>
+<text x="16.8" y="139.5" fill="#9FA2A8">d</text>
+<text x="25.2" y="139.5" fill="#9FA2A8">r</text>
+<text x="33.6" y="139.5" fill="#9FA2A8">a</text>
+<text x="42.0" y="139.5" fill="#9FA2A8">f</text>
+<text x="50.4" y="139.5" fill="#9FA2A8">t</text>
+<g shape-rendering="geometricPrecision"><path d="M58.5 126.0 A8.4 9.0 0 0 1 58.5 144.0 Z" fill="#40434A"/></g>
+<g shape-rendering="geometricPrecision"><path d="M84.3 126.0 A8.4 9.0 0 0 0 84.3 144.0 Z" fill="#3871E1"/></g>
+<text x="84.0" y="139.5" fill="#FFFFFF">1</text>
+<text x="92.4" y="139.5" fill="#FFFFFF">2</text>
+<g shape-rendering="geometricPrecision"><path d="M100.5 126.0 A8.4 9.0 0 0 1 100.5 144.0 Z" fill="#3871E1"/></g>
+<g shape-rendering="geometricPrecision"><path d="M126.3 126.0 A8.4 9.0 0 0 0 126.3 144.0 Z" fill="#443833"/></g>
+<text x="126.0" y="139.5" fill="#DEA584">r</text>
+<text x="134.4" y="139.5" fill="#DEA584">u</text>
+<text x="142.8" y="139.5" fill="#DEA584">s</text>
+<text x="151.2" y="139.5" fill="#DEA584">t</text>
+<g shape-rendering="geometricPrecision"><path d="M159.3 126.0 A8.4 9.0 0 0 1 159.3 144.0 Z" fill="#443833"/></g>
+<rect x="0.0" y="144.0" width="436.8" height="18" fill="#191A1C"/>
 </svg>

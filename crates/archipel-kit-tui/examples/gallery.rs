@@ -31,16 +31,30 @@ impl App {
         if area.width < 20 || area.height < 8 {
             return;
         }
-        // Header island with the page switcher.
-        let header = Rect::new(1, 1, area.width - 2, 3);
-        Island::new(look).render(header, buf);
-        buf.set_string(3, 2, "Archipel Kit", look.strong());
-        SegmentedControl::new(look, &PAGES, self.page).render(Rect::new(17, 2, 50, 1), buf);
-        Kbd::new(look, &["t", "q"]).render(Rect::new(area.width.saturating_sub(15), 2, 13, 1), buf);
-        let body = Rect::new(1, 5, area.width - 2, area.height - 6);
-        let island = Island::new(look).title(PAGES[self.page]);
+        // One focused panel with the page switcher on top, the status bar below.
+        let body = Rect::new(0, 0, area.width, area.height - 1);
+        let island = Island::new(look).title("Archipel Kit").focused(true);
         let inner = island.inner(body);
         island.render(body, buf);
+        SegmentedControl::new(look, &PAGES, self.page)
+            .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
+        let hints = [
+            ("←→", "page"),
+            ("↑↓", "move"),
+            ("space", "toggle"),
+            ("t", "theme"),
+            ("q", "quit"),
+        ];
+        StatusBar::new(look, &hints)
+            .mode(PAGES[self.page])
+            .right(if look.theme.dark { "dark" } else { "light" })
+            .render(Rect::new(0, area.height - 1, area.width, 1), buf);
+        let inner = Rect::new(
+            inner.x,
+            inner.y + 2,
+            inner.width,
+            inner.height.saturating_sub(2),
+        );
         let row = |n: u16| Rect::new(inner.x, inner.y + n, inner.width, 1);
         match self.page {
             0 => {
@@ -54,7 +68,7 @@ impl App {
                 ] {
                     let width = button.width();
                     button.render(Rect::new(x, inner.y, width, 1), buf);
-                    x += width + 1;
+                    x += width;
                 }
                 let labels = ["Format on save", "Optimize imports", "Mixed"];
                 for (i, label) in labels.iter().enumerate() {
@@ -66,17 +80,17 @@ impl App {
                 for (i, label) in ["Spaces", "Tabs"].iter().enumerate() {
                     Radio::new(look, self.radio == i, label).render(row(6 + i as u16), buf);
                 }
-                Toggle::new(look, self.toggle, "Power save mode").render(row(9), buf);
+                Toggle::new(look, self.toggle, "Power save mode")
+                    .focused(self.row == 3)
+                    .render(row(9), buf);
+                let field = |y: u16| Rect::new(inner.x, inner.y + y, inner.width.min(40), 3);
                 TextField::new(look, "")
                     .placeholder("Search everywhere")
-                    .render(row(11), buf);
+                    .render(field(11), buf);
                 TextField::new(look, "8o80")
                     .label("Port")
                     .error(Some("Must be a number"))
-                    .render(
-                        Rect::new(inner.x, inner.y + 13, inner.width.min(40), 3),
-                        buf,
-                    );
+                    .render(field(14), buf);
             }
             1 => {
                 let tabs = [
@@ -85,7 +99,7 @@ impl App {
                     (Some(Glyph::FileText.into()), "README.md", false),
                 ];
                 TabBar::new(look, &tabs, self.row % 3)
-                    .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
+                    .render(Rect::new(inner.x, inner.y, inner.width, 2), buf);
                 let rows: [(&str, u16, Option<bool>, RowIcon); 8] = [
                     ("kit", 0, Some(true), Glyph::Folder.into()),
                     ("src", 1, Some(true), Glyph::Folder.into()),
