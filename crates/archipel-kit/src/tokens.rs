@@ -54,6 +54,39 @@ pub mod size {
     pub const BUTTON_PADDING: f32 = 14.0;
     /// Vertical gap between stacked sections.
     pub const SECTION_SPACING: f32 = 8.0;
+    /// Settings forms (measured on Android Studio's Settings pages): gap between rows. With
+    /// 24 pt checkbox rows this gives their 29 pt pitch.
+    pub const FORM_ROW_GAP: f32 = 5.0;
+    /// Settings forms: space above and below a row of fields (28 pt): a field sits 9 pt
+    /// from the box of a checkbox above or below it, 9 pt below a group title's row.
+    pub const FORM_FIELD_INSET: f32 = 4.0;
+    /// Settings forms: gap between independent controls in one row, e.g. radio buttons.
+    pub const FORM_CONTROL_GAP: f32 = 16.0;
+    /// Settings forms: space to add between independent fields in a row of labelled
+    /// fields, on top of [`FORM_LABEL_GAP`], making [`FORM_CONTROL_GAP`].
+    pub const FORM_CONTROL_SPACE: f32 = FORM_CONTROL_GAP - FORM_LABEL_GAP;
+    /// Settings forms: extra space between rows that are only loosely related (measured
+    /// between `Zoom:` and `Use custom font:` in Settings | Appearance).
+    pub const FORM_ROWS_GAP: f32 = 7.0;
+    /// Settings forms: gap between a row's label (`Theme:`) and its control.
+    pub const FORM_LABEL_GAP: f32 = 6.0;
+    /// Settings forms: space above a group title, on top of [`FORM_ROW_GAP`].
+    pub const FORM_GROUP_SPACING: f32 = 20.0;
+    /// Settings forms: indent of a group's rows under its title.
+    pub const FORM_GROUP_INDENT: f32 = 24.0;
+    /// Gap between a group title and its line.
+    pub const GROUP_LINE_GAP: f32 = 6.0;
+    /// Gap between a checkbox or radio and its label.
+    pub const CHECK_LABEL_GAP: f32 = 8.0;
+    /// Space between a control's row and the first line of its comment below.
+    pub const COMMENT_GAP: f32 = 3.0;
+    /// A comment below a control takes this much space besides its lines (above and
+    /// below them together).
+    pub const COMMENT_SPACE: f32 = 7.0;
+    /// Line height of comments (12 pt text).
+    pub const COMMENT_LINE_HEIGHT: f32 = 16.0;
+    /// Gap between a label and its inline comment (`Requires restart`).
+    pub const INLINE_COMMENT_GAP: f32 = 12.0;
     /// Padding inside dialogs, popups and banners.
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
@@ -331,6 +364,8 @@ pub mod typography {
 
     /// Default UI text size.
     pub const BODY: f32 = 13.0;
+    /// Comments under and next to settings controls.
+    pub const COMMENT: f32 = 12.0;
     /// Small captions and badges.
     pub const SMALL: f32 = 11.0;
     /// Section and dialog titles.

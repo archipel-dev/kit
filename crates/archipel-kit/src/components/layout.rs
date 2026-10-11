@@ -462,39 +462,32 @@ impl SectionHeader {
 impl Widget for SectionHeader {
     fn ui(self, ui: &mut Ui) -> egui::Response {
         let colors = Theme::colors(ui.ctx());
-        let galley = common::galley(
-            ui,
-            self.title.as_str(),
-            typography::semibold(ui.ctx(), typography::BODY),
-        );
-        // Space above separates the section from the previous one.
-        let (outer, response) = ui.allocate_exact_size(
-            vec2(
-                ui.available_width(),
-                size::ROW_HEIGHT + size::SECTION_SPACING,
-            ),
-            Sense::hover(),
-        );
-        let rect = egui::Rect::from_min_max(
-            egui::pos2(outer.left(), outer.bottom() - size::ROW_HEIGHT),
-            outer.max,
-        );
+        let galley = common::galley(ui, self.title.as_str(), typography::body(typography::BODY));
+        // Space above separates the group from the previous one; the first group of a
+        // page starts at the top, as on Android Studio's Settings pages.
+        let first = ui.min_rect().height() <= 0.0;
+        let above = if first { 0.0 } else { size::FORM_GROUP_SPACING };
+        ui.add_space(above);
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(ui.available_width(), size::ROW_HEIGHT), Sense::hover());
         response
             .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.title));
         let text_right = rect.left() + galley.size().x;
-        common::text_left(
+        let top = rect.center().y - galley.size().y / 2.0;
+        // Measured: the line runs 4 pt above the title's baseline, to the right edge.
+        let y = (top + common::baseline(&galley) - 4.0).round() + 0.5;
+        common::text(
             ui.painter(),
-            rect,
-            rect.left(),
+            egui::pos2(rect.left(), top),
             galley,
-            colors.text_secondary,
+            colors.text,
         );
-        let y = rect.center().y.round() + 0.5;
-        if text_right + 8.0 < rect.right() {
+        let start = text_right + size::GROUP_LINE_GAP;
+        if start < rect.right() {
             ui.painter().hline(
-                text_right + 8.0..=rect.right(),
+                start..=rect.right(),
                 y,
-                Stroke::new(1.0_f32, colors.separator),
+                Stroke::new(1.0_f32, colors.group_separator),
             );
         }
         response

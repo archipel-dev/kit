@@ -2,7 +2,7 @@ use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::code::{Json, TemplateHighlighter, TemplateToken};
 use archipel_kit::components::{
     Avatar, Banner, Bucket, Button, Cell, ChartColor, Checkbox, CodeEditor, CodeView, Column,
-    Counter, Dialog, Dropdown, EmptyState, Histogram, IconButton, Kbd, KeyValueEntry,
+    Counter, Dialog, Dropdown, EmptyState, Form, Histogram, IconButton, Kbd, KeyValueEntry,
     KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio,
     SectionHeader, SegmentedControl, Separator, Severity, Side, SortOrder, Sparkline, Spinner,
     SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip,

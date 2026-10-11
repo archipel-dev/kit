@@ -18,32 +18,50 @@ impl Default for State {
 
 impl State {
     fn show(&mut self, ui: &mut egui::Ui, enabled: bool) {
-        ui.add(SectionHeader::new("Checkboxes"));
-        let [a, b, c] = &mut self.checks;
-        let all = *a && *b && *c;
-        let some = *a || *b || *c;
-        let mut parent = all;
-        if ui
-            .add(
-                Checkbox::new(&mut parent, "All inspections")
-                    .mixed(some && !all)
-                    .enabled(enabled),
-            )
-            .changed()
-        {
-            self.checks = [parent; 3];
-        }
-        let [a, b, c] = &mut self.checks;
-        ui.indent("children", |ui| {
-            ui.add(Checkbox::new(a, "Unused imports").enabled(enabled));
-            ui.add(Checkbox::new(b, "Spelling").enabled(enabled));
-            ui.add(Checkbox::new(c, "Deprecated API").enabled(enabled));
+        // A settings page: the form owns the spacing, groups and indents.
+        Form::new().show(ui, |form| {
+            form.group("Checkboxes", |form| {
+                let [a, b, c] = &mut self.checks;
+                let all = *a && *b && *c;
+                let some = *a || *b || *c;
+                let mut parent = all;
+                if form
+                    .add(
+                        Checkbox::new(&mut parent, "All inspections")
+                            .mixed(some && !all)
+                            .enabled(enabled),
+                    )
+                    .changed()
+                {
+                    self.checks = [parent; 3];
+                }
+                let [a, b, c] = &mut self.checks;
+                form.indent(|form| {
+                    form.add(Checkbox::new(a, "Unused imports").enabled(enabled));
+                    form.add(
+                        Checkbox::new(b, "Spelling")
+                            .inline_comment("Requires restart")
+                            .enabled(enabled),
+                    );
+                    form.add(
+                        Checkbox::new(c, "Deprecated API")
+                            .comment("Highlights calls to APIs marked deprecated by their library")
+                            .enabled(enabled),
+                    );
+                });
+            });
+            form.group("Radio buttons", |form| {
+                form.radios("Indent with", |ui| {
+                    ui.add(Radio::new(&mut self.indent, 0, "Tabs").enabled(enabled));
+                    ui.add(Radio::new(&mut self.indent, 1, "Spaces").enabled(enabled));
+                });
+            });
+            form.group("Toggles", |form| {
+                form.add(
+                    Toggle::new(&mut self.toggles[0], "Save files automatically").enabled(enabled),
+                );
+            });
         });
-        ui.add(SectionHeader::new("Radio buttons"));
-        ui.add(Radio::new(&mut self.indent, 0, "Tabs").enabled(enabled));
-        ui.add(Radio::new(&mut self.indent, 1, "Spaces").enabled(enabled));
-        ui.add(SectionHeader::new("Toggles"));
-        ui.add(Toggle::new(&mut self.toggles[0], "Save files automatically").enabled(enabled));
     }
 }
 

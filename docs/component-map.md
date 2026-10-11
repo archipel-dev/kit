@@ -105,6 +105,11 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Disabled borders | `#33353B` / light `#DDDFE4` | `Colors::border_disabled` |
 | Combo box list | Below the field, at least as wide, current value highlighted, groups separated by lines, chevron stays down | `Dropdown::separators` |
 | Fields and combo boxes | 28 pt, `#40434A` / `#D1D3D9` border; combo fill `#26282C` / white | `TextField`, `Dropdown` |
+| Checkbox label | Starts 8 pt after the box (radio the same); radios in a row 16 pt apart | `size::CHECK_LABEL_GAP`, `FORM_CONTROL_GAP` |
+| Disabled combo box | No fill, `border_disabled` border, dimmed text (not a faded copy) | `Dropdown::enabled(false)` |
+| Settings rows | Checkbox rows 29 pt apart; fields 9 pt from a box or field above and below; label 6 pt before its field | `Form`, `size::FORM_*` |
+| Comments | 12 pt in `#73767C` (both themes), 16 pt lines, aligned with the label; first line's cap 6 pt below the row; a comment adds 7 pt + 16 per line. Inline comment 12 pt after the label, same baseline | `Checkbox::comment`, `inline_comment`, `size::COMMENT_*` |
+| Group title | Regular weight, text color; 1 pt line `#33353B` / `#E9EAEE` from 6 pt after the title, 4 pt above its baseline, to the right edge; 20 pt extra above, none for the first group; rows indented 24 pt | `Form::group`, `SectionHeader`, `Colors::group_separator` |
 
 ### Tooltips and status bar
 

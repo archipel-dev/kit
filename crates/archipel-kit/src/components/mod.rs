@@ -10,7 +10,7 @@
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`], [`KeyValueTable`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`], [`Histogram`], [`Sparkline`] |
 //! | Code | [`CodeView`], [`CodeEditor`], and the [`code::Highlighter`]s |
-//! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`] |
+//! | Layout | [`Panel`], [`Form`], [`FieldLabel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
@@ -21,6 +21,7 @@ pub mod code;
 mod collections;
 pub(crate) mod common;
 mod feedback;
+mod form;
 mod icon_button;
 mod key_value;
 mod layout;
@@ -47,6 +48,7 @@ pub use collections::{
     VirtualList,
 };
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
+pub use form::{FieldLabel, Form, FormUi};
 pub use icon_button::IconButton;
 pub use key_value::{
     Change, KeyValueEntry, KeyValueRow, KeyValueTable, KeyValueTableResponse, ValueCell,

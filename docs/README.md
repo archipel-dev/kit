@@ -35,6 +35,7 @@
 | [EmptyState](components/empty-state.md) | <img src="components/img/empty_state.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Histogram, Sparkline](components/chart.md) | <img src="components/img/chart.dark.png" width="160"> | Value distributions, top-N counts, inline trends. |
+| [Form, FieldLabel](components/form.md) | <img src="components/img/form.dark.png" width="160"> | Settings pages: rows, comments, groups. |
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
 | [StatusBarItem](components/status-bar-item.md) | <img src="components/img/status_bar_item.dark.png" width="160"> | Status bar and toolbar widgets. |
 | [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |

@@ -1,0 +1,182 @@
+//! Settings forms: rows of controls in titled groups, spaced like Android Studio's Settings
+//! pages.
+
+use super::{SectionHeader, common};
+use crate::theme::Theme;
+use crate::tokens::{size, typography};
+use egui::{Align, Layout, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, vec2};
+
+/// A settings page: rows of controls, optionally in titled groups.
+///
+/// The form owns the vertical rhythm, so pages built with it look like Android Studio's
+/// Settings: checkbox rows 29 pt apart, fields 9 pt apart, a group title with a line and
+/// 20 pt above it, the group's rows indented under the title. Put explanations in the
+/// controls ([`Checkbox::comment`](super::Checkbox::comment),
+/// [`Checkbox::inline_comment`](super::Checkbox::inline_comment)) instead of extra labels.
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::components::{Checkbox, Form, TextField};
+///
+/// let (mut lighter, mut readers, mut zoom) = (false, false, String::from("100%"));
+/// Form::new().show(ui, |form| {
+///     form.add(
+///         Checkbox::new(&mut lighter, "Different tool window background")
+///             .comment("Use a lighter color in the dark theme"),
+///     );
+///     form.group("Accessibility", |form| {
+///         form.row("Zoom:", |ui| ui.add(TextField::new(&mut zoom).width(60.0)));
+///         form.add(
+///             Checkbox::new(&mut readers, "Support screen readers")
+///                 .inline_comment("Requires restart"),
+///         );
+///     });
+/// });
+/// # });
+/// ```
+#[derive(Debug, Default)]
+#[must_use = "show it with `form.show(ui, |form| …)`"]
+pub struct Form {}
+
+impl Form {
+    /// An empty form.
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    /// Lays out the rows `add` adds, top to bottom.
+    pub fn show<R>(self, ui: &mut Ui, add: impl FnOnce(&mut FormUi<'_>) -> R) -> R {
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = size::FORM_ROW_GAP;
+            add(&mut FormUi { ui })
+        })
+        .inner
+    }
+}
+
+/// The rows of a [`Form`].
+pub struct FormUi<'u> {
+    ui: &'u mut Ui,
+}
+
+impl FormUi<'_> {
+    /// A row with a control that names itself: a checkbox, radio, toggle or button.
+    pub fn add(&mut self, widget: impl Widget) -> Response {
+        self.ui.add(widget)
+    }
+
+    /// A row with a label (`Theme:`) followed by the fields `add` adds, left to right,
+    /// [`FORM_LABEL_GAP`](size::FORM_LABEL_GAP) apart. The label names the row; give
+    /// fields an accessible name of their own ([`TextField::name`](super::TextField::name)).
+    /// Label further fields with [`FieldLabel`] and set independent ones apart with
+    /// `ui.add_space(size::FORM_CONTROL_SPACE)`.
+    pub fn row<R>(&mut self, label: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
+        self.fields(|ui| {
+            ui.add(FieldLabel::new(label));
+            add(ui)
+        })
+    }
+
+    /// A row of fields without a leading label, e.g. a checkbox that enables a dropdown
+    /// (`[x] Use custom font: [Inter]  Size: [13]`). Like [`row`](Self::row) otherwise.
+    pub fn fields<R>(&mut self, add: impl FnOnce(&mut Ui) -> R) -> R {
+        // Fields are 28 pt; a few points above and below put their edges where the boxes
+        // of neighbouring checkbox rows are.
+        self.ui.add_space(size::FORM_FIELD_INSET);
+        let inner = self
+            .ui
+            .allocate_ui_with_layout(
+                vec2(self.ui.available_width(), size::CONTROL_HEIGHT),
+                Layout::left_to_right(Align::Center),
+                |ui| {
+                    ui.spacing_mut().item_spacing.x = size::FORM_LABEL_GAP;
+                    add(ui)
+                },
+            )
+            .inner;
+        self.ui.add_space(size::FORM_FIELD_INSET);
+        inner
+    }
+
+    /// A row with a label followed by radio buttons (`Open project in (•) New window
+    /// ( ) Current window`), [`FORM_CONTROL_GAP`](size::FORM_CONTROL_GAP) apart.
+    pub fn radios<R>(&mut self, label: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
+        self.ui
+            .allocate_ui_with_layout(
+                vec2(self.ui.available_width(), size::ROW_HEIGHT),
+                Layout::left_to_right(Align::Center),
+                |ui| {
+                    ui.spacing_mut().item_spacing.x = size::FORM_CONTROL_GAP;
+                    ui.add(FieldLabel::new(label));
+                    add(ui)
+                },
+            )
+            .inner
+    }
+
+    /// Extra space before the next row, between rows that are only loosely related. Use a
+    /// [group](Self::group) for unrelated ones.
+    pub fn space(&mut self) {
+        self.ui.add_space(size::FORM_ROWS_GAP);
+    }
+
+    /// A titled group: the title with a line to the right edge, then the rows `add` adds,
+    /// indented under it.
+    pub fn group<R>(&mut self, title: &str, add: impl FnOnce(&mut FormUi<'_>) -> R) -> R {
+        self.ui.add(SectionHeader::new(title));
+        self.indent(add)
+    }
+
+    /// Rows that belong to the row above (they only apply when it is checked), indented
+    /// under it.
+    pub fn indent<R>(&mut self, add: impl FnOnce(&mut FormUi<'_>) -> R) -> R {
+        self.ui
+            .horizontal_top(|ui| {
+                ui.add_space(size::FORM_GROUP_INDENT);
+                ui.vertical(|ui| add(&mut FormUi { ui })).inner
+            })
+            .inner
+    }
+
+    /// The underlying `Ui`, for content that is not a row (a table, a preview).
+    pub fn ui(&mut self) -> &mut Ui {
+        self.ui
+    }
+}
+
+/// The label of a field in a [`Form`] row (`Size:`), dimmed with the field when it is
+/// disabled.
+#[must_use = "add it with `ui.add(label)`"]
+pub struct FieldLabel {
+    text: String,
+    enabled: bool,
+}
+
+impl FieldLabel {
+    /// A label reading `text`, usually ending in a colon.
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            enabled: true,
+        }
+    }
+
+    /// Dims the label along with a disabled field.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+}
+
+impl Widget for FieldLabel {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let galley = common::galley(ui, self.text.as_str(), typography::body(typography::BODY));
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(galley.size().x, size::ROW_HEIGHT), Sense::hover());
+        response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, self.enabled, &self.text));
+        let colors = Theme::colors(ui.ctx());
+        let color = common::enabled_text(self.enabled, colors.text, &colors);
+        common::text_left(ui.painter(), rect, rect.left(), galley, color);
+        response
+    }
+}

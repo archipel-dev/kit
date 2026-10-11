@@ -208,6 +208,21 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                 state.bg_fill = colors.combo;
                 state.weak_bg_fill = colors.combo;
             }
+            if !self.enabled {
+                // Measured on Android Studio: a disabled combo has no fill, a faint
+                // border and dimmed text, instead of a faded copy of the enabled one.
+                for state in [
+                    &mut visuals.noninteractive,
+                    &mut visuals.inactive,
+                    &mut visuals.hovered,
+                ] {
+                    state.bg_fill = Color32::TRANSPARENT;
+                    state.weak_bg_fill = Color32::TRANSPARENT;
+                    state.bg_stroke = Stroke::new(1.0_f32, colors.border_disabled);
+                }
+                ui.style_mut().visuals.override_text_color = Some(colors.text_disabled);
+                ui.set_opacity(1.0);
+            }
             let leading = self.leading.as_ref().map(|slot| slot(self.selected));
             let leading_width = leading.as_ref().map_or(0.0, |slot| slot.width(ui));
             let mut selected_text = egui::text::LayoutJob::simple_singleline(

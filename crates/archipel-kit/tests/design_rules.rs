@@ -197,6 +197,12 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
         "EmptyState",
         "composition with one button, audited in tests/feedback.rs",
     ),
+    ("FieldLabel", "display only: names the field after it"),
+    (
+        "Form",
+        "layout of other components, measured in tests/form.rs",
+    ),
+    ("FormUi", "layout handle of Form"),
     ("Histogram", "chart, audited in tests/chart.rs"),
     ("HistogramResponse", "response"),
     ("Kbd", "display only"),

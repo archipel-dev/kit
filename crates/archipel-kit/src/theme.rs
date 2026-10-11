@@ -113,6 +113,8 @@ pub struct Colors {
     pub border: Color32,
     /// Toolbar and menu separators.
     pub separator: Color32,
+    /// Line after a group title in settings forms ([`SectionHeader`](crate::components::SectionHeader)).
+    pub group_separator: Color32,
     /// Selected editor tab fill.
     pub tab_selected: Color32,
     /// Selected editor tab underline.
@@ -327,6 +329,7 @@ impl Theme {
                 focus_ring: rgb(0x3871E1),
                 border: rgb(0x40434A),
                 separator: rgba(0xFFFFFF21),
+                group_separator: rgb(0x33353B),
                 tab_selected: rgb(0x233558),
                 tab_selected_border: rgb(0x2E4D89),
                 tab_text: rgb(0xAFB1B6),
@@ -463,6 +466,7 @@ impl Theme {
                 focus_ring: rgb(0x3871E1),
                 border: rgb(0xD1D3D9),
                 separator: rgba(0x00000020),
+                group_separator: rgb(0xE9EAEE),
                 tab_selected: rgb(0xE3EBFE),
                 tab_selected_border: rgb(0xA7C5FF),
                 tab_text: rgb(0x515151),
