@@ -79,14 +79,16 @@ impl Tooltip {
     pub fn content(&self, ui: &mut Ui) {
         let colors = Theme::colors(ui.ctx());
         let font = typography::body(typography::BODY);
-        ui.spacing_mut().item_spacing = vec2(size::SECONDARY_GAP, 3.0);
+        ui.spacing_mut().item_spacing = vec2(size::TOOLTIP_SHORTCUT_GAP, 3.0);
+        // One text line high, not a row of controls.
+        ui.spacing_mut().interact_size.y = ui.text_style_height(&egui::TextStyle::Body);
         ui.horizontal(|ui| {
             let label = common::galley(ui, self.label.as_str(), font.clone());
             let (rect, response) = ui.allocate_exact_size(label.size(), Sense::hover());
             response.widget_info(|| {
                 egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.label)
             });
-            common::text(ui.painter(), rect.min, label, colors.text_strong);
+            common::text(ui.painter(), rect.min, label, colors.text);
             if let Some(shortcut) = &self.shortcut {
                 let shortcut = common::galley(ui, shortcut.as_str(), font.clone());
                 let (rect, _) = ui.allocate_exact_size(shortcut.size(), Sense::hover());

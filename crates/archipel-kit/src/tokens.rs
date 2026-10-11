@@ -57,6 +57,12 @@ pub mod size {
     pub const STATUS_ITEM_PADDING: f32 = 6.0;
     /// Height of a status bar item's hover pill (21 pt in Android Studio).
     pub const STATUS_ITEM_HEIGHT: f32 = 21.0;
+    /// Space inside a tooltip at its sides (16 pt in Android Studio).
+    pub const TOOLTIP_PADDING_X: f32 = 16.0;
+    /// Space inside a tooltip above and below its text.
+    pub const TOOLTIP_PADDING_Y: f32 = 9.0;
+    /// Space between a tooltip's text and its shortcut.
+    pub const TOOLTIP_SHORTCUT_GAP: f32 = 9.0;
     /// Height of a one-line banner (Android Studio's editor notifications: 39 pt).
     pub const BANNER_HEIGHT: f32 = 39.0;
     /// Space inside a banner before its icon.

@@ -106,6 +106,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 
 | Situation | Android Studio | Kit |
 |---|---|---|
+| Tooltip look | `#33353B`, 36 pt for one line, 16 pt at the sides, text `#D1D3D9`, shortcut in `text_secondary` 9 pt after it | `Surface::Tooltip`, `tokens::size::TOOLTIP_*` |
 | Tooltip delay | About 0.5 s on toolbar buttons; stripe buttons name themselves at once, beside the button | egui's 0.5 s; `Tooltip::immediate`, `Tooltip::align` |
 | Tooltip linger | Help tooltips stay about 0.5 s after the pointer leaves, so links in them can be reached | Not reproduced: kit tooltips have no links |
 | Status bar | 30 pt on the frame, 8 pt from the left; items 21 pt hover pills, text `text_secondary`, full strength on hover | `Workbench::status`, `StatusBarItem` |

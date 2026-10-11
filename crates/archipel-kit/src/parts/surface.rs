@@ -42,7 +42,11 @@ impl Surface {
                 .fill(colors.tooltip)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
                 .corner_radius(CornerRadius::same(radius::CONTROL))
-                .inner_margin(Margin::symmetric(8, 5)),
+                // Android Studio's tooltips: 16 pt at the sides, 36 pt high for one line.
+                .inner_margin(Margin::symmetric(
+                    size::TOOLTIP_PADDING_X as i8,
+                    size::TOOLTIP_PADDING_Y as i8,
+                )),
             Surface::Dialog => egui::Frame::popup(&style)
                 .fill(colors.popup)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
