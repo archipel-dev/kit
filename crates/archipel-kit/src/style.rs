@@ -1,7 +1,7 @@
 //! Fonts, spacing and egui visuals.
 
 use crate::theme::Theme;
-use crate::tokens::{radius, size, typography};
+use crate::tokens::{popup, radius, scroll, size, typography};
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, Stroke};
 use std::sync::Arc;
 
@@ -30,11 +30,27 @@ pub fn install(ctx: &egui::Context, theme: Theme) {
         style.spacing.item_spacing = egui::vec2(6.0, 4.0);
         // Popups and menus: a small vertical inset, rows reach the sides (their pills inset
         // themselves), like the reference IDE's popup lists.
-        style.spacing.menu_margin = egui::Margin::symmetric(0, 6);
+        style.spacing.menu_margin = egui::Margin::symmetric(0, popup::PADDING as i8);
         style.spacing.window_margin = egui::Margin::same(size::DIALOG_PADDING as i8);
         style.spacing.button_padding = egui::vec2(8.0, 3.0);
         style.spacing.interact_size.y = size::ROW_HEIGHT;
-        style.spacing.scroll = egui::style::ScrollStyle::floating();
+        // Android Studio's scroll bars: a thin thumb that stays visible over the content and
+        // brightens under the pointer, no track.
+        style.spacing.scroll = egui::style::ScrollStyle {
+            floating: true,
+            bar_width: scroll::THUMB,
+            floating_width: scroll::THUMB,
+            floating_allocated_width: 0.0,
+            bar_outer_margin: scroll::MARGIN,
+            foreground_color: true,
+            dormant_background_opacity: 0.0,
+            active_background_opacity: 0.0,
+            interact_background_opacity: 0.0,
+            dormant_handle_opacity: scroll::THUMB_OPACITY,
+            active_handle_opacity: scroll::THUMB_OPACITY,
+            interact_handle_opacity: scroll::THUMB_HOVER_OPACITY,
+            ..egui::style::ScrollStyle::solid()
+        };
         style.interaction.selectable_labels = false;
     });
     theme.apply(ctx);

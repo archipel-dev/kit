@@ -223,6 +223,18 @@ pub mod glow {
     pub const LIGHT_PASTEL: f32 = 0.6;
 }
 
+/// Scroll bars, measured on Android Studio's Islands UI.
+pub mod scroll {
+    /// Thickness of a scroll bar's thumb.
+    pub const THUMB: f32 = 7.0;
+    /// Space between the thumb and the edge of what scrolls.
+    pub const MARGIN: f32 = 2.0;
+    /// Opacity of the text color the thumb is drawn in, at rest (`#3C3D3E` on a dark island).
+    pub const THUMB_OPACITY: f32 = 0.19;
+    /// Opacity of the thumb under the pointer (`#565657` on a dark island).
+    pub const THUMB_HOVER_OPACITY: f32 = 0.33;
+}
+
 /// Motion: delays and durations, in seconds. Measured on Android Studio's Islands UI.
 pub mod motion {
     /// How long an island's header actions stay after the pointer leaves the island (and
