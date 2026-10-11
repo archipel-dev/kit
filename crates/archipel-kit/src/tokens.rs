@@ -39,6 +39,10 @@ pub mod size {
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
     pub const ISLAND_GAP: f32 = 4.0;
+    /// Line height of code views and editors.
+    pub const CODE_LINE_HEIGHT: f32 = 20.0;
+    /// Padding inside code views and editors, and between gutter and text.
+    pub const CODE_PADDING: f32 = 8.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
@@ -60,6 +64,24 @@ pub mod size {
     pub fn indent(depth: usize) -> f32 {
         CONTENT_INSET + depth as f32 * TREE_INDENT
     }
+}
+
+/// Charts (histograms, sparklines), in points.
+pub mod chart {
+    /// Thickness of a horizontal histogram bar.
+    pub const BAR_HEIGHT: f32 = 12.0;
+    /// Inset of a sparkline's plot from its edges, leaving room for markers.
+    pub const SPARKLINE_PAD: f32 = 3.0;
+    /// Radius of sparkline markers (last value, extremes, hover).
+    pub const DOT_RADIUS: f32 = 2.5;
+    /// Extra radius of the island-colored ring around a marker.
+    pub const DOT_RING: f32 = 1.0;
+    /// Stroke width of a sparkline.
+    pub const LINE_WIDTH: f32 = 1.5;
+    /// Stroke width of hairlines: axis baselines.
+    pub const HAIRLINE: f32 = 1.0;
+    /// Opacity of a sparkline's min/max band.
+    pub const BAND_OPACITY: f32 = 0.12;
 }
 
 /// Corner radii, in points.

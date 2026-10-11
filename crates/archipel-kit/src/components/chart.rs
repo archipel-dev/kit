@@ -1,12 +1,12 @@
 //! Charts: a histogram of bucketed counts and an inline sparkline.
 
 use super::{Tooltip, common};
-use crate::parts::{Tone, focus_ring};
+use crate::parts::{State, Tone, focus_ring};
 use crate::theme::{Colors, Theme};
-use crate::tokens::{radius, size, typography};
+use crate::tokens::{chart as metrics, radius, size, typography};
 use egui::{
-    CornerRadius, Key, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo,
-    WidgetType, pos2, vec2,
+    CornerRadius, Key, Pos2, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo, WidgetType,
+    pos2, vec2,
 };
 
 /// Formats a number for labels and summaries: integers plain, others with up to two
@@ -124,7 +124,6 @@ pub struct Histogram<'a> {
     selectable: bool,
     selected: Option<usize>,
     enabled: bool,
-    tooltip: bool,
     behaviours: crate::behaviour::Behaviours<'a>,
 }
 
@@ -142,7 +141,6 @@ impl<'a> Histogram<'a> {
             selectable: false,
             selected: None,
             enabled: true,
-            tooltip: true,
             behaviours: Default::default(),
         }
     }
@@ -197,13 +195,8 @@ impl<'a> Histogram<'a> {
         self
     }
 
-    /// Shows the hover tooltip (default true).
-    pub fn tooltip(mut self, tooltip: bool) -> Self {
-        self.tooltip = tooltip;
-        self
-    }
-
-    /// Adds a behaviour (context menu, your own tooltip with `.tooltip(false)` …).
+    /// Adds a behaviour: a context menu, or your own [`Tooltip`], which replaces the automatic
+    /// one.
     pub fn with(mut self, behaviour: impl crate::behaviour::Behaviour + 'a) -> Self {
         self.behaviours.push(behaviour);
         self
@@ -379,8 +372,16 @@ impl<'a> Histogram<'a> {
             }
         }
 
-        if self.tooltip
-            && let Some(index) = hovered
+        if selected_now.is_some() || clicked.is_some() {
+            response.mark_changed();
+        }
+        let caller_has_behaviours = !self.behaviours.is_empty();
+        let response = self.behaviours.attach(ui, response);
+
+        // The automatic tooltip, unless the caller's own is already showing.
+        if let Some(index) = hovered
+            && !(caller_has_behaviours
+                && egui::Tooltip::was_tooltip_open_last_frame(ui.ctx(), response.id))
         {
             let bucket = &self.buckets[index];
             let total: u64 = self.buckets.iter().map(|b| b.count).sum();
@@ -393,16 +394,19 @@ impl<'a> Histogram<'a> {
                 .hint(format!("{} {}{share}", bucket.count, self.unit))
                 .show_for(&response);
         }
-
-        if selected_now.is_some() || clicked.is_some() {
-            response.mark_changed();
-        }
-        let response = self.behaviours.attach(ui, response);
         HistogramResponse {
             response,
             hovered,
             selected: selected_now,
             clicked,
+        }
+    }
+
+    /// Only `enabled` matters: the chart is drawn, not pressed.
+    fn state(&self) -> State {
+        State {
+            enabled: self.enabled,
+            ..State::default()
         }
     }
 
@@ -417,7 +421,7 @@ impl<'a> Histogram<'a> {
         if self.enabled {
             color
         } else {
-            color.gamma_multiply(0.4)
+            colors.text_disabled
         }
     }
 
@@ -428,7 +432,7 @@ impl<'a> Histogram<'a> {
         let font = typography::body(typography::SMALL);
         let axis_height = typography::SMALL + 6.0;
         let plot = Rect::from_min_max(
-            rect.min + vec2(0.0, 2.0),
+            rect.min + vec2(0.0, 4.0),
             pos2(rect.right(), rect.bottom() - axis_height),
         );
         let slot = rect.width() / n as f32;
@@ -439,14 +443,25 @@ impl<'a> Histogram<'a> {
             sw: 0,
             se: 0,
         };
+        let pill = CornerRadius {
+            nw: radius::ROW,
+            ne: radius::ROW,
+            sw: 0,
+            se: 0,
+        };
         for (i, bucket) in self.buckets.iter().enumerate() {
             let x = rect.left() + i as f32 * slot;
-            let column = Rect::from_min_max(pos2(x, rect.top()), pos2(x + slot, rect.bottom()));
-            let is_selected = self.selected == Some(i);
-            if is_selected {
-                painter.rect_filled(column, CornerRadius::same(radius::ROW), colors.selection);
+            // The highlight stays inside the plot (above the axis), under the bar.
+            let column = Rect::from_min_max(pos2(x, rect.top()), pos2(x + slot, plot.bottom()));
+            let fill = if self.selected == Some(i) {
+                colors.selection
             } else if hovered == Some(i) {
-                painter.rect_filled(column, CornerRadius::same(radius::ROW), colors.row_hover);
+                colors.row_hover
+            } else {
+                egui::Color32::TRANSPARENT
+            };
+            if fill != egui::Color32::TRANSPARENT {
+                painter.rect_filled(column, pill, fill);
             }
             if bucket.count > 0 {
                 let h = (plot.height() * bucket.count as f32 / max as f32).max(2.0);
@@ -455,28 +470,16 @@ impl<'a> Histogram<'a> {
                     pos2(x + slot - gap / 2.0, plot.bottom()),
                 );
                 painter.rect_filled(bar, corner, self.bar_color(bucket.count, max, colors));
-                if is_selected || hovered == Some(i) {
-                    painter.rect_stroke(
-                        bar,
-                        corner,
-                        Stroke::new(1.0_f32, colors.text_strong),
-                        StrokeKind::Outside,
-                    );
-                }
             }
         }
         painter.hline(
             rect.x_range(),
             plot.bottom() + 0.5,
-            Stroke::new(1.0_f32, colors.separator),
+            Stroke::new(metrics::HAIRLINE, colors.separator),
         );
         // Axis labels: every bar's if they fit, else the first and the last.
         let label_y = plot.bottom() + 3.0;
-        let color = if self.enabled {
-            colors.text_secondary
-        } else {
-            colors.text_disabled
-        };
+        let color = self.state().text(Tone::Secondary, colors);
         let galleys: Vec<_> = self
             .buckets
             .iter()
@@ -521,12 +524,12 @@ impl<'a> Histogram<'a> {
         let label_width = widest.min(rect.width() * 0.4);
         let bar_left = rect.left() + inset + label_width + size::SECONDARY_GAP;
         let bar_right = rect.right() - inset - count_width - size::SECONDARY_GAP;
-        let bar_height = 12.0;
-        let (text, muted) = if self.enabled {
-            (colors.text, colors.text_secondary)
-        } else {
-            (colors.text_disabled, colors.text_disabled)
-        };
+        let bar_height = metrics::BAR_HEIGHT;
+        let state = self.state();
+        let (text, muted) = (
+            state.text(Tone::Default, colors),
+            state.text(Tone::Secondary, colors),
+        );
         for (i, (bucket, (label, count))) in self
             .buckets
             .iter()
@@ -546,7 +549,7 @@ impl<'a> Histogram<'a> {
             let y = row.center().y;
             // Truncate long labels to their column.
             let label = if label.size().x > label_width {
-                common::galley_truncated(ui, bucket.label.as_str(), font.clone(), label_width)
+                galley_truncated(ui, bucket.label.as_str(), font.clone(), label_width)
             } else {
                 label
             };
@@ -699,7 +702,7 @@ impl Widget for Sparkline<'_> {
         crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         let n = self.values.len();
         let extremes = self.extremes();
-        let pad = 3.0;
+        let pad = metrics::SPARKLINE_PAD;
         let plot = rect.shrink2(vec2(pad, pad));
         let (low, high) = self.scale.or(extremes).unwrap_or((0.0, 1.0));
         let span = high - low;
@@ -729,10 +732,10 @@ impl Widget for Sparkline<'_> {
                             pos2(plot.right(), b.max(a + 1.0)),
                         ),
                         CornerRadius::same(2),
-                        color.gamma_multiply(0.12),
+                        color.gamma_multiply(metrics::BAND_OPACITY),
                     );
                 }
-                let stroke = Stroke::new(1.5_f32, color);
+                let stroke = Stroke::new(metrics::LINE_WIDTH, color);
                 let mut previous: Option<Pos2> = None;
                 for (i, &v) in self.values.iter().enumerate() {
                     if !v.is_finite() {
@@ -756,8 +759,12 @@ impl Widget for Sparkline<'_> {
                     }
                 }
                 let dot = |p: Pos2, fill| {
-                    painter.circle_filled(p, 3.5, colors.island);
-                    painter.circle_filled(p, 2.5, fill);
+                    painter.circle_filled(
+                        p,
+                        metrics::DOT_RADIUS + metrics::DOT_RING,
+                        colors.island,
+                    );
+                    painter.circle_filled(p, metrics::DOT_RADIUS, fill);
                 };
                 if self.band {
                     for (v, extreme) in [(min, min), (max, max)] {
@@ -776,7 +783,7 @@ impl Widget for Sparkline<'_> {
                 painter.hline(
                     plot.x_range(),
                     plot.center().y,
-                    Stroke::new(1.0_f32, colors.text_disabled),
+                    Stroke::new(metrics::HAIRLINE, colors.text_disabled),
                 );
             }
         }
@@ -789,8 +796,12 @@ impl Widget for Sparkline<'_> {
             let index = (t * (n - 1) as f32).round() as usize;
             if let Some(&value) = self.values.get(index).filter(|v| v.is_finite()) {
                 let p = at(index, value);
-                ui.painter().circle_filled(p, 3.5, colors.island);
-                ui.painter().circle_filled(p, 2.5, color);
+                ui.painter().circle_filled(
+                    p,
+                    metrics::DOT_RADIUS + metrics::DOT_RING,
+                    colors.island,
+                );
+                ui.painter().circle_filled(p, metrics::DOT_RADIUS, color);
                 Tooltip::new(self.write(value))
                     .hint(format!("Point {} of {n}", index + 1))
                     .show_for(&response);
@@ -798,4 +809,19 @@ impl Widget for Sparkline<'_> {
         }
         response
     }
+}
+
+/// Lays out `text` on one line in `font`, elided with an ellipsis at `max_width`.
+fn galley_truncated(
+    ui: &Ui,
+    text: &str,
+    font: egui::FontId,
+    max_width: f32,
+) -> std::sync::Arc<egui::Galley> {
+    egui::WidgetText::from(text).into_galley(
+        ui,
+        Some(egui::TextWrapMode::Truncate),
+        max_width,
+        egui::FontSelection::FontId(font),
+    )
 }

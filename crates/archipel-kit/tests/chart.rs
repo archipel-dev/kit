@@ -232,6 +232,25 @@ fn hovering_a_bar_shows_its_range_and_count() {
 }
 
 #[test]
+fn a_tooltip_attached_by_the_caller_replaces_the_automatic_one() {
+    let buckets = price();
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        Histogram::new("price", &buckets)
+            .with(archipel_kit::components::Tooltip::new("Filter by price"))
+            .show(ui);
+    });
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 260.0));
+    let rect = harness.get_by_label(PRICE).rect();
+    harness.hover_at(egui::pos2(
+        rect.left() + rect.width() * 0.37,
+        rect.top() + 30.0,
+    ));
+    harness.run_steps(60);
+    assert!(harness.query_by_label("Filter by price").is_some());
+    assert!(harness.query_by_label("20–40").is_none());
+}
+
+#[test]
 fn sparkline_tooltip_is_opt_in() {
     let values = [1.0, 5.0, 3.0];
     let mut harness = testing::harness(Theme::dark(), |ui| {

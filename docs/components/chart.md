@@ -63,8 +63,7 @@ fn field_stats(ui: &mut egui::Ui, selected: &mut Option<usize>, latency: &[f32])
 | `.selectable(bool)` | Opt into click, arrow keys and Enter. |
 | `.selected(Option<usize>)` | The caller's selection. |
 | `.enabled(bool)` | Disabled charts are dimmed and inert. |
-| `.tooltip(bool)` | The hover tooltip (on); turn off to bring your own with `.with(...)`. |
-| `.with(behaviour)` | Context menu or other [behaviours](../behaviours.md). |
+| `.with(behaviour)` | [Behaviours](../behaviours.md): a context menu, or your own `Tooltip`, which replaces the automatic one. |
 | `Sparkline::new(name, &[f32])` | `.width(f32)` (96 pt; the height is fixed), `.color`, `.last_marker(bool)`, `.min_max_band(bool)`, `.scale(low, high)`, `.tooltip(bool)`, `.format(fn(f32) -> String)`. |
 
 `Histogram::show` returns a `HistogramResponse`: `response`, `hovered`, `selected` (changed
@@ -79,6 +78,9 @@ by click or keys this frame) and `clicked` (activated by click or Enter/Space).
   <kbd>Tab</kbd> stop with a focus ring; <kbd>←</kbd>/<kbd>→</kbd> (<kbd>↑</kbd>/<kbd>↓</kbd>
   when horizontal), <kbd>Home</kbd> and <kbd>End</kbd> move the selection,
   <kbd>Enter</kbd> or <kbd>Space</kbd> activates it.
+- **Sparkline tooltip.** The opt-in tooltip (`.tooltip(true)`) is mouse-only: a sparkline is
+  read-only and takes no keyboard focus. The accessible name carries the min, max and last
+  value for everyone else.
 - **Axis labels.** Every bucket label if they fit, otherwise the first and the last.
   Horizontal labels truncate at 40% of the width.
 - **Edge cases.** An empty histogram says "No data". Zero counts draw no bar, other bars
