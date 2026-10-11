@@ -72,10 +72,12 @@ pub struct Dropdown<'a, T: PartialEq + Clone + ToString> {
     enabled: bool,
     label: Option<String>,
     leading: Option<OptionLeading<'a, T>>,
+    tone: Option<OptionTone<'a, T>>,
     separators: Vec<usize>,
 }
 
 type OptionLeading<'a, T> = Box<dyn Fn(&T) -> Slot<'a> + 'a>;
+type OptionTone<'a, T> = Box<dyn Fn(&T) -> crate::parts::Tone + 'a>;
 
 impl<'a, T: PartialEq + Clone + ToString> Dropdown<'a, T> {
     /// A dropdown with a unique `id_salt`, editing `selected`, offering `options`.
@@ -92,6 +94,7 @@ impl<'a, T: PartialEq + Clone + ToString> Dropdown<'a, T> {
             enabled: true,
             label: None,
             leading: None,
+            tone: None,
             separators: Vec::new(),
         }
     }
@@ -107,6 +110,13 @@ impl<'a, T: PartialEq + Clone + ToString> Dropdown<'a, T> {
     /// announce it with the selected value.
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    /// Colors each option's text, and the selected value's, by meaning: HTTP methods,
+    /// log levels. The text stays the option's name for screen readers.
+    pub fn tone(mut self, tone: impl Fn(&T) -> crate::parts::Tone + 'a) -> Self {
+        self.tone = Some(Box::new(tone));
         self
     }
 
@@ -225,10 +235,14 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
             }
             let leading = self.leading.as_ref().map(|slot| slot(self.selected));
             let leading_width = leading.as_ref().map_or(0.0, |slot| slot.width(ui));
+            let text_color = match &self.tone {
+                Some(tone) if self.enabled => tone(self.selected).color(&colors),
+                _ => common::enabled_text(self.enabled, colors.text, &colors),
+            };
             let mut selected_text = egui::text::LayoutJob::simple_singleline(
                 self.selected.to_string(),
                 egui::TextStyle::Button.resolve(ui.style()),
-                common::enabled_text(self.enabled, colors.text, &colors),
+                text_color,
             );
             if let Some(section) = selected_text.sections.first_mut() {
                 section.leading_space = if leading.is_some() {
@@ -237,7 +251,7 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                     0.0
                 };
             }
-            let selected_text = if leading.is_some() {
+            let selected_text = if leading.is_some() || self.tone.is_some() {
                 egui::WidgetText::from(selected_text)
             } else {
                 egui::WidgetText::from(self.selected.to_string())
@@ -277,6 +291,9 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                             .selected(index == highlight);
                         if let Some(slot) = &self.leading {
                             row = row.leading(slot(option));
+                        }
+                        if let Some(tone) = &self.tone {
+                            row = row.label_tone(tone(option));
                         }
                         let row = row.show(ui);
                         if index == highlight && navigated {

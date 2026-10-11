@@ -89,3 +89,52 @@ fn separators_group_options_without_shifting_picks() {
     harness.run();
     assert_eq!(*harness.state(), "Darcula");
 }
+
+#[test]
+fn tone_colors_options_and_keeps_their_names() {
+    use archipel_kit::parts::Tone;
+    let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {
+        ui.add(
+            Dropdown::new("method", method, ["GET", "POST", "PUT", "DELETE"])
+                .tone(|m| Tone::method(m))
+                .label("Method")
+                .width(110.0),
+        );
+    });
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 220.0));
+    harness.run();
+    harness.get_by_label("Method").click();
+    harness.run();
+    harness.get_by_label("DELETE").click();
+    harness.run();
+    assert_eq!(*harness.state(), "DELETE");
+}
+
+#[test]
+fn tone_snapshot() {
+    use archipel_kit::parts::Tone;
+    testing::snapshot_themes_after(
+        "dropdown_tone",
+        common::IMG,
+        |ui| {
+            let id = egui::Id::new("tone-snapshot");
+            let mut method = ui.data_mut(|d| *d.get_temp_mut_or_insert_with(id, || "POST"));
+            ui.add(
+                Dropdown::new(
+                    "method",
+                    &mut method,
+                    ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                )
+                .tone(|m| Tone::method(m))
+                .label("Method")
+                .width(110.0),
+            );
+            ui.data_mut(|d| d.insert_temp(id, method));
+            ui.add_space(170.0);
+        },
+        |h| {
+            h.get_by_label("Method").click();
+            h.run();
+        },
+    );
+}
