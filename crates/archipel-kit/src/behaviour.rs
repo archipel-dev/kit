@@ -162,7 +162,9 @@ impl<P: Any + Send + Sync> Behaviour for DragSource<P> {
             return response;
         }
         // The same widget, now also sensing drags: a click without movement still clicks.
-        let response = response.interact(Sense::drag());
+        // `Sense::DRAG` alone: `Sense::drag()` would also make the widget a Tab stop, which
+        // rows inside a list (roving focus) must not be.
+        let response = response.interact(Sense::DRAG);
         if response.dragged() {
             response.dnd_set_drag_payload(self.0);
             response.ctx.set_cursor_icon(CursorIcon::Grabbing);

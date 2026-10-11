@@ -206,3 +206,28 @@ fn drag_source_keeps_clicks() {
     harness.run();
     assert_eq!(*harness.state(), 1);
 }
+
+/// Nexus HTTP's sidebar (kit issue #21): draggable `ListRow`s in a `VirtualList` are
+/// reached with the arrow keys after Tab focuses the list. `DragSource` must not make the
+/// rows Tab stops of their own, or the audit reports them as unreachable.
+#[test]
+fn draggable_rows_in_a_virtual_list_pass_the_audit() {
+    use archipel_kit::components::VirtualList;
+    let names = ["Auth", "Login", "List users", "Get invoice"];
+    let mut selected = None;
+    for theme in [Theme::dark(), Theme::light()] {
+        let mut harness = testing::harness(theme, |ui| {
+            let _ = VirtualList::new("sidebar", names.len(), &mut selected)
+                .name("Requests")
+                .height(200.0)
+                .show(ui, |i| {
+                    ListRow::new(names[i])
+                        .icon(Glyph::Folder)
+                        .with(DragSource(i))
+                });
+        });
+        harness.set_size(egui::vec2(300.0, 720.0));
+        harness.run();
+        testing::audit(&mut harness).assert_clean();
+    }
+}
