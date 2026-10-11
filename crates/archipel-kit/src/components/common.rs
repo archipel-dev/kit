@@ -14,6 +14,16 @@ pub(crate) fn galley(ui: &Ui, text: impl Into<WidgetText>, font: FontId) -> Arc<
     )
 }
 
+/// Lays out `text` on one line in `font`, cut at `max_width` with `…`.
+pub(crate) fn galley_elided(ui: &Ui, text: &str, font: FontId, max_width: f32) -> Arc<Galley> {
+    let mut job =
+        egui::text::LayoutJob::simple_singleline(text.to_owned(), font, Color32::PLACEHOLDER);
+    job.wrap.max_width = max_width;
+    job.wrap.max_rows = 1;
+    job.wrap.break_anywhere = true;
+    ui.painter().layout_job(job)
+}
+
 /// Paints `galley` at `pos` in `color`, ignoring the style's global text color override.
 pub(crate) fn text(painter: &Painter, pos: Pos2, galley: Arc<Galley>, color: Color32) {
     painter.galley_with_override_text_color(pos, galley, color);

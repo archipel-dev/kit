@@ -28,6 +28,7 @@ pub struct Popover {
     id: Id,
     anchor: Rect,
     width: Option<f32>,
+    beside: bool,
 }
 
 impl Popover {
@@ -37,6 +38,16 @@ impl Popover {
             id: Id::new(id_salt),
             anchor,
             width: None,
+            beside: false,
+        }
+    }
+
+    /// A popover attached to the right of `response`'s widget (to its left when there is no
+    /// room), aligned with its top edge: submenus.
+    pub fn right_of(id_salt: impl std::hash::Hash, response: &egui::Response) -> Self {
+        Self {
+            beside: true,
+            ..Self::new(id_salt, response.rect)
         }
     }
 
@@ -66,7 +77,17 @@ impl Popover {
         let last_height: f32 = ctx.data(|d| d.get_temp(self.id)).unwrap_or(0.0);
         let screen = ctx.content_rect();
         let below = self.anchor.left_bottom() + egui::vec2(0.0, 4.0);
-        let pos = if below.y + last_height > screen.bottom() && self.anchor.top() > last_height {
+        let pos = if self.beside {
+            // The popup's own padding is 4 points: line its first row up with the anchor.
+            let x = if self.anchor.right() + width > screen.right() && self.anchor.left() > width {
+                self.anchor.left() - width
+            } else {
+                self.anchor.right()
+            };
+            let y =
+                (self.anchor.top() - 4.0).min((screen.bottom() - last_height).max(screen.top()));
+            egui::pos2(x, y)
+        } else if below.y + last_height > screen.bottom() && self.anchor.top() > last_height {
             self.anchor.left_top() - egui::vec2(0.0, last_height + 4.0)
         } else {
             below

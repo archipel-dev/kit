@@ -136,3 +136,51 @@ fn value_kinds_follow_the_theme_of_the_context() {
     assert_eq!(kind.resolve(&dark.ctx), Theme::dark().editor.string);
     assert_eq!(kind.resolve(&light.ctx), Theme::light().editor.string);
 }
+
+#[test]
+fn tool_window_header_snapshot() {
+    testing::snapshot_themes("panel_tool_window", common::IMG, |ui| {
+        Panel::new("Project")
+            .actions(|ui| {
+                ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+                ui.add(IconButton::new(Glyph::Search, "Find"));
+            })
+            .on_hide(|| {})
+            .show(ui, |ui| {
+                ui.add_space(4.0);
+                ui.label("src/");
+            });
+    });
+}
+
+#[test]
+fn panel_hide_button_hides_and_passes_the_audit() {
+    let mut harness = testing::harness_state(Theme::dark(), 0, |ui, hidden| {
+        Panel::new("Project")
+            .actions(|ui| {
+                ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+            })
+            .on_hide(|| *hidden += 1)
+            .show(ui, |ui| {
+                ui.label("src/");
+            });
+    });
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    harness.get_by_label("Collapse all").click();
+    harness.run();
+    assert_eq!(*harness.state(), 0);
+    harness.get_by_label("Hide Project").click();
+    harness.run();
+    assert_eq!(*harness.state(), 1);
+}
+
+#[test]
+fn panel_without_on_hide_has_no_hide_button() {
+    let harness = testing::harness(Theme::dark(), |ui| {
+        Panel::new("Project").show(ui, |ui| {
+            ui.label("src/");
+        });
+    });
+    assert!(harness.query_by_label("Hide Project").is_none());
+}

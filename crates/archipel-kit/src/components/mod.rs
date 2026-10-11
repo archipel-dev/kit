@@ -9,7 +9,7 @@
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
-//! | Layout | [`Panel`], [`SectionHeader`], [`Separator`] |
+//! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`StatusBarItem`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
@@ -25,6 +25,7 @@ mod misc;
 mod overlay;
 mod progress;
 mod segmented;
+mod status_bar;
 mod text_field;
 
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
@@ -42,4 +43,5 @@ pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
 pub use overlay::{Dialog, DialogAction, MenuSeparator, Tooltip, TooltipExt};
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
+pub use status_bar::StatusBarItem;
 pub use text_field::TextField;

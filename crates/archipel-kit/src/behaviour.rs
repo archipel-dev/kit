@@ -115,8 +115,8 @@ impl Behaviour for Tooltip {
 }
 
 /// A context menu on secondary click (right click, or Ctrl+click on macOS), on the popup
-/// surface. Fill it with [`MenuItem`](crate::components::MenuItem)s; a click on an item
-/// closes it.
+/// surface. Fill it with [`MenuItem`](crate::components::MenuItem)s; a click on a `MenuItem`
+/// closes it (call `ui.close()` for other widgets).
 pub struct ContextMenu<'a> {
     add: Box<dyn FnOnce(&mut Ui) + 'a>,
 }
@@ -133,6 +133,9 @@ impl Behaviour for ContextMenu<'_> {
         let frame = Surface::Popup.frame(&response.ctx);
         egui::Popup::context_menu(&response)
             .frame(frame)
+            // Clicks inside stay open so a submenu item can open its menu; a `MenuItem` closes
+            // the menu itself when it is clicked (other widgets: call `ui.close()`).
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
             .show(|ui| (self.add)(ui));
         response
     }
