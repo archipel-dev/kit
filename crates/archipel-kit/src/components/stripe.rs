@@ -151,7 +151,10 @@ impl ToolStripe {
             let icon = Rect::from_center_size(center, vec2(stripe::ICON, stripe::ICON));
             icons::paint(painter, icon, button.icon, Tone::Icon.color(&colors));
         }
-        let mut tooltip = Tooltip::new(button.label.clone()).align(egui::RectAlign::RIGHT);
+        // Stripe buttons name themselves at once, beside the button, as in Android Studio.
+        let mut tooltip = Tooltip::new(button.label.clone())
+            .align(egui::RectAlign::RIGHT)
+            .immediate(true);
         if let Some(shortcut) = &button.shortcut {
             tooltip = tooltip.shortcut(shortcut.clone());
         }

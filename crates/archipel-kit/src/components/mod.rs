@@ -58,7 +58,7 @@ pub use overlay::{Dialog, DialogAction, MenuHeader, MenuSeparator, Tooltip, Tool
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
-pub use status_bar::StatusBarItem;
+pub use status_bar::{Breadcrumbs, StatusBarItem};
 pub use stripe::{StripeButton, ToolStripe};
 pub use text_field::{TextField, TextFieldOutput};
 pub use toolbar::ToolbarButton;

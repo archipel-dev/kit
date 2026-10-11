@@ -66,3 +66,26 @@ A `Button` named by its text, reporting disabled.
 
 Source: [`components/status_bar.rs`](../../crates/archipel-kit/src/components/status_bar.rs) ·
 Tests: [`tests/status_bar.rs`](../../crates/archipel-kit/tests/status_bar.rs)
+
+## Status bar and breadcrumbs (measured on Android Studio)
+
+The status bar is 30 pt on the window frame below the islands (`Workbench::status`), 8 pt from
+the window's left edge. Items are 21 pt hover pills; their text is dimmed (`text_secondary`)
+at rest and full strength under the pointer.
+
+`Breadcrumbs` is the navigation path at its left (`project › src › main.rs`): each crumb is a
+flat button (4 pt padding, optional icon, text), dimmed chevrons separate them, and `show`
+returns the index of the crumb clicked. It also serves as a settings page's location.
+
+```rust
+# egui::__run_test_ui(|ui| {
+use archipel_kit::{Glyph, Icon, components::{Breadcrumbs, StatusBarItem}};
+
+let clicked = Breadcrumbs::new()
+    .crumb("archipel", Some(Glyph::Folder.into()))
+    .crumb("main.rs", Some(Icon::for_file("main.rs")))
+    .show(ui);
+ui.add(StatusBarItem::new("UTF-8"));
+# let _ = clicked;
+# });
+```

@@ -27,6 +27,7 @@ pub struct Tooltip {
     shortcut: Option<String>,
     hint: Option<String>,
     align: Option<egui::RectAlign>,
+    immediate: bool,
 }
 
 impl Tooltip {
@@ -37,7 +38,16 @@ impl Tooltip {
             shortcut: None,
             hint: None,
             align: None,
+            immediate: false,
         }
+    }
+
+    /// Shows the tooltip as soon as the widget is hovered, without the usual delay (about
+    /// half a second, as in Android Studio). Android Studio's tool window stripe buttons
+    /// name themselves at once.
+    pub fn immediate(mut self, immediate: bool) -> Self {
+        self.immediate = immediate;
+        self
     }
 
     /// Where the tooltip goes relative to its widget (default: below it). Tool window
@@ -98,7 +108,12 @@ impl Tooltip {
 
     /// Shows the tooltip for `response` when it is hovered long enough.
     pub fn show_for(&self, response: &Response) {
-        let mut tooltip = if response.enabled() {
+        let mut tooltip = if self.immediate {
+            let mut tooltip = egui::Tooltip::for_widget(response);
+            let dragging = response.ctx.dragged_id().is_some();
+            tooltip.popup = tooltip.popup.open(response.hovered() && !dragging);
+            tooltip
+        } else if response.enabled() {
             egui::Tooltip::for_enabled(response)
         } else {
             egui::Tooltip::for_disabled(response)

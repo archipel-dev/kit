@@ -117,8 +117,7 @@ impl Widget for StatusBarItem<'_> {
         } else {
             Sense::hover()
         };
-        let (rect, response) =
-            ui.allocate_exact_size(vec2(width, size::CONTROL_HEIGHT_SMALL), sense);
+        let (rect, response) = ui.allocate_exact_size(vec2(width, size::STATUS_ITEM_HEIGHT), sense);
         crate::cursor::on_hover_action(&response);
         response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.text));
         if ui.is_rect_visible(rect) {
@@ -151,7 +150,17 @@ impl Widget for StatusBarItem<'_> {
             } else {
                 text
             };
-            common::text_left(painter, rect, x, galley, state.text(self.tone, &colors));
+            // As in Android Studio: dimmed at rest, full strength under the pointer.
+            let color = if self.tone == Tone::Default && state.enabled {
+                if state.hovered || state.pressed || state.focused {
+                    colors.text
+                } else {
+                    colors.text_secondary
+                }
+            } else {
+                state.text(self.tone, &colors)
+            };
+            common::text_left(painter, rect, x, galley, color);
             if self.chevron {
                 let chevron_rect = Rect::from_min_size(
                     pos2(
@@ -172,5 +181,105 @@ impl Widget for StatusBarItem<'_> {
             Tooltip::new(self.text.clone()).show_for(&response);
         }
         self.behaviours.attach(ui, response)
+    }
+}
+
+/// A path of places, like Android Studio's navigation path at the left of the status bar
+/// (`project › src › main.rs`) or a settings page's location. Each crumb is a flat button
+/// with an optional icon; dimmed chevrons separate them. Text is dimmed at rest and full
+/// strength under the pointer. Returns the index of the crumb clicked this frame.
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::{Glyph, Icon, components::Breadcrumbs};
+///
+/// let clicked = Breadcrumbs::new()
+///     .crumb("archipel", Some(Glyph::Folder.into()))
+///     .crumb("main.rs", Some(Icon::for_file("main.rs")))
+///     .show(ui);
+/// # let _ = clicked;
+/// # });
+/// ```
+#[must_use = "show it with `.show(ui)`"]
+#[derive(Default)]
+pub struct Breadcrumbs {
+    crumbs: Vec<(String, Option<Icon>)>,
+}
+
+impl Breadcrumbs {
+    /// An empty path.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Appends a crumb reading `label`, with an optional icon.
+    pub fn crumb(mut self, label: impl Into<String>, icon: Option<Icon>) -> Self {
+        self.crumbs.push((label.into(), icon));
+        self
+    }
+
+    /// Draws the path in a row, [`size::STATUS_ITEM_HEIGHT`] high.
+    pub fn show(self, ui: &mut Ui) -> Option<usize> {
+        let colors = Theme::colors(ui.ctx());
+        let mut clicked = None;
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = size::BREADCRUMB_GAP;
+            let count = self.crumbs.len();
+            for (index, (label, icon)) in self.crumbs.iter().enumerate() {
+                let galley = common::galley(ui, label.as_str(), typography::body(typography::BODY));
+                let icon_width = if icon.is_some() {
+                    size::ICON + size::ICON_TEXT_GAP
+                } else {
+                    0.0
+                };
+                let width = 2.0 * size::BREADCRUMB_PADDING + icon_width + galley.size().x;
+                let (rect, response) =
+                    ui.allocate_exact_size(vec2(width, size::STATUS_ITEM_HEIGHT), Sense::click());
+                crate::cursor::on_hover_action(&response);
+                response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+                if response.clicked() {
+                    clicked = Some(index);
+                }
+                let state = State::of(&response);
+                if ui.is_rect_visible(rect) {
+                    let painter = ui.painter();
+                    let fill = state.flat_fill(&colors);
+                    if fill != egui::Color32::TRANSPARENT {
+                        painter.rect_filled(rect, CornerRadius::same(radius::CONTROL), fill);
+                    }
+                    if response.has_focus() {
+                        common::focus_ring(painter, rect, radius::CONTROL, &colors);
+                    }
+                    let mut x = rect.left() + size::BREADCRUMB_PADDING;
+                    if let Some(icon) = *icon {
+                        let icon_rect = Rect::from_min_size(
+                            pos2(x, rect.center().y - size::ICON / 2.0),
+                            vec2(size::ICON, size::ICON),
+                        );
+                        icons::paint(painter, icon_rect, icon, state.icon(Tone::Icon, &colors));
+                        x += icon_width;
+                    }
+                    let color = if state.hovered || state.pressed || state.focused {
+                        colors.text
+                    } else {
+                        colors.text_secondary
+                    };
+                    common::text_left(painter, rect, x, galley, color);
+                }
+                if index + 1 < count {
+                    let (chevron, _) = ui.allocate_exact_size(
+                        vec2(size::ICON, size::STATUS_ITEM_HEIGHT),
+                        Sense::hover(),
+                    );
+                    icons::paint(
+                        ui.painter(),
+                        Rect::from_center_size(chevron.center(), vec2(size::ICON, size::ICON)),
+                        Glyph::ChevronRight,
+                        colors.text_placeholder,
+                    );
+                }
+            }
+        });
+        clicked
     }
 }

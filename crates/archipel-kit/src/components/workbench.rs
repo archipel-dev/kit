@@ -194,11 +194,23 @@ impl<'a> Workbench<'a> {
         // The glow continues from the toolbar: anchor it to the window, not the islands.
         self.glow_anchor = Some(ctx.input(|i| i.viewport_rect()));
         if let Some(content) = self.status.take() {
+            // Android Studio's status bar: 30 pt on the frame, items 21 pt high.
             egui::TopBottomPanel::bottom(self.id.with("status"))
                 .show_separator_line(false)
-                .frame(crate::parts::Surface::Chrome.frame(ctx))
+                .exact_height(tokens::size::STATUS_BAR_HEIGHT)
+                .frame(
+                    egui::Frame::new()
+                        .fill(Theme::colors(ctx).frame)
+                        .inner_margin(egui::Margin::symmetric(
+                            tokens::size::STATUS_BAR_INSET as i8,
+                            0,
+                        )),
+                )
                 .show(ctx, |ui| {
-                    ui.horizontal(content);
+                    ui.horizontal_centered(|ui| {
+                        ui.spacing_mut().item_spacing.x = 0.0;
+                        content(ui);
+                    });
                 });
         }
         egui::CentralPanel::default()

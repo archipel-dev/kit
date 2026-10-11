@@ -173,7 +173,9 @@ fn stripe_buttons_open_and_close_tool_windows() {
 /// Islands UI: toolbar with project widget and project color, stripes, a project tree and an
 /// editor with tabs.
 fn ide(theme: Theme, gpu: bool) -> Harness<'static, WorkbenchState> {
-    use archipel_kit::components::{Avatar, IconButton, Tab, TabBar, ToolbarButton, WindowChrome};
+    use archipel_kit::components::{
+        Avatar, Breadcrumbs, IconButton, StatusBarItem, Tab, TabBar, ToolbarButton, WindowChrome,
+    };
     use archipel_kit::parts::Slot;
     let mut installed = false;
     let builder = Harness::builder().with_size(egui::vec2(1000.0, 560.0));
@@ -252,6 +254,18 @@ fn ide(theme: Theme, gpu: bool) -> Harness<'static, WorkbenchState> {
                 .padded(WorkbenchRegion::Bottom, true)
                 .icon(WorkbenchRegion::Bottom, Glyph::Terminal)
                 .center_padded(false)
+                .status(|ui| {
+                    let _ = Breadcrumbs::new()
+                        .crumb("archipel", Some(Glyph::Folder.into()))
+                        .crumb("lib.rs", Some(archipel_kit::Icon::for_file("lib.rs")))
+                        .show(ui);
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add(StatusBarItem::new("4 spaces"));
+                        ui.add(StatusBarItem::new("UTF-8"));
+                        ui.add(StatusBarItem::new("LF"));
+                        ui.add(StatusBarItem::new("23:1"));
+                    });
+                })
                 .show(ctx, |ui| {
                     ui.horizontal(|ui| {
                         ui.add_space(6.0);
@@ -287,4 +301,34 @@ fn ide_window_passes_both_theme_audits_and_snapshot() {
         ));
     }
     results.unwrap();
+}
+
+#[test]
+fn stripe_tooltips_show_at_once() {
+    let count = |h: &Harness<'_, WorkbenchState>| {
+        h.output()
+            .shapes
+            .iter()
+            .filter(|c| match &c.shape {
+                egui::Shape::Text(t) => t.galley.text() == "Messages",
+                _ => false,
+            })
+            .count()
+    };
+    let mut h = harness(Theme::dark(), 920.0, true, false);
+    let before = count(&h);
+    let button = h
+        .get_by_role_and_label(Role::Button, "Messages")
+        .rect()
+        .center();
+    h.hover_at(button);
+    // Two frames, far less than the usual tooltip delay: Android Studio's stripes name
+    // their buttons at once.
+    h.step();
+    h.step();
+    assert_eq!(
+        count(&h),
+        before + 1,
+        "the tooltip shows next to the panel title"
+    );
 }

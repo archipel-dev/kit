@@ -101,6 +101,15 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Disabled borders | `#33353B` / light `#DDDFE4` | `Colors::border_disabled` |
 | Fields and combo boxes | 28 pt, `#40434A` / `#D1D3D9` border; combo fill `#26282C` / white | `TextField`, `Dropdown` |
 
+### Tooltips and status bar
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Tooltip delay | About 0.5 s on toolbar buttons; stripe buttons name themselves at once, beside the button | egui's 0.5 s; `Tooltip::immediate`, `Tooltip::align` |
+| Tooltip linger | Help tooltips stay about 0.5 s after the pointer leaves, so links in them can be reached | Not reproduced: kit tooltips have no links |
+| Status bar | 30 pt on the frame, 8 pt from the left; items 21 pt hover pills, text `text_secondary`, full strength on hover | `Workbench::status`, `StatusBarItem` |
+| Navigation path | Crumbs with icons, 4 pt padding, dimmed chevrons between | `Breadcrumbs` |
+
 ## Fixed invariants
 
 - Body font: Inter 13 pt. Code: the bundled mono font. Existing icon artwork is fixed.

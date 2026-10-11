@@ -55,6 +55,16 @@ pub mod size {
     pub const SUBMENU_WIDTH: f32 = 200.0;
     /// Space inside a status bar item at each end.
     pub const STATUS_ITEM_PADDING: f32 = 6.0;
+    /// Height of a status bar item's hover pill (21 pt in Android Studio).
+    pub const STATUS_ITEM_HEIGHT: f32 = 21.0;
+    /// Space inside a breadcrumb at each end.
+    pub const BREADCRUMB_PADDING: f32 = 4.0;
+    /// Space between a breadcrumb and the chevron after it.
+    pub const BREADCRUMB_GAP: f32 = 2.0;
+    /// Height of the status bar on the window frame below the islands.
+    pub const STATUS_BAR_HEIGHT: f32 = 30.0;
+    /// Space between the window's left edge and the status bar's first item.
+    pub const STATUS_BAR_INSET: f32 = 8.0;
     /// Gap between a popup and what it is attached to (its own padding is
     /// [`popup::PADDING`](super::popup::PADDING)).
     pub const POPUP_PADDING: f32 = 4.0;
