@@ -2,9 +2,10 @@
 
 use super::common;
 use crate::icons::{self, Glyph, Icon};
+use crate::parts::{RowContent, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{size, typography};
-use egui::{Color32, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
+use crate::tokens::size;
+use egui::{Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
 
 /// What happened to a [`ListRow`] this frame.
 pub struct RowResponse {
@@ -51,8 +52,8 @@ pub struct ListRow {
     label: String,
     secondary: Option<String>,
     icon: Option<Icon>,
-    icon_color: Option<Color32>,
-    label_color: Option<Color32>,
+    icon_tone: Option<Tone>,
+    label_tone: Tone,
     depth: usize,
     expanded: Option<bool>,
     flat: bool,
@@ -69,8 +70,8 @@ impl ListRow {
             label: label.into(),
             secondary: None,
             icon: None,
-            icon_color: None,
-            label_color: None,
+            icon_tone: None,
+            label_tone: Tone::Default,
             depth: 0,
             expanded: None,
             flat: false,
@@ -93,15 +94,15 @@ impl ListRow {
         self
     }
 
-    /// Icon color (default: the theme's icon color).
-    pub fn icon_color(mut self, color: impl Into<Color32>) -> Self {
-        self.icon_color = Some(color.into());
+    /// Meaning of the icon's color, e.g. [`Tone::Run`] (default: the icon gray).
+    pub fn icon_tone(mut self, tone: Tone) -> Self {
+        self.icon_tone = Some(tone);
         self
     }
 
-    /// Label color, e.g. `vcs_modified` for a changed file.
-    pub fn label_color(mut self, color: impl Into<Color32>) -> Self {
-        self.label_color = Some(color.into());
+    /// Meaning of the label's color, e.g. [`Tone::Modified`] for a changed file.
+    pub fn label_tone(mut self, tone: Tone) -> Self {
+        self.label_tone = tone;
         self
     }
 
@@ -190,6 +191,14 @@ impl ListRow {
         if let Some(expanded) = self.expanded.filter(|_| !self.flat) {
             let chevron_response =
                 ui.interact(chevron.expand(2.0), response.id.with("chevron"), sense);
+            let action = if expanded { "Collapse" } else { "Expand" };
+            chevron_response.widget_info(|| {
+                WidgetInfo::labeled(
+                    WidgetType::Button,
+                    self.enabled,
+                    format!("{action} {}", self.label),
+                )
+            });
             toggled = chevron_response.clicked() || response.double_clicked();
             if response.has_focus() {
                 let key = if expanded {
@@ -201,17 +210,12 @@ impl ListRow {
             }
         }
 
+        let state = State::of(&response)
+            .selected(self.selected)
+            .inactive(self.inactive);
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            let fill = if self.selected && self.inactive {
-                colors.row_hover
-            } else if self.selected {
-                colors.selection
-            } else if self.enabled && response.hovered() {
-                colors.row_hover
-            } else {
-                Color32::TRANSPARENT
-            };
+            let fill = state.row_fill(&colors);
             common::row_pill(painter, rect, fill);
             if response.has_focus() && !self.selected {
                 common::focus_ring(
@@ -221,7 +225,6 @@ impl ListRow {
                     &colors,
                 );
             }
-            let mut x = chevron.right();
             if let Some(expanded) = self.expanded {
                 let icon = if expanded {
                     Glyph::ChevronDown
@@ -230,44 +233,16 @@ impl ListRow {
                 };
                 icons::paint(painter, chevron, icon, colors.text_secondary);
             }
-            if let Some(icon) = self.icon {
-                let icon_rect = Rect::from_min_size(
-                    pos2(x + 2.0, rect.center().y - size::ICON / 2.0),
-                    vec2(size::ICON, size::ICON),
-                );
-                let color = if self.enabled {
-                    self.icon_color.unwrap_or(colors.icon)
-                } else {
-                    colors.text_disabled
-                };
-                icons::paint(painter, icon_rect, icon, color);
-                x = icon_rect.right() + size::ICON_TEXT_GAP;
-            } else {
-                x += 2.0;
-            }
-            let label_color = if !self.enabled {
-                colors.text_disabled
-            } else if let Some(color) = self.label_color {
-                color
-            } else if self.selected {
-                colors.text_strong
-            } else {
-                colors.text
+            let content = RowContent {
+                icon: self.icon,
+                icon_tone: self.icon_tone,
+                reserve_icon: false,
+                label: &self.label,
+                label_tone: self.label_tone,
+                secondary: self.secondary.as_deref(),
+                trailing: None,
             };
-            let font = typography::body(typography::BODY);
-            let galley = common::galley(ui, self.label.as_str(), font.clone());
-            let label_width = galley.size().x;
-            common::text_left(painter, rect, x, galley, label_color);
-            if let Some(secondary) = &self.secondary {
-                let galley = common::galley(ui, secondary.as_str(), font);
-                common::text_left(
-                    painter,
-                    rect,
-                    x + label_width + size::SECONDARY_GAP,
-                    galley,
-                    colors.text_placeholder,
-                );
-            }
+            content.paint(ui, rect, chevron.right() + 2.0, state);
         }
         RowResponse { response, toggled }
     }

@@ -1,6 +1,7 @@
 //! Small inline labels: counters, tags, keyboard shortcuts and avatars.
 
 use super::common;
+use crate::parts::Tone;
 use crate::theme::{Theme, avatar_color};
 use crate::tokens::{radius, typography};
 use egui::{
@@ -79,16 +80,16 @@ impl Widget for Counter {
 /// ```
 /// # egui::__run_test_ui(|ui| {
 /// use archipel_kit::components::Tag;
-/// use archipel_kit::egui::Color32;
+/// use archipel_kit::Tone;
 ///
 /// ui.add(Tag::new("beta"));
-/// ui.add(Tag::new("GET").color(Color32::from_rgb(0x6D, 0xB0, 0x83)));
+/// ui.add(Tag::new("GET").tone(Tone::Success));
 /// # });
 /// ```
 #[must_use = "add it with `ui.add(tag)`"]
 pub struct Tag {
     text: String,
-    color: Option<Color32>,
+    tone: Option<Tone>,
 }
 
 impl Tag {
@@ -96,13 +97,13 @@ impl Tag {
     pub fn new(text: impl Into<String>) -> Self {
         Self {
             text: text.into(),
-            color: None,
+            tone: None,
         }
     }
 
-    /// Tints the tag: `color` text on a faint fill of the same color.
-    pub fn color(mut self, color: impl Into<Color32>) -> Self {
-        self.color = Some(color.into());
+    /// Tints the tag: text in `tone` on a faint fill of the same color.
+    pub fn tone(mut self, tone: Tone) -> Self {
+        self.tone = Some(tone);
         self
     }
 }
@@ -118,7 +119,7 @@ impl Widget for Tag {
         let (rect, response) =
             ui.allocate_exact_size(vec2(galley.size().x + 12.0, 18.0), Sense::hover());
         response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &self.text));
-        let (fill, text) = match self.color {
+        let (fill, text) = match self.tone.map(|tone| tone.color(&colors)) {
             Some(color) => (color.gamma_multiply(0.18), color),
             None => (colors.tag, colors.text_secondary),
         };

@@ -48,9 +48,9 @@ For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 | Builder | Effect |
 |---|---|
 | `ListRow::new(label)` | A row; `.show(ui)` returns `RowResponse { response, toggled }`. |
-| `.icon(Icon)`, `.icon_color(Color32)` | Leading icon. |
+| `.icon(Icon)`, `.icon_tone(Tone)` | Leading icon. |
 | `.secondary(str)` | Dimmed text after the label (path, size, type). |
-| `.label_color(Color32)` | E.g. `colors.vcs_modified` for a changed file. |
+| `.label_tone(Tone)` | E.g. `Tone::Modified` for a changed file. |
 | `.depth(usize)` | Tree indent. |
 | `.expanded(Option<bool>)` | `Some` draws a chevron; `None` keeps leaves aligned. |
 | `.selected(bool)`, `.enabled(bool)` | State. |

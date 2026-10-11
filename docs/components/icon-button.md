@@ -13,13 +13,13 @@ green for Run.
 
 ```rust
 use archipel_kit::components::IconButton;
-use archipel_kit::{Glyph, Icon, Theme, egui};
+use archipel_kit::{Glyph, Icon, Theme, Tone, egui};
 
 fn toolbar(ui: &mut egui::Ui, pinned: &mut bool) {
     let colors = Theme::colors(ui.ctx());
     ui.horizontal(|ui| {
-        ui.add(IconButton::new(Glyph::Run, "Run").color(colors.run));
-        ui.add(IconButton::new(Glyph::Stop, "Stop").color(colors.stop).enabled(false));
+        ui.add(IconButton::new(Glyph::Run, "Run").tone(Tone::Run));
+        ui.add(IconButton::new(Glyph::Stop, "Stop").tone(Tone::Stop).enabled(false));
         if ui.add(IconButton::new(Glyph::Pin, "Pin tab").selected(*pinned)).clicked() {
             *pinned = !*pinned;
         }
@@ -33,7 +33,7 @@ fn toolbar(ui: &mut egui::Ui, pinned: &mut bool) {
 |---|---|
 | `IconButton::new(icon, label)` | The label is required: it is the tooltip and the accessible name. |
 | `.selected(bool)` | Makes it a toggle; selected toggles are accent-filled. |
-| `.color(Color32)` | Icon color (default: the theme's icon color). |
+| `.tone(Tone)` | Meaning of the icon color, e.g. `Tone::Run` (default: the icon gray). |
 | `.enabled(bool)` | Disabled buttons are dimmed and ignore clicks. |
 
 ## Accessibility

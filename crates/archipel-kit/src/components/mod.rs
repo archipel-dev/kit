@@ -16,7 +16,7 @@ mod badges;
 mod button;
 mod choice;
 mod collections;
-mod common;
+pub(crate) mod common;
 mod feedback;
 mod icon_button;
 mod layout;

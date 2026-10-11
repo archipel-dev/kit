@@ -11,7 +11,7 @@ use archipel_kit::components::{
     Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
-use archipel_kit::{Glyph, Icon, Theme, cursor, egui, tokens};
+use archipel_kit::{Glyph, Icon, Theme, Tone, cursor, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
 const GAP: i8 = tokens::size::ISLAND_GAP as i8;
@@ -234,7 +234,7 @@ impl Gallery {
                     .map_or("", |(_, l, _)| l);
                 Panel::new(title).show(ui, |ui| {
                     ui.set_min_height(ui.available_height());
-                    egui::ScrollArea::vertical()
+                    archipel_kit::parts::scroll_vertical()
                         .auto_shrink(false)
                         .show(ui, |ui| {
                             egui::Frame::new()
@@ -311,17 +311,16 @@ impl Gallery {
                 });
                 ui.add(SectionHeader::new("Icon buttons"));
                 ui.horizontal(|ui| {
-                    let colors = Theme::colors(ui.ctx());
                     ui.add(IconButton::new(Glyph::Refresh, "Reload").enabled(enabled))
                         .tooltip_with(Tooltip::new("Reload from Disk").shortcut("Ctrl+Alt+Y"));
                     ui.add(
                         IconButton::new(Glyph::Run, "Run")
-                            .color(colors.run)
+                            .tone(Tone::Run)
                             .enabled(enabled),
                     );
                     ui.add(
                         IconButton::new(Glyph::Stop, "Stop")
-                            .color(colors.stop)
+                            .tone(Tone::Stop)
                             .enabled(enabled),
                     );
                     let mut pinned = self.toggles[1];
@@ -437,7 +436,6 @@ impl Gallery {
             }
             Page::Lists => {
                 ui.add(SectionHeader::new("Tree"));
-                let colors = Theme::colors(ui.ctx());
                 let mut row = |ui: &mut egui::Ui, index: usize, row: ListRow| {
                     let out = row
                         .selected(self.selected == index)
@@ -482,7 +480,7 @@ impl Gallery {
                             ListRow::new("theme.rs")
                                 .icon(Icon::for_file("theme.rs"))
                                 .depth(2)
-                                .label_color(colors.vcs_modified),
+                                .label_tone(Tone::Modified),
                         );
                     }
                     row(
@@ -500,7 +498,6 @@ impl Gallery {
         }
         if self.page == Page::Lists {
             ui.add(SectionHeader::new("Virtualized table: 100 000 rows"));
-            let colors = Theme::colors(ui.ctx());
             let len = 100_000;
             let descending = self
                 .sort
@@ -514,10 +511,10 @@ impl Gallery {
                     match col {
                         0 => Cell::new(n.to_string()).muted(),
                         1 => Cell::new(format!("GET /api/users/{n}")),
-                        2 => Cell::new(status.to_string()).color(match status {
-                            500.. => colors.error,
-                            400.. => colors.warning,
-                            _ => colors.success,
+                        2 => Cell::new(status.to_string()).tone(match status {
+                            500.. => Tone::Error,
+                            400.. => Tone::Warning,
+                            _ => Tone::Success,
                         }),
                         _ => Cell::new(format!("{} ms", 12 + n * 37 % 300)).muted(),
                     }
@@ -581,14 +578,13 @@ impl Gallery {
             Page::Data => {
                 ui.add(SectionHeader::new("Counters & tags"));
                 ui.horizontal(|ui| {
-                    let colors = Theme::colors(ui.ctx());
                     ui.add(Counter::new(3));
                     ui.add(Counter::new(12).accent(true));
                     ui.add(Counter::new(1234));
                     ui.add(Separator);
                     ui.add(Tag::new("beta"));
-                    ui.add(Tag::new("GET").color(colors.success));
-                    ui.add(Tag::new("DELETE").color(colors.error));
+                    ui.add(Tag::new("GET").tone(Tone::Success));
+                    ui.add(Tag::new("DELETE").tone(Tone::Error));
                 });
                 ui.add(SectionHeader::new("Keyboard shortcuts"));
                 ui.horizontal(|ui| {
@@ -829,5 +825,41 @@ mod tests {
             }
         }
         results.unwrap();
+    }
+
+    /// Every page passes the kit's UX audit: named controls, big enough targets, no
+    /// overlaps, everything reachable by Tab.
+    #[test]
+    fn every_page_passes_the_ux_audit() {
+        let mut failures = Vec::new();
+        for (page, label, _) in Page::ALL {
+            let mut gallery = Gallery {
+                page,
+                ..Gallery::default()
+            };
+            let mut installed = false;
+            let mut harness = Harness::builder()
+                .with_size(egui::vec2(1000.0, 640.0))
+                .with_max_steps(30)
+                .build(move |ctx| {
+                    if !installed {
+                        installed = true;
+                        archipel_kit::install(ctx, Theme::dark());
+                        ctx.request_repaint();
+                        return;
+                    }
+                    gallery.show(ctx);
+                });
+            harness.run_ok();
+            let audit = archipel_kit::testing::audit(&mut harness);
+            for finding in audit.findings {
+                failures.push(format!("{label}: {finding}"));
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "UX audit:\n  {}",
+            failures.join("\n  ")
+        );
     }
 }

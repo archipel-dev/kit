@@ -2,9 +2,10 @@
 
 use super::{Button, common};
 use crate::icons::{self, Glyph};
+use crate::parts::Surface;
 use crate::theme::Theme;
-use crate::tokens::{radius, size, typography};
-use egui::{Align, CornerRadius, Key, Layout, Response, Sense, Stroke, Ui, Widget, vec2};
+use crate::tokens::{size, typography};
+use egui::{Align, Key, Layout, Response, Sense, Stroke, Ui, Widget, vec2};
 
 /// A tooltip: a label, an optional shortcut after it, and an optional hint below, on the
 /// tooltip color. Attach it with [`TooltipExt::tooltip`] or [`TooltipExt::tooltip_with`];
@@ -51,12 +52,7 @@ impl Tooltip {
 
     /// The tooltip frame: the tooltip color, popup border and radius.
     pub fn frame(ctx: &egui::Context) -> egui::Frame {
-        let colors = Theme::colors(ctx);
-        egui::Frame::popup(&ctx.style())
-            .fill(colors.tooltip)
-            .stroke(Stroke::new(1.0_f32, colors.popup_border))
-            .corner_radius(CornerRadius::same(radius::CONTROL))
-            .inner_margin(egui::Margin::symmetric(8, 5))
+        Surface::Tooltip.frame(ctx)
     }
 
     /// Draws the content (without the frame) into `ui`. Use it to show a tooltip outside
@@ -272,11 +268,7 @@ impl<'a> Dialog<'a> {
     pub fn show(self, ctx: &egui::Context) -> Option<DialogAction> {
         let colors = Theme::colors(ctx);
         let id = egui::Id::new(("archipel-dialog", &self.title));
-        let frame = egui::Frame::popup(&ctx.style())
-            .fill(colors.popup)
-            .stroke(Stroke::new(1.0_f32, colors.popup_border))
-            .corner_radius(CornerRadius::same(radius::ISLAND))
-            .inner_margin(egui::Margin::same(size::DIALOG_PADDING as i8 + 4));
+        let frame = Surface::Dialog.frame(ctx);
         let mut action = None;
         let primary_enabled = self.primary_enabled;
         let modal = egui::Modal::new(id)

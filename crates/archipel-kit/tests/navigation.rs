@@ -4,7 +4,7 @@ mod common;
 
 use archipel_kit::components::{ListRow, SegmentedControl, Tab, TabBar};
 use archipel_kit::testing::{self, NodeExt, Queryable};
-use archipel_kit::{Glyph, Icon, Theme};
+use archipel_kit::{Glyph, Icon, Theme, Tone};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum View {
@@ -87,7 +87,6 @@ fn tab_bar_reports_selection_and_close() {
 #[test]
 fn list_row_snapshot() {
     testing::snapshot_themes("list_row", common::IMG, |ui| {
-        let colors = Theme::colors(ui.ctx());
         ListRow::new("archipel")
             .icon(Glyph::Project)
             .expanded(Some(true))
@@ -105,7 +104,7 @@ fn list_row_snapshot() {
         ListRow::new("theme.rs")
             .icon(Icon::for_file("theme.rs"))
             .depth(2)
-            .label_color(colors.vcs_modified)
+            .label_tone(Tone::Modified)
             .show(ui);
         ListRow::new("target")
             .icon(Glyph::Folder)

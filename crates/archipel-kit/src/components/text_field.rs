@@ -168,7 +168,9 @@ impl Widget for TextField<'_> {
                 edit =
                     edit.hint_text(egui::RichText::new(placeholder).color(colors.text_placeholder));
             }
-            let mut edited = content.add(edit);
+            // Disabled through the ui, so the field reports disabled to screen readers and
+            // tests, not just ignores input.
+            let mut edited = content.add_enabled(self.enabled, edit);
             if let Some(id) = label_id {
                 edited = edited.labelled_by(id);
             }

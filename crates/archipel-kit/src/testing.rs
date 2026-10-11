@@ -32,8 +32,13 @@
 //! `mesa-vulkan-drivers`).
 
 use crate::theme::Theme;
-use crate::tokens::{radius, size};
 use std::path::Path;
+
+mod audit;
+mod conformance;
+
+pub use audit::{Audit, Finding, MIN_TARGET, Problem, audit};
+pub use conformance::{Conformance, conformance};
 
 pub use egui::accesskit::Role;
 pub use egui_kittest::kittest::{By, NodeT, Queryable};
@@ -159,12 +164,7 @@ pub fn snapshot_themes_sized(
 
 /// Draws `add` on a rounded island with content padding, like a panel in an app.
 fn island(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
-    let colors = Theme::colors(ui.ctx());
-    egui::Frame::new()
-        .fill(colors.island)
-        .corner_radius(radius::ISLAND)
-        .inner_margin(egui::Margin::same(size::CONTENT_INSET as i8))
-        .show(ui, add);
+    crate::parts::Surface::Island.frame(ui.ctx()).show(ui, add);
 }
 
 /// Accessible state of a node, for assertions: what a screen reader would announce.

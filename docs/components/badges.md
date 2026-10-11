@@ -12,7 +12,7 @@ Small inline labels: **counters** for numbers of items, **tags** for statuses an
 
 ```rust
 use archipel_kit::components::{Avatar, Counter, Kbd, Tag};
-use archipel_kit::{Theme, egui};
+use archipel_kit::{Theme, Tone, egui};
 
 fn header(ui: &mut egui::Ui, problems: usize) {
     let colors = Theme::colors(ui.ctx());
@@ -20,7 +20,7 @@ fn header(ui: &mut egui::Ui, problems: usize) {
         ui.add(Avatar::new("nexus-http"));
         ui.label("Problems");
         ui.add(Counter::new(problems));
-        ui.add(Tag::new("GET").color(colors.success));
+        ui.add(Tag::new("GET").tone(Tone::Success));
         ui.add(Kbd::parse("Ctrl+Shift+F"));
     });
 }
@@ -31,7 +31,7 @@ fn header(ui: &mut egui::Ui, problems: usize) {
 | Component | Builders |
 |---|---|
 | `Counter::new(usize)` | `.accent(bool)`; counts above 99 show `99+`. |
-| `Tag::new(text)` | `.color(Color32)`: colored text on a faint fill of the same color. |
+| `Tag::new(text)` | `.tone(Tone)`: text in that meaning's color on a faint fill of it. |
 | `Kbd::new([keys])`, `Kbd::parse("Ctrl+K")` | One cap per key; `parse` splits at `+`. |
 | `Avatar::new(name)` | `.size(f32)`, `.round(bool)`; initials on a color derived from the name. |
 

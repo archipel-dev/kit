@@ -7,11 +7,12 @@
 
 use super::{ListRow, common};
 use crate::icons::{self, Glyph, Icon};
+use crate::parts::Tone;
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
 use egui::{
-    Align, Color32, CornerRadius, CursorIcon, Id, Key, Rect, Response, Sense, Stroke, Ui,
-    WidgetInfo, WidgetType, pos2, vec2,
+    Align, CornerRadius, CursorIcon, Id, Key, Rect, Response, Sense, Stroke, Ui, WidgetInfo,
+    WidgetType, pos2, vec2,
 };
 
 /// What happened in a [`VirtualList`], [`Tree`] or [`Table`] this frame.
@@ -43,16 +44,30 @@ struct Viewport {
     height: f32,
 }
 
+/// What a collection is: identity, size and accessible role.
+struct Spec<'a> {
+    id: Id,
+    len: usize,
+    height: f32,
+    role: egui::accesskit::Role,
+    name: &'a str,
+}
+
 /// The shared engine: keyboard navigation, scroll-into-view and virtualized rows.
 /// Returns the response and the horizontal arrow pressed while focused (for trees).
 fn collection(
     ui: &mut Ui,
-    id: Id,
-    len: usize,
+    spec: Spec<'_>,
     selected: &mut Option<usize>,
-    height: f32,
     mut row: impl FnMut(&mut Ui, usize, bool, bool) -> DrawnRow,
 ) -> (CollectionResponse, Option<Key>) {
+    let Spec {
+        id,
+        len,
+        height,
+        role,
+        name,
+    } = spec;
     let row_height = size::ROW_HEIGHT;
     let focus_id = id.with("focus");
     let focused = ui.memory(|m| m.has_focus(focus_id));
@@ -79,24 +94,7 @@ fn collection(
         });
         let page = viewport.map_or(10, |v| ((v.height / row_height) as usize).max(1));
         let current = *selected;
-        let last = len - 1;
-        let next = ui.input(|i| {
-            if i.key_pressed(Key::ArrowDown) {
-                Some(current.map_or(0, |c| (c + 1).min(last)))
-            } else if i.key_pressed(Key::ArrowUp) {
-                Some(current.map_or(0, |c| c.saturating_sub(1)))
-            } else if i.key_pressed(Key::Home) {
-                Some(0)
-            } else if i.key_pressed(Key::End) {
-                Some(last)
-            } else if i.key_pressed(Key::PageDown) {
-                Some(current.map_or(0, |c| (c + page).min(last)))
-            } else if i.key_pressed(Key::PageUp) {
-                Some(current.map_or(0, |c| c.saturating_sub(page)))
-            } else {
-                None
-            }
-        });
+        let next = crate::parts::nav::pressed(ui, current, len, page);
         if let Some(next) = next {
             selection_changed |= current != Some(next);
             *selected = Some(next);
@@ -114,10 +112,14 @@ fn collection(
         });
     }
 
-    let mut area = egui::ScrollArea::vertical()
+    let mut area = crate::parts::scroll_vertical()
         .id_salt(id)
         .max_height(height)
         .min_scrolled_height(height)
+        .scroll_source(
+            egui::scroll_area::ScrollSource::MOUSE_WHEEL
+                | egui::scroll_area::ScrollSource::SCROLL_BAR,
+        )
         .auto_shrink([false, false]);
     if let (Some(index), Some(view)) = (scroll_to, viewport) {
         let top = index as f32 * row_height;
@@ -131,24 +133,34 @@ fn collection(
     let mut clicked = None;
     let mut toggled = None;
     // show_rows strides by the row height plus the item spacing of the ui it starts in.
-    let output = ui
-        .scope(|ui| {
-            ui.spacing_mut().item_spacing.y = 0.0;
-            area.show_rows(ui, row_height, len, |ui, range| {
-                for index in range {
-                    let drawn = row(ui, index, *selected == Some(index), focused);
-                    if drawn.toggled {
-                        toggled = Some(index);
-                    } else if drawn.response.double_clicked() {
-                        activated = Some(index);
-                    }
-                    if drawn.response.clicked() || drawn.response.double_clicked() {
-                        clicked = Some(index);
-                    }
+    let rows = ui.scope_builder(egui::UiBuilder::new().id_salt(id.with("rows")), |ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        area.show_rows(ui, row_height, len, |ui, range| {
+            for index in range {
+                let drawn = row(ui, index, *selected == Some(index), focused);
+                if drawn.toggled {
+                    toggled = Some(index);
+                } else if drawn.response.double_clicked() {
+                    activated = Some(index);
                 }
-            })
+                if drawn.response.clicked() || drawn.response.double_clicked() {
+                    clicked = Some(index);
+                }
+            }
         })
-        .inner;
+    });
+    let output = rows.inner;
+    // The rows' parent node gets the viewport bounds, so tools see which rows are cut off.
+    let viewport_rect = output.inner_rect;
+    ui.ctx().accesskit_node_builder(rows.response.id, |node| {
+        node.set_role(egui::accesskit::Role::Group);
+        node.set_bounds(egui::accesskit::Rect {
+            x0: viewport_rect.min.x.into(),
+            y0: viewport_rect.min.y.into(),
+            x1: viewport_rect.max.x.into(),
+            y1: viewport_rect.max.y.into(),
+        });
+    });
     if let Some(index) = clicked {
         selection_changed |= *selected != Some(index);
         *selected = Some(index);
@@ -164,6 +176,10 @@ fn collection(
         focus_id,
         Sense::focusable_noninteractive(),
     );
+    ui.ctx().accesskit_node_builder(focus_id, |node| {
+        node.set_role(role);
+        node.set_label(name);
+    });
     // After `interact`: a click on a row counts as "elsewhere" for the focus widget, which
     // would otherwise give up the focus requested here.
     if clicked.is_some() {
@@ -207,6 +223,7 @@ fn collection(
 #[must_use = "show it with `list.show(ui, row)`"]
 pub struct VirtualList<'a> {
     id: Id,
+    name: String,
     len: usize,
     selected: &'a mut Option<usize>,
     height: f32,
@@ -217,6 +234,7 @@ impl<'a> VirtualList<'a> {
     pub fn new(id_salt: impl std::hash::Hash, len: usize, selected: &'a mut Option<usize>) -> Self {
         Self {
             id: Id::new(id_salt),
+            name: "List".into(),
             len,
             selected,
             height: 240.0,
@@ -224,6 +242,13 @@ impl<'a> VirtualList<'a> {
     }
 
     /// Visible height in points (default 240).
+    /// The accessible name, e.g. "Request history" (default: "List", "Tree" or "Table").
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    /// Visible height in points.
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
         self
@@ -234,10 +259,14 @@ impl<'a> VirtualList<'a> {
     pub fn show(self, ui: &mut Ui, mut row: impl FnMut(usize) -> ListRow) -> CollectionResponse {
         let (response, _) = collection(
             ui,
-            self.id,
-            self.len,
+            Spec {
+                id: self.id,
+                len: self.len,
+                height: self.height,
+                role: egui::accesskit::Role::List,
+                name: &self.name,
+            },
             self.selected,
-            self.height,
             |ui, index, selected, focused| {
                 let shown = row(index)
                     .selected(selected)
@@ -341,6 +370,7 @@ impl TreeRow {
 #[must_use = "show it with `tree.show(ui)`"]
 pub struct Tree<'a> {
     id: Id,
+    name: String,
     rows: &'a [TreeRow],
     selected: &'a mut Option<usize>,
     height: f32,
@@ -355,6 +385,7 @@ impl<'a> Tree<'a> {
     ) -> Self {
         Self {
             id: Id::new(id_salt),
+            name: "Tree".into(),
             rows,
             selected,
             height: 240.0,
@@ -362,6 +393,13 @@ impl<'a> Tree<'a> {
     }
 
     /// Visible height in points (default 240).
+    /// The accessible name, e.g. "Request history" (default: "List", "Tree" or "Table").
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    /// Visible height in points.
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
         self
@@ -372,10 +410,14 @@ impl<'a> Tree<'a> {
         let rows = self.rows;
         let (mut response, horizontal) = collection(
             ui,
-            self.id,
-            rows.len(),
+            Spec {
+                id: self.id,
+                len: rows.len(),
+                height: self.height,
+                role: egui::accesskit::Role::Tree,
+                name: &self.name,
+            },
             self.selected,
-            self.height,
             |ui, index, selected, focused| {
                 let tree_row = &rows[index];
                 let mut row = ListRow::new(tree_row.label.as_str())
@@ -492,8 +534,7 @@ impl Column {
 pub struct Cell {
     text: String,
     icon: Option<Icon>,
-    color: Option<Color32>,
-    muted: bool,
+    tone: Option<Tone>,
 }
 
 impl Cell {
@@ -511,16 +552,16 @@ impl Cell {
         self
     }
 
-    /// Text in a semantic color (status codes, log levels).
-    pub fn color(mut self, color: Color32) -> Self {
-        self.color = Some(color);
+    /// Meaning of the text's color: [`Tone::Error`] for a 500, [`Tone::Muted`] for nulls
+    /// and timestamps.
+    pub fn tone(mut self, tone: Tone) -> Self {
+        self.tone = Some(tone);
         self
     }
 
-    /// Secondary text (null values, timestamps).
-    pub fn muted(mut self) -> Self {
-        self.muted = true;
-        self
+    /// Secondary text (null values, timestamps): [`Tone::Secondary`].
+    pub fn muted(self) -> Self {
+        self.tone(Tone::Secondary)
     }
 }
 
@@ -573,6 +614,7 @@ const MIN_COLUMN: f32 = 40.0;
 #[must_use = "show it with `table.show(ui, cell)`"]
 pub struct Table<'a> {
     id: Id,
+    name: String,
     columns: &'a mut [Column],
     len: usize,
     selected: &'a mut Option<usize>,
@@ -590,6 +632,7 @@ impl<'a> Table<'a> {
     ) -> Self {
         Self {
             id: Id::new(id_salt),
+            name: "Table".into(),
             columns,
             len,
             selected,
@@ -605,6 +648,13 @@ impl<'a> Table<'a> {
     }
 
     /// Height of the rows area in points, without the header (default 240).
+    /// The accessible name, e.g. "Request history" (default: "List", "Tree" or "Table").
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    /// Visible height in points.
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
         self
@@ -621,10 +671,14 @@ impl<'a> Table<'a> {
         let columns: &[Column] = self.columns;
         let (mut response, _) = collection(
             ui,
-            self.id,
-            self.len,
+            Spec {
+                id: self.id,
+                len: self.len,
+                height: self.height,
+                role: egui::accesskit::Role::Table,
+                name: &self.name,
+            },
             self.selected,
-            self.height,
             |ui, index, selected, focused| {
                 let (rect, response) = ui.allocate_exact_size(
                     vec2(ui.available_width(), size::ROW_HEIGHT),
@@ -642,11 +696,10 @@ impl<'a> Table<'a> {
                     )
                 });
                 if ui.is_rect_visible(rect) {
-                    let fill = match (selected, focused, response.hovered()) {
-                        (true, true, _) => colors.selection,
-                        (true, false, _) | (false, _, true) => colors.row_hover,
-                        _ => Color32::TRANSPARENT,
-                    };
+                    let state = crate::parts::State::of(&response)
+                        .selected(selected)
+                        .inactive(!focused);
+                    let fill = state.row_fill(&colors);
                     common::row_pill(ui.painter(), rect, fill);
                     let mut x = rect.left() + size::ROW_PILL_INSET;
                     for (column, cell) in columns.iter().zip(cells) {
@@ -732,6 +785,10 @@ fn header(
         let edge = Rect::from_center_size(pos2(cell.right(), cell.center().y), vec2(7.0, height));
         let handle = ui.interact(edge, id.with(("resize", index)), Sense::drag());
         crate::cursor::on_hover(&handle, CursorIcon::ResizeColumn);
+        ui.ctx().accesskit_node_builder(handle.id, |node| {
+            node.set_role(egui::accesskit::Role::Splitter);
+            node.set_label(format!("Resize {}", column.title));
+        });
         if handle.dragged() {
             ui.ctx().set_cursor_icon(CursorIcon::ResizeColumn);
             column.width = (column.width + handle.drag_delta().x).max(MIN_COLUMN);
@@ -766,14 +823,10 @@ fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selected: bool) 
     } else {
         typography::body(typography::BODY)
     };
-    let color = if let Some(color) = cell.color {
-        color
-    } else if cell.muted {
-        colors.text_secondary
-    } else if selected {
-        colors.text_strong
-    } else {
-        colors.text
+    let color = match (cell.tone, selected) {
+        (Some(tone), _) => tone.color(&colors),
+        (None, true) => colors.text_strong,
+        (None, false) => colors.text,
     };
     let galley = common::galley(ui, cell.text.as_str(), font);
     let icon_width = if cell.icon.is_some() {

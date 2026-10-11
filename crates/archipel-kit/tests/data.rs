@@ -6,7 +6,7 @@ use archipel_kit::components::{
     Avatar, Counter, IconButton, Kbd, Panel, PropertyGrid, SectionHeader, Separator, Tag,
 };
 use archipel_kit::testing::{self, Queryable};
-use archipel_kit::{Glyph, Theme};
+use archipel_kit::{Glyph, Theme, Tone};
 
 #[test]
 fn badges_snapshot() {
@@ -17,8 +17,8 @@ fn badges_snapshot() {
             ui.add(Counter::new(1234));
             ui.add(Separator);
             ui.add(Tag::new("beta"));
-            ui.add(Tag::new("GET").color(Theme::colors(ui.ctx()).success));
-            ui.add(Tag::new("DELETE").color(Theme::colors(ui.ctx()).error));
+            ui.add(Tag::new("GET").tone(Tone::Success));
+            ui.add(Tag::new("DELETE").tone(Tone::Error));
         });
         ui.horizontal(|ui| {
             ui.add(Kbd::parse("Ctrl+Shift+F"));

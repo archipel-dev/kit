@@ -4,7 +4,7 @@ mod common;
 
 use archipel_kit::components::{Button, IconButton};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
-use archipel_kit::{Glyph, Theme};
+use archipel_kit::{Glyph, Theme, Tone};
 
 #[test]
 fn snapshot() {
@@ -29,8 +29,8 @@ fn icon_button_snapshot() {
     testing::snapshot_themes("icon_button", common::IMG, |ui| {
         ui.horizontal(|ui| {
             ui.add(IconButton::new(Glyph::Refresh, "Reload"));
-            ui.add(IconButton::new(Glyph::Run, "Run").color(Theme::colors(ui.ctx()).run));
-            ui.add(IconButton::new(Glyph::Stop, "Stop").color(Theme::colors(ui.ctx()).stop));
+            ui.add(IconButton::new(Glyph::Run, "Run").tone(Tone::Run));
+            ui.add(IconButton::new(Glyph::Stop, "Stop").tone(Tone::Stop));
             ui.add(IconButton::new(Glyph::Pin, "Pin").selected(true));
             ui.add(IconButton::new(Glyph::Debug, "Debug").enabled(false));
         });

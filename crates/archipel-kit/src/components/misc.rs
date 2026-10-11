@@ -2,11 +2,12 @@
 
 use super::{Button, common};
 use crate::icons::{self, Glyph, Icon};
+use crate::parts::{RowContent, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{radius, size, typography};
+use crate::tokens::{size, typography};
 use egui::{
-    Align, CornerRadius, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo,
-    WidgetType, pos2, vec2,
+    Align, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo, WidgetType,
+    vec2,
 };
 
 /// A text link: underlined on hover, pointer cursor.
@@ -247,15 +248,24 @@ impl MenuItem {
 impl Widget for MenuItem {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
-        let font = typography::body(typography::BODY);
-        let label = common::galley(ui, self.label.as_str(), font.clone());
-        let shortcut = self
-            .shortcut
-            .as_ref()
-            .map(|s| common::galley(ui, s.as_str(), font.clone()));
-        let min_width =
-            24.0 + label.size().x + shortcut.as_ref().map_or(0.0, |s| 32.0 + s.size().x) + 8.0;
-        let width = ui.available_width().max(min_width).max(180.0);
+        let (icon, icon_tone) = match (self.checked, self.icon) {
+            (Some(true), _) => (Some(Icon::Glyph(Glyph::Success)), Some(Tone::Default)),
+            (Some(false), _) => (None, None),
+            (None, icon) => (icon, None),
+        };
+        let content = RowContent {
+            icon,
+            icon_tone,
+            reserve_icon: true,
+            label: &self.label,
+            label_tone: Tone::Default,
+            secondary: None,
+            trailing: self.shortcut.as_deref(),
+        };
+        let width = ui
+            .available_width()
+            .max(content.min_width(ui) + 10.0)
+            .max(180.0);
         let sense = if self.enabled {
             Sense::click()
         } else {
@@ -270,34 +280,9 @@ impl Widget for MenuItem {
             None => WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.label),
         });
         if ui.is_rect_visible(rect) {
-            let painter = ui.painter();
-            if self.enabled && response.hovered() {
-                painter.rect_filled(
-                    rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0)),
-                    CornerRadius::same(radius::ROW),
-                    colors.selection,
-                );
-            }
-            let icon_rect = Rect::from_min_size(
-                pos2(rect.left() + 4.0, rect.center().y - 8.0),
-                vec2(16.0, 16.0),
-            );
-            let text = common::enabled_text(self.enabled, colors.text, &colors);
-            match (self.checked, self.icon) {
-                (Some(true), _) => icons::paint(painter, icon_rect, Glyph::Success, text),
-                (_, Some(icon)) => icons::paint(
-                    painter,
-                    icon_rect,
-                    icon,
-                    common::enabled_text(self.enabled, colors.icon, &colors),
-                ),
-                _ => {}
-            }
-            common::text_left(painter, rect, rect.left() + 26.0, label, text);
-            if let Some(shortcut) = shortcut {
-                let x = rect.right() - 8.0 - shortcut.size().x;
-                common::text_left(painter, rect, x, shortcut, colors.text_placeholder);
-            }
+            let state = State::of(&response);
+            common::row_pill(ui.painter(), rect, state.menu_fill(&colors));
+            content.paint(ui, rect, rect.left() + 4.0, state);
         }
         response
     }

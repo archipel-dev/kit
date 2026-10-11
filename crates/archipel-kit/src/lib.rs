@@ -27,6 +27,7 @@
 pub mod components;
 pub mod cursor;
 pub mod icons;
+pub mod parts;
 mod style;
 pub mod theme;
 pub mod tokens;
@@ -36,6 +37,7 @@ pub mod testing;
 
 pub use egui;
 pub use icons::{Glyph, Icon};
+pub use parts::Tone;
 pub use style::install;
 pub use theme::Theme;
 

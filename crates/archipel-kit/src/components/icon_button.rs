@@ -2,6 +2,7 @@
 
 use super::common;
 use crate::icons::{self, Icon};
+use crate::parts::Tone;
 use crate::theme::Theme;
 use crate::tokens::{radius, size};
 use egui::{Color32, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, vec2};
@@ -28,7 +29,7 @@ pub struct IconButton {
     label: String,
     selected: Option<bool>,
     enabled: bool,
-    color: Option<Color32>,
+    tone: Option<Tone>,
 }
 
 impl IconButton {
@@ -39,7 +40,7 @@ impl IconButton {
             label: label.into(),
             selected: None,
             enabled: true,
-            color: None,
+            tone: None,
         }
     }
 
@@ -55,10 +56,10 @@ impl IconButton {
         self
     }
 
-    /// Icon color (default: the theme's icon color). Use it for semantic icons such as a
-    /// green Run or red Stop.
-    pub fn color(mut self, color: impl Into<Color32>) -> Self {
-        self.color = Some(color.into());
+    /// Meaning of the icon's color (default: the icon gray), e.g. [`Tone::Run`] or
+    /// [`Tone::Stop`] for run and stop buttons.
+    pub fn tone(mut self, tone: Tone) -> Self {
+        self.tone = Some(tone);
         self
     }
 }
@@ -99,7 +100,7 @@ impl Widget for IconButton {
             } else if selected {
                 colors.text_on_accent
             } else {
-                self.color.unwrap_or(colors.icon)
+                self.tone.unwrap_or(Tone::Icon).color(&colors)
             };
             let icon_rect = Rect::from_center_size(rect.center(), vec2(size::ICON, size::ICON));
             icons::paint(painter, icon_rect, self.icon, color);

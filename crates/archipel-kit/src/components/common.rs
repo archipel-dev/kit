@@ -1,10 +1,7 @@
 //! Painting helpers shared by the components.
 
 use crate::theme::Colors;
-use crate::tokens::{radius, size};
-use egui::{
-    Color32, CornerRadius, FontId, Galley, Painter, Pos2, Rect, Stroke, StrokeKind, Ui, WidgetText,
-};
+use egui::{Color32, FontId, Galley, Painter, Pos2, Rect, Ui, WidgetText};
 use std::sync::Arc;
 
 /// Lays out `text` on one line in `font`, without wrapping.
@@ -34,15 +31,7 @@ pub(crate) fn text_left(
     text(painter, egui::pos2(x, y), galley, color);
 }
 
-/// Keyboard focus ring around `rect`.
-pub(crate) fn focus_ring(painter: &Painter, rect: Rect, corner: u8, colors: &Colors) {
-    painter.rect_stroke(
-        rect.expand(1.0),
-        CornerRadius::same(corner.saturating_add(1)),
-        Stroke::new(size::FOCUS_RING, colors.focus_ring),
-        StrokeKind::Outside,
-    );
-}
+pub(crate) use crate::parts::focus_ring;
 
 /// Fill of a flat control (toolbar button, row, menu item) for its interaction state.
 pub(crate) fn flat_fill(response: &egui::Response, colors: &Colors) -> Color32 {
@@ -55,13 +44,7 @@ pub(crate) fn flat_fill(response: &egui::Response, colors: &Colors) -> Color32 {
     }
 }
 
-/// The rounded selection/hover pill of a row spanning `rect`.
-pub(crate) fn row_pill(painter: &Painter, rect: Rect, fill: Color32) {
-    if fill != Color32::TRANSPARENT {
-        let pill = rect.shrink2(egui::vec2(size::ROW_PILL_INSET, 0.0));
-        painter.rect_filled(pill, CornerRadius::same(radius::ROW), fill);
-    }
-}
+pub(crate) use crate::parts::row_pill;
 
 /// `text` if `enabled`, else the disabled text color.
 pub(crate) fn enabled_text(enabled: bool, color: Color32, colors: &Colors) -> Color32 {

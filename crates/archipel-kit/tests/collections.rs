@@ -7,7 +7,7 @@ use archipel_kit::components::{
 };
 use archipel_kit::icons::Language;
 use archipel_kit::testing::{self, NodeExt, Queryable};
-use archipel_kit::{Glyph, Theme};
+use archipel_kit::{Glyph, Theme, Tone};
 use egui::Key;
 
 fn label(i: usize) -> String {
@@ -245,16 +245,16 @@ fn request_columns() -> Vec<Column> {
     ]
 }
 
-fn request_cell(row: usize, col: usize, colors: &archipel_kit::theme::Colors) -> Cell {
+fn request_cell(row: usize, col: usize) -> Cell {
     let status = STATUS[row % STATUS.len()];
     match col {
         0 => Cell::new(if row.is_multiple_of(3) { "POST" } else { "GET" }),
         1 => Cell::new(format!("/api/users/{row}")),
-        2 => Cell::new(status.to_string()).color(match status {
-            500.. => colors.error,
-            400.. => colors.warning,
-            300.. => colors.text_secondary,
-            _ => colors.success,
+        2 => Cell::new(status.to_string()).tone(match status {
+            500.. => Tone::Error,
+            400.. => Tone::Warning,
+            300.. => Tone::Secondary,
+            _ => Tone::Success,
         }),
         _ => Cell::new(format!("{} ms", 12 + row * 37 % 300)).muted(),
     }
@@ -264,13 +264,12 @@ fn request_cell(row: usize, col: usize, colors: &archipel_kit::theme::Colors) ->
 fn table_snapshot() {
     testing::snapshot_themes("table", common::IMG, |ui| {
         ui.set_width(420.0);
-        let colors = Theme::colors(ui.ctx());
         let mut columns = request_columns();
         let mut selected = Some(1);
         let _ = Table::new("requests", &mut columns, 500, &mut selected)
             .sort(Some((3, SortOrder::Descending)))
             .height(144.0)
-            .show(ui, |row, col| request_cell(row, col, &colors));
+            .show(ui, request_cell);
     });
 }
 
@@ -287,11 +286,10 @@ fn table_harness() -> testing::Harness<'static, TableState> {
         ..TableState::default()
     };
     let mut harness = testing::harness_state(Theme::dark(), state, |ui, state| {
-        let colors = Theme::colors(ui.ctx());
         let out = Table::new("requests", &mut state.columns, 10_000, &mut state.selected)
             .sort(state.sort)
             .height(160.0)
-            .show(ui, |row, col| request_cell(row, col, &colors));
+            .show(ui, request_cell);
         if let Some(col) = out.sort_clicked {
             state.sort = Some(match state.sort {
                 Some((c, order)) if c == col => (col, order.reversed()),

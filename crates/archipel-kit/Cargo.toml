@@ -16,7 +16,7 @@ testing = ["dep:egui_kittest"]
 
 [dependencies]
 archipel-icons = { path = "../archipel-icons", features = ["egui"] }
-egui.workspace = true
+egui = { workspace = true, features = ["accesskit"] }
 egui_kittest = { workspace = true, optional = true }
 
 [dev-dependencies]
