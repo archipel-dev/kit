@@ -11,10 +11,9 @@ mod tree_table;
 pub use edit::CellEdit;
 pub use tree_table::TreeTable;
 
-use super::{ListRow, Spinner, Tag, common};
+use super::{ListRow, Tag, common};
 use crate::behaviour::{Behaviour, DragSource, DropTarget};
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::Slot;
 use crate::parts::{Tone, ValueKind};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
@@ -365,11 +364,11 @@ pub struct TreeRow {
     secondary: Option<String>,
     icon: Option<Icon>,
     icon_tone: Option<Tone>,
+    busy: bool,
     depth: usize,
     children: bool,
     expanded: bool,
     editable: bool,
-    busy: bool,
 }
 
 impl TreeRow {
@@ -380,11 +379,11 @@ impl TreeRow {
             secondary: None,
             icon: None,
             icon_tone: None,
+            busy: false,
             depth,
             children: false,
             expanded: false,
             editable: false,
-            busy: false,
         }
     }
 
@@ -412,16 +411,14 @@ impl TreeRow {
         self
     }
 
-    /// Meaning of the icon's color, e.g. [`Tone::Run`] (default: the icon gray). Like
-    /// [`ListRow::icon_tone`].
+    /// Color the row's icon by meaning, using the theme's tones.
     pub fn icon_tone(mut self, tone: Tone) -> Self {
         self.icon_tone = Some(tone);
         self
     }
 
-    /// Shows a [`Spinner`] at the end of the row while its children load. A [`Tree`] draws
-    /// it in the row's trailing slot, so a trailing slot you add in
-    /// [`show_with`](Tree::show_with) replaces it; a [`TreeTable`] ignores it.
+    /// Show an accessible loading indicator before the row's icon while children load.
+    /// The caller owns the loading state and the row remains navigable.
     pub fn busy(mut self, busy: bool) -> Self {
         self.busy = busy;
         self
@@ -574,9 +571,9 @@ impl<'a> Tree<'a> {
                     row = row.icon_tone(tone);
                 }
                 if tree_row.busy {
-                    let label = format!("Loading {}", tree_row.label);
-                    row = row.trailing(Slot::ui(move |ui| {
-                        ui.centered_and_justified(|ui| ui.add(Spinner::new().label(label)));
+                    let name = format!("Loading {}", tree_row.label);
+                    row = row.leading(crate::parts::Slot::ui_width(size::ICON, move |ui| {
+                        ui.add(super::Spinner::new().label(name));
                     }));
                 }
                 if let Some(secondary) = &tree_row.secondary {

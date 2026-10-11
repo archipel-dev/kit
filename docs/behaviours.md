@@ -30,7 +30,7 @@ the component has drawn, so each one sees the final response.
 | `Tooltip::new(label)` | Kit tooltip after the hover delay, also over disabled widgets (say why). `.shortcut(...)`, `.hint(...)`. |
 | `ContextMenu::new(\|ui\| …)` | Menu on secondary click, on the popup surface. Fill it with `MenuItem`s. |
 | `Cursor(icon)` | The cursor over this widget, instead of the component's (splitters, handles). |
-| `DragSource(payload)` | The widget can be dragged, carrying `payload`. Open hand on hover, closed while dragging; clicks still click. |
+| `DragSource(payload)` | The widget can be dragged, carrying `payload`. Open hand on hover, closed while dragging; clicks still click. Doesn't add a Tab stop, so draggable rows in a list keep the list's arrow-key focus. |
 | `DropTarget::new(&mut Option<P>)` | Outlines the widget while a `P` hovers it; stores the payload when it is dropped. `DropTarget::shared(&Cell<Option<P>>)` for many targets sharing one slot (the rows of a tree). |
 | A closure `\|ui, response\| { …; response }` | Anything else, e.g. react to `double_clicked()`. |
 

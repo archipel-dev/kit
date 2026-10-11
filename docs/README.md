@@ -9,6 +9,8 @@
 - [Behaviours](behaviours.md): tooltips, context menus, cursors and drag and drop on any widget with `.with(...)`.
 - [Building a component](building-components.md): from parts, with slots and behaviours, proven by conformance and the audit.
 - [Contributing a component](contributing.md): the checklist every component meets.
+- [Desktop component map](component-map.md): reusable families, Android Studio reference
+  behavior, interaction invariants and verification.
 
 ## Components
 
@@ -21,6 +23,7 @@
 | [Dropdown](components/dropdown.md) | <img src="components/img/dropdown.dark.png" width="100"> | Picking one value from a long list. |
 | [SegmentedControl](components/segmented-control.md) | <img src="components/img/segmented_control.dark.png" width="140"> | Switching views. |
 | [TabBar](components/tab-bar.md) | <img src="components/img/tab_bar.dark.png" width="160"> | Editor tabs. |
+| [KeyValueTable](components/key-value-table.md) | <img src="components/img/key_value.dark.png" width="160"> | Query parameters, headers, form fields, environment variables. |
 | [CodeView, CodeEditor](components/code.md) | <img src="components/img/code_view.dark.png" width="160"> | Read-only and editable code with highlighting and find. |
 | [VirtualList, Tree, Table](components/collections.md) | <img src="components/img/table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
@@ -30,6 +33,7 @@
 | [Spinner, ProgressBar](components/progress.md) | <img src="components/img/progress.dark.png" width="160"> | Work in progress. |
 | [EmptyState](components/empty-state.md) | <img src="components/img/empty_state.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
+| [Histogram, Sparkline](components/chart.md) | <img src="components/img/chart.dark.png" width="160"> | Value distributions, top-N counts, inline trends. |
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
 | [StatusBarItem](components/status-bar-item.md) | <img src="components/img/status_bar_item.dark.png" width="160"> | Status bar and toolbar widgets. |
 | [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |

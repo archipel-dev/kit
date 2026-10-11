@@ -17,6 +17,7 @@ fn snapshot() {
         });
         ui.horizontal(|ui| {
             ui.add(Button::primary("Create").enabled(false));
+            ui.add(Button::danger("Delete").enabled(false));
             ui.add(Button::secondary("Cancel").enabled(false));
             ui.add(Button::secondary("Run").icon(Glyph::Run));
             ui.add(Button::ghost("Small").small(true));

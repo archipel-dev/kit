@@ -91,7 +91,7 @@ fn document(ui: &mut egui::Ui, doc: &mut Doc) {
 | Item | Builders and fields |
 |---|---|
 | `TreeTable::new(id, &mut columns, &rows, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.name(str)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
-| `TreeRow` | `.editable(bool)` for the key, plus `.parent`, `.icon`, `.icon_tone`, `.secondary` as for `Tree` (`.busy` is for `Tree` only) |
+| `TreeRow` | `.editable(bool)` for the key, plus `.parent`, `.icon`, `.icon_tone`, `.secondary` as for `Tree` |
 | `Cell` | `.editable(bool)`, `.value_kind(ValueKind)` (values in the editor's syntax colors, see [collections](collections.md#typed-values)), plus `.icon`, `.tone`, `.tag(Tone)`, `.muted` as for `Table` |
 | `CellEdit` | `row`, `column`, `text` |
 | `CollectionResponse` | `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited` |

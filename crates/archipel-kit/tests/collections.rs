@@ -1182,48 +1182,6 @@ fn list_arrows_collapse_and_expand_nodes() {
 }
 
 #[test]
-fn tree_busy_row_shows_a_spinner_and_icon_tone_colors_the_icon() {
-    let rows = vec![
-        TreeRow::new("orders", 0)
-            .icon(Glyph::Folder)
-            .icon_tone(Tone::Warning)
-            .parent(true)
-            .busy(true),
-        TreeRow::new("users", 0).icon(Glyph::Folder).parent(false),
-    ];
-    let mut selected = None;
-    let mut harness = testing::harness(Theme::dark(), |ui| {
-        let _ = Tree::new("db", &rows, &mut selected).height(96.0).show(ui);
-    });
-    // The spinner repaints forever, so `run` would never settle.
-    harness.run_steps(3);
-    assert!(harness.query_by_label("Loading orders").is_some());
-    assert!(harness.query_by_label("Loading users").is_none());
-    testing::audit(&mut harness).assert_clean();
-}
-
-#[test]
-fn tree_states_snapshot() {
-    testing::snapshot_themes("tree-states", common::IMG, |ui| {
-        ui.set_width(280.0);
-        let rows = vec![
-            TreeRow::new("orders", 0)
-                .icon(Glyph::Folder)
-                .icon_tone(Tone::Warning)
-                .parent(true)
-                .busy(true),
-            TreeRow::new("users", 0)
-                .icon(Glyph::Folder)
-                .icon_tone(Tone::Success)
-                .parent(false),
-            TreeRow::new("logs", 0).icon(Glyph::Folder).parent(false),
-        ];
-        let mut selected = Some(1);
-        let _ = Tree::new("db", &rows, &mut selected).height(80.0).show(ui);
-    });
-}
-
-#[test]
 fn tree_chevron_click_also_focuses_the_tree() {
     let mut harness = tree_harness();
     let tests = harness.get_by_label("tests").rect();

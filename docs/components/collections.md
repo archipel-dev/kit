@@ -1,5 +1,13 @@
 # VirtualList, Tree, Table
 
+Loading tree rows retain selection and expansion keys while showing a named spinner.
+Double-clicking a parent toggles it and gives the tree keyboard focus.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/tree_busy.dark.png">
+  <img alt="A loading tree parent with a themed icon" src="img/tree_busy.light.png" width="360">
+</picture>
+
 > Need a tree with columns, or editable cells? See [`TreeTable`](tree-table.md).
 
 Collections that draw **only the visible rows**, so they stay fast with hundreds of
@@ -96,18 +104,6 @@ methods, status codes, pass/fail. `Tone::Default` gives the neutral tag. The row
 points and stays virtualized, the row's accessible name still reads the text, and the tag
 takes precedence over `.tone` and `.value_kind`. It follows the column's alignment and works
 in `Table` and `TreeTable`.
-
-### Tree: busy rows and icon tones
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/tree-states.dark.png">
-  <img alt="A tree whose orders folder has an amber icon and a spinner while it loads, and users has a green icon" src="img/tree-states.light.png" width="320">
-</picture>
-
-`TreeRow::busy(true)` shows the kit [`Spinner`](progress.md) at the end of the row while its
-children load (named "Loading <label>"). `TreeRow::icon_tone(Tone)` colors the icon by
-meaning, like `ListRow::icon_tone`. The busy spinner uses the row's trailing slot, so a
-trailing slot you add in `show_with` replaces it; a `TreeTable` ignores `busy`.
 
 ### Following the tail
 
