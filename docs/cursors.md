@@ -11,7 +11,7 @@ for everything inside.
 | Buttons, icon buttons, checkboxes, radios, toggles, segments, dropdowns, close buttons, sortable column headers | The theme's `action_cursor`: the pointing hand by default |
 | List rows, tree rows, table rows, tabs, menu items | Default arrow |
 | Links | Pointing hand |
-| Text fields | Text beam; default over the clear button |
+| Text fields, inline cell editors | Text beam; default over the clear button |
 | Disabled controls | Default arrow |
 | Anything with `.with(Cursor(icon))` | `icon` |
 

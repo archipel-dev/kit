@@ -1,9 +1,9 @@
-//! `VirtualList`, `Tree` and `Table` tests.
+//! `VirtualList`, `Tree`, `Table` and `TreeTable` tests.
 
 mod common;
 
 use archipel_kit::components::{
-    Cell, Column, ListRow, SortOrder, Table, Tree, TreeRow, VirtualList,
+    Cell, CellEdit, Column, ListRow, SortOrder, Table, Tree, TreeRow, TreeTable, VirtualList,
 };
 use archipel_kit::icons::Language;
 use archipel_kit::testing::{self, NodeExt, Queryable};
@@ -345,4 +345,421 @@ fn table_columns_resize_by_dragging_the_header_edge() {
     harness.run();
     let width = harness.state().columns[0].width;
     assert!((width - 100.0).abs() < 1.0, "width {width}");
+}
+
+// ---- TreeTable ----
+
+/// The visible rows of a small MongoDB document: key | value | type.
+fn document_rows(address_open: bool) -> Vec<TreeRow> {
+    let mut rows = vec![
+        TreeRow::new("name", 0).editable(true),
+        TreeRow::new("age", 0),
+        TreeRow::new("address", 0)
+            .icon(Glyph::Folder)
+            .parent(address_open),
+    ];
+    if address_open {
+        rows.push(TreeRow::new("city", 1));
+        rows.push(TreeRow::new("zip", 1));
+    }
+    rows.push(TreeRow::new("active", 0));
+    rows
+}
+
+fn document_columns() -> Vec<Column> {
+    vec![
+        Column::new("Key", 130.0),
+        Column::new("Value", 150.0).mono(),
+        Column::new("Type", 70.0),
+    ]
+}
+
+/// Value and type of the visible row `row` (`address_open` decides which rows exist).
+fn document_cell(row: usize, col: usize, address_open: bool, name: &str, city: &str) -> Cell {
+    let keys = if address_open {
+        ["name", "age", "address", "city", "zip", "active"].as_slice()
+    } else {
+        ["name", "age", "address", "active"].as_slice()
+    };
+    match (keys[row], col) {
+        ("name", 1) => Cell::new(name).editable(true),
+        ("name", _) => Cell::new("String").muted(),
+        ("age", 1) => Cell::new("36").editable(true),
+        ("age", _) => Cell::new("Int32").muted(),
+        ("address", 1) => Cell::new("{ 2 fields }").muted(),
+        ("address", _) => Cell::new("Object").muted(),
+        ("city", 1) => Cell::new(city).editable(true),
+        ("zip", 1) => Cell::new("12345"),
+        ("active", 1) => Cell::new("true").tone(Tone::Success),
+        ("active", _) => Cell::new("Boolean").muted(),
+        _ => Cell::new("String").muted(),
+    }
+}
+
+#[test]
+fn tree_table_snapshot() {
+    testing::snapshot_themes("tree_table", common::IMG, |ui| {
+        ui.set_width(380.0);
+        let rows = document_rows(true);
+        let mut columns = document_columns();
+        let mut selected = Some(3);
+        let _ = TreeTable::new("document", &mut columns, &rows, &mut selected)
+            .name("Document")
+            .height(168.0)
+            .show(ui, |row, col| {
+                document_cell(row, col, true, "Ada", "London")
+            });
+    });
+}
+
+#[derive(Default)]
+struct DocState {
+    columns: Vec<Column>,
+    selected: Option<usize>,
+    address_open: bool,
+    name: String,
+    city: String,
+    sort: Option<(usize, SortOrder)>,
+    edited: Vec<CellEdit>,
+    activated: Vec<usize>,
+    cursor: egui::CursorIcon,
+}
+
+fn doc_ui(ui: &mut egui::Ui, state: &mut DocState) {
+    let rows = document_rows(state.address_open);
+    let (open, name, city) = (state.address_open, state.name.clone(), state.city.clone());
+    let out = TreeTable::new("document", &mut state.columns, &rows, &mut state.selected)
+        .name("Document")
+        .sort(state.sort)
+        .height(168.0)
+        .show(ui, |row, col| document_cell(row, col, open, &name, &city));
+    if out.toggled.is_some() {
+        state.address_open = !state.address_open;
+    }
+    if let Some(index) = out.activated {
+        state.activated.push(index);
+    }
+    if let Some(col) = out.sort_clicked {
+        state.sort = Some((col, SortOrder::Ascending));
+    }
+    if let Some(edit) = out.edited {
+        match (edit.row, edit.column) {
+            (0, 1) => state.name = edit.text.clone(),
+            (3, 1) => state.city = edit.text.clone(),
+            _ => {}
+        }
+        state.edited.push(edit);
+    }
+    state.cursor = archipel_kit::cursor::current(ui.ctx());
+}
+
+fn doc_state() -> DocState {
+    DocState {
+        columns: document_columns(),
+        address_open: true,
+        name: "Ada".into(),
+        city: "London".into(),
+        ..DocState::default()
+    }
+}
+
+fn doc_harness() -> testing::Harness<'static, DocState> {
+    let mut harness = testing::harness_state(Theme::dark(), doc_state(), doc_ui);
+    harness.run();
+    harness
+}
+
+const NAME_ROW: &str = "name, Ada, String";
+
+/// Where the key and the value column of `row` are, for raw clicks.
+fn key_at(row: egui::Rect) -> egui::Pos2 {
+    egui::pos2(row.left() + 60.0, row.center().y)
+}
+
+#[test]
+fn tree_table_keys_walk_expand_and_collapse() {
+    let mut harness = doc_harness();
+    harness.get_by_label(NAME_ROW).click();
+    harness.run();
+    assert_eq!(harness.state().selected, Some(0));
+    for (key, expected) in [
+        (Key::ArrowDown, 1),
+        (Key::ArrowDown, 2),
+        (Key::End, 5),
+        (Key::Home, 0),
+        (Key::PageDown, 5),
+        (Key::PageUp, 0),
+    ] {
+        harness.key_press(key);
+        harness.run();
+        assert_eq!(harness.state().selected, Some(expected), "after {key:?}");
+    }
+    harness.key_press(Key::ArrowDown);
+    harness.key_press(Key::ArrowDown);
+    harness.run();
+    // ← collapses the expanded parent, → expands it, a second → walks to the first child.
+    harness.key_press(Key::ArrowLeft);
+    harness.run();
+    assert!(!harness.state().address_open);
+    assert!(harness.query_by_label_contains("city, ").is_none());
+    harness.key_press(Key::ArrowRight);
+    harness.run();
+    assert!(harness.state().address_open);
+    harness.key_press(Key::ArrowRight);
+    harness.run();
+    assert_eq!(harness.state().selected, Some(3));
+    // ← on a leaf goes to its parent.
+    harness.key_press(Key::ArrowLeft);
+    harness.run();
+    assert_eq!(harness.state().selected, Some(2));
+}
+
+#[test]
+fn tree_table_chevron_toggles_a_parent() {
+    let mut harness = doc_harness();
+    harness.get_by_label("Collapse address").click();
+    harness.run();
+    assert!(!harness.state().address_open);
+    harness.get_by_label("Expand address").click();
+    harness.run();
+    assert!(harness.state().address_open);
+}
+
+#[test]
+fn tree_table_double_click_toggles_a_parent_instead_of_activating_it() {
+    let mut harness = doc_harness();
+    let row = harness.get_by_label("address, { 2 fields }, Object").rect();
+    double_click(&mut harness, key_at(row));
+    assert!(!harness.state().address_open);
+    assert!(harness.state().activated.is_empty());
+}
+
+fn click_at(harness: &mut testing::Harness<'_, DocState>, pos: egui::Pos2) {
+    harness.hover_at(pos);
+    harness.run();
+    for pressed in [true, false] {
+        harness.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+    }
+}
+
+fn double_click(harness: &mut testing::Harness<'_, DocState>, pos: egui::Pos2) {
+    click_at(harness, pos);
+    click_at(harness, pos);
+    harness.run();
+}
+
+#[test]
+fn tree_table_enter_activates_rows_with_nothing_to_edit() {
+    let mut harness = doc_harness();
+    harness.get_by_label("active, true, Boolean").click();
+    harness.run();
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().activated, vec![5]);
+    assert!(harness.query_by_label("Edit Value").is_none());
+}
+
+#[test]
+fn tree_table_f2_edits_commits_with_enter_and_cancels_with_escape() {
+    let mut harness = doc_harness();
+    let row = harness.get_by_label(NAME_ROW).rect();
+    click_at(&mut harness, key_at(row));
+    harness.run();
+    // F2 edits the first editable column (the key of `name` is editable, so column 0).
+    harness.key_press(Key::F2);
+    harness.run();
+    assert!(harness.query_by_label("Edit Key").is_some());
+    harness.key_press(Key::Escape);
+    harness.run();
+    assert!(harness.query_by_label("Edit Key").is_none());
+    assert!(harness.state().edited.is_empty(), "Escape cancels");
+
+    // Clicking a value cell makes the value the column F2 and Enter edit.
+    let row = harness.get_by_label(NAME_ROW).rect();
+    click_at(&mut harness, egui::pos2(row.left() + 160.0, row.center().y));
+    harness.run();
+    harness.key_press(Key::F2);
+    harness.run();
+    let field = harness.get_by_label("Edit Value");
+    field.type_text("m");
+    harness.run();
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(
+        harness.state().edited,
+        vec![CellEdit {
+            row: 0,
+            column: 1,
+            text: "Adam".into()
+        }]
+    );
+    assert_eq!(harness.state().name, "Adam");
+    assert!(harness.query_by_label("Edit Value").is_none());
+    assert!(
+        harness.state().activated.is_empty(),
+        "Enter edited, not activated"
+    );
+    // The collection has the focus again: the arrows move the selection.
+    harness.key_press(Key::ArrowDown);
+    harness.run();
+    assert_eq!(harness.state().selected, Some(1));
+}
+
+#[test]
+fn tree_table_enter_starts_an_edit_and_escape_cancels_it() {
+    let mut harness = doc_harness();
+    harness.get_by_label("age, 36, Int32").click();
+    harness.run();
+    // `age` has an editable value but no editable key: Enter finds the value.
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert!(harness.query_by_label("Edit Value").is_some());
+    assert!(harness.state().activated.is_empty());
+    harness.key_press(Key::Escape);
+    harness.run();
+    assert!(harness.query_by_label("Edit Value").is_none());
+    assert!(harness.state().edited.is_empty());
+}
+
+#[test]
+fn tree_table_double_click_edits_an_editable_cell() {
+    let mut harness = doc_harness();
+    let row = harness.get_by_label("city, London, String").rect();
+    double_click(&mut harness, egui::pos2(row.left() + 160.0, row.center().y));
+    harness.get_by_label("Edit Value");
+    assert!(harness.state().activated.is_empty());
+    harness.get_by_label("Edit Value").type_text("!");
+    harness.run();
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().city, "London!");
+}
+
+#[test]
+fn tree_table_leaving_the_field_commits() {
+    let mut harness = doc_harness();
+    harness.get_by_label(NAME_ROW).click();
+    harness.run();
+    let row = harness.get_by_label(NAME_ROW).rect();
+    click_at(&mut harness, egui::pos2(row.left() + 160.0, row.center().y));
+    harness.key_press(Key::F2);
+    harness.run();
+    harness.get_by_label("Edit Value").type_text("x");
+    harness.run();
+    harness.get_by_label("age, 36, Int32").click();
+    harness.run();
+    assert_eq!(harness.state().name, "Adax");
+    assert_eq!(harness.state().selected, Some(1));
+}
+
+#[test]
+fn tree_table_cursors_are_arrow_on_rows_and_text_in_the_field() {
+    let mut harness = doc_harness();
+    harness.get_by_label(NAME_ROW).hover();
+    harness.run();
+    assert_eq!(harness.state().cursor, egui::CursorIcon::Default);
+    harness.get_by_label(NAME_ROW).click();
+    harness.run();
+    let row = harness.get_by_label(NAME_ROW).rect();
+    click_at(&mut harness, egui::pos2(row.left() + 160.0, row.center().y));
+    harness.key_press(Key::F2);
+    harness.run();
+    harness.get_by_label("Edit Value").hover();
+    harness.run();
+    assert_eq!(harness.state().cursor, egui::CursorIcon::Text);
+}
+
+#[test]
+fn tree_table_header_sorts_and_edge_resizes_the_column() {
+    let mut harness = doc_harness();
+    harness.get_by_label("Type").click();
+    harness.run();
+    assert_eq!(harness.state().sort, Some((2, SortOrder::Ascending)));
+    let key = harness.get_by_label("Key").rect();
+    let edge = egui::pos2(key.right(), key.center().y);
+    harness.hover_at(edge);
+    harness.run();
+    assert_eq!(harness.state().cursor, egui::CursorIcon::ResizeColumn);
+    harness.drag_at(edge);
+    harness.run();
+    harness.hover_at(edge + egui::vec2(30.0, 0.0));
+    harness.run();
+    harness.drop_at(edge + egui::vec2(30.0, 0.0));
+    harness.run();
+    let width = harness.state().columns[0].width;
+    assert!((width - 160.0).abs() < 1.0, "width {width}");
+}
+
+#[test]
+fn tree_table_with_100k_rows_draws_only_the_visible_ones() {
+    let rows: Vec<TreeRow> = (0..100_000)
+        .map(|i| TreeRow::new(format!("field{i}"), i % 3))
+        .collect();
+    let mut state = (document_columns(), Some(0usize));
+    let mut harness = testing::harness_state(Theme::dark(), (), move |ui, _| {
+        let _ = TreeTable::new("big", &mut state.0, &rows, &mut state.1)
+            .name("Big")
+            .height(160.0)
+            .show(ui, |row, col| Cell::new(format!("{row}:{col}")));
+    });
+    harness.run();
+    assert!(harness.query_by_label_contains("field0, ").is_some());
+    assert!(harness.query_by_label_contains("field99999, ").is_none());
+    let drawn = harness.get_all_by_label_contains("field").count();
+    assert!(drawn < 20, "{drawn} rows drawn");
+}
+
+/// Renders the document with the value of `age` open for editing, in both themes at the
+/// docs' 2× scale (so the image matches the others), driven by the keyboard only.
+#[test]
+fn tree_table_editing_snapshot() {
+    let mut results = testing::SnapshotResults::new();
+    for theme in [Theme::dark(), Theme::light()] {
+        let suffix = if theme.dark { "dark" } else { "light" };
+        let egui_theme = if theme.dark {
+            egui::Theme::Dark
+        } else {
+            egui::Theme::Light
+        };
+        let mut pending = Some(theme);
+        let state = DocState {
+            selected: Some(1),
+            ..doc_state()
+        };
+        let mut harness = testing::builder::<DocState>()
+            .with_theme(egui_theme)
+            .with_pixels_per_point(testing::SNAPSHOT_SCALE)
+            .build_ui_state(
+                move |ui, state| {
+                    if let Some(theme) = pending.take() {
+                        archipel_kit::install(ui.ctx(), theme);
+                        ui.ctx().request_repaint();
+                        return;
+                    }
+                    archipel_kit::parts::Surface::Island
+                        .frame(ui.ctx())
+                        .show(ui, |ui| {
+                            ui.set_width(380.0);
+                            doc_ui(ui, state);
+                        });
+                },
+                state,
+            );
+        harness.run_ok();
+        harness.get_by_label("Document").focus();
+        harness.run();
+        harness.key_press(Key::F2);
+        harness.run();
+        harness.fit_contents();
+        results.add(harness.try_snapshot_options(
+            format!("tree_table_edit.{suffix}"),
+            &testing::SnapshotOptions::new().output_path(common::IMG),
+        ));
+    }
+    results.unwrap();
 }

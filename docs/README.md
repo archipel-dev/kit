@@ -22,6 +22,7 @@
 | [SegmentedControl](components/segmented-control.md) | <img src="components/img/segmented_control.dark.png" width="140"> | Switching views. |
 | [TabBar](components/tab-bar.md) | <img src="components/img/tab_bar.dark.png" width="160"> | Editor tabs. |
 | [VirtualList, Tree, Table](components/collections.md) | <img src="components/img/table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
+| [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
 | [ListRow](components/list-row.md) | <img src="components/img/list_row.dark.png" width="160"> | Lists and trees. |
 | [Banner](components/banner.md) | <img src="components/img/banner.dark.png" width="160"> | Inline messages with actions. |
 | [Toast](components/toast.md) | <img src="components/img/toast.dark.png" width="160"> | Notifications. |
