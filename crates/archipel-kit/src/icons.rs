@@ -1,12 +1,12 @@
 //! Icons: the designed glyphs of the `archipel-icons` kit, plus file-type icons.
 //!
 //! [`Glyph`]s are the general icon set and [`Language`]s the language tiles (see
-//! `docs/icons/`). [`Icon`] adds what the kit draws from the theme: Java type circles and
-//! folders tinted by their role. [`Icon::for_file`] picks an icon for a file name. All
+//! `docs/icons/`), and [`Symbol`]s the code symbols. [`Icon`] adds folders tinted by their
+//! role. [`Icon::for_file`] picks an icon for a file name. All
 //! drawings are original (no third-party artwork).
 
 use crate::theme::{Colors, Theme};
-pub use archipel_icons::{Category, Glyph, Language};
+pub use archipel_icons::{Category, Glyph, Language, Symbol, SymbolKind, Visibility};
 use archipel_icons::{Paint, Part, Shape, Tone};
 use egui::{self, Color32, Rect, vec2};
 
@@ -21,124 +21,86 @@ const IMAGE: Color32 = rgb(0x5F, 0xAD, 0x65);
 const ARCHIVE: Color32 = rgb(0xD9, 0xB0, 0x4C);
 const HIDDEN: Color32 = rgb(0x6C, 0x70, 0x7E);
 
-/// What a Java source file declares (the letter in its circle).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TypeKind {
-    /// `class`: C.
-    Class,
-    /// `interface`: I.
-    Interface,
-    /// `enum`: E.
-    Enum,
-    /// `record`: R.
-    Record,
-    /// `@interface`: @.
-    Annotation,
-}
-
-impl TypeKind {
-    fn letter(self) -> &'static str {
-        match self {
-            TypeKind::Class => "C",
-            TypeKind::Interface => "I",
-            TypeKind::Enum => "E",
-            TypeKind::Record => "R",
-            TypeKind::Annotation => "@",
-        }
-    }
-
-    fn color(self) -> Color32 {
-        match self {
-            TypeKind::Class => rgb(0x4F, 0x9B, 0xE0),
-            TypeKind::Interface => rgb(0x5F, 0xAD, 0x65),
-            TypeKind::Enum => rgb(0xE0, 0x9A, 0x55),
-            TypeKind::Record => rgb(0x4F, 0xB8, 0xC8),
-            TypeKind::Annotation => rgb(0xB1, 0x8A, 0xDB),
-        }
-    }
-
-    /// Cheap peek at the first top-level declaration of a Java source (comments,
-    /// strings and nested braces skipped): `class` when nothing is recognized.
-    pub fn peek_java(source: &str) -> TypeKind {
-        let bytes = source.as_bytes();
-        let (mut i, mut depth) = (0, 0usize);
-        let mut previous_at = false;
-        while i < bytes.len() {
-            match bytes[i] {
-                b'/' if bytes.get(i + 1) == Some(&b'/') => {
-                    while i < bytes.len() && bytes[i] != b'\n' {
-                        i += 1;
-                    }
-                }
-                b'/' if bytes.get(i + 1) == Some(&b'*') => {
-                    i += 2;
-                    while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
-                        i += 1;
-                    }
-                    i += 2;
-                }
-                b'"' | b'\'' => {
-                    let quote = bytes[i];
-                    i += 1;
-                    while i < bytes.len() && bytes[i] != quote && bytes[i] != b'\n' {
-                        i += if bytes[i] == b'\\' { 2 } else { 1 };
-                    }
-                    i += 1;
-                }
-                b'{' => {
-                    depth += 1;
-                    i += 1;
-                }
-                b'}' => {
-                    depth = depth.saturating_sub(1);
-                    i += 1;
-                }
-                b'@' => {
-                    previous_at = true;
-                    i += 1;
-                }
-                c if c.is_ascii_alphabetic() || c == b'_' || c == b'$' => {
-                    let start = i;
-                    while i < bytes.len()
-                        && (bytes[i].is_ascii_alphanumeric()
-                            || bytes[i] == b'_'
-                            || bytes[i] == b'$')
-                    {
-                        i += 1;
-                    }
-                    let word = &source[start..i];
-                    if depth == 0 {
-                        let rest = source[i..].trim_start();
-                        let named = rest.starts_with(|c: char| c.is_alphabetic() || c == '_');
-                        match word {
-                            "interface" if previous_at => return TypeKind::Annotation,
-                            "interface" => return TypeKind::Interface,
-                            "enum" if named => return TypeKind::Enum,
-                            "class" if named => return TypeKind::Class,
-                            "record" if named => {
-                                // `record Name(` or `record Name<T>(` (contextual keyword).
-                                let after = rest.trim_start_matches(|c: char| {
-                                    c.is_alphanumeric() || c == '_' || c == '$'
-                                });
-                                if after.starts_with(['(', '<']) {
-                                    return TypeKind::Record;
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                    previous_at = false;
-                }
-                c => {
-                    if !c.is_ascii_whitespace() {
-                        previous_at = false;
-                    }
+/// Cheap peek at the first top-level declaration of a Java source (comments, strings
+/// and nested braces skipped): class, interface, enum, record or annotation; `Class` when
+/// nothing is recognized.
+pub fn peek_java(source: &str) -> SymbolKind {
+    let bytes = source.as_bytes();
+    let (mut i, mut depth) = (0, 0usize);
+    let mut previous_at = false;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'/' if bytes.get(i + 1) == Some(&b'/') => {
+                while i < bytes.len() && bytes[i] != b'\n' {
                     i += 1;
                 }
             }
+            b'/' if bytes.get(i + 1) == Some(&b'*') => {
+                i += 2;
+                while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
+                    i += 1;
+                }
+                i += 2;
+            }
+            b'"' | b'\'' => {
+                let quote = bytes[i];
+                i += 1;
+                while i < bytes.len() && bytes[i] != quote && bytes[i] != b'\n' {
+                    i += if bytes[i] == b'\\' { 2 } else { 1 };
+                }
+                i += 1;
+            }
+            b'{' => {
+                depth += 1;
+                i += 1;
+            }
+            b'}' => {
+                depth = depth.saturating_sub(1);
+                i += 1;
+            }
+            b'@' => {
+                previous_at = true;
+                i += 1;
+            }
+            c if c.is_ascii_alphabetic() || c == b'_' || c == b'$' => {
+                let start = i;
+                while i < bytes.len()
+                    && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'$')
+                {
+                    i += 1;
+                }
+                let word = &source[start..i];
+                if depth == 0 {
+                    let rest = source[i..].trim_start();
+                    let named = rest.starts_with(|c: char| c.is_alphabetic() || c == '_');
+                    match word {
+                        "interface" if previous_at => return SymbolKind::Annotation,
+                        "interface" => return SymbolKind::Interface,
+                        "enum" if named => return SymbolKind::Enum,
+                        "class" if named => return SymbolKind::Class,
+                        "record" if named => {
+                            // `record Name(` or `record Name<T>(` (contextual keyword).
+                            let after = rest.trim_start_matches(|c: char| {
+                                c.is_alphanumeric() || c == '_' || c == '$'
+                            });
+                            if after.starts_with(['(', '<']) {
+                                return SymbolKind::Record;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                previous_at = false;
+            }
+            c => {
+                if !c.is_ascii_whitespace() {
+                    previous_at = false;
+                }
+                i += 1;
+            }
         }
-        TypeKind::Class
     }
+    SymbolKind::Class
 }
 
 /// What a folder is for, shown by its colour like the reference IDE's project view.
@@ -198,8 +160,8 @@ pub enum Icon {
     Glyph(Glyph),
     /// A language icon from `archipel-icons`.
     Language(Language),
-    /// A Java type: a filled circle with C, I, E, R or @.
-    JavaType(TypeKind),
+    /// A code symbol from `archipel-icons`: class, interface, method, field, ...
+    Symbol(Symbol),
     /// A folder tinted by its role.
     FolderKind(FolderKind),
     /// An image file (green picture).
@@ -214,6 +176,18 @@ impl From<Glyph> for Icon {
     }
 }
 
+impl From<Symbol> for Icon {
+    fn from(symbol: Symbol) -> Self {
+        Icon::Symbol(symbol)
+    }
+}
+
+impl From<SymbolKind> for Icon {
+    fn from(kind: SymbolKind) -> Self {
+        Icon::Symbol(Symbol::new(kind))
+    }
+}
+
 impl From<Language> for Icon {
     fn from(language: Language) -> Self {
         Icon::Language(language)
@@ -221,7 +195,7 @@ impl From<Language> for Icon {
 }
 
 impl Icon {
-    /// File icon by name: Java sources show their type circle, other languages their icon
+    /// File icon by name: Java sources show their class symbol, other languages their icon
     /// (by exact name, then the longest extension), images and archives their glyph, and
     /// everything else a text page.
     pub fn for_file(name: &str) -> Icon {
@@ -232,7 +206,7 @@ impl Icon {
                 .is_some_and(|rest| rest.ends_with('.') && rest.len() > 1)
         };
         if has_ext("java") {
-            return Icon::JavaType(TypeKind::Class);
+            return Icon::Symbol(Symbol::new(SymbolKind::Class));
         }
         if let Some(language) = Language::from_file_name(name) {
             return Icon::Language(language);
@@ -252,7 +226,7 @@ impl Icon {
     /// Like [`Icon::for_file`], peeking into Java sources for the kind of their type.
     pub fn for_source(name: &str, text: Option<&str>) -> Icon {
         match (Icon::for_file(name), text) {
-            (Icon::JavaType(_), Some(text)) => Icon::JavaType(TypeKind::peek_java(text)),
+            (Icon::Symbol(_), Some(text)) => Icon::Symbol(Symbol::new(peek_java(text))),
             (icon, _) => icon,
         }
     }
@@ -294,22 +268,7 @@ pub fn paint(
         Icon::Language(language) => archipel_icons::paint_language(painter, rect, language, color),
         Icon::FileImage => archipel_icons::paint(painter, rect, Glyph::Image, IMAGE, &tones),
         Icon::FileArchive => archipel_icons::paint(painter, rect, Glyph::Archive, ARCHIVE, &tones),
-        Icon::JavaType(kind) => {
-            let mut parts = vec![Part {
-                shape: Shape::Circle {
-                    center: (8.0, 8.0),
-                    radius: 6.5,
-                },
-                paint: Paint::Fill(Tone::Rgb(hex(kind.color()))),
-            }];
-            parts.push(archipel_icons::label(
-                kind.letter(),
-                (8.0, 8.0),
-                8.5,
-                Tone::Knockout,
-            ));
-            archipel_icons::paint_parts(painter, rect, &parts, color, &tones);
-        }
+        Icon::Symbol(symbol) => archipel_icons::paint_symbol(painter, rect, symbol, color, &tones),
         Icon::FolderKind(kind) => paint_folder(painter, rect, kind, color, &theme.colors, &tones),
     }
 }
@@ -384,7 +343,7 @@ mod tests {
             ("App.kt", Icon::Language(Language::Kotlin)),
             ("Dockerfile", Icon::Language(Language::Dockerfile)),
             ("README.md", Icon::Language(Language::Markdown)),
-            ("Main.java", Icon::JavaType(TypeKind::Class)),
+            ("Main.java", Icon::Symbol(Symbol::new(SymbolKind::Class))),
             ("logo.PNG", Icon::FileImage),
             ("lib.jar", Icon::FileArchive),
             ("Cargo.lock", Icon::Language(Language::Toml)),
@@ -398,7 +357,7 @@ mod tests {
 
     #[test]
     fn java_kind_is_peeked_from_the_first_top_level_type() {
-        use TypeKind::*;
+        use SymbolKind::*;
         for (source, expected) in [
             ("package a;\n\npublic class Foo {\n}\n", Class),
             ("public interface Foo { class Inner {} }", Interface),
@@ -413,13 +372,16 @@ mod tests {
             ("int record = 1;", Class),
             ("", Class),
         ] {
-            assert_eq!(TypeKind::peek_java(source), expected, "{source}");
+            assert_eq!(peek_java(source), expected, "{source}");
         }
         assert_eq!(
             Icon::for_source("Foo.java", Some("enum Foo {}")),
-            Icon::JavaType(Enum)
+            Icon::Symbol(Symbol::new(Enum))
         );
-        assert_eq!(Icon::for_source("Foo.java", None), Icon::JavaType(Class));
+        assert_eq!(
+            Icon::for_source("Foo.java", None),
+            Icon::Symbol(Symbol::new(Class))
+        );
         assert_eq!(
             Icon::for_source("a.rs", Some("enum Foo {}")),
             Icon::for_file("a.rs")

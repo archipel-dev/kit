@@ -21,6 +21,18 @@ pub fn paint_language(painter: &Painter, rect: Rect, language: crate::Language, 
     paint_parts(painter, rect, &language.parts(), ink, &Tones::dark());
 }
 
+/// Paints the icon of `symbol` into the square centered in `rect`; modifier marks use
+/// `ink`, the cut-outs around them `tones.knockout`.
+pub fn paint_symbol(
+    painter: &Painter,
+    rect: Rect,
+    symbol: crate::Symbol,
+    ink: Color32,
+    tones: &Tones,
+) {
+    paint_parts(painter, rect, &symbol.parts(), ink, tones);
+}
+
 /// Paints `parts` (16×16 grid) into the square centered in `rect`.
 pub fn paint_parts(
     painter: &Painter,

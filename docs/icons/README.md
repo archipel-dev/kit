@@ -15,6 +15,7 @@ design tools.
 
 - [Catalog](catalog.md): every glyph by category, with names and keywords.
 - [Language icons](languages.md): 78 languages and file formats, with their extensions.
+- [Symbol icons](symbols.md): classes, interfaces, methods, fields and their modifiers.
 - [Design rules](design.md): the grid, strokes and shapes every glyph follows.
 - [Review](review.md): how glyphs are reviewed, and the review log.
 - [`svg/`](svg/): one SVG per glyph (`currentColor`).
@@ -70,6 +71,24 @@ assert_eq!(Language::Rust.label(), "Rs");
 
 In Archipel Kit, `Icon::for_file(name)` returns the language icon (or a Java type circle,
 image, archive or text page).
+
+## Symbol icons
+
+Code symbols for structure views, completion and outlines: types are circles with a capital
+(`C` class, `I` interface, `E` enum, `R` record, `@` annotation, `S` struct, `T` trait, `O`
+object), members rounded squares with a small letter (`m` method, `f` field, `p` property,
+`c` constructor, `ƒ` function, `λ` lambda …). Modifiers are overlays: abstract (hollow),
+static (dot) and visibility (private square, protected diamond, internal ring). Every color
+gives white labels 4.5:1 and the shape 3:1 on dark and light.
+
+```rust
+use archipel_icons::{Symbol, SymbolKind, Visibility};
+
+// From a language server's DocumentSymbol.kind:
+let kind = SymbolKind::from_lsp(6).unwrap_or(SymbolKind::Variable);
+let icon = Symbol::new(kind).visibility(Visibility::Private).static_(true);
+assert_eq!(icon.slug(), "method-private-static");
+```
 
 ## Tones
 

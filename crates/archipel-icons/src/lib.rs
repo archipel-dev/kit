@@ -32,12 +32,14 @@ mod languages;
 #[cfg(feature = "egui")]
 mod paint;
 mod svg;
+mod symbols;
 
 pub use languages::{Language, LanguageKind};
 pub use svg::parts_to_svg;
+pub use symbols::{Symbol, SymbolKind, SymbolShape, Visibility};
 
 #[cfg(feature = "egui")]
-pub use paint::{paint, paint_language, paint_parts, show};
+pub use paint::{paint, paint_language, paint_parts, paint_symbol, show};
 
 /// A color role. Renderers map tones to concrete colors with [`Tones`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -295,6 +297,31 @@ pub const fn label(text: &'static str, center: Point, size: f32, tone: Tone) -> 
     Part {
         shape: Shape::Text { text, center, size },
         paint: Paint::Fill(tone),
+    }
+}
+
+impl Symbol {
+    /// The icon as an SVG document of `size` pixels, in `tones`.
+    pub fn to_svg(self, size: f32, tones: &Tones) -> String {
+        parts_to_svg(&self.parts(), size, tones)
+    }
+
+    /// Kebab-case slug for file names, e.g. `"method-private-static"`.
+    pub fn slug(self) -> String {
+        let mut slug = self.kind.name().to_lowercase().replace(' ', "-");
+        if self.is_abstract {
+            slug.push_str("-abstract");
+        }
+        match self.visibility {
+            Some(Visibility::Private) => slug.push_str("-private"),
+            Some(Visibility::Protected) => slug.push_str("-protected"),
+            Some(Visibility::Internal) => slug.push_str("-internal"),
+            Some(Visibility::Public) | None => {}
+        }
+        if self.is_static {
+            slug.push_str("-static");
+        }
+        slug
     }
 }
 

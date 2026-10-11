@@ -3,7 +3,7 @@
 
 mod common;
 
-use archipel_kit::icons::{FolderKind, TypeKind};
+use archipel_kit::icons::{FolderKind, Symbol, SymbolKind, Visibility};
 use archipel_kit::testing;
 use archipel_kit::{Icon, Theme};
 
@@ -33,14 +33,14 @@ fn file_icons_snapshot() {
         });
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
-            for kind in [
-                TypeKind::Class,
-                TypeKind::Interface,
-                TypeKind::Enum,
-                TypeKind::Record,
-                TypeKind::Annotation,
+            for symbol in [
+                Symbol::new(SymbolKind::Class),
+                Symbol::new(SymbolKind::Interface).visibility(Visibility::Internal),
+                Symbol::new(SymbolKind::Enum),
+                Symbol::new(SymbolKind::Method).visibility(Visibility::Private),
+                Symbol::new(SymbolKind::Field).static_(true),
             ] {
-                archipel_kit::icons::show(ui, Icon::JavaType(kind), 16.0, color);
+                archipel_kit::icons::show(ui, symbol, 16.0, color);
             }
             for kind in [
                 FolderKind::Source,

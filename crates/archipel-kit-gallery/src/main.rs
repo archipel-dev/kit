@@ -9,7 +9,7 @@ use archipel_kit::components::{
     ListRow, MenuItem, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
     Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
 };
-use archipel_kit::icons::{Category, Language};
+use archipel_kit::icons::{Category, Language, SymbolKind};
 use archipel_kit::{Glyph, Icon, Theme, egui, tokens};
 
 fn main() -> eframe::Result {
@@ -597,6 +597,15 @@ impl Gallery {
                                 }
                             }
                         });
+                }
+                if query.is_empty() || "symbol".contains(&query) {
+                    ui.add(SectionHeader::new("Symbols"));
+                    ui.horizontal_wrapped(|ui| {
+                        for kind in SymbolKind::ALL {
+                            archipel_kit::icons::show(ui, kind, 16.0, color)
+                                .on_hover_text(kind.name());
+                        }
+                    });
                 }
                 if matches.is_empty() && languages.is_empty() {
                     EmptyState::new("No icons match")

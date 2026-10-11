@@ -71,5 +71,15 @@ picked **file outline + color band**.
 | Actual size | Labels at 6.4 units were mush at 1×. | Band and label enlarged (7.4 units); sheets now render with Inter SemiBold like the kit. |
 | Java types | Same stroke font in the C/I/E/R/@ circles. | Same bold font, centered on its ink. |
 
+### 2026-10 · Symbol icons (user request)
+
+Request: "interface, enum etc. icons for object-oriented languages like Java". Designed a
+symbol system rather than one-off badges: shape for the category (circle type, rounded
+square member, glyph namespace), letter for the kind, color for the group, overlays for
+abstract, static and visibility. Colors were tuned into the luminance band 0.129–0.183, the
+only band where white labels reach 4.5:1 and the shape 3:1 on both themes (checked).
+Review: `module` first reused the package cube; it now uses the layers glyph. Overlay marks
+touch the letter's corner at 16 px; accepted, as marks read as badges, like in other IDEs.
+
 Open follow-ups: an outline/filled pair for toggles (star, pin, bookmark), and a 20 px
 optical size for dense toolbars on high-DPI screens.
