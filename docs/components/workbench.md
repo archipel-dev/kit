@@ -54,7 +54,7 @@ fn window(ctx: &egui::Context, app: &mut App) {
 }
 ```
 
-`WorkbenchPlace` is `Center`, `Tool(region)`, `Toolbar` or `Status`.
+`WorkbenchPlace` is `Center`, `Tool(region)`, `ToolActions(region)` (header buttons of that tool window, before Maximize and Hide), `Toolbar` or `Status`.
 
 ## Islands behavior
 

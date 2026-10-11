@@ -387,6 +387,12 @@ fn show_with_fills_every_place_from_one_state() {
                             WorkbenchPlace::Status => {
                                 ui.add(StatusBarItem::new(format!("{clicks} sent")));
                             }
+                            WorkbenchPlace::ToolActions(WorkbenchRegion::Left) => {
+                                ui.add(archipel_kit::components::IconButton::new(
+                                    Glyph::Plus,
+                                    "New request",
+                                ));
+                            }
                             _ => {
                                 ui.label(format!("{clicks} in tool"));
                             }
@@ -405,6 +411,10 @@ fn show_with_fills_every_place_from_one_state() {
         assert!(h.state().drawn.contains(&place), "{place:?} was not drawn");
     }
     assert!(h.query_by_label("Collections").is_some());
+    assert!(
+        h.query_by_label("New request").is_some(),
+        "tool window actions"
+    );
     h.get_by_label("Send").click();
     h.run();
     h.run();

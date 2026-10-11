@@ -274,7 +274,6 @@ impl<'a> VirtualList<'a> {
         }
     }
 
-    /// Visible height in points (default 240).
     /// The accessible name, e.g. "Request history" (default: "List", "Tree" or "Table").
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();

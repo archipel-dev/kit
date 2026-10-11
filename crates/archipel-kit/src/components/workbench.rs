@@ -30,6 +30,9 @@ pub enum WorkbenchPlace {
     Center,
     /// A tool window declared with [`Workbench::tool`].
     Tool(WorkbenchRegion),
+    /// The header buttons of that tool window ([`IconButton`]s, laid out right to left
+    /// before its Maximize and Hide buttons; they show while the pointer is over it).
+    ToolActions(WorkbenchRegion),
     /// The window toolbar declared with [`Workbench::with_toolbar`].
     Toolbar,
     /// The status bar declared with [`Workbench::with_status`].
@@ -75,6 +78,7 @@ type Content<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
 struct Region<'a> {
     title: String,
     content: Option<Content<'a>>,
+    actions: Option<Content<'a>>,
     padded: bool,
     icon: Option<Icon>,
 }
@@ -302,6 +306,9 @@ impl<'a> Workbench<'a> {
             region.map(|r| Region {
                 content: Some(r.content.unwrap_or_else(|| {
                     Box::new(move |ui: &mut Ui| fill(WorkbenchPlace::Tool(place), ui))
+                })),
+                actions: Some(r.actions.unwrap_or_else(|| {
+                    Box::new(move |ui: &mut Ui| fill(WorkbenchPlace::ToolActions(place), ui))
                 })),
                 title: r.title,
                 padded: r.padded,
@@ -629,6 +636,7 @@ impl<'a> Region<'a> {
         Self {
             title: title.into(),
             content: Some(Box::new(content)),
+            actions: None,
             padded: false,
             icon: None,
         }
@@ -638,6 +646,7 @@ impl<'a> Region<'a> {
         Self {
             title: title.into(),
             content: None,
+            actions: None,
             padded: false,
             icon: None,
         }
@@ -664,10 +673,14 @@ impl<'a> Region<'a> {
             .padded(self.padded)
             .on_hide(|| hide.set(Some(region)))
             .actions(|ui| {
+                let custom = self.actions;
                 let button = IconButton::new(Glyph::Fullscreen, label)
                     .with(Tooltip::new(if maximized { "Restore" } else { "Maximize" }));
                 if ui.add(button).clicked() {
                     maximize.set(Some(region));
+                }
+                if let Some(custom) = custom {
+                    custom(ui);
                 }
             })
             .show(ui, |ui| {
