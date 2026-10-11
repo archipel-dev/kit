@@ -57,6 +57,10 @@ pub mod size {
     pub const STATUS_ITEM_PADDING: f32 = 6.0;
     /// Height of a status bar item's hover pill (21 pt in Android Studio).
     pub const STATUS_ITEM_HEIGHT: f32 = 21.0;
+    /// Width of a notification card (370 pt in Android Studio).
+    pub const NOTIFICATION_WIDTH: f32 = 370.0;
+    /// Space inside a notification card.
+    pub const NOTIFICATION_PADDING: f32 = 12.0;
     /// Space inside a breadcrumb at each end.
     pub const BREADCRUMB_PADDING: f32 = 4.0;
     /// Space between a breadcrumb and the chevron after it.
