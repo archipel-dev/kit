@@ -17,10 +17,16 @@ impl Glyph {
 pub fn parts_to_svg(parts: &[crate::Part], size: f32, tones: &Tones) -> String {
     let color = |tone| {
         let value = tones.get(tone, tones.ink);
-        if tone == crate::Tone::Ink && tones.ink == 0 {
-            "currentColor".to_owned()
-        } else {
-            format!("#{value:06X}")
+        match tone {
+            crate::Tone::Ink if tones.ink == 0 => "currentColor".to_owned(),
+            // Closes the color attribute and adds its opacity (both are attribute values).
+            crate::Tone::Rgba(rgba) => {
+                format!(
+                    "#{value:06X}\" fill-opacity=\"{:.2}",
+                    (rgba & 0xFF) as f32 / 255.0
+                )
+            }
+            _ => format!("#{value:06X}"),
         }
     };
     let mut out = format!(
@@ -71,6 +77,12 @@ pub fn parts_to_svg(parts: &[crate::Part], size: f32, tones: &Tones) -> String {
                     "<path d=\"M{:.3} {:.3} A{radius} {radius} 0 {large} {sweep} {:.3} {:.3}\" {paint}/>",
                     start.0, start.1, end.0, end.1
                 )
+            }
+            Shape::Letter { .. } => {
+                for line in part.shape.letter_lines() {
+                    let _ = write!(out, "<polyline points=\"{}\" {paint}/>", points(&line));
+                }
+                Ok(())
             }
             Shape::Text { text, center, size } => write!(
                 out,

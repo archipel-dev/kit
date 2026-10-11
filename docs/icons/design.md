@@ -43,6 +43,10 @@ rules are enforced by `crates/archipel-icons/tests/lint.rs`; the rest are judged
 
 ## Language icons
 
+Five styles share color and label (see `LanguageStyle`); the rules below are for the default,
+*file with band*. The pixel tile uses the stroke font in `letters.rs` (4×6 units, capitals).
+
+
 - **File outline** in the ink color, from 1.5 to 6.5: the page ends half a unit above the
   band, so the band never fights the outline.
 - **Band** 1..15 × 7.5..15, radius 2, in the language's Linguist color.

@@ -15,10 +15,27 @@ pub fn paint(painter: &Painter, rect: Rect, glyph: Glyph, ink: Color32, tones: &
     paint_parts(painter, rect, glyph.parts(), ink, tones);
 }
 
-/// Paints the icon of `language` into the square centered in `rect`, its file outline in
-/// `ink`.
+/// Paints the icon of `language` in the default style into the square centered in `rect`,
+/// its file outline in `ink`.
 pub fn paint_language(painter: &Painter, rect: Rect, language: crate::Language, ink: Color32) {
-    paint_parts(painter, rect, &language.parts(), ink, &Tones::dark());
+    paint_language_styled(painter, rect, language, crate::LanguageStyle::FileBand, ink);
+}
+
+/// Paints the icon of `language` in `style` into the square centered in `rect`.
+pub fn paint_language_styled(
+    painter: &Painter,
+    rect: Rect,
+    language: crate::Language,
+    style: crate::LanguageStyle,
+    ink: Color32,
+) {
+    paint_parts(
+        painter,
+        rect,
+        &language.parts_styled(style),
+        ink,
+        &Tones::dark(),
+    );
 }
 
 /// Paints the icon of `symbol` into the square centered in `rect`; modifier marks use
@@ -47,6 +64,12 @@ pub fn paint_parts(
     let p = |(x, y): crate::Point| -> Pos2 { origin + vec2(x * scale, y * scale) };
     let resolve = |tone| match tone {
         crate::Tone::Ink => ink,
+        crate::Tone::Rgba(value) => Color32::from_rgba_unmultiplied(
+            (value >> 24) as u8,
+            (value >> 16) as u8,
+            (value >> 8) as u8,
+            value as u8,
+        ),
         tone => color(tones.get(tone, 0)),
     };
     for part in parts {
@@ -106,6 +129,11 @@ pub fn paint_parts(
                 // Center the ink, not the line box, so every label sits in the optical middle.
                 let pos = p(center) - galley.mesh_bounds.center().to_vec2();
                 painter.galley_with_override_text_color(pos, galley, color);
+            }
+            Shape::Letter { .. } => {
+                for line in part.shape.letter_lines() {
+                    painter.add(PathShape::line(line.into_iter().map(p).collect(), stroke));
+                }
             }
             Shape::Rect { min, max, radius } => {
                 painter.rect(

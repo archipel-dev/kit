@@ -9,7 +9,7 @@ use archipel_kit::components::{
     ListRow, MenuItem, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
     Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
 };
-use archipel_kit::icons::{Category, Language, SymbolKind};
+use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::{Glyph, Icon, Theme, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
@@ -129,6 +129,7 @@ impl Gallery {
     fn show(&mut self, ctx: &egui::Context) {
         let colors = Theme::colors(ctx);
         egui::TopBottomPanel::top("toolbar")
+            .show_separator_line(false)
             .exact_height(40.0)
             .frame(
                 egui::Frame::new()
@@ -148,7 +149,9 @@ impl Gallery {
                         let mut dark = self.dark;
                         if ui.add(Toggle::new(&mut dark, "Dark")).changed() {
                             self.dark = dark;
-                            if dark { Theme::dark() } else { Theme::light() }.apply(ui.ctx());
+                            let mut theme = if dark { Theme::dark() } else { Theme::light() };
+                            theme.language_icons = Theme::current(ui.ctx()).language_icons;
+                            theme.apply(ui.ctx());
                         }
                         ui.add(Separator);
                         ui.add(Toggle::new(&mut self.enabled, "Enabled"));
@@ -157,6 +160,7 @@ impl Gallery {
             });
 
         egui::SidePanel::left("pages")
+            .show_separator_line(false)
             .exact_width(220.0)
             .resizable(false)
             .frame(
@@ -537,6 +541,14 @@ impl Gallery {
             }
             Page::Icons => {
                 ui.add(TextField::search(&mut self.icon_filter).placeholder("Search icons"));
+                ui.add(SectionHeader::new("Language icon style"));
+                let mut style = Theme::current(ui.ctx()).language_icons;
+                let styles = LanguageStyle::ALL.map(|style| (style, style.name()));
+                if ui.add(SegmentedControl::new(&mut style, styles)).changed() {
+                    let mut theme = (*Theme::current(ui.ctx())).clone();
+                    theme.language_icons = style;
+                    theme.apply(ui.ctx());
+                }
                 let color = Theme::colors(ui.ctx()).icon;
                 let matches: Vec<Glyph> = Glyph::search(&self.icon_filter).collect();
                 for category in Category::ALL {

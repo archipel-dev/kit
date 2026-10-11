@@ -6,7 +6,9 @@
 //! drawings are original (no third-party artwork).
 
 use crate::theme::{Colors, Theme};
-pub use archipel_icons::{Category, Glyph, Language, Symbol, SymbolKind, Visibility};
+pub use archipel_icons::{
+    Category, Glyph, Language, LanguageStyle, Symbol, SymbolKind, Visibility,
+};
 use archipel_icons::{Paint, Part, Shape, Tone};
 use egui::{self, Color32, Rect, vec2};
 
@@ -265,7 +267,13 @@ pub fn paint(
     let tones = tones(&theme);
     match icon.into() {
         Icon::Glyph(glyph) => archipel_icons::paint(painter, rect, glyph, color, &tones),
-        Icon::Language(language) => archipel_icons::paint_language(painter, rect, language, color),
+        Icon::Language(language) => archipel_icons::paint_language_styled(
+            painter,
+            rect,
+            language,
+            theme.language_icons,
+            color,
+        ),
         Icon::FileImage => archipel_icons::paint(painter, rect, Glyph::Image, IMAGE, &tones),
         Icon::FileArchive => archipel_icons::paint(painter, rect, Glyph::Archive, ARCHIVE, &tones),
         Icon::Symbol(symbol) => archipel_icons::paint_symbol(painter, rect, symbol, color, &tones),

@@ -29,17 +29,58 @@
 
 mod glyphs;
 mod languages;
+pub mod letters;
 #[cfg(feature = "egui")]
 mod paint;
 mod svg;
 mod symbols;
 
 pub use languages::{Language, LanguageKind};
+
+/// How [`Language`] icons look. Every style carries the same color and label; apps can
+/// offer the choice as a setting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum LanguageStyle {
+    /// A file outline in the ink color with a band in the language color (default).
+    #[default]
+    FileBand,
+    /// A rounded tile in the language color with the label in the bold UI font.
+    Tile,
+    /// A file tinted with the language color, outline and label in that color.
+    TintedFile,
+    /// A circle in the language color with the label.
+    Circle,
+    /// A rounded tile with a capital label in the built-in stroke font (crisp at 1×, no
+    /// font needed).
+    PixelTile,
+}
+
+impl LanguageStyle {
+    /// Every style, in catalog order.
+    pub const ALL: [LanguageStyle; 5] = [
+        LanguageStyle::FileBand,
+        LanguageStyle::Tile,
+        LanguageStyle::TintedFile,
+        LanguageStyle::Circle,
+        LanguageStyle::PixelTile,
+    ];
+
+    /// Display name.
+    pub const fn name(self) -> &'static str {
+        match self {
+            LanguageStyle::FileBand => "File with band",
+            LanguageStyle::Tile => "Tile",
+            LanguageStyle::TintedFile => "Tinted file",
+            LanguageStyle::Circle => "Circle",
+            LanguageStyle::PixelTile => "Pixel tile",
+        }
+    }
+}
 pub use svg::parts_to_svg;
 pub use symbols::{Symbol, SymbolKind, SymbolShape, Visibility};
 
 #[cfg(feature = "egui")]
-pub use paint::{paint, paint_language, paint_parts, paint_symbol, show};
+pub use paint::{paint, paint_language, paint_language_styled, paint_parts, paint_symbol, show};
 
 /// A color role. Renderers map tones to concrete colors with [`Tones`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -64,6 +105,8 @@ pub enum Tone {
     Stop,
     /// A fixed color, `0xRRGGBB` (language bands and their labels).
     Rgb(u32),
+    /// A fixed translucent color, `0xRRGGBBAA` (tinted language files).
+    Rgba(u32),
 }
 
 /// Concrete colors for the semantic tones, as `0xRRGGBB` (ink comes from the caller).
@@ -133,6 +176,7 @@ impl Tones {
             Tone::Run => self.run,
             Tone::Stop => self.stop,
             Tone::Rgb(value) => value,
+            Tone::Rgba(value) => value >> 8,
         }
     }
 }
@@ -176,6 +220,13 @@ pub enum Shape {
         center: Point,
         /// Font size in grid units.
         size: f32,
+    },
+    /// A character of the [`letters`] stroke font, its 4×6 cell's top-left at `origin`.
+    Letter {
+        /// The character (`A`-`Z`, `+`, `#`, `{`, `}`, `<`, `>`, `@`, `_`).
+        letter: char,
+        /// Top-left of the cell.
+        origin: Point,
     },
     /// An axis-aligned rectangle with rounded corners.
     Rect {
@@ -292,6 +343,38 @@ impl Glyph {
     }
 }
 
+impl Shape {
+    /// The polylines a [`Shape::Letter`] expands to, offset to its origin (empty for other
+    /// shapes and for characters the font lacks).
+    pub fn letter_lines(&self) -> Vec<Vec<Point>> {
+        let Shape::Letter { letter, origin } = *self else {
+            return Vec::new();
+        };
+        letters::strokes(letter)
+            .unwrap_or(&[])
+            .iter()
+            .map(|stroke| {
+                stroke
+                    .iter()
+                    .map(|(x, y)| (origin.0 + x, origin.1 + y))
+                    .collect()
+            })
+            .collect()
+    }
+}
+
+/// Parts drawing `text` in the [`letters`] stroke font, centered on `center`, in `tone`.
+pub fn stroke_label(text: &str, center: Point, tone: Tone) -> Vec<Part> {
+    let chars: Vec<char> = text.chars().collect();
+    letters::origins(chars.len(), center)
+        .zip(chars)
+        .map(|(origin, letter)| Part {
+            shape: Shape::Letter { letter, origin },
+            paint: Paint::Stroke { width: 1.0, tone },
+        })
+        .collect()
+}
+
 /// A label part: `text` centered on `center`, `size` units tall, in `tone`.
 pub const fn label(text: &'static str, center: Point, size: f32, tone: Tone) -> Part {
     Part {
@@ -355,59 +438,151 @@ impl Language {
             .map(|(language, _)| language)
     }
 
-    /// The icon: a file outline in the ink color with a band in the language color
-    /// carrying its label.
+    /// The icon in the default style ([`LanguageStyle::FileBand`]).
     pub fn parts(self) -> Vec<Part> {
-        let ink = |points| Part {
-            shape: Shape::Line(points),
-            paint: Paint::Stroke {
-                width: 1.0,
-                tone: Tone::Ink,
-            },
-        };
-        let mut parts = vec![
-            // The page stops above the band, with half a unit of air between them.
-            ink(&[(3.5, 6.5), (3.5, 1.5), (9.5, 1.5), (12.5, 4.5), (12.5, 6.5)]),
-            ink(&[(9.5, 1.5), (9.5, 4.5), (12.5, 4.5)]),
-            Part {
-                shape: Shape::Rect {
-                    min: (1.0, 7.5),
-                    max: (15.0, 15.0),
-                    radius: 2.0,
-                },
-                paint: Paint::Fill(Tone::Rgb(self.color())),
-            },
-        ];
-        if let Some(outline) = self.outline() {
-            parts.push(Part {
-                shape: Shape::Rect {
-                    min: (1.5, 8.0),
-                    max: (14.5, 14.5),
-                    radius: 1.5,
-                },
-                paint: Paint::Stroke {
-                    width: 1.0,
-                    tone: Tone::Rgb(outline),
-                },
-            });
-        }
-        let label_color = if self.dark_label() {
+        self.parts_styled(LanguageStyle::FileBand)
+    }
+
+    /// The icon in `style`.
+    pub fn parts_styled(self, style: LanguageStyle) -> Vec<Part> {
+        let color = Tone::Rgb(self.color());
+        let label_tone = Tone::Rgb(if self.dark_label() {
             0x000000
         } else {
             0xFFFFFF
+        });
+        let chars = self.label().chars().count();
+        let rect = |min, max, radius| Shape::Rect { min, max, radius };
+        let fill = |shape, tone| Part {
+            shape,
+            paint: Paint::Fill(tone),
         };
-        let size = if self.label().chars().count() <= 2 {
-            7.4
-        } else {
-            6.2
+        let stroke = |shape, tone| Part {
+            shape,
+            paint: Paint::Stroke { width: 1.0, tone },
         };
-        parts.push(label(
-            self.label(),
-            (8.0, 11.25),
-            size,
-            Tone::Rgb(label_color),
-        ));
+        let mut parts = Vec::new();
+        match style {
+            LanguageStyle::FileBand => {
+                // The page stops above the band, with half a unit of air between them.
+                parts.push(stroke(
+                    Shape::Line(&[(3.5, 6.5), (3.5, 1.5), (9.5, 1.5), (12.5, 4.5), (12.5, 6.5)]),
+                    Tone::Ink,
+                ));
+                parts.push(stroke(
+                    Shape::Line(&[(9.5, 1.5), (9.5, 4.5), (12.5, 4.5)]),
+                    Tone::Ink,
+                ));
+                parts.push(fill(rect((1.0, 7.5), (15.0, 15.0), 2.0), color));
+                if let Some(outline) = self.outline() {
+                    parts.push(stroke(
+                        rect((1.5, 8.0), (14.5, 14.5), 1.5),
+                        Tone::Rgb(outline),
+                    ));
+                }
+                let size = if chars <= 2 { 7.4 } else { 6.2 };
+                parts.push(label(self.label(), (8.0, 11.25), size, label_tone));
+            }
+            LanguageStyle::Tile => {
+                parts.push(fill(rect((1.5, 1.5), (14.5, 14.5), 4.0), color));
+                if let Some(outline) = self.outline() {
+                    parts.push(stroke(
+                        rect((2.0, 2.0), (14.0, 14.0), 3.5),
+                        Tone::Rgb(outline),
+                    ));
+                }
+                let size = match chars {
+                    1 => 10.0,
+                    2 => 7.6,
+                    _ => 6.2,
+                };
+                parts.push(label(self.label(), (8.0, 8.0), size, label_tone));
+            }
+            LanguageStyle::TintedFile => {
+                // Outline and label in the color, readable on both themes.
+                let ink = Tone::Rgb(self.tinted_ink());
+                parts.push(Part {
+                    shape: Shape::Polygon(&[
+                        (2.5, 1.5),
+                        (10.0, 1.5),
+                        (13.5, 5.0),
+                        (13.5, 14.5),
+                        (2.5, 14.5),
+                    ]),
+                    paint: Paint::Fill(Tone::Rgba(self.color() << 8 | 0x38)),
+                });
+                parts.push(stroke(
+                    Shape::Polygon(&[
+                        (2.5, 1.5),
+                        (10.0, 1.5),
+                        (13.5, 5.0),
+                        (13.5, 14.5),
+                        (2.5, 14.5),
+                    ]),
+                    ink,
+                ));
+                parts.push(stroke(
+                    Shape::Line(&[(10.0, 1.5), (10.0, 5.0), (13.5, 5.0)]),
+                    ink,
+                ));
+                let size = match chars {
+                    1 => 7.8,
+                    2 => 6.6,
+                    _ => 5.4,
+                };
+                parts.push(label(self.label(), (8.0, 9.75), size, ink));
+            }
+            LanguageStyle::Circle => {
+                parts.push(fill(
+                    Shape::Circle {
+                        center: (8.0, 8.0),
+                        radius: 6.75,
+                    },
+                    color,
+                ));
+                if let Some(outline) = self.outline() {
+                    parts.push(stroke(
+                        Shape::Circle {
+                            center: (8.0, 8.0),
+                            radius: 6.25,
+                        },
+                        Tone::Rgb(outline),
+                    ));
+                }
+                let size = match chars {
+                    1 => 9.0,
+                    2 => 6.8,
+                    _ => 5.6,
+                };
+                parts.push(label(self.label(), (8.0, 8.0), size, label_tone));
+            }
+            LanguageStyle::PixelTile => {
+                parts.push(fill(rect((1.0, 1.0), (15.0, 15.0), 3.0), color));
+                if let Some(outline) = self.outline() {
+                    parts.push(stroke(
+                        rect((1.5, 1.5), (14.5, 14.5), 2.5),
+                        Tone::Rgb(outline),
+                    ));
+                }
+                parts.extend(stroke_label(self.pixel_label(), (8.0, 8.0), label_tone));
+            }
+        }
         parts
+    }
+
+    /// Outline and label color of the tinted style: the language color, mixed towards
+    /// mid-gray while it reads poorly on the dark or the light background.
+    fn tinted_ink(self) -> u32 {
+        let mut color = self.color();
+        for _ in 0..4 {
+            if contrast(color, Tones::dark().knockout) >= 2.0
+                && contrast(color, Tones::light().knockout) >= 2.0
+            {
+                break;
+            }
+            color = mix(color, 0x8C8F96, 0.4);
+        }
+        color
     }
 
     /// An outline for bands that would melt into a dark or a light background: the band
@@ -419,9 +594,14 @@ impl Language {
         melts.then(|| mix(color, 0x8C8F96, 0.5))
     }
 
-    /// The icon as an SVG document of `size` pixels.
+    /// The icon as an SVG document of `size` pixels, in the default style.
     pub fn to_svg(self, size: f32) -> String {
-        parts_to_svg(&self.parts(), size, &Tones::dark())
+        self.to_svg_styled(size, LanguageStyle::FileBand)
+    }
+
+    /// The icon in `style` as an SVG document of `size` pixels.
+    pub fn to_svg_styled(self, size: f32, style: LanguageStyle) -> String {
+        parts_to_svg(&self.parts_styled(style), size, &Tones::dark())
     }
 
     /// Kebab-case slug for file names, e.g. `"c-sharp"`.

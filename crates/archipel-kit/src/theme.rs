@@ -42,6 +42,8 @@ pub struct Theme {
     pub colors: Colors,
     /// Code editor colors.
     pub editor: EditorColors,
+    /// How language file icons look (an app setting; see `docs/icons/languages.md`).
+    pub language_icons: archipel_icons::LanguageStyle,
 }
 
 /// Background and border of a banner or callout of one severity.
@@ -299,6 +301,7 @@ impl Theme {
                 icon: rgb(0xCED0D6),
                 folder_fill: rgb(0x43454A),
             },
+            language_icons: archipel_icons::LanguageStyle::FileBand,
             editor: EditorColors {
                 background: rgb(0x191A1C),
                 text: rgb(0xBCBEC4),
@@ -396,6 +399,7 @@ impl Theme {
                 icon: rgb(0x73767C),
                 folder_fill: rgb(0xEBECF0),
             },
+            language_icons: archipel_icons::LanguageStyle::FileBand,
             editor: EditorColors {
                 background: rgb(0xFFFFFF),
                 text: rgb(0x080808),

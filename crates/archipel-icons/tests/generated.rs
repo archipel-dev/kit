@@ -131,6 +131,10 @@ fn languages_page_is_current() {
          file name, then by the longest extension. SVGs: `svg/lang-<slug>.svg`.\n\n\
          <picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"img/languages.dark.png\">\n  \
          <img alt=\"All language icons with their names\" src=\"img/languages.light.png\" width=\"656\">\n</picture>\n\n\
+         Five styles carry the same color and label; `LanguageStyle` selects one \
+         (Archipel Kit: `Theme::language_icons`). File with band is the default.\n\n\
+         <picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"img/language-styles.dark.png\">\n  \
+         <img alt=\"Twenty languages in each of the five styles\" src=\"img/language-styles.light.png\" width=\"630\">\n</picture>\n\n\
          At actual size (16 px, 1×):\n\n\
          <picture>\n  <source media=\"(prefers-color-scheme: dark)\" srcset=\"img/languages-actual-size.dark.png\">\n  \
          <img alt=\"All language icons at 16 pixels\" src=\"img/languages-actual-size.light.png\" width=\"488\">\n</picture>\n\n\

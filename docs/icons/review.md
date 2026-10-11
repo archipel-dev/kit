@@ -71,6 +71,14 @@ picked **file outline + color band**.
 | Actual size | Labels at 6.4 units were mush at 1×. | Band and label enlarged (7.4 units); sheets now render with Inter SemiBold like the kit. |
 | Java types | Same stroke font in the C/I/E/R/@ circles. | Same bold font, centered on its ink. |
 
+### 2026-10 · Language icon styles (user request)
+
+All five prototyped directions stay available as `LanguageStyle` (file with band, tile,
+tinted file, circle, pixel tile), selected per app through `Theme::language_icons`. The
+pixel tile keeps its own capital labels in the stroke font. Review: the tinted style drew
+yellow (JavaScript) and near-black outlines that vanished on white or dark; its ink is now
+mixed towards mid-gray until it reaches 2:1 on both backgrounds (checked at 1.9:1).
+
 ### 2026-10 · Symbol icons (user request)
 
 Request: "interface, enum etc. icons for object-oriented languages like Java". Designed a

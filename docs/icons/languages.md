@@ -9,6 +9,13 @@
   <img alt="All language icons with their names" src="img/languages.light.png" width="656">
 </picture>
 
+Five styles carry the same color and label; `LanguageStyle` selects one (Archipel Kit: `Theme::language_icons`). File with band is the default.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/language-styles.dark.png">
+  <img alt="Twenty languages in each of the five styles" src="img/language-styles.light.png" width="630">
+</picture>
+
 At actual size (16 px, 1×):
 
 <picture>

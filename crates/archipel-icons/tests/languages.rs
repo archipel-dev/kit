@@ -154,3 +154,137 @@ fn language_sheets() {
     }
     results.unwrap();
 }
+
+#[test]
+fn pixel_labels_are_unique_and_in_the_font() {
+    let mut seen = HashSet::new();
+    for language in Language::ALL {
+        let label = language.pixel_label();
+        assert!(seen.insert(label), "{label} is used twice");
+        assert!((1..=2).contains(&label.chars().count()), "{label}");
+        for c in label.chars() {
+            assert!(
+                archipel_icons::letters::strokes(c).is_some(),
+                "{}: no {c:?} in the font",
+                language.name()
+            );
+        }
+    }
+}
+
+/// The tinted style draws label and outline in the language color: it must read on both.
+#[test]
+fn tinted_ink_reads_on_both_themes() {
+    use archipel_icons::{LanguageStyle, Paint, Tone, Tones};
+    for language in Language::ALL {
+        for part in language.parts_styled(LanguageStyle::TintedFile) {
+            if let Paint::Stroke {
+                tone: Tone::Rgb(color),
+                ..
+            } = part.paint
+            {
+                for background in [Tones::dark().knockout, Tones::light().knockout] {
+                    assert!(
+                        contrast(color, background) >= 1.9,
+                        "{}: {color:06X} on {background:06X}",
+                        language.name()
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn every_style_stays_inside_the_tile() {
+    use archipel_icons::{LanguageStyle, Paint, Shape};
+    for style in LanguageStyle::ALL {
+        for language in Language::ALL {
+            for part in language.parts_styled(style) {
+                let pad = match part.paint {
+                    Paint::Stroke { width, .. } => width / 2.0,
+                    Paint::Fill(_) => 0.0,
+                };
+                let points: Vec<(f32, f32)> = match part.shape {
+                    Shape::Rect { min, max, .. } => vec![min, max],
+                    Shape::Circle { center, radius } => {
+                        vec![
+                            (center.0 - radius, center.1 - radius),
+                            (center.0 + radius, center.1 + radius),
+                        ]
+                    }
+                    Shape::Line(p) | Shape::Polygon(p) => p.to_vec(),
+                    Shape::Letter { .. } => part.shape.letter_lines().concat(),
+                    _ => continue,
+                };
+                for (x, y) in points {
+                    assert!(
+                        x - pad >= 1.0 - 1e-3
+                            && y - pad >= 1.0 - 1e-3
+                            && x + pad <= 15.0 + 1e-3
+                            && y + pad <= 15.0 + 1e-3,
+                        "{} {:?}: ({x}, {y})",
+                        language.name(),
+                        style
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn style_comparison_sheets() {
+    use archipel_icons::LanguageStyle;
+    let languages = [
+        Language::Rust,
+        Language::Java,
+        Language::Kotlin,
+        Language::Python,
+        Language::JavaScript,
+        Language::TypeScript,
+        Language::Go,
+        Language::C,
+        Language::Cpp,
+        Language::CSharp,
+        Language::Swift,
+        Language::Ruby,
+        Language::Php,
+        Language::Html,
+        Language::Css,
+        Language::Json,
+        Language::Yaml,
+        Language::Markdown,
+        Language::Shell,
+        Language::Dockerfile,
+    ];
+    let mut results = SnapshotResults::new();
+    for (name, background, text, ink) in LOOKS {
+        let size = vec2(
+            110.0 + languages.len() as f32 * 26.0,
+            8.0 + LanguageStyle::ALL.len() as f32 * 30.0,
+        );
+        let mut harness = sheet(size, 2.0, background, |painter| {
+            for (row, style) in LanguageStyle::ALL.iter().enumerate() {
+                let y = 8.0 + row as f32 * 30.0;
+                painter.text(
+                    pos2(10.0, y + 8.0),
+                    egui::Align2::LEFT_CENTER,
+                    style.name(),
+                    egui::FontId::proportional(10.0),
+                    text,
+                );
+                for (i, language) in languages.iter().enumerate() {
+                    let rect =
+                        Rect::from_min_size(pos2(110.0 + i as f32 * 26.0, y), vec2(16.0, 16.0));
+                    archipel_icons::paint_language_styled(painter, rect, *language, *style, ink);
+                }
+            }
+        });
+        results.add(harness.try_snapshot_options(
+            format!("language-styles.{name}"),
+            &SnapshotOptions::new().output_path("../../docs/icons/img"),
+        ));
+    }
+    results.unwrap();
+}
