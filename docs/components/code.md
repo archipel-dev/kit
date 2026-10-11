@@ -220,7 +220,7 @@ fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
 
 ### Autocomplete
 
-`.completer(&dyn Completer)` gives a field a completion list, drawn and operated by the kit.
+`.completer(&dyn Completer)` (the `Completer` trait) gives a field a completion list, drawn and operated by the kit.
 The completer is any `Fn(&str, usize) -> Option<Completions>`: given the text and the caret
 (a char index) it returns where the replaced part starts and the suggestions, or `None` when
 nothing completes there. The kit opens the list under the caret on every edit with
