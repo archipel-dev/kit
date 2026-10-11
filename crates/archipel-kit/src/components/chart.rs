@@ -375,16 +375,15 @@ impl<'a> Histogram<'a> {
         if selected_now.is_some() || clicked.is_some() {
             response.mark_changed();
         }
-        let caller_has_behaviours = !self.behaviours.is_empty();
+        let caller_has_tooltip = self.behaviours.has_tooltip();
         let response = self.behaviours.attach(ui, response);
 
         // The automatic tooltip, unless the caller's own is already showing.
         if let Some(index) = hovered
-            && !(caller_has_behaviours
-                && egui::Tooltip::was_tooltip_open_last_frame(ui.ctx(), response.id))
+            && !caller_has_tooltip
         {
             let bucket = &self.buckets[index];
-            let total: u64 = self.buckets.iter().map(|b| b.count).sum();
+            let total: u128 = self.buckets.iter().map(|b| u128::from(b.count)).sum();
             let share = if total > 0 {
                 format!(" · {:.1}%", bucket.count as f64 * 100.0 / total as f64)
             } else {
