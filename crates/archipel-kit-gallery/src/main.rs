@@ -7,9 +7,9 @@
 use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::{
     Avatar, Banner, Button, Cell, Checkbox, Column, Counter, Dialog, Dropdown, EmptyState,
-    IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid,
-    Radio, SectionHeader, SegmentedControl, Separator, Severity, SortOrder, Spinner, Tab, TabBar,
-    Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
+    IconButton, Kbd, KeyValueEntry, KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, Panel,
+    ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity,
+    SortOrder, Spinner, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::parts::Slot;
@@ -80,6 +80,7 @@ struct Gallery {
     query: String,
     port: String,
     password: String,
+    params: Vec<KeyValueEntry>,
     checks: [bool; 3],
     indent: usize,
     toggles: [bool; 2],
@@ -118,6 +119,14 @@ impl Default for Gallery {
             query: String::new(),
             port: "8080".into(),
             password: "hunter2".into(),
+            params: vec![
+                KeyValueEntry::new("page", "1"),
+                KeyValueEntry::new("limit", "50"),
+                KeyValueEntry {
+                    enabled: false,
+                    ..KeyValueEntry::new("debug", "true")
+                },
+            ],
             checks: [true, false, false],
             indent: 1,
             toggles: [true, false],
@@ -369,6 +378,13 @@ impl Gallery {
                         .password(true)
                         .enabled(enabled),
                 );
+                ui.add(SectionHeader::new("Key/value table"));
+                // Disabling the page makes the table read-only.
+                KeyValueTable::new("params", &mut self.params)
+                    .key_placeholder("Add parameter")
+                    .value_placeholder("value")
+                    .read_only(!enabled)
+                    .show(ui);
                 ui.add(SectionHeader::new("Dropdown"));
                 ui.add(
                     Dropdown::new(

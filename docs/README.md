@@ -21,6 +21,7 @@
 | [Dropdown](components/dropdown.md) | <img src="components/img/dropdown.dark.png" width="100"> | Picking one value from a long list. |
 | [SegmentedControl](components/segmented-control.md) | <img src="components/img/segmented_control.dark.png" width="140"> | Switching views. |
 | [TabBar](components/tab-bar.md) | <img src="components/img/tab_bar.dark.png" width="160"> | Editor tabs. |
+| [KeyValueTable](components/key-value-table.md) | <img src="components/img/key_value.dark.png" width="160"> | Query parameters, headers, form fields, environment variables. |
 | [VirtualList, Tree, Table](components/collections.md) | <img src="components/img/table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [ListRow](components/list-row.md) | <img src="components/img/list_row.dark.png" width="160"> | Lists and trees. |
 | [Banner](components/banner.md) | <img src="components/img/banner.dark.png" width="160"> | Inline messages with actions. |

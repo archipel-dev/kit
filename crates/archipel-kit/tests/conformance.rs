@@ -212,3 +212,20 @@ fn conformance_catches_a_button_that_ignores_clicks() {
 fn conformance_catches_a_fake_disabled_state() {
     testing::conformance("Run", |ui, _enabled| ui.add(Button::primary("Run"))).run();
 }
+
+#[test]
+fn key_value_text_cells_conform() {
+    use archipel_kit::components::{KeyValueEntry, KeyValueTable};
+    for label in ["Key, row 1", "Value, row 1"] {
+        let mut rows = vec![KeyValueEntry::new("page", "1")];
+        testing::conformance(label, move |ui, enabled| {
+            KeyValueTable::new("params", &mut rows)
+                .read_only(!enabled)
+                .show(ui)
+                .response
+        })
+        .no_click()
+        .keys(&[])
+        .run();
+    }
+}

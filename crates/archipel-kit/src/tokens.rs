@@ -41,6 +41,9 @@ pub mod size {
     pub const ISLAND_GAP: f32 = 4.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Share of a key/value table's field width that goes to the key column; the value
+    /// column gets the rest.
+    pub const KEY_COLUMN_SHARE: f32 = 0.4;
 
     /// Distance from a row's left edge to the first column at `depth`.
     pub fn indent(depth: usize) -> f32 {
