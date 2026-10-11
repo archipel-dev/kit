@@ -67,6 +67,18 @@ pub mod size {
     pub const SPLIT_COLLAPSE: f32 = 40.0;
     /// Default minimum size of each side of a split pane.
     pub const SPLIT_MIN_PANE: f32 = 120.0;
+    /// Smallest width of a workbench's left or right tool window.
+    pub const TOOL_WINDOW_MIN: f32 = 160.0;
+    /// Default width of a workbench's left or right tool window.
+    pub const TOOL_WINDOW_DEFAULT: f32 = 260.0;
+    /// Smallest height of a workbench's bottom tool window.
+    pub const TOOL_WINDOW_MIN_HEIGHT: f32 = 96.0;
+    /// Default height of a workbench's bottom tool window.
+    pub const TOOL_WINDOW_DEFAULT_HEIGHT: f32 = 200.0;
+    /// Least width the workbench keeps for its center island.
+    pub const CENTER_MIN: f32 = 200.0;
+    /// Least height the workbench keeps for its center island.
+    pub const CENTER_MIN_HEIGHT: f32 = 120.0;
 
     /// Distance from a row's left edge to the first column at `depth`.
     pub fn indent(depth: usize) -> f32 {

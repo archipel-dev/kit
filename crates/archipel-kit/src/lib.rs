@@ -87,6 +87,7 @@ mod docs {
         StatusBarItem = "components/status-bar-item.md";
         SplitPane = "components/split-pane.md";
         TabBar = "components/tab-bar.md";
+        WorkbenchPage = "components/workbench.md";
         TextField = "components/text-field.md";
         Toast = "components/toast.md";
     }

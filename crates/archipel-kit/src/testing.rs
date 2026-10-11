@@ -61,7 +61,7 @@ pub fn harness_state<'a, State>(
 ) -> Harness<'a, State> {
     // Interaction tests run at 1×: kittest clicks at AccessKit bounds, which are in
     // physical pixels.
-    build(theme, state, app, 1.0)
+    build(theme, state, app, 1.0, true)
 }
 
 fn build<'a, State>(
@@ -69,6 +69,7 @@ fn build<'a, State>(
     state: State,
     mut app: impl FnMut(&mut egui::Ui, &mut State) + 'a,
     pixels_per_point: f32,
+    wrap: bool,
 ) -> Harness<'a, State> {
     let egui_theme = if theme.dark {
         egui::Theme::Dark
@@ -88,13 +89,23 @@ fn build<'a, State>(
                     ui.ctx().request_repaint();
                     return;
                 }
-                island(ui, |ui| app(ui, state));
+                if wrap {
+                    island(ui, |ui| app(ui, state));
+                } else {
+                    // The whole window, past the harness panel's margin.
+                    let rect = ui.ctx().content_rect();
+                    let mut window = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+                    window.set_clip_rect(rect);
+                    app(&mut window, state);
+                }
             },
             state,
         );
     // Animated widgets (spinners) never settle, so wait with a step limit.
     harness.run_ok();
-    harness.fit_contents();
+    if wrap {
+        harness.fit_contents();
+    }
     harness
 }
 
@@ -119,7 +130,7 @@ pub fn snapshot_themes(name: &str, dir: impl AsRef<Path>, mut app: impl FnMut(&m
     let mut results = SnapshotResults::new();
     for theme in [Theme::dark(), Theme::light()] {
         let suffix = if theme.dark { "dark" } else { "light" };
-        let mut harness = build(theme, (), |ui, _| app(ui), SNAPSHOT_SCALE);
+        let mut harness = build(theme, (), |ui, _| app(ui), SNAPSHOT_SCALE, true);
         results.add(harness.try_snapshot_options(
             format!("{name}.{suffix}"),
             &SnapshotOptions::new().output_path(dir.as_ref()),
@@ -144,7 +155,7 @@ pub fn snapshot_themes_after(
     let mut results = SnapshotResults::new();
     for theme in [Theme::dark(), Theme::light()] {
         let suffix = if theme.dark { "dark" } else { "light" };
-        let mut harness = build(theme, (), |ui, _| app(ui), SNAPSHOT_SCALE);
+        let mut harness = build(theme, (), |ui, _| app(ui), SNAPSHOT_SCALE, true);
         act(&mut harness);
         harness.run_ok();
         harness.fit_contents();
@@ -179,7 +190,51 @@ pub fn snapshot_themes_sized(
                 .rect_filled(ui.ctx().content_rect(), 0.0, colors.frame);
             app(ui);
         };
-        let mut harness = build(theme, (), draw, SNAPSHOT_SCALE);
+        let mut harness = build(theme, (), draw, SNAPSHOT_SCALE, true);
+        harness.set_size(size);
+        harness.run_ok();
+        results.add(harness.try_snapshot_options(
+            format!("{name}.{suffix}"),
+            &SnapshotOptions::new().output_path(dir.as_ref()),
+        ));
+    }
+    results.unwrap();
+}
+
+/// Like [`harness_state`], for a whole window of `size` points (a [`Workbench`]): `app` gets
+/// the window's `Ui` itself, not an island, and the canvas keeps its size.
+///
+/// [`Workbench`]: crate::components::Workbench
+pub fn window_harness_state<'a, State>(
+    theme: Theme,
+    size: egui::Vec2,
+    state: State,
+    app: impl FnMut(&mut egui::Ui, &mut State) + 'a,
+) -> Harness<'a, State> {
+    let mut harness = build(theme, state, app, 1.0, false);
+    harness.set_size(size);
+    harness.run_ok();
+    harness
+}
+
+/// Like [`snapshot_themes_sized`], for a whole window: `app` gets the window's `Ui`, not an
+/// island, so a [`Workbench`] paints the frame itself.
+///
+/// [`Workbench`]: crate::components::Workbench
+///
+/// # Panics
+/// If an image differs from its snapshot (or none exists and `UPDATE_SNAPSHOTS` is unset).
+#[track_caller]
+pub fn snapshot_themes_window(
+    name: &str,
+    dir: impl AsRef<Path>,
+    size: egui::Vec2,
+    mut app: impl FnMut(&mut egui::Ui),
+) {
+    let mut results = SnapshotResults::new();
+    for theme in [Theme::dark(), Theme::light()] {
+        let suffix = if theme.dark { "dark" } else { "light" };
+        let mut harness = build(theme, (), |ui, _| app(ui), SNAPSHOT_SCALE, false);
         harness.set_size(size);
         harness.run_ok();
         results.add(harness.try_snapshot_options(

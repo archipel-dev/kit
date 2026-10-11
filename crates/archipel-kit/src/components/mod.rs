@@ -10,7 +10,7 @@
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
 //! | Code | [`CodeView`], [`CodeEditor`], and the [`code::Highlighter`]s |
-//! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`] |
+//! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`], [`Workbench`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
@@ -30,6 +30,7 @@ mod segmented;
 mod split_pane;
 mod status_bar;
 mod text_field;
+mod workbench;
 
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
@@ -50,3 +51,4 @@ pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
 pub use status_bar::StatusBarItem;
 pub use text_field::TextField;
+pub use workbench::{Anchor, Workbench, WorkbenchResponse, WorkbenchState};

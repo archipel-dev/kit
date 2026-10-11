@@ -13,16 +13,20 @@ categories = ["gui"]
 ## Test helpers (`archipel_kit::testing`) built on egui_kittest: themed harnesses and
 ## dark + light snapshots. Enable it in your `[dev-dependencies]`.
 testing = ["dep:egui_kittest"]
+## `serde` impls for the caller-owned state types (`WorkbenchState`), for apps' settings files.
+serde = ["dep:serde"]
 
 [dependencies]
 archipel-icons = { path = "../archipel-icons", features = ["egui"] }
 egui = { workspace = true, features = ["accesskit"] }
 egui_kittest = { workspace = true, optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]
-archipel-kit = { path = ".", features = ["testing"] }
+archipel-kit = { path = ".", features = ["testing", "serde"] }
 eframe.workspace = true
 egui_kittest.workspace = true
+serde_json = "1"
 
 [lints]
 workspace = true

@@ -33,6 +33,7 @@
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
 | [StatusBarItem](components/status-bar-item.md) | <img src="components/img/status_bar_item.dark.png" width="160"> | Status bar and toolbar widgets. |
 | [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |
+| [Workbench](components/workbench.md) | <img src="components/img/workbench_four_islands.dark.png" width="160"> | The islands layout of every app: frame, toolbar, tool windows, center, status bar. |
 | [MenuItem, MenuSeparator, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
 | [Tooltip](components/tooltip.md) | <img src="components/img/tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
 | [Dialog](components/dialog.md) | <img src="components/img/dialog.dark.png" width="160"> | Decisions and short forms. |

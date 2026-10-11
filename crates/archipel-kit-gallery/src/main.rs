@@ -7,11 +7,11 @@
 use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::code::Json;
 use archipel_kit::components::{
-    Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
+    Anchor, Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
     Dropdown, EmptyState, IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel,
     ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity, Side,
     SortOrder, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast,
-    Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
+    Toggle, Tooltip, TooltipExt, TreeRow, TreeTable, Workbench, WorkbenchState,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::parts::{Slot, Surface};
@@ -47,13 +47,14 @@ enum Page {
     Feedback,
     Data,
     Layout,
+    Workbench,
     Overlays,
     Code,
     Icons,
 }
 
 impl Page {
-    const ALL: [(Page, &'static str, Glyph); 11] = [
+    const ALL: [(Page, &'static str, Glyph); 12] = [
         (Page::Buttons, "Buttons", Glyph::Run),
         (Page::Inputs, "Text fields", Glyph::Search),
         (Page::Choices, "Choices", Glyph::Success),
@@ -62,6 +63,7 @@ impl Page {
         (Page::Feedback, "Feedback", Glyph::Warning),
         (Page::Data, "Badges & data", Glyph::Package),
         (Page::Layout, "Panels & menus", Glyph::Layers),
+        (Page::Workbench, "Workbench", Glyph::SidebarLeft),
         (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
         (Page::Code, "Code", Glyph::Code),
         (Page::Icons, "Icons", Glyph::Sparkle),
@@ -119,6 +121,7 @@ struct Gallery {
     sort: Option<(usize, SortOrder)>,
     code: String,
     splits: [f32; 3],
+    workbench: WorkbenchState,
     sidebar_collapsed: bool,
     /// The data column shown at each position of the table.
     column_order: Vec<usize>,
@@ -306,6 +309,7 @@ impl Default for Gallery {
             sort: None,
             code: CODE_SAMPLE.into(),
             splits: [0.25, 0.5, 0.5],
+            workbench: WorkbenchState::default(),
             sidebar_collapsed: false,
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
@@ -994,6 +998,44 @@ impl Gallery {
                                     );
                             },
                         );
+                });
+            }
+            Page::Workbench => {
+                ui.add(SectionHeader::new("Islands layout"));
+                ui.label(
+                    "The islands layout of every app: toolbar and status bar on the frame, \
+                     tool windows and the center as islands. Drag the dividers or hide a \
+                     tool window.",
+                );
+                let size = egui::vec2(ui.available_width(), 380.0);
+                let enabled = self.enabled;
+                let state = &mut self.workbench;
+                ui.allocate_ui(size, |ui| {
+                    Workbench::new("gallery-workbench", state)
+                        .enabled(enabled)
+                        .toolbar(|ui| {
+                            ui.add(IconButton::new(Glyph::Run, "Run workbench"));
+                            ui.label("archipel-kit");
+                        })
+                        .left("Project", |ui| {
+                            ui.label("src/\ntests/");
+                        })
+                        .actions(Anchor::Left, |ui| {
+                            ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+                        })
+                        .right("Outline", |ui| {
+                            ui.label("fn main");
+                        })
+                        .bottom("Terminal", |ui| {
+                            ui.label("$ cargo test");
+                        })
+                        .status_bar(|ui| {
+                            ui.add(StatusBarItem::new("main").icon(Glyph::Branch));
+                            ui.add(StatusBarItem::new("UTF-8"));
+                        })
+                        .show(ui, |ui| {
+                            ui.label("fn main() {}");
+                        });
                 });
             }
             Page::Overlays => {
