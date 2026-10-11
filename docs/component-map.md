@@ -61,6 +61,8 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Items | 24 pt, touching; pill inset 8 pt, radius 4, `#2A4371`; icon 8 pt inside the pill; text 4 pt after the icon; shortcut ends 8 pt before the pill's end | `MenuItem`, `tokens::popup` |
 | Separator | 9 pt row, 1 pt line in the border color, inset like pills | `MenuSeparator` |
 | Group title | "Open Projects": semibold 13 pt, `#73767C`, aligned with icons, 24 pt row, not selectable | `MenuHeader` |
+| Clear button in fields | Gray 8 pt cross (`#676B71` / `#B0B4C3`) centered 15 pt from the right edge; under the pointer a 16 pt round background (`#353637` / `#EBEBED`) and a darker cross | `TextField::clearable`, `Colors::clear_*`, `size::CLEAR_*` |
+| Settings search | Filters the tree as you type and dims everything on the page that doesn't match; the match gets an orange outline | Not in the kit yet: app behavior |
 | Two-line item | 20 pt icon, label, path below in `#73767C`, 48 pt | `MenuItem::description` |
 | Icon column | Reserved only when an item of the menu has an icon or a check | `MenuItem` |
 | Pointer and keys | One highlight, shared; the first pointer move after opening is ignored; it stays on the last item when the pointer leaves; arrows continue from it and skip headers and separators | `MenuItem` |

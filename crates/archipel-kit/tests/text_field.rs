@@ -104,3 +104,22 @@ fn id_is_the_text_edits_id_and_requests_focus() {
     harness.run();
     assert_eq!(harness.state().0, "a");
 }
+
+#[test]
+fn clear_button_sits_at_the_measured_place() {
+    // Android Studio's search fields: a 16 pt round target centered 15 pt from the right edge.
+    use archipel_kit::egui;
+    use archipel_kit::tokens::size;
+    let field = egui::Rect::from_min_size(egui::pos2(10.0, 10.0), egui::vec2(247.0, 28.0));
+    let harness = testing::harness(Theme::dark(), move |ui| {
+        let mut text = String::from("font");
+        ui.put(field, TextField::search(&mut text).width(247.0));
+    });
+    let clear = harness.get_by_label("Clear").rect();
+    assert_eq!(
+        clear.size(),
+        egui::vec2(size::CLEAR_BUTTON, size::CLEAR_BUTTON)
+    );
+    assert_eq!(clear.center().x, field.right() - size::CLEAR_BUTTON_INSET);
+    assert_eq!(clear.center().y, field.center().y);
+}

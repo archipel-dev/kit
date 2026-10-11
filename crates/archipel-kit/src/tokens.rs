@@ -44,6 +44,13 @@ pub mod size {
     pub const HEADER_DIVIDER: f32 = 20.0;
     /// Square edge of a small icon button: actions inside rows and tabs.
     pub const ICON_BUTTON_SMALL: f32 = 20.0;
+    /// A field's clear button: a round 16 pt target (measured on Android Studio's search
+    /// fields).
+    pub const CLEAR_BUTTON: f32 = 16.0;
+    /// Distance from a field's right edge to the center of its clear button.
+    pub const CLEAR_BUTTON_INSET: f32 = 15.0;
+    /// Size the close glyph is drawn at in a clear button, so its cross is 8 pt.
+    pub const CLEAR_GLYPH: f32 = 13.0;
     /// Gap between toolbar items.
     pub const TOOLBAR_GAP: f32 = 4.0;
     /// Height of buttons, text fields and combo boxes.

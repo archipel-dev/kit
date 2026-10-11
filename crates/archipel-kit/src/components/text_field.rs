@@ -2,7 +2,7 @@
 
 use super::code::{Highlighter, Span, TemplateAt, TokenKind, template_at};
 use super::code::{styled_job, token_format};
-use super::{IconButton, common};
+use super::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
@@ -262,8 +262,11 @@ impl TextField<'_> {
                 icons::show(&mut content, icon, size::ICON, colors.text_placeholder);
             }
             let show_clear = self.clearable && !self.text.is_empty() && self.enabled;
+            // The clear button sits at a fixed distance from the field's right edge; the
+            // text stops a gap before it.
             let clear_width = if show_clear {
-                size::ICON_BUTTON + size::ICON_TEXT_GAP
+                size::CLEAR_BUTTON_INSET + size::CLEAR_BUTTON / 2.0 - size::CODE_PADDING
+                    + size::ICON_TEXT_GAP
             } else {
                 0.0
             };
@@ -368,12 +371,7 @@ impl TextField<'_> {
                 ui.ctx()
                     .accesskit_node_builder(edited.id, |node| node.set_label(name.as_str()));
             }
-            if show_clear
-                && content
-                    .add(IconButton::new(Glyph::Close, "Clear"))
-                    .on_hover_cursor(egui::CursorIcon::Default)
-                    .clicked()
-            {
+            if show_clear && clear_button(&content, rect, edited.id).clicked() {
                 self.text.clear();
                 edited.mark_changed();
                 edited.request_focus();
@@ -513,4 +511,33 @@ fn underline_unresolved(
             row_start += row.char_count_including_newline();
         }
     }
+}
+
+/// The clear button of a field: a gray cross that gets a round background under the
+/// pointer, at a fixed distance from the field's right edge (measured on Android Studio's
+/// search fields).
+fn clear_button(ui: &Ui, field: Rect, field_id: Id) -> Response {
+    let rect = Rect::from_center_size(
+        pos2(field.right() - size::CLEAR_BUTTON_INSET, field.center().y),
+        vec2(size::CLEAR_BUTTON, size::CLEAR_BUTTON),
+    );
+    let response = ui.interact(rect, field_id.with("clear"), egui::Sense::click());
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Clear"));
+    let colors = Theme::colors(ui.ctx());
+    let hovered = response.hovered();
+    if hovered {
+        ui.painter()
+            .circle_filled(rect.center(), size::CLEAR_BUTTON / 2.0, colors.clear_hover);
+    }
+    icons::paint(
+        ui.painter(),
+        Rect::from_center_size(rect.center(), vec2(size::CLEAR_GLYPH, size::CLEAR_GLYPH)),
+        Glyph::Close,
+        if hovered {
+            colors.clear_icon_hover
+        } else {
+            colors.clear_icon
+        },
+    );
+    response
 }

@@ -143,6 +143,12 @@ pub struct Colors {
     pub combo: Color32,
     /// Dropdown arrow.
     pub combo_arrow: Color32,
+    /// The cross of a field's clear button.
+    pub clear_icon: Color32,
+    /// The cross of a field's clear button under the pointer.
+    pub clear_icon_hover: Color32,
+    /// The round background of a field's clear button under the pointer.
+    pub clear_hover: Color32,
     /// Fill of the selected segment of a segmented control.
     pub segment_selected: Color32,
     /// Outline of the selected segment.
@@ -344,6 +350,9 @@ impl Theme {
                 row_hover: rgba(0xFFFFFF10),
                 combo: rgb(0x26282C),
                 combo_arrow: rgb(0x9A9DA1),
+                clear_icon: rgb(0x676B71),
+                clear_icon_hover: rgb(0x7F8389),
+                clear_hover: rgb(0x353637),
                 segment_selected: rgb(0x26282C),
                 segment_selected_border: rgb(0x5F6269),
                 progress_track: rgb(0x40434A),
@@ -481,6 +490,9 @@ impl Theme {
                 row_hover: rgba(0x00000008),
                 combo: rgb(0xFFFFFF),
                 combo_arrow: rgb(0x6E6E6E),
+                clear_icon: rgb(0xB0B4C3),
+                clear_icon_hover: rgb(0x8A8E9C),
+                clear_hover: rgb(0xEBEBED),
                 segment_selected: rgb(0xFFFFFF),
                 segment_selected_border: rgb(0xB5B7BD),
                 progress_track: rgb(0xDDDFE4),
