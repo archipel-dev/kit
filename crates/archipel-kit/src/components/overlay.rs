@@ -152,11 +152,9 @@ impl Widget for MenuSeparator {
 /// Custom dialog content.
 type Content<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
 
-/// Height of a dialog's title, buttons and padding, which don't scroll.
-const DIALOG_CHROME: f32 = 130.0;
-
 /// What the user did with a [`Dialog`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DialogAction {
     /// The primary button, or <kbd>Enter</kbd>.
     Primary,
@@ -296,6 +294,8 @@ impl<'a> Dialog<'a> {
         let colors = Theme::colors(ctx);
         let id = egui::Id::new(("archipel-dialog", &self.title));
         let frame = Surface::Dialog.frame(ctx);
+        let frame_height = frame.total_margin().sum().y;
+        let buttons_id = id.with("buttons");
         let mut action = None;
         let primary_enabled = self.primary_enabled;
         let max_height = self
@@ -329,31 +329,62 @@ impl<'a> Dialog<'a> {
                     common::text(ui.painter(), rect.min, title, colors.text_strong);
                 });
                 // Title and buttons stay; what lies between scrolls past the max height.
-                let body_max = (max_height - DIALOG_CHROME).max(size::ROW_HEIGHT);
-                egui::ScrollArea::vertical()
-                    .id_salt("archipel-dialog-body")
-                    .max_height(body_max)
-                    .auto_shrink([false, true])
-                    .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = size::SECTION_SPACING;
-                        if let Some(message) = &self.message {
-                            ui.add(
-                                egui::Label::new(
-                                    egui::RichText::new(message)
-                                        .font(typography::body(typography::BODY))
-                                        .color(colors.text),
-                                )
-                                .wrap(),
-                            );
-                        }
-                        if let Some(content) = self.content {
-                            content(ui);
-                        }
-                    });
+                // What doesn't scroll: the frame, the title as drawn (measured), the button
+                // row, and the four gaps between the title, body, space and buttons.
+                let title_height = ui.min_rect().height();
+                let chrome = frame_height
+                    + title_height
+                    + size::CONTROL_HEIGHT
+                    + 4.0 * size::SECTION_SPACING;
+                let body_max = (max_height - chrome).max(size::ROW_HEIGHT);
+                // A solid scroll bar: it shows that there is more without hovering.
+                ui.scope(|ui| {
+                    ui.spacing_mut().scroll = egui::style::ScrollStyle::solid();
+                    ui.visuals_mut().extreme_bg_color = colors.border;
+                    ui.visuals_mut().widgets.inactive.bg_fill = colors.text_placeholder;
+                    ui.visuals_mut().widgets.hovered.bg_fill = colors.text_secondary;
+                    ui.visuals_mut().widgets.active.bg_fill = colors.text_secondary;
+                    crate::parts::scroll_vertical()
+                        .id_salt("archipel-dialog-body")
+                        .max_height(body_max)
+                        .auto_shrink([false, true])
+                        .show(ui, |ui| {
+                            ui.spacing_mut().item_spacing.y = size::SECTION_SPACING;
+                            if let Some(message) = &self.message {
+                                ui.add(
+                                    egui::Label::new(
+                                        egui::RichText::new(message)
+                                            .font(typography::body(typography::BODY))
+                                            .color(colors.text),
+                                    )
+                                    .wrap(),
+                                );
+                            }
+                            if let Some(content) = self.content {
+                                content(ui);
+                            }
+                        });
+                });
                 ui.add_space(size::SECTION_SPACING);
                 // A fixed-height row: `with_layout` would take all the height left over.
+                // Drawn left to right so Tab follows reading order: tertiary, secondary,
+                // primary. The secondary and primary buttons sit at the right edge: the
+                // spacer uses their width from the last frame.
                 let row = vec2(ui.available_width(), size::CONTROL_HEIGHT);
-                ui.allocate_ui_with_layout(row, Layout::right_to_left(Align::Center), |ui| {
+                ui.allocate_ui_with_layout(row, Layout::left_to_right(Align::Center), |ui| {
+                    if let Some(tertiary) = &self.tertiary
+                        && ui.add(Button::secondary(tertiary.as_str())).clicked()
+                    {
+                        action = Some(DialogAction::Tertiary);
+                    }
+                    let group: f32 = ui.data(|d| d.get_temp(buttons_id)).unwrap_or(0.0);
+                    ui.add_space((ui.available_width() - group).max(0.0));
+                    let start = ui.cursor().min.x;
+                    if let Some(secondary) = &self.secondary
+                        && ui.add(Button::secondary(secondary.as_str())).clicked()
+                    {
+                        action = Some(DialogAction::Secondary);
+                    }
                     if let Some(primary) = &self.primary {
                         let button = if self.danger {
                             Button::danger(primary.as_str())
@@ -364,23 +395,20 @@ impl<'a> Dialog<'a> {
                             action = Some(DialogAction::Primary);
                         }
                     }
-                    if let Some(secondary) = &self.secondary
-                        && ui.add(Button::secondary(secondary.as_str())).clicked()
-                    {
-                        action = Some(DialogAction::Secondary);
-                    }
-                    if let Some(tertiary) = &self.tertiary {
-                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                            if ui.add(Button::secondary(tertiary.as_str())).clicked() {
-                                action = Some(DialogAction::Tertiary);
-                            }
-                        });
+                    let width = ui.min_rect().right().max(start) - start;
+                    if (width - group).abs() > 0.5 {
+                        ui.data_mut(|d| d.insert_temp(buttons_id, width));
+                        ui.ctx().request_repaint();
                     }
                 });
             });
         if action.is_none() {
             // A multiline field keeps the focus when it takes Enter (a single-line field
             // gives it up), and Enter there is a new line: Ctrl/Cmd+Enter confirms.
+            // egui has no "this field is multiline" query, so this relies on two of its
+            // behaviours: a `TextEdit` reports IME output while it has focus, and a
+            // single-line one surrenders focus on Enter. Anything else that keeps the focus
+            // (no IME output) is not a text field: Enter still confirms. Tests pin this.
             let in_multiline = focus_before.is_some()
                 && ctx.memory(|m| m.focused()) == focus_before
                 && ctx.output(|o| o.ime.is_some());

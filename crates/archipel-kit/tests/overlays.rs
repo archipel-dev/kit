@@ -462,3 +462,56 @@ fn dialog_tertiary_snapshot() {
         },
     );
 }
+
+#[test]
+fn dialog_tab_order_follows_the_visual_order() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = tertiary_dialog(ui, 2);
+    });
+    harness.set_size(egui::vec2(520.0, 400.0));
+    harness.run_steps(3);
+    let mut order = Vec::new();
+    for _ in 0..6 {
+        harness.key_press(egui::Key::Tab);
+        harness.run_steps(2);
+        for label in ["Reset", "Cancel", "Open"] {
+            if harness.get_by_label(label).is_focused() {
+                order.push(label);
+            }
+        }
+    }
+    assert_eq!(
+        order,
+        ["Reset", "Cancel", "Open", "Reset", "Cancel", "Open"]
+    );
+}
+
+/// A focusable widget that is not a text field keeps the focus on Enter: Enter confirms.
+#[test]
+fn dialog_enter_confirms_with_a_custom_widget_holding_focus() {
+    let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
+        let shown = Dialog::new("Pick")
+            .content(|ui| {
+                let (_, response) = ui.allocate_exact_size(
+                    egui::vec2(80.0, 24.0),
+                    egui::Sense::focusable_noninteractive(),
+                );
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Swatch")
+                });
+                if !ui.memory(|m| m.has_focus(response.id)) {
+                    response.request_focus();
+                }
+            })
+            .primary("Save")
+            .show(ui.ctx());
+        if let Some(done) = shown {
+            action.get_or_insert(done);
+        }
+    });
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run_steps(3);
+    harness.key_press(egui::Key::Enter);
+    harness.run_steps(2);
+    assert_eq!(*harness.state(), Some(DialogAction::Primary));
+}
