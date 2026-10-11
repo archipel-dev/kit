@@ -80,6 +80,7 @@ pub struct Checkbox<'a> {
     label: String,
     enabled: bool,
     mixed: bool,
+    label_visible: bool,
 }
 
 impl<'a> Checkbox<'a> {
@@ -90,7 +91,16 @@ impl<'a> Checkbox<'a> {
             label: label.into(),
             enabled: true,
             mixed: false,
+            label_visible: true,
         }
+    }
+
+    /// Whether the label is drawn next to the box (default). Without it the label is only
+    /// the accessible name: use it where another widget names the box, e.g. in the
+    /// [leading slot](crate::components::ListRow::leading) of a row.
+    pub fn label_visible(mut self, visible: bool) -> Self {
+        self.label_visible = visible;
+        self
     }
 
     /// Shows a dash instead of a check mark: some, but not all, children are checked.
@@ -120,8 +130,8 @@ fn mark_color(ui: &Ui, colors: &Colors, enabled: bool) -> Color32 {
 impl Widget for Checkbox<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
-        let (mut response, rect, galley) =
-            control_row(ui, vec2(BOX, BOX), &self.label, self.enabled);
+        let shown = if self.label_visible { &self.label } else { "" };
+        let (mut response, rect, galley) = control_row(ui, vec2(BOX, BOX), shown, self.enabled);
         if response.clicked() {
             *self.checked = self.mixed || !*self.checked;
             response.mark_changed();
