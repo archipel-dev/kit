@@ -1,13 +1,13 @@
 //! [`CodeEditor`]: multi-line code editing on the caller's `String`.
 
 use super::find::{self, FindState};
-use super::highlight::{Highlighter, PlainText, Span, TokenKind};
+use super::highlight::{Highlighter, PlainText, Span, styled_job, token_format};
 use super::text::{self, MAX_MATCHES};
 use super::{code_font, gutter_width, paint_background, paint_border, paint_number};
 use crate::parts::desktop;
 use crate::theme::{EditorColors, Theme};
 use crate::tokens::size;
-use egui::text::{CCursor, CCursorRange, LayoutJob, TextFormat};
+use egui::text::{CCursor, CCursorRange};
 use egui::text_edit::TextEditState;
 use egui::{
     Event, EventFilter, Id, Key, Margin, Modifiers, Rect, Response, RichText, Sense, Shape,
@@ -517,33 +517,9 @@ fn layout(
 ) -> Arc<egui::Galley> {
     let mut spans: Vec<Span> = Vec::new();
     highlighter.highlight_text(text, &mut spans);
-    let dim = |c: egui::Color32| if enabled { c } else { c.gamma_multiply(0.55) };
-    let format = |kind: TokenKind| TextFormat {
-        font_id: font.clone(),
-        color: dim(kind.color(colors)),
-        line_height: Some(size::CODE_LINE_HEIGHT),
-        ..TextFormat::default()
-    };
-    let mut job = LayoutJob::default();
-    job.wrap.max_width = wrap_width;
-    let mut at = 0;
-    for span in &spans {
-        let (a, b) = (span.start.max(at).min(text.len()), span.end.min(text.len()));
-        if a >= b || !text.is_char_boundary(a) || !text.is_char_boundary(b) {
-            continue;
-        }
-        if a > at {
-            job.append(&text[at..a], 0.0, format(TokenKind::Plain));
-        }
-        job.append(&text[a..b], 0.0, format(span.kind));
-        at = b;
-    }
-    if at < text.len() {
-        job.append(&text[at..], 0.0, format(TokenKind::Plain));
-    }
-    if text.is_empty() {
-        job.append("", 0.0, format(TokenKind::Plain));
-    }
+    let job = styled_job(text, 0, &spans, wrap_width, |kind| {
+        token_format(kind, font, colors, Some(size::CODE_LINE_HEIGHT), enabled)
+    });
     ui.fonts_mut(|fonts| fonts.layout_job(job))
 }
 

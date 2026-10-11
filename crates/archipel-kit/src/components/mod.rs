@@ -7,20 +7,22 @@
 //! | Inputs | [`TextField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
-//! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
-//! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
+//! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`], [`KeyValueTable`] |
+//! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`], [`Histogram`], [`Sparkline`] |
 //! | Code | [`CodeView`], [`CodeEditor`], and the [`code::Highlighter`]s |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`], [`Workbench`] |
 //! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
 mod button;
+mod chart;
 mod choice;
 pub mod code;
 mod collections;
 pub(crate) mod common;
 mod feedback;
 mod icon_button;
+mod key_value;
 mod layout;
 mod list;
 mod misc;
@@ -34,6 +36,7 @@ mod workbench;
 
 pub use badges::{Avatar, Counter, Kbd, Tag, initials};
 pub use button::{Button, ButtonVariant};
+pub use chart::{Bucket, ChartColor, Histogram, HistogramResponse, Sparkline};
 pub use choice::{Checkbox, Radio, Toggle};
 pub use code::{CodeEditor, CodeView};
 pub use collections::{
@@ -42,6 +45,9 @@ pub use collections::{
 };
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
 pub use icon_button::IconButton;
+pub use key_value::{
+    Change, KeyValueEntry, KeyValueRow, KeyValueTable, KeyValueTableResponse, ValueCell,
+};
 pub use layout::{Panel, SectionHeader, Separator};
 pub use list::{ListRow, RowResponse};
 pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
@@ -50,5 +56,5 @@ pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
 pub use status_bar::StatusBarItem;
-pub use text_field::TextField;
+pub use text_field::{TextField, TextFieldOutput};
 pub use workbench::{Anchor, Workbench, WorkbenchResponse, WorkbenchState};

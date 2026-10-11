@@ -193,6 +193,8 @@ pub fn snapshot_themes_sized(
         let mut harness = build(theme, (), draw, SNAPSHOT_SCALE, true);
         harness.set_size(size);
         harness.run_ok();
+        // Centered overlays learn their size in the first frame and move in the second.
+        harness.run_steps(3);
         results.add(harness.try_snapshot_options(
             format!("{name}.{suffix}"),
             &SnapshotOptions::new().output_path(dir.as_ref()),

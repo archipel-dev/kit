@@ -359,6 +359,63 @@ fn conformance_catches_a_fake_disabled_state() {
 }
 
 #[test]
+fn key_value_text_cells_conform() {
+    use archipel_kit::components::{KeyValueEntry, KeyValueTable};
+    for label in ["Key, row 1", "Value, row 1"] {
+        let mut rows = vec![KeyValueEntry::new("page", "1")];
+        testing::conformance(label, move |ui, enabled| {
+            KeyValueTable::new("params", &mut rows)
+                .read_only(!enabled)
+                .show(ui)
+                .response
+        })
+        .no_click()
+        .keys(&[])
+        .run();
+    }
+}
+
+/// The table reports its cells through `changes`, not through one response: turns "this
+/// change was reported" into the `clicked()` that `conformance` counts as an activation.
+fn activated_if(mut response: egui::Response, activated: bool) -> egui::Response {
+    if activated {
+        response
+            .flags
+            .insert(egui::response::Flags::FAKE_PRIMARY_CLICKED);
+    }
+    response
+}
+
+#[test]
+fn key_value_enable_checkbox_conforms() {
+    use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+    let mut rows = vec![KeyValueEntry::new("page", "1")];
+    testing::conformance("Enabled, row 1", move |ui, enabled| {
+        let out = KeyValueTable::new("params", &mut rows)
+            .read_only(!enabled)
+            .show(ui);
+        activated_if(out.response, out.changes.contains(&Change::Toggled(0)))
+    })
+    .run();
+}
+
+#[test]
+fn key_value_remove_button_conforms() {
+    use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+    // Read-only tables have no delete button: the disabled state is a disabled `Ui`.
+    testing::conformance("Remove, row 1", |ui, enabled| {
+        // Rebuilt every frame: a removed row would take the button with it.
+        let mut rows = vec![KeyValueEntry::new("page", "1")];
+        ui.add_enabled_ui(enabled, |ui| {
+            let out = KeyValueTable::new("params", &mut rows).show(ui);
+            activated_if(out.response, out.changes.contains(&Change::Removed(0)))
+        })
+        .inner
+    })
+    .run();
+}
+
+#[test]
 fn split_pane_divider_conforms() {
     use archipel_kit::components::SplitPane;
     let mut ratio = 0.5;
@@ -394,4 +451,30 @@ fn collapsible_split_pane_divider_conforms_open_and_collapsed() {
         })
         .run();
     }
+}
+
+/// A row the arrow keys reach but Tab never focuses: a bare accessibility node.
+fn roving_row(ui: &mut egui::Ui, id: &str, label: &str) {
+    use egui::accesskit::{Action, Role};
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(120.0, 20.0), egui::Sense::hover());
+    ui.ctx().accesskit_node_builder(egui::Id::new(id), |node| {
+        node.set_role(Role::ListItem);
+        node.set_label(label);
+        node.add_action(Action::Focus);
+        node.set_bounds(egui::accesskit::Rect {
+            x0: rect.min.x.into(),
+            y0: rect.min.y.into(),
+            x1: rect.max.x.into(),
+            y1: rect.max.y.into(),
+        });
+    });
+}
+
+#[test]
+fn audit_still_catches_a_focusable_row_outside_any_collection() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        roving_row(ui, "lonely", "Lonely row");
+    });
+    let audit = testing::audit(&mut harness);
+    assert_eq!(audit.of(Problem::Unreachable).len(), 1, "{audit:?}");
 }

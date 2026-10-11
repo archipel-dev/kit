@@ -105,6 +105,8 @@ pub struct Colors {
     pub accent: Color32,
     /// Primary button fill when disabled.
     pub accent_disabled: Color32,
+    /// Label of a disabled primary button: at least 3:1 against [`Colors::accent_disabled`].
+    pub text_on_accent_disabled: Color32,
     /// Keyboard focus ring around inputs and buttons.
     pub focus_ring: Color32,
     /// Outline of buttons, inputs and checkboxes.
@@ -311,6 +313,7 @@ impl Theme {
                 selection_popup: rgb(0x113A5C),
                 accent: rgb(0x3871E1),
                 accent_disabled: rgb(0x4E5157),
+                text_on_accent_disabled: rgb(0xB0B3BA),
                 focus_ring: rgb(0x3D6185),
                 border: rgb(0x40434A),
                 separator: rgba(0xFFFFFF21),
@@ -441,6 +444,7 @@ impl Theme {
                 selection_popup: rgb(0xC5DFFC),
                 accent: rgb(0x3871E1),
                 accent_disabled: rgb(0xDDDFE4),
+                text_on_accent_disabled: rgb(0x60636A),
                 focus_ring: rgb(0x97C3F3),
                 border: rgb(0xD1D3D9),
                 separator: rgba(0x00000020),
@@ -634,6 +638,15 @@ mod tests {
             assert!(secondary >= 4.5, "{}: secondary {secondary:.1}", theme.name);
             let on_accent = contrast(theme.colors.text_on_accent, theme.colors.accent);
             assert!(on_accent >= 4.5, "{}: on accent {on_accent:.1}", theme.name);
+            let disabled = contrast(
+                theme.colors.text_on_accent_disabled,
+                theme.colors.accent_disabled,
+            );
+            assert!(
+                disabled >= 3.0,
+                "{}: disabled primary {disabled:.1}",
+                theme.name
+            );
         }
     }
 

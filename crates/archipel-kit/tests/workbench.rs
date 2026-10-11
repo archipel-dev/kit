@@ -6,7 +6,7 @@ use archipel_kit::components::{
     Anchor, IconButton, StatusBarItem, Workbench, WorkbenchResponse, WorkbenchState,
 };
 use archipel_kit::egui::{self, Key, vec2};
-use archipel_kit::testing::{self, Harness, NodeT, Queryable};
+use archipel_kit::testing::{self, Harness, Queryable};
 use archipel_kit::tokens::{radius, size};
 use archipel_kit::{Glyph, Theme};
 
@@ -48,9 +48,9 @@ struct App {
     resized: Vec<Anchor>,
 }
 
-fn workbench<'a>(
+fn workbench(
     ui: &mut egui::Ui,
-    state: &'a mut WorkbenchState,
+    state: &mut WorkbenchState,
     layout: Layout,
 ) -> WorkbenchResponse<()> {
     let mut wb = Workbench::new("window", state);
@@ -353,7 +353,7 @@ fn islands_are_one_gap_apart_with_the_island_radius() {
     };
     let gap = size::ISLAND_GAP as usize;
     for theme in [Theme::dark(), Theme::light()] {
-        let colors = theme.colors.clone();
+        let colors = theme.colors;
         let mut harness = testing::window_harness_state(
             theme,
             vec2(900.0, 600.0),

@@ -36,7 +36,7 @@ fn dialog_buttons(ui: &mut egui::Ui, can_create: bool) -> bool {
 | `Button::danger(label)` | Error fill, for Delete and other destructive actions. |
 | `Button::new(label, ButtonVariant)` | The same, with the variant as a value. |
 | `.icon(Icon)` | Icon before the label. |
-| `.enabled(bool)` | Disabled buttons are dimmed and ignore clicks. |
+| `.enabled(bool)` | Disabled buttons are dimmed and ignore clicks. A disabled primary or danger button keeps a label of at least 3:1 contrast (`text_on_accent_disabled` on `accent_disabled`). |
 | `.small(bool)` | 24 pt instead of 28 pt tall. |
 | `.min_width(f32)` | Minimum width, 72 pt by default so "OK" does not look cramped. |
 

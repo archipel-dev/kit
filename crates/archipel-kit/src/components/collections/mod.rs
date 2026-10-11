@@ -339,6 +339,8 @@ pub struct TreeRow {
     label: String,
     secondary: Option<String>,
     icon: Option<Icon>,
+    icon_tone: Option<Tone>,
+    busy: bool,
     depth: usize,
     children: bool,
     expanded: bool,
@@ -352,6 +354,8 @@ impl TreeRow {
             label: label.into(),
             secondary: None,
             icon: None,
+            icon_tone: None,
+            busy: false,
             depth,
             children: false,
             expanded: false,
@@ -380,6 +384,19 @@ impl TreeRow {
     /// Icon before the label.
     pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
         self.icon = Some(icon.into());
+        self
+    }
+
+    /// Color the row's icon by meaning, using the theme's tones.
+    pub fn icon_tone(mut self, tone: Tone) -> Self {
+        self.icon_tone = Some(tone);
+        self
+    }
+
+    /// Show an accessible loading indicator before the row's icon while children load.
+    /// The caller owns the loading state and the row remains navigable.
+    pub fn busy(mut self, busy: bool) -> Self {
+        self.busy = busy;
         self
     }
 
@@ -524,6 +541,15 @@ impl<'a> Tree<'a> {
                     .focusable(false);
                 if let Some(icon) = tree_row.icon {
                     row = row.icon(icon);
+                }
+                if let Some(tone) = tree_row.icon_tone {
+                    row = row.icon_tone(tone);
+                }
+                if tree_row.busy {
+                    let name = format!("Loading {}", tree_row.label);
+                    row = row.leading(crate::parts::Slot::ui_width(size::ICON, move |ui| {
+                        ui.add(super::Spinner::new().label(name));
+                    }));
                 }
                 if let Some(secondary) = &tree_row.secondary {
                     row = row.secondary(secondary.as_str());

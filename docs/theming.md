@@ -1,5 +1,9 @@
 # Theming
 
+The selected kit theme also sets egui's appearance explicitly, so native system appearance
+cannot make plain egui popups disagree with kit components. Switching themes preserves
+the installed typography and spacing.
+
 ## Themes
 
 A `Theme` is plain data: workbench `colors`, `editor` colors, a name and whether it is dark.
@@ -23,7 +27,7 @@ Use the semantic colors in your own widgets so they follow the theme:
 | Group | Colors |
 |---|---|
 | Surfaces | `frame`, `island`, `popup`, `popup_border`, `field`, `notification`, `tooltip` (`Surface::Chrome` paints the workbench frame, toolbars and the status bar in `frame`) |
-| Text | `text`, `text_strong`, `text_secondary`, `text_placeholder`, `text_disabled`, `text_on_accent` |
+| Text | `text`, `text_strong`, `text_secondary`, `text_placeholder`, `text_disabled`, `text_on_accent`, `text_on_accent_disabled` |
 | Interaction | `hover`, `pressed`, `selection`, `accent`, `focus_ring`, `border`, `separator` |
 | Semantic | `error`, `warning`, `success`, `link`, `banner_*` |
 | Developer tools | `run`, `stop`, `vcs_modified`, `vcs_added`, `vcs_untracked`, `vcs_ignored` |
