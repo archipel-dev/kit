@@ -49,4 +49,4 @@ pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
 pub use status_bar::StatusBarItem;
-pub use text_field::TextField;
+pub use text_field::{TextField, TextFieldOutput};

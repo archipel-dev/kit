@@ -222,6 +222,7 @@ pub struct MenuItem<'a> {
     shortcut: Option<String>,
     enabled: bool,
     checked: Option<bool>,
+    highlighted: bool,
     submenu: Option<Submenu<'a>>,
 }
 
@@ -237,6 +238,7 @@ impl<'a> MenuItem<'a> {
             shortcut: None,
             enabled: true,
             checked: None,
+            highlighted: false,
             submenu: None,
         }
     }
@@ -263,6 +265,13 @@ impl<'a> MenuItem<'a> {
     /// Disabled items are dimmed and ignore clicks.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Draws the hover fill without the pointer: the row the keyboard is on in a
+    /// suggestion list (see the template autocomplete in the code page).
+    pub fn highlighted(mut self, highlighted: bool) -> Self {
+        self.highlighted = highlighted;
         self
     }
 
@@ -317,7 +326,8 @@ impl Widget for MenuItem<'_> {
             None => WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.label),
         });
         if ui.is_rect_visible(rect) {
-            let state = State::of(&response);
+            let mut state = State::of(&response);
+            state.hovered |= self.highlighted && self.enabled;
             common::row_pill(ui.painter(), rect, state.menu_fill(&colors));
             content.paint(ui, rect, rect.left() + 4.0, state);
             if self.submenu.is_some() {
