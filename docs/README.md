@@ -9,6 +9,8 @@
 - [Behaviours](behaviours.md): tooltips, context menus, cursors and drag and drop on any widget with `.with(...)`.
 - [Building a component](building-components.md): from parts, with slots and behaviours, proven by conformance and the audit.
 - [Contributing a component](contributing.md): the checklist every component meets.
+- [Desktop component map](component-map.md): reusable families, Android Studio reference
+  behavior, interaction invariants and verification.
 
 ## Components
 

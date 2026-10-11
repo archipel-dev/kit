@@ -1,4 +1,4 @@
-//! Single-line text inputs.
+//! Themed single-line and multi-line text inputs.
 
 use super::code::{Highlighter, Span, TemplateAt, TokenKind, template_at};
 use super::code::{styled_job, token_format};
@@ -11,8 +11,9 @@ use egui::{Color32, CornerRadius, Id, Rect, Response, Stroke, Ui, Widget, pos2, 
 use std::cell::RefCell;
 use std::sync::Arc;
 
-/// A single-line text input with an optional label, placeholder, leading icon, clear
+/// A text input with an optional label, placeholder, leading icon, clear
 /// button and validation message.
+/// Use [`multiline`](Self::multiline) for wrapped text with an internal scroll area.
 ///
 /// The returned [`Response`] is the text edit's: `changed()` after every edit,
 /// `lost_focus()` when the user leaves the field.
@@ -45,6 +46,8 @@ use std::sync::Arc;
 pub struct TextField<'t> {
     text: &'t mut String,
     label: Option<String>,
+    name: Option<String>,
+    rows: usize,
     placeholder: Option<String>,
     error: Option<String>,
     leading: Option<Icon>,
@@ -63,7 +66,7 @@ pub struct TextFieldOutput {
     /// The text edit's response: `changed()` after every edit, `lost_focus()` on leaving.
     pub response: Response,
     /// The field lost focus because <kbd>Enter</kbd> was pressed. Enter never inserts a
-    /// newline.
+    /// newline in single-line mode. Always false in multi-line mode.
     pub submitted: bool,
     /// The caret as a screen rectangle (a thin bar the height of the line): anchor a
     /// popup at its left-bottom. `None` before the field was ever focused.
@@ -105,6 +108,8 @@ impl<'t> TextField<'t> {
         Self {
             text,
             label: None,
+            name: None,
+            rows: 1,
             placeholder: None,
             error: None,
             leading: None,
@@ -129,6 +134,20 @@ impl<'t> TextField<'t> {
     /// A visible label above the input; it is also the input's accessible name.
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    /// An accessible name without adding a visible label. Defaults to the visible label
+    /// or placeholder. Use it for compact search fields and request-body editors.
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    /// A multi-line input with `rows` visible lines (at least two). Enter inserts a
+    /// newline; Tab leaves the field. Extra lines scroll inside the field.
+    pub fn multiline(mut self, rows: usize) -> Self {
+        self.rows = rows.max(2);
         self
     }
 
@@ -185,8 +204,8 @@ impl<'t> TextField<'t> {
 
     /// Colors the text with `highlighter`: a URL, a header value, `{{variables}}` (see
     /// [`TemplateHighlighter`](super::code::TemplateHighlighter)). Ignored for
-    /// [`password`](Self::password) fields. The text stays one line: <kbd>Enter</kbd>
-    /// submits.
+    /// [`password`](Self::password) fields. In single-line mode <kbd>Enter</kbd> submits;
+    /// multi-line fields wrap the highlighted text and insert newlines.
     pub fn highlighter(mut self, highlighter: &'t dyn Highlighter) -> Self {
         self.highlighter = Some(highlighter);
         self
@@ -220,13 +239,22 @@ impl TextField<'_> {
                 .id
             });
 
+            let multiline = self.rows > 1;
+            let height = if multiline {
+                self.rows as f32 * size::CODE_LINE_HEIGHT + size::CODE_PADDING
+            } else {
+                size::CONTROL_HEIGHT
+            };
             let (rect, frame_response) =
-                ui.allocate_exact_size(vec2(width, size::CONTROL_HEIGHT), egui::Sense::hover());
+                ui.allocate_exact_size(vec2(width, height), egui::Sense::hover());
             // Painted after the content, once focus is known, but drawn beneath it.
             let background = ui.painter().add(egui::Shape::Noop);
             let mut content = ui.new_child(
                 egui::UiBuilder::new()
-                    .max_rect(rect.shrink2(vec2(8.0, 0.0)))
+                    .max_rect(rect.shrink2(vec2(
+                        size::CODE_PADDING,
+                        if multiline { size::POPUP_PADDING } else { 0.0 },
+                    )))
                     .layout(egui::Layout::left_to_right(egui::Align::Center)),
             );
             content.spacing_mut().item_spacing.x = size::ICON_TEXT_GAP;
@@ -239,13 +267,17 @@ impl TextField<'_> {
             } else {
                 0.0
             };
-            let mut edit = egui::TextEdit::singleline(self.text)
-                .frame(false)
-                .password(self.password)
-                .interactive(self.enabled)
-                .text_color(common::enabled_text(self.enabled, colors.text, &colors))
-                .desired_width(content.available_width() - clear_width)
-                .margin(vec2(0.0, 0.0));
+            let mut edit = if multiline {
+                egui::TextEdit::multiline(self.text).desired_rows(self.rows)
+            } else {
+                egui::TextEdit::singleline(self.text)
+            }
+            .frame(false)
+            .password(self.password)
+            .interactive(self.enabled)
+            .text_color(common::enabled_text(self.enabled, colors.text, &colors))
+            .desired_width(content.available_width() - clear_width)
+            .margin(vec2(0.0, 0.0));
             if let Some(id) = self.id {
                 edit = edit.id(id);
             }
@@ -261,20 +293,27 @@ impl TextField<'_> {
             // The spans of the last layout, which the underline reuses within the frame.
             let spans = RefCell::new(Vec::new());
             let mut layouter =
-                |ui: &Ui, buf: &dyn egui::TextBuffer, _wrap: f32| -> Arc<egui::Galley> {
+                |ui: &Ui, buf: &dyn egui::TextBuffer, wrap: f32| -> Arc<egui::Galley> {
                     let text = buf.as_str();
                     let mut spans = spans.borrow_mut();
                     spans.clear();
                     if let Some(highlighter) = highlighter {
                         highlighter.highlight_text(text, &mut spans);
                     }
-                    let job = styled_job(text, 0, &spans, f32::INFINITY, |kind| {
-                        let mut format = token_format(kind, &font, &theme.editor, None, enabled);
-                        if kind == TokenKind::Plain {
-                            format.color = common::enabled_text(enabled, colors.text, &colors);
-                        }
-                        format
-                    });
+                    let job = styled_job(
+                        text,
+                        0,
+                        &spans,
+                        if multiline { wrap } else { f32::INFINITY },
+                        |kind| {
+                            let mut format =
+                                token_format(kind, &font, &theme.editor, None, enabled);
+                            if kind == TokenKind::Plain {
+                                format.color = common::enabled_text(enabled, colors.text, &colors);
+                            }
+                            format
+                        },
+                    );
                     ui.fonts_mut(|fonts| fonts.layout_job(job))
                 };
             if highlighter.is_some() {
@@ -287,7 +326,18 @@ impl TextField<'_> {
             // Disabled through the ui, so the field reports disabled to screen readers and
             // tests, not just ignores input.
             let shown = content
-                .add_enabled_ui(self.enabled, |ui| edit.show(ui))
+                .add_enabled_ui(self.enabled, |ui| {
+                    if multiline {
+                        crate::parts::scroll_vertical()
+                            .id_salt(self.id.unwrap_or(frame_response.id).with("lines"))
+                            .max_height(rect.height() - size::CODE_PADDING)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| edit.show(ui))
+                            .inner
+                    } else {
+                        edit.show(ui)
+                    }
+                })
                 .inner;
             let galley = shown.galley.clone();
             let galley_pos = shown.galley_pos;
@@ -309,6 +359,15 @@ impl TextField<'_> {
             if let Some(id) = label_id {
                 edited = edited.labelled_by(id);
             }
+            if let Some(name) = self
+                .name
+                .as_ref()
+                .or(self.label.as_ref())
+                .or(self.placeholder.as_ref())
+            {
+                ui.ctx()
+                    .accesskit_node_builder(edited.id, |node| node.set_label(name.as_str()));
+            }
             if show_clear
                 && content
                     .add(IconButton::new(Glyph::Close, "Clear"))
@@ -325,7 +384,9 @@ impl TextField<'_> {
                 // The layouter ran on this text unless egui reused its galley.
                 let spans = spans.into_inner();
                 underline_unresolved(
-                    &content.painter().with_clip_rect(edited.rect),
+                    &content
+                        .painter()
+                        .with_clip_rect(edited.rect.intersect(rect).intersect(ui.clip_rect())),
                     &spans,
                     self.text,
                     &galley,
@@ -355,7 +416,8 @@ impl TextField<'_> {
                 }
                 None => (None, None),
             };
-            let submitted = edited.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            let submitted =
+                !multiline && edited.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
             let stroke = if self.error.is_some() {
                 Stroke::new(
                     if focused { size::FOCUS_RING } else { 1.0_f32 },
@@ -412,10 +474,6 @@ fn underline_unresolved(
     galley_pos: egui::Pos2,
     color: Color32,
 ) {
-    let x_of = |byte: usize| {
-        let chars = text[..byte].chars().count();
-        galley.pos_from_cursor(CCursor::new(chars))
-    };
     for span in spans.iter().filter(|s| s.kind.dotted_underline()) {
         if span.end > text.len()
             || !text.is_char_boundary(span.start)
@@ -423,18 +481,28 @@ fn underline_unresolved(
         {
             continue;
         }
-        let (a, b) = (x_of(span.start), x_of(span.end));
-        let y = galley_pos.y + a.max.y;
-        let mut x = galley_pos.x + a.min.x;
-        let end = galley_pos.x + b.min.x;
-        while x < end {
-            let top = y - size::DOTTED_INSET - size::DOTTED_DOT;
-            let dot = Rect::from_min_max(
-                pos2(x, top),
-                pos2((x + size::DOTTED_DOT).min(end), top + size::DOTTED_DOT),
-            );
-            painter.rect_filled(dot, 0.0, color);
-            x += size::DOTTED_PITCH;
+        let start = text[..span.start].chars().count();
+        let end = text[..span.end].chars().count();
+        let mut row_start = 0;
+        for row in &galley.rows {
+            let row_end = row_start + row.char_count_excluding_newline();
+            let from = start.max(row_start);
+            let to = end.min(row_end);
+            if from < to {
+                let y = galley_pos.y + row.pos.y + row.height();
+                let mut x = galley_pos.x + row.pos.x + row.x_offset(from - row_start);
+                let right = galley_pos.x + row.pos.x + row.x_offset(to - row_start);
+                while x < right {
+                    let top = y - size::DOTTED_INSET - size::DOTTED_DOT;
+                    let dot = Rect::from_min_max(
+                        pos2(x, top),
+                        pos2((x + size::DOTTED_DOT).min(right), top + size::DOTTED_DOT),
+                    );
+                    painter.rect_filled(dot, 0.0, color);
+                    x += size::DOTTED_PITCH;
+                }
+            }
+            row_start += row.char_count_including_newline();
         }
     }
 }

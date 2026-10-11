@@ -11,6 +11,9 @@ publish = false
 [dependencies]
 archipel-kit = { path = "../archipel-kit" }
 eframe.workspace = true
+# eframe without its default features leaves wgpu's native backends disabled.
+# Enable them for normal builds too, rather than relying on test feature unification.
+wgpu = "27"
 
 [dev-dependencies]
 archipel-kit = { path = "../archipel-kit", features = ["testing"] }

@@ -1,5 +1,9 @@
 # Theming
 
+The selected kit theme also sets egui's appearance explicitly, so native system appearance
+cannot make plain egui popups disagree with kit components. Switching themes preserves
+the installed typography and spacing.
+
 ## Themes
 
 A `Theme` is plain data: workbench `colors`, `editor` colors, a name and whether it is dark.

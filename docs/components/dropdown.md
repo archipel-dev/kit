@@ -1,5 +1,18 @@
 # Dropdown
 
+Open with Enter/Space or Down. While open, Up/Down, Home/End and Page Up/Down move the
+highlight without changing the value. Enter commits; Escape cancels and returns focus
+to the button.
+
+Use `.leading(|value| Slot::icon(...))` for a per-option icon, or a decorative
+`Slot::ui_width` for a themed color dot. The same factory draws the selected value and
+each popup option; each option keeps its text as its accessible name.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dropdown_leading.dark.png">
+  <img alt="Environment dropdowns with leading icons, enabled and disabled" src="img/dropdown_leading.light.png" width="360">
+</picture>
+
 Picks one value from a list, in a popup. Use it for more than five options or when space is
 tight; for fewer, prefer a [segmented control](segmented-control.md) or
 [radio buttons](choice.md).

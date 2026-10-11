@@ -12,7 +12,7 @@ use archipel_kit::components::{
     KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio,
     SectionHeader, SegmentedControl, Separator, Severity, Side, SortOrder, Sparkline, Spinner,
     SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip,
-    TooltipExt, TreeRow, TreeTable,
+    TooltipExt, Tree, TreeRow, TreeTable,
 };
 use archipel_kit::egui::{Key, Modifiers};
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
@@ -101,6 +101,7 @@ struct Gallery {
     query: String,
     port: String,
     password: String,
+    body: String,
     params: Vec<KeyValueEntry>,
     checks: [bool; 3],
     indent: usize,
@@ -110,6 +111,7 @@ struct Gallery {
     tabs: Vec<Tab>,
     expanded: [bool; 2],
     selected: usize,
+    loading_selected: Option<usize>,
     method: &'static str,
     banners: [bool; 4],
     progress: f32,
@@ -286,6 +288,7 @@ impl Default for Gallery {
             query: String::new(),
             port: "8080".into(),
             password: "hunter2".into(),
+            body: "{\n  \"name\": \"archipel\"\n}".into(),
             params: vec![
                 KeyValueEntry::new("page", "1"),
                 KeyValueEntry::new("limit", "50"),
@@ -305,6 +308,7 @@ impl Default for Gallery {
                 .collect(),
             expanded: [true, true],
             selected: 2,
+            loading_selected: None,
             method: "GET",
             banners: [true; 4],
             progress: 0.4,
@@ -633,6 +637,13 @@ impl Gallery {
                         .password(true)
                         .enabled(enabled),
                 );
+                ui.add(
+                    TextField::new(&mut self.body)
+                        .label("Request body")
+                        .multiline(4)
+                        .monospace(true)
+                        .enabled(enabled),
+                );
                 ui.add(SectionHeader::new("Key/value table"));
                 // Disabling the page makes the table read-only.
                 KeyValueTable::new("params", &mut self.params)
@@ -648,6 +659,7 @@ impl Gallery {
                         ["GET", "POST", "PUT", "PATCH", "DELETE"],
                     )
                     .label("HTTP method")
+                    .leading(|_| Slot::icon(Glyph::Send))
                     .enabled(enabled),
                 );
             }
@@ -695,6 +707,21 @@ impl Gallery {
                     .enabled(enabled),
                 );
                 ui.add(SectionHeader::new("Tab bar"));
+                ui.add(
+                    SegmentedControl::new(
+                        &mut self.view,
+                        [
+                            (View::Pretty, "Pretty"),
+                            (View::Raw, "Raw"),
+                            (View::Preview, "Preview"),
+                        ],
+                    )
+                    .icon(View::Pretty, Glyph::Code)
+                    .icon(View::Raw, Glyph::File)
+                    .icon(View::Preview, Glyph::Eye)
+                    .icon_only(true)
+                    .enabled(enabled),
+                );
                 let out = TabBar::new(&self.tabs, self.tab).show(ui);
                 if let Some(index) = out.selected {
                     self.tab = index;
@@ -766,6 +793,16 @@ impl Gallery {
                     );
                 }
                 ui.add(SectionHeader::new("Slots and behaviours"));
+                let loading = [TreeRow::new("Collections", 0)
+                    .icon(Glyph::Database)
+                    .icon_tone(Tone::Warning)
+                    .busy(true)
+                    .parent(false)];
+                ui.add_enabled_ui(enabled, |ui| {
+                    Tree::new("gallery-busy-tree", &loading, &mut self.loading_selected)
+                        .height(32.0)
+                        .show(ui);
+                });
                 ListRow::new("Problems")
                     .icon(Glyph::Warning)
                     .trailing(Slot::text("12"))
