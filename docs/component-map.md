@@ -64,6 +64,16 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Two-line item | 20 pt icon, label, path below in `#73767C`, 48 pt | `MenuItem::description` |
 | Pointer and keys | One highlight, shared; the first pointer move after opening is ignored; it stays on the last item when the pointer leaves; arrows continue from it and skip headers and separators | `MenuItem` |
 
+### Editor tabs and headers
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Island header (tool window title bar, editor tab bar) | 40 pt high, no line below | `tokens::size::HEADER_HEIGHT` |
+| Selected tab | 28 pt pill, radius 6, fill `#233558` / light `#E3EBFE`, 1 pt border `#2E4D89` / `#A7C5FF`, text at full strength | `TabBar` |
+| Other tabs | No fill; title `#AFB1B6` / light `#515151`; on hover a `hover` pill and full-strength title | `Colors::tab_text` |
+| Close button | Only on the selected and the hovered tab; its room is always kept; small cross; round hover behind it | `tokens::tab` |
+| Spacing | 8 pt, icon, 4 pt, title, 4 pt, close 16 pt, 4 pt; 6 pt between pills | `tokens::tab` |
+
 ## Fixed invariants
 
 - Body font: Inter 13 pt. Code: the bundled mono font. Existing icon artwork is fixed.

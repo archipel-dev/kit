@@ -117,6 +117,8 @@ pub struct Colors {
     pub tab_selected: Color32,
     /// Selected editor tab underline.
     pub tab_selected_border: Color32,
+    /// Title of an editor tab that is not selected (the selected one uses [`Colors::text`]).
+    pub tab_text: Color32,
     /// Fill of a switched-on toggle.
     pub toggle_on: Color32,
     /// Track of a switched-off toggle.
@@ -319,6 +321,7 @@ impl Theme {
                 separator: rgba(0xFFFFFF21),
                 tab_selected: rgb(0x233558),
                 tab_selected_border: rgb(0x2E4D89),
+                tab_text: rgb(0xAFB1B6),
                 toggle_on: rgb(0x338555),
                 toggle_off: rgb(0x191A1C),
                 toggle_off_knob: rgb(0x5F6269),
@@ -450,6 +453,7 @@ impl Theme {
                 separator: rgba(0x00000020),
                 tab_selected: rgb(0xE3EBFE),
                 tab_selected_border: rgb(0xA7C5FF),
+                tab_text: rgb(0x515151),
                 toggle_on: rgb(0x4E9D6C),
                 toggle_off: rgb(0xF7F8F9),
                 toggle_off_knob: rgb(0xC3C5CB),

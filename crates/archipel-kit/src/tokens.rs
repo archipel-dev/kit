@@ -21,8 +21,9 @@ pub mod size {
     pub const ICON_TEXT_GAP: f32 = 4.0;
     /// Gap between a primary and a secondary text in a row.
     pub const SECONDARY_GAP: f32 = 8.0;
-    /// Panel title bar height.
-    pub const HEADER_HEIGHT: f32 = 31.0;
+    /// Height of an island's header: a tool window's title bar or an editor's tab bar
+    /// (40 pt in Android Studio's Islands UI).
+    pub const HEADER_HEIGHT: f32 = 40.0;
     /// Shared main toolbar / integrated window title height.
     pub const WINDOW_TOOLBAR_HEIGHT: f32 = 40.0;
     /// macOS native traffic-light region, including the gap before app content.
@@ -132,6 +133,26 @@ pub mod popup {
     pub const DESCRIPTION_HEIGHT: f32 = 24.0;
 }
 
+/// Editor tabs, in points. Measured on Android Studio's Islands UI.
+pub mod tab {
+    /// Height of a tab's pill, centered in the header.
+    pub const HEIGHT: f32 = 28.0;
+    /// Space between two tabs' pills.
+    pub const GAP: f32 = 6.0;
+    /// Space from the pill's left edge to the icon (or the title).
+    pub const PADDING_LEFT: f32 = 8.0;
+    /// Space from the close button to the pill's right edge.
+    pub const PADDING_RIGHT: f32 = 4.0;
+    /// Space between the title and the close button.
+    pub const CLOSE_GAP: f32 = 4.0;
+    /// Edge of the close button's box.
+    pub const CLOSE: f32 = 16.0;
+    /// Edge the close cross is drawn in: smaller than an icon, as in Android Studio.
+    pub const CLOSE_GLYPH: f32 = 10.0;
+    /// Radius of the round hover behind the close button.
+    pub const CLOSE_HOVER_RADIUS: f32 = 9.0;
+}
+
 /// Motion: delays and durations, in seconds. Measured on Android Studio's Islands UI.
 pub mod motion {
     /// How long an island's header actions stay after the pointer leaves the island (and
@@ -167,6 +188,8 @@ pub mod radius {
     pub const UNDERLINE: u8 = 2;
     /// Toolbar icon buttons.
     pub const ICON_BUTTON: u8 = 6;
+    /// Editor tab pills.
+    pub const TAB: u8 = 6;
     /// Row selection pills.
     pub const ROW: u8 = 4;
     /// Fully rounded (pills, counters, toggles).

@@ -1,7 +1,7 @@
 # TabBar
 
-Editor-style tabs. The selected tab is tinted and underlined; tabs can show a file icon, an
-unsaved-changes dot and a close button.
+Editor tabs as in Android Studio's Islands UI. The selected tab is a tinted pill with a 1 pt
+border; tabs can show a file icon, an unsaved-changes dot and a close button.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/tab_bar.dark.png">
@@ -42,7 +42,15 @@ The caller owns the tab list and the selection; `show` only reports what the use
 ## Behavior
 
 - Clicking a tab selects it; middle-clicking a closable tab closes it.
-- The close button shows on the selected tab and on hover.
+- The close button shows on the selected tab and on hover. Its room is kept on every
+  closable tab, so tabs never move when it appears; hovering the cross shows a round
+  highlight behind it.
+- Hovering an unselected tab shows a hover pill and brings its dimmed title (`tab_text`) up
+  to full strength.
+
+Geometry (`tokens::tab`, measured on Android Studio): the bar is `HEADER_HEIGHT` (40 pt);
+pills are 28 pt high, radius 6, 6 pt apart; inside a pill: 8 pt, icon, 4 pt, title, 4 pt,
+close (16 pt), 4 pt. Put the bar at the island's top, 6 pt from its left edge.
 
 ## Accessibility
 
