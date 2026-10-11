@@ -26,6 +26,36 @@ Workbench::new("workspace", &mut state)
 
 `WorkbenchRegion` identifies the left, right or bottom maximized tool window.
 
+## One closure for the whole window
+
+An application usually has one state that every region reads and writes. Declare the
+places and fill them from one closure, so the state is borrowed once:
+
+```rust
+use archipel_kit::components::{
+    StatusBarItem, WindowChrome, Workbench, WorkbenchPlace, WorkbenchRegion, WorkbenchState,
+};
+use archipel_kit::{Glyph, egui};
+
+struct App { layout: WorkbenchState, sent: u32 }
+
+fn window(ctx: &egui::Context, app: &mut App) {
+    let App { layout, sent } = app;
+    Workbench::new("nexus", layout)
+        .with_toolbar(WindowChrome::Integrated)
+        .tool(WorkbenchRegion::Left, "Collections", Glyph::Folder)
+        .tool(WorkbenchRegion::Right, "Response", Glyph::Structure)
+        .with_status()
+        .show_with(ctx, sent, |place, ui, sent| match place {
+            WorkbenchPlace::Center => { /* request editor */ }
+            WorkbenchPlace::Status => { ui.add(StatusBarItem::new(format!("{sent} sent"))); }
+            _ => {}
+        });
+}
+```
+
+`WorkbenchPlace` is `Center`, `Tool(region)`, `Toolbar` or `Status`.
+
 ## Islands behavior
 
 As in the IntelliJ / Android Studio Islands UI:

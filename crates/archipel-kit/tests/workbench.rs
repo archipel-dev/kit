@@ -351,3 +351,63 @@ fn the_focused_tool_window_has_an_accent_stripe_button() {
     assert!(filled(&h, "Browser"));
     assert!(!filled(&h, "Messages"));
 }
+
+#[test]
+fn show_with_fills_every_place_from_one_state() {
+    use archipel_kit::components::{StatusBarItem, WorkbenchPlace};
+    #[derive(Default)]
+    struct App {
+        layout: WorkbenchState,
+        drawn: Vec<WorkbenchPlace>,
+        clicks: u32,
+    }
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(1000.0, 520.0))
+        .build_state(
+            |ctx, app: &mut App| {
+                app.drawn.clear();
+                let App {
+                    layout,
+                    drawn,
+                    clicks,
+                } = app;
+                let mut state = (drawn, clicks);
+                Workbench::new("with", layout)
+                    .tool(WorkbenchRegion::Left, "Collections", Glyph::Folder)
+                    .tool(WorkbenchRegion::Right, "Response", Glyph::Structure)
+                    .with_status()
+                    .show_with(ctx, &mut state, |place, ui, (drawn, clicks)| {
+                        drawn.push(place);
+                        match place {
+                            WorkbenchPlace::Center => {
+                                if ui.add(Button::primary("Send")).clicked() {
+                                    **clicks += 1;
+                                }
+                            }
+                            WorkbenchPlace::Status => {
+                                ui.add(StatusBarItem::new(format!("{clicks} sent")));
+                            }
+                            _ => {
+                                ui.label(format!("{clicks} in tool"));
+                            }
+                        }
+                    });
+            },
+            App::default(),
+        );
+    h.run();
+    for place in [
+        WorkbenchPlace::Center,
+        WorkbenchPlace::Status,
+        WorkbenchPlace::Tool(WorkbenchRegion::Left),
+        WorkbenchPlace::Tool(WorkbenchRegion::Right),
+    ] {
+        assert!(h.state().drawn.contains(&place), "{place:?} was not drawn");
+    }
+    assert!(h.query_by_label("Collections").is_some());
+    h.get_by_label("Send").click();
+    h.run();
+    h.run();
+    assert_eq!(h.state().clicks, 1);
+    assert!(h.query_by_label("1 sent").is_some());
+}

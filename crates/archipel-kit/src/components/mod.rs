@@ -65,4 +65,4 @@ pub use stripe::{StripeButton, ToolStripe};
 pub use text_field::{TextField, TextFieldOutput};
 pub use toolbar::ToolbarButton;
 pub use window::{WindowChrome, WindowToolbar};
-pub use workbench::{Workbench, WorkbenchRegion, WorkbenchState};
+pub use workbench::{Workbench, WorkbenchPlace, WorkbenchRegion, WorkbenchState};

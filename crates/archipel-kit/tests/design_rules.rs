@@ -246,6 +246,7 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
         "Workbench",
         "layout of conforming parts, audited in tests/workbench.rs",
     ),
+    ("WorkbenchPlace", "enum"),
     ("WorkbenchRegion", "enum"),
     ("WorkbenchState", "layout state"),
 ];

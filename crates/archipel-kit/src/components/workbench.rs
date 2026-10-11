@@ -22,6 +22,20 @@ pub enum WorkbenchRegion {
     Bottom,
 }
 
+/// Where [`Workbench::show_with`] asks for content.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum WorkbenchPlace {
+    /// The center island.
+    Center,
+    /// A tool window declared with [`Workbench::tool`].
+    Tool(WorkbenchRegion),
+    /// The window toolbar declared with [`Workbench::with_toolbar`].
+    Toolbar,
+    /// The status bar declared with [`Workbench::with_status`].
+    Status,
+}
+
 /// Caller-owned layout state. Persist it in the host's settings if desired.
 /// Ratios retain their preferred values when a smaller viewport clamps the layout.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -60,7 +74,7 @@ impl Default for WorkbenchState {
 type Content<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
 struct Region<'a> {
     title: String,
-    content: Content<'a>,
+    content: Option<Content<'a>>,
     padded: bool,
     icon: Option<Icon>,
 }
@@ -86,8 +100,8 @@ pub struct Workbench<'a> {
     left: Option<Region<'a>>,
     right: Option<Region<'a>>,
     bottom: Option<Region<'a>>,
-    toolbar: Option<(WindowChrome, Content<'a>)>,
-    status: Option<Content<'a>>,
+    toolbar: Option<(WindowChrome, Option<Content<'a>>)>,
+    status: Option<Option<Content<'a>>>,
     project_color: Option<egui::Color32>,
     glow_anchor: Option<egui::Rect>,
     center_padded: bool,
@@ -172,13 +186,150 @@ impl<'a> Workbench<'a> {
 
     /// Window toolbar; use the same chrome when configuring the host viewport.
     pub fn toolbar(mut self, chrome: WindowChrome, content: impl FnOnce(&mut Ui) + 'a) -> Self {
-        self.toolbar = Some((chrome, Box::new(content)));
+        self.toolbar = Some((chrome, Some(Box::new(content))));
         self
     }
     /// A status area on the window frame, typically containing `StatusBarItem`s.
     pub fn status(mut self, content: impl FnOnce(&mut Ui) + 'a) -> Self {
-        self.status = Some(Box::new(content));
+        self.status = Some(Some(Box::new(content)));
         self
+    }
+
+    /// Declares a tool window in `region` titled `title`, with its stripe button showing
+    /// `icon`. Its content comes from the closure given to [`show_with`](Self::show_with),
+    /// which lets one closure fill every region from the same application state.
+    pub fn tool(
+        mut self,
+        region: WorkbenchRegion,
+        title: impl Into<String>,
+        icon: impl Into<Icon>,
+    ) -> Self {
+        let mut declared = Region::declared(title);
+        declared.icon = Some(icon.into());
+        *self.slot(region) = Some(declared);
+        self
+    }
+
+    /// Declares the window toolbar; its content comes from [`show_with`](Self::show_with)
+    /// as [`WorkbenchPlace::Toolbar`].
+    pub fn with_toolbar(mut self, chrome: WindowChrome) -> Self {
+        self.toolbar = Some((chrome, None));
+        self
+    }
+
+    /// Declares the status bar; its content comes from [`show_with`](Self::show_with) as
+    /// [`WorkbenchPlace::Status`].
+    pub fn with_status(mut self) -> Self {
+        self.status = Some(None);
+        self
+    }
+
+    fn slot(&mut self, region: WorkbenchRegion) -> &mut Option<Region<'a>> {
+        match region {
+            WorkbenchRegion::Left => &mut self.left,
+            WorkbenchRegion::Right => &mut self.right,
+            WorkbenchRegion::Bottom => &mut self.bottom,
+        }
+    }
+
+    /// Renders a whole window, asking `content` for every declared place (center, tool
+    /// windows, toolbar, status bar) with the same `state`. One closure and one borrow of
+    /// the application state, instead of a closure per region:
+    ///
+    /// ```
+    /// # egui::__run_test_ctx(|ctx| {
+    /// use archipel_kit::components::{
+    ///     StatusBarItem, Workbench, WorkbenchPlace, WorkbenchRegion, WorkbenchState,
+    /// };
+    /// use archipel_kit::Glyph;
+    /// struct App { layout: WorkbenchState, requests: Vec<String> }
+    /// let mut app = App { layout: WorkbenchState::default(), requests: vec![] };
+    /// let App { layout, requests } = &mut app;
+    /// Workbench::new("app", layout)
+    ///     .tool(WorkbenchRegion::Left, "Collections", Glyph::Folder)
+    ///     .with_status()
+    ///     .show_with(ctx, requests, |place, ui, requests| match place {
+    ///         WorkbenchPlace::Tool(WorkbenchRegion::Left) => {
+    ///             ui.label(format!("{} requests", requests.len()));
+    ///         }
+    ///         WorkbenchPlace::Status => {
+    ///             ui.add(StatusBarItem::new("Ready"));
+    ///         }
+    ///         _ => {}
+    ///     });
+    /// # });
+    /// ```
+    pub fn show_with<S>(
+        self,
+        ctx: &egui::Context,
+        state: &mut S,
+        content: impl FnMut(WorkbenchPlace, &mut Ui, &mut S),
+    ) -> Response {
+        let shared = std::cell::RefCell::new((state, content));
+        // Each place is drawn one after the other, so the borrows never overlap.
+        let fill = |place: WorkbenchPlace, ui: &mut Ui| {
+            let mut guard = shared.borrow_mut();
+            let (state, content) = &mut *guard;
+            content(place, ui, state);
+        };
+        self.dispatch(&fill)
+            .show(ctx, |ui| fill(WorkbenchPlace::Center, ui))
+    }
+
+    /// Like [`show_with`](Self::show_with), into a bounded area (no toolbar or status bar).
+    pub fn show_inside_with<S>(
+        self,
+        ui: &mut Ui,
+        state: &mut S,
+        content: impl FnMut(WorkbenchPlace, &mut Ui, &mut S),
+    ) -> Response {
+        let shared = std::cell::RefCell::new((state, content));
+        let fill = |place: WorkbenchPlace, ui: &mut Ui| {
+            let mut guard = shared.borrow_mut();
+            let (state, content) = &mut *guard;
+            content(place, ui, state);
+        };
+        self.dispatch(&fill)
+            .show_inside(ui, |ui| fill(WorkbenchPlace::Center, ui))
+    }
+
+    /// Fills every declared place without content from `fill`.
+    fn dispatch<'b>(self, fill: &'b (dyn Fn(WorkbenchPlace, &mut Ui) + 'b)) -> Workbench<'b>
+    where
+        'a: 'b,
+    {
+        let region = |region: Option<Region<'a>>, place: WorkbenchRegion| {
+            region.map(|r| Region {
+                content: Some(r.content.unwrap_or_else(|| {
+                    Box::new(move |ui: &mut Ui| fill(WorkbenchPlace::Tool(place), ui))
+                })),
+                title: r.title,
+                padded: r.padded,
+                icon: r.icon,
+            })
+        };
+        Workbench {
+            id: self.id,
+            state: self.state,
+            left: region(self.left, WorkbenchRegion::Left),
+            right: region(self.right, WorkbenchRegion::Right),
+            bottom: region(self.bottom, WorkbenchRegion::Bottom),
+            toolbar: self.toolbar.map(|(chrome, content)| {
+                let content: Content<'b> = content.unwrap_or_else(|| {
+                    Box::new(move |ui: &mut Ui| fill(WorkbenchPlace::Toolbar, ui))
+                });
+                (chrome, Some(content))
+            }),
+            status: self.status.map(|content| {
+                let content: Content<'b> = content.unwrap_or_else(|| {
+                    Box::new(move |ui: &mut Ui| fill(WorkbenchPlace::Status, ui))
+                });
+                Some(content)
+            }),
+            project_color: self.project_color,
+            glow_anchor: self.glow_anchor,
+            center_padded: self.center_padded,
+        }
     }
 
     /// Render a whole window. Hidden or temporarily constrained region callbacks are
@@ -189,7 +340,11 @@ impl<'a> Workbench<'a> {
             if let Some(color) = self.project_color {
                 toolbar = toolbar.project_color(color);
             }
-            toolbar.show(ctx, content);
+            toolbar.show(ctx, |ui| {
+                if let Some(content) = content {
+                    content(ui);
+                }
+            });
         }
         // The glow continues from the toolbar: anchor it to the window, not the islands.
         self.glow_anchor = Some(ctx.input(|i| i.viewport_rect()));
@@ -209,7 +364,9 @@ impl<'a> Workbench<'a> {
                 .show(ctx, |ui| {
                     ui.horizontal_centered(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.0;
-                        content(ui);
+                        if let Some(content) = content {
+                            content(ui);
+                        }
                     });
                 });
         }
@@ -471,7 +628,16 @@ impl<'a> Region<'a> {
     fn new(title: impl Into<String>, content: impl FnOnce(&mut Ui) + 'a) -> Self {
         Self {
             title: title.into(),
-            content: Box::new(content),
+            content: Some(Box::new(content)),
+            padded: false,
+            icon: None,
+        }
+    }
+
+    fn declared(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            content: None,
             padded: false,
             icon: None,
         }
@@ -508,7 +674,11 @@ impl<'a> Region<'a> {
                 ui.set_min_height((ui.available_height() - tokens::size::SECTION_SPACING).max(0.0));
                 crate::parts::desktop(egui::ScrollArea::both())
                     .auto_shrink([false, false])
-                    .show(ui, self.content);
+                    .show(ui, |ui| {
+                        if let Some(content) = self.content {
+                            content(ui);
+                        }
+                    });
             });
         // Where the island is, to tell next frame whether the focus is in it.
         let rect = ui.min_rect();
