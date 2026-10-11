@@ -1180,3 +1180,232 @@ fn list_arrows_collapse_and_expand_nodes() {
     assert!(harness.state().1);
     assert_eq!(harness.state().0, Some(1));
 }
+
+#[test]
+fn tree_busy_row_shows_a_spinner_and_icon_tone_colors_the_icon() {
+    let rows = vec![
+        TreeRow::new("orders", 0)
+            .icon(Glyph::Folder)
+            .icon_tone(Tone::Warning)
+            .parent(true)
+            .busy(true),
+        TreeRow::new("users", 0).icon(Glyph::Folder).parent(false),
+    ];
+    let mut selected = None;
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = Tree::new("db", &rows, &mut selected).height(96.0).show(ui);
+    });
+    // The spinner repaints forever, so `run` would never settle.
+    harness.run_steps(3);
+    assert!(harness.query_by_label("Loading orders").is_some());
+    assert!(harness.query_by_label("Loading users").is_none());
+    testing::audit(&mut harness).assert_clean();
+}
+
+#[test]
+fn tree_states_snapshot() {
+    testing::snapshot_themes("tree-states", common::IMG, |ui| {
+        ui.set_width(280.0);
+        let rows = vec![
+            TreeRow::new("orders", 0)
+                .icon(Glyph::Folder)
+                .icon_tone(Tone::Warning)
+                .parent(true)
+                .busy(true),
+            TreeRow::new("users", 0)
+                .icon(Glyph::Folder)
+                .icon_tone(Tone::Success)
+                .parent(false),
+            TreeRow::new("logs", 0).icon(Glyph::Folder).parent(false),
+        ];
+        let mut selected = Some(1);
+        let _ = Tree::new("db", &rows, &mut selected).height(80.0).show(ui);
+    });
+}
+
+#[test]
+fn tree_chevron_click_also_focuses_the_tree() {
+    let mut harness = tree_harness();
+    let tests = harness.get_by_label("tests").rect();
+    let chevron = egui::pos2(tests.left() + 24.0, tests.center().y);
+    harness.hover_at(chevron);
+    harness.run();
+    for pressed in [true, false] {
+        harness.event(egui::Event::PointerButton {
+            pos: chevron,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+    }
+    harness.run();
+    assert!(harness.state().tests);
+    harness.key_press(Key::ArrowDown);
+    harness.run();
+    assert!(harness.state().selected.is_some());
+}
+
+#[test]
+fn tree_double_click_on_a_parent_toggles_it_and_focuses_the_tree() {
+    let mut harness = tree_harness();
+    assert!(!harness.state().tests);
+    let pos = harness.get_by_label("tests").rect().center();
+    harness.hover_at(pos);
+    harness.run();
+    for _ in 0..2 {
+        for pressed in [true, false] {
+            harness.event(egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            });
+        }
+    }
+    harness.run();
+    assert!(harness.state().tests, "the double-click expanded the node");
+    // The tree has the keyboard focus: ↓ moves the selection without another click.
+    let before = harness.state().selected;
+    harness.key_press(Key::ArrowDown);
+    harness.run();
+    assert_ne!(harness.state().selected, before);
+}
+
+fn tagged_cell(row: usize, col: usize) -> Cell {
+    const METHODS: [(&str, Tone); 3] = [
+        ("GET", Tone::Success),
+        ("POST", Tone::Warning),
+        ("DELETE", Tone::Error),
+    ];
+    match col {
+        0 => Cell::new(METHODS[row % 3].0).tag(METHODS[row % 3].1),
+        1 => Cell::new("ok").tag(Tone::Default),
+        _ => Cell::new(format!("/orders/{row}")),
+    }
+}
+
+fn tagged_columns() -> Vec<Column> {
+    vec![
+        Column::new("Method", 90.0),
+        Column::new("Result", 90.0).right(),
+        Column::new("Path", 140.0).mono(),
+    ]
+}
+
+#[test]
+fn table_tags_snapshot() {
+    testing::snapshot_themes("table-tags", common::IMG, |ui| {
+        ui.set_width(340.0);
+        let mut columns = tagged_columns();
+        let mut selected = Some(1);
+        let _ = Table::new("runs", &mut columns, 3, &mut selected)
+            .height(80.0)
+            .show(ui, tagged_cell);
+    });
+}
+
+#[test]
+fn table_tags_keep_row_height_names_and_pass_the_audit() {
+    let mut columns = tagged_columns();
+    let mut selected = None;
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = Table::new("runs", &mut columns, 3, &mut selected)
+            .height(96.0)
+            .show(ui, tagged_cell);
+    });
+    harness.run();
+    // The accessible name of a row still reads the cells' text.
+    let row = harness.get_by_label("GET, ok, /orders/0").rect();
+    assert_eq!(row.height(), 24.0);
+    testing::audit(&mut harness).assert_clean();
+}
+
+struct Log {
+    len: usize,
+    follow: bool,
+    selected: Option<usize>,
+}
+
+fn log_harness() -> testing::Harness<'static, Log> {
+    let state = Log {
+        len: 50,
+        follow: true,
+        selected: None,
+    };
+    let mut harness = testing::harness_state(Theme::dark(), state, |ui, log| {
+        let _ = VirtualList::new("log", log.len, &mut log.selected)
+            .name("Messages")
+            .height(120.0)
+            .follow_tail(&mut log.follow)
+            .show(ui, |i| ListRow::new(format!("message {i}")));
+    });
+    harness.run();
+    harness
+}
+
+fn wheel(harness: &mut testing::Harness<'_, Log>, dy: f32) {
+    let list = harness.get_by_label("Messages").rect();
+    harness.hover_at(list.center());
+    harness.run();
+    harness.event(egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Point,
+        delta: egui::vec2(0.0, dy),
+        modifiers: egui::Modifiers::NONE,
+    });
+    harness.run();
+}
+
+#[test]
+fn follow_tail_stays_at_the_bottom_while_items_arrive() {
+    let mut harness = log_harness();
+    assert!(harness.query_by_label("message 49").is_some());
+    assert!(harness.query_by_label("message 0").is_none());
+    for len in [51, 60, 200] {
+        harness.state_mut().len = len;
+        harness.run();
+        assert!(harness.state().follow);
+        assert!(
+            harness
+                .query_by_label(&format!("message {}", len - 1))
+                .is_some(),
+            "row {} is visible",
+            len - 1
+        );
+    }
+}
+
+#[test]
+fn scrolling_up_stops_following_and_the_bottom_resumes_it() {
+    let mut harness = log_harness();
+    wheel(&mut harness, 300.0);
+    assert!(!harness.state().follow, "scrolling up releases the tail");
+    // New items do not move the view.
+    harness.state_mut().len = 80;
+    harness.run();
+    assert!(!harness.state().follow);
+    assert!(harness.query_by_label("message 79").is_none());
+    assert!(harness.query_by_label("message 49").is_none());
+    // Scrolling back to the bottom resumes following.
+    wheel(&mut harness, -5000.0);
+    assert!(harness.state().follow, "the bottom resumes the tail");
+    harness.state_mut().len = 90;
+    harness.run();
+    assert!(harness.query_by_label("message 89").is_some());
+}
+
+#[test]
+fn follow_tail_can_be_resumed_by_the_caller() {
+    let mut harness = log_harness();
+    wheel(&mut harness, 300.0);
+    assert!(!harness.state().follow);
+    harness.state_mut().follow = true;
+    harness.run();
+    assert!(harness.query_by_label("message 49").is_some());
+    assert!(harness.state().follow);
+}
+
+#[test]
+fn follow_tail_list_passes_the_audit() {
+    let mut harness = log_harness();
+    testing::audit(&mut harness).assert_clean();
+}

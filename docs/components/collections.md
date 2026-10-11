@@ -84,6 +84,51 @@ fn grid(ui: &mut egui::Ui, grid: &mut Grid) {
 `.tone(Tone)` the color stays when the row is selected, and the last of the two calls wins.
 Use a tone for meaning (a 500 in red) and a kind for the type of data.
 
+### Tags in cells
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/table-tags.dark.png">
+  <img alt="A table whose method column shows GET, POST and DELETE as green, amber and red tags, with a neutral ok tag" src="img/table-tags.light.png" width="460">
+</picture>
+
+`Cell::tag(Tone)` draws the cell's text as a kit [`Tag`](badges.md) tinted with the tone: HTTP
+methods, status codes, pass/fail. `Tone::Default` gives the neutral tag. The row keeps its 24
+points and stays virtualized, the row's accessible name still reads the text, and the tag
+takes precedence over `.tone` and `.value_kind`. It follows the column's alignment and works
+in `Table` and `TreeTable`.
+
+### Tree: busy rows and icon tones
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/tree-states.dark.png">
+  <img alt="A tree whose orders folder has an amber icon and a spinner while it loads, and users has a green icon" src="img/tree-states.light.png" width="320">
+</picture>
+
+`TreeRow::busy(true)` shows the kit [`Spinner`](progress.md) at the end of the row while its
+children load (named "Loading <label>"). `TreeRow::icon_tone(Tone)` colors the icon by
+meaning, like `ListRow::icon_tone`. The busy spinner uses the row's trailing slot, so a
+trailing slot you add in `show_with` replaces it; a `TreeTable` ignores `busy`.
+
+### Following the tail
+
+`VirtualList::follow_tail(&mut bool)` keeps a log, a WebSocket or SSE message list scrolled
+to the last row while `len` grows. Scrolling up (wheel, scroll bar or keys) sets the flag to
+`false` and the view stays put; scrolling back to the bottom sets it to `true` again. Set it
+to `true` yourself to jump to the latest, for example from a "Jump to latest" button you
+show while it is `false`.
+
+```rust
+use archipel_kit::components::{ListRow, VirtualList};
+use archipel_kit::egui;
+
+fn log(ui: &mut egui::Ui, messages: &[String], selected: &mut Option<usize>, follow: &mut bool) {
+    VirtualList::new("messages", messages.len(), selected)
+        .height(200.0)
+        .follow_tail(follow)
+        .show(ui, |i| ListRow::new(&messages[i]));
+}
+```
+
 ## The model
 
 All three work the same way:
@@ -180,13 +225,13 @@ fn results(
 
 | Item | Builders and fields |
 |---|---|
-| `VirtualList::new(id, len, &mut selected)` | `.height(f32)`, `.show(ui, \|index\| ListRow)` |
+| `VirtualList::new(id, len, &mut selected)` | `.height(f32)`, `.follow_tail(&mut bool)`, `.show(ui, \|index\| ListRow)` |
 | `VirtualList` as a tree | Rows with `.expanded(Some(..))` report `toggled` on <kbd>→</kbd> (collapsed) and <kbd>←</kbd> (expanded). |
 | `Tree::new(id, &rows, &mut selected)` | `.height(f32)`, `.show(ui)`, `.show_with(ui, \|index, row\| row)` |
-| `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.secondary(str)` |
+| `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.icon_tone(Tone)`, `.busy(bool)`, `.secondary(str)` |
 | `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.reorderable(bool)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
-| `Cell::new(text)` | `.value_kind(ValueKind)`, `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
+| `Cell::new(text)` | `.tag(Tone)`, `.value_kind(ValueKind)`, `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
 | `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited`, `column_order` |
 
 ## Behavior
@@ -196,7 +241,8 @@ fn results(
   expanded. <kbd>←</kbd> collapses an expanded node, or moves to its parent. The chevron and
   a double-click on a parent toggle it too. Each of these reports `toggled`. A `VirtualList`
   of `ListRow`s with an expanded state toggles on <kbd>→</kbd>/<kbd>←</kbd> the same way (it
-  has no parent or child to walk to, as it does not know the tree).
+  has no parent or child to walk to, as it does not know the tree). Clicking a row, its
+  chevron or double-clicking a parent also gives the collection the keyboard focus.
 - **Per-row behaviours.** `Tree::show_with` hands each visible row to your closure before it
   is drawn: add a context menu, a drag source or a drop target with `.with(...)`, or a tint,
   a trailing slot, a semibold label. The closure may be called every frame for every

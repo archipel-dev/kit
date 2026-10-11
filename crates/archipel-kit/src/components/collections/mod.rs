@@ -11,9 +11,10 @@ mod tree_table;
 pub use edit::CellEdit;
 pub use tree_table::TreeTable;
 
-use super::{ListRow, common};
+use super::{ListRow, Spinner, Tag, common};
 use crate::behaviour::{Behaviour, DragSource, DropTarget};
 use crate::icons::{self, Glyph, Icon};
+use crate::parts::Slot;
 use crate::parts::{Tone, ValueKind};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
@@ -86,6 +87,7 @@ fn collection(
     ui: &mut Ui,
     spec: Spec<'_>,
     selected: &mut Option<usize>,
+    follow: Option<&mut bool>,
     mut row: impl FnMut(&mut Ui, usize, bool, bool) -> DrawnRow,
 ) -> (CollectionResponse, Keys) {
     let Spec {
@@ -159,6 +161,13 @@ fn collection(
         }
     }
 
+    // Following the tail: start at the bottom of the rows as they are now, unless a key
+    // moved the selection this frame.
+    if scroll_to.is_none() && follow.as_deref().copied().unwrap_or(false) {
+        let view_height = viewport.map_or(height, |v| v.height);
+        area = area.vertical_scroll_offset((len as f32 * row_height - view_height).max(0.0));
+    }
+
     let mut clicked = None;
     let mut toggled = None;
     // show_rows strides by the row height plus the item spacing of the ui it starts in.
@@ -198,6 +207,11 @@ fn collection(
         offset: output.state.offset.y,
         height: output.inner_rect.height(),
     };
+    // The user scrolling up releases the tail; scrolling back to the bottom resumes it.
+    if let Some(follow) = follow {
+        let bottom = (len as f32 * row_height - view.height).max(0.0);
+        *follow = view.offset >= bottom - 0.5;
+    }
     ui.ctx().data_mut(|d| d.insert_temp(id, view));
     // The list itself holds keyboard focus (Tab reaches it once, not every row).
     let response = ui.interact(
@@ -211,7 +225,7 @@ fn collection(
     });
     // After `interact`: a click on a row counts as "elsewhere" for the focus widget, which
     // would otherwise give up the focus requested here.
-    if clicked.is_some() {
+    if clicked.is_some() || toggled.is_some() {
         ui.memory_mut(|m| m.request_focus(focus_id));
     }
     if response.has_focus() && selected.is_none() {
@@ -260,6 +274,7 @@ pub struct VirtualList<'a> {
     len: usize,
     selected: &'a mut Option<usize>,
     height: f32,
+    follow_tail: Option<&'a mut bool>,
 }
 
 impl<'a> VirtualList<'a> {
@@ -271,19 +286,28 @@ impl<'a> VirtualList<'a> {
             len,
             selected,
             height: 240.0,
+            follow_tail: None,
         }
     }
 
-    /// Visible height in points (default 240).
     /// The accessible name, e.g. "Request history" (default: "List", "Tree" or "Table").
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
         self
     }
 
-    /// Visible height in points.
+    /// Visible height in points (default 240).
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
+        self
+    }
+
+    /// Keeps the list scrolled to the last row while `len` grows, like a log. The user
+    /// scrolling up (wheel, scroll bar or keys) sets `*follow` to `false`; scrolling back
+    /// to the bottom sets it to `true` again. Set it to `true` yourself to jump to the
+    /// latest, e.g. from a "Jump to latest" button shown while it is `false`.
+    pub fn follow_tail(mut self, follow: &'a mut bool) -> Self {
+        self.follow_tail = Some(follow);
         self
     }
 
@@ -306,6 +330,7 @@ impl<'a> VirtualList<'a> {
                 name: &self.name,
             },
             self.selected,
+            self.follow_tail,
             |ui, index, selected, focused| {
                 let row = row(index);
                 if selected {
@@ -339,10 +364,12 @@ pub struct TreeRow {
     label: String,
     secondary: Option<String>,
     icon: Option<Icon>,
+    icon_tone: Option<Tone>,
     depth: usize,
     children: bool,
     expanded: bool,
     editable: bool,
+    busy: bool,
 }
 
 impl TreeRow {
@@ -352,10 +379,12 @@ impl TreeRow {
             label: label.into(),
             secondary: None,
             icon: None,
+            icon_tone: None,
             depth,
             children: false,
             expanded: false,
             editable: false,
+            busy: false,
         }
     }
 
@@ -380,6 +409,21 @@ impl TreeRow {
     /// Icon before the label.
     pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
         self.icon = Some(icon.into());
+        self
+    }
+
+    /// Meaning of the icon's color, e.g. [`Tone::Run`] (default: the icon gray). Like
+    /// [`ListRow::icon_tone`].
+    pub fn icon_tone(mut self, tone: Tone) -> Self {
+        self.icon_tone = Some(tone);
+        self
+    }
+
+    /// Shows a [`Spinner`] at the end of the row while its children load. A [`Tree`] draws
+    /// it in the row's trailing slot, so a trailing slot you add in
+    /// [`show_with`](Tree::show_with) replaces it; a [`TreeTable`] ignores it.
+    pub fn busy(mut self, busy: bool) -> Self {
+        self.busy = busy;
         self
     }
 
@@ -514,6 +558,7 @@ impl<'a> Tree<'a> {
                 name: &self.name,
             },
             self.selected,
+            None,
             |ui, index, selected, focused| {
                 let tree_row = &rows[index];
                 let mut row = ListRow::new(tree_row.label.as_str())
@@ -524,6 +569,15 @@ impl<'a> Tree<'a> {
                     .focusable(false);
                 if let Some(icon) = tree_row.icon {
                     row = row.icon(icon);
+                }
+                if let Some(tone) = tree_row.icon_tone {
+                    row = row.icon_tone(tone);
+                }
+                if tree_row.busy {
+                    let label = format!("Loading {}", tree_row.label);
+                    row = row.trailing(Slot::ui(move |ui| {
+                        ui.centered_and_justified(|ui| ui.add(Spinner::new().label(label)));
+                    }));
                 }
                 if let Some(secondary) = &tree_row.secondary {
                     row = row.secondary(secondary.as_str());
@@ -651,6 +705,7 @@ pub struct Cell {
     text: String,
     icon: Option<Icon>,
     color: Option<CellColor>,
+    tag: Option<Option<Tone>>,
     editable: bool,
 }
 
@@ -673,6 +728,15 @@ impl Cell {
     /// and timestamps.
     pub fn tone(mut self, tone: Tone) -> Self {
         self.color = Some(CellColor::Tone(tone));
+        self
+    }
+
+    /// Shows the text as a [`Tag`] tinted with `tone`: an HTTP method, a status code, a
+    /// pass/fail result. The row keeps its height; the tag is drawn instead of the plain
+    /// text and takes precedence over [`tone`](Self::tone) and
+    /// [`value_kind`](Self::value_kind). [`Tone::Default`] gives the neutral tag.
+    pub fn tag(mut self, tone: Tone) -> Self {
+        self.tag = Some(Some(tone).filter(|tone| *tone != Tone::Default));
         self
     }
 
@@ -829,6 +893,7 @@ impl<'a> Table<'a> {
                 name: &self.name,
             },
             self.selected,
+            None,
             |ui, index, selected, focused| {
                 let (rect, response) = ui.allocate_exact_size(
                     vec2(ui.available_width(), size::ROW_HEIGHT),
@@ -1059,13 +1124,16 @@ pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selec
         (None, true) => colors.text_strong,
         (None, false) => colors.text,
     };
+    let tag = cell
+        .tag
+        .map(|tone| Tag::new(cell.text.as_str()).tone_opt(tone));
     let galley = common::galley(ui, cell.text.as_str(), font);
     let icon_width = if cell.icon.is_some() {
         size::ICON + size::ICON_TEXT_GAP
     } else {
         0.0
     };
-    let content = icon_width + galley.size().x;
+    let content = icon_width + tag.as_ref().map_or(galley.size().x, |tag| tag.size(ui).x);
     let mut x = match column.align {
         Align::Max => rect.right() - CELL_PADDING - content,
         _ => rect.left() + CELL_PADDING,
@@ -1078,5 +1146,14 @@ pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selec
         icons::paint(&painter, icon_rect, icon, colors.icon);
         x += icon_width;
     }
-    common::text_left(&painter, rect, x, galley, color);
+    match tag {
+        Some(tag) => {
+            let tag_rect = Rect::from_min_size(
+                pos2(x, rect.center().y - tag.size(ui).y / 2.0),
+                tag.size(ui),
+            );
+            tag.paint(ui, &painter, tag_rect);
+        }
+        None => common::text_left(&painter, rect, x, galley, color),
+    }
 }

@@ -11,7 +11,7 @@ use archipel_kit::components::{
     Dropdown, EmptyState, IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel,
     ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity, Side,
     SortOrder, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast,
-    Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
+    Toggle, Tooltip, TooltipExt, Tree, TreeRow, TreeTable, VirtualList,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::parts::{Slot, Surface};
@@ -125,6 +125,10 @@ struct Gallery {
     /// Edited request texts of the table, by row.
     requests: std::collections::HashMap<usize, String>,
     documents: Documents,
+    /// The message log of the Lists page: length, whether it follows the tail, selection.
+    log: (usize, bool, Option<usize>),
+    /// The database tree of the Lists page: is "orders" still loading, selection.
+    db: (bool, Option<usize>),
 }
 
 /// Documents in the tree table page, and fields per document: 1 000 × (1 + 99) rows.
@@ -310,6 +314,8 @@ impl Default for Gallery {
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
             documents: Documents::new(),
+            log: (40, true, None),
+            db: (true, None),
         }
     }
 }
@@ -733,6 +739,39 @@ impl Gallery {
         }
         if self.page == Page::Lists {
             ui.add(SectionHeader::new(
+                "Tree: busy row and icon tones; message log: follows the tail",
+            ));
+            let rows = [
+                TreeRow::new("orders", 0)
+                    .icon(Glyph::Folder)
+                    .icon_tone(Tone::Warning)
+                    .parent(true)
+                    .busy(self.db.0),
+                TreeRow::new("users", 0)
+                    .icon(Glyph::Folder)
+                    .icon_tone(Tone::Success)
+                    .parent(false),
+            ];
+            let _ = Tree::new("gallery-db", &rows, &mut self.db.1)
+                .name("Databases")
+                .height(56.0)
+                .show(ui);
+            ui.horizontal(|ui| {
+                if ui.add(Button::secondary("Append 5 messages")).clicked() {
+                    self.log.0 += 5;
+                }
+                if !self.log.1 && ui.add(Button::secondary("Jump to latest")).clicked() {
+                    self.log.1 = true;
+                }
+            });
+            let _ = VirtualList::new("gallery-log", self.log.0, &mut self.log.2)
+                .name("Messages")
+                .height(96.0)
+                .follow_tail(&mut self.log.1)
+                .show(ui, |i| {
+                    ListRow::new(format!("message {i}")).icon(Glyph::Send)
+                });
+            ui.add(SectionHeader::new(
                 "Virtualized table: 100 000 rows, drag headers to reorder, edit requests",
             ));
             let len = 100_000;
@@ -760,7 +799,7 @@ impl Gallery {
                                 .unwrap_or_else(|| format!("GET /api/users/{n}")),
                         )
                         .editable(true),
-                        2 => Cell::new(status.to_string()).tone(match status {
+                        2 => Cell::new(status.to_string()).tag(match status {
                             500.. => Tone::Error,
                             400.. => Tone::Warning,
                             _ => Tone::Success,

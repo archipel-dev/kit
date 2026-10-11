@@ -158,6 +158,7 @@ impl<'a> TreeTable<'a> {
                 name: &name,
             },
             selected,
+            None,
             |ui, index, selected, focused| {
                 let tree_row = &rows[index];
                 let (rect, response) = ui.allocate_exact_size(
@@ -279,6 +280,7 @@ impl<'a> TreeTable<'a> {
                     let key_editing = editing.is_editing(index, 0);
                     let content = RowContent {
                         icon: tree_row.icon,
+                        icon_tone: tree_row.icon_tone,
                         label: if key_editing { "" } else { &tree_row.label },
                         secondary: tree_row.secondary.as_deref().filter(|_| !key_editing),
                         ..RowContent::new("")
