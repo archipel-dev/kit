@@ -94,6 +94,15 @@ impl Default for WorkbenchState {
 }
 
 type Content<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
+
+/// What the tool windows report while they draw, applied to the state afterwards, and the
+/// tab selection they draw with.
+struct Signals {
+    hide: Cell<Option<WorkbenchRegion>>,
+    maximize: Cell<Option<WorkbenchRegion>>,
+    tab: Cell<Option<(WorkbenchRegion, usize)>>,
+    tabs: [usize; 3],
+}
 struct Region<'a> {
     title: String,
     content: Option<Content<'a>>,
@@ -433,10 +442,12 @@ impl<'a> Workbench<'a> {
             center_padded,
             ..
         } = self;
-        let hide = Cell::new(None);
-        let maximize = Cell::new(None);
-        let tab_pick = Cell::new(None);
-        let tabs_now = state.tool_tabs;
+        let signals = Signals {
+            hide: Cell::new(None),
+            maximize: Cell::new(None),
+            tab: Cell::new(None),
+            tabs: state.tool_tabs,
+        };
         let full = ui.available_rect_before_wrap();
         ui.painter()
             .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
@@ -522,12 +533,7 @@ impl<'a> Workbench<'a> {
                         id,
                         maximized.unwrap_or(WorkbenchRegion::Left),
                         true,
-                        &hide,
-                        &maximize,
-                        (
-                            tabs_now[region_index(maximized.unwrap_or(WorkbenchRegion::Left))],
-                            &tab_pick,
-                        ),
+                        &signals,
                     );
                     return;
                 }
@@ -571,13 +577,7 @@ impl<'a> Workbench<'a> {
                                                     id,
                                                     WorkbenchRegion::Right,
                                                     false,
-                                                    &hide,
-                                                    &maximize,
-                                                    (
-                                                        tabs_now
-                                                            [region_index(WorkbenchRegion::Right)],
-                                                        &tab_pick,
-                                                    ),
+                                                    &signals,
                                                 );
                                             }
                                         },
@@ -609,18 +609,7 @@ impl<'a> Workbench<'a> {
                                 ui,
                                 |ui| {
                                     if ui.is_visible() {
-                                        region.show(
-                                            ui,
-                                            id,
-                                            WorkbenchRegion::Left,
-                                            false,
-                                            &hide,
-                                            &maximize,
-                                            (
-                                                tabs_now[region_index(WorkbenchRegion::Left)],
-                                                &tab_pick,
-                                            ),
-                                        );
+                                        region.show(ui, id, WorkbenchRegion::Left, false, &signals);
                                     }
                                 },
                                 middle,
@@ -642,15 +631,7 @@ impl<'a> Workbench<'a> {
                         .enabled(!auto_bottom)
                         .show(ui, main, |ui| {
                             if ui.is_visible() {
-                                region.show(
-                                    ui,
-                                    id,
-                                    WorkbenchRegion::Bottom,
-                                    false,
-                                    &hide,
-                                    &maximize,
-                                    (tabs_now[region_index(WorkbenchRegion::Bottom)], &tab_pick),
-                                );
+                                region.show(ui, id, WorkbenchRegion::Bottom, false, &signals);
                             }
                         });
                     if split.divider.changed() {
@@ -661,17 +642,17 @@ impl<'a> Workbench<'a> {
                 }
             })
             .response;
-        if let Some((region, tab)) = tab_pick.get() {
+        if let Some((region, tab)) = signals.tab.get() {
             state.tool_tabs[region_index(region)] = tab;
         }
-        if let Some(region) = hide.get() {
+        if let Some(region) = signals.hide.get() {
             match region {
                 WorkbenchRegion::Left => state.left_hidden = true,
                 WorkbenchRegion::Right => state.right_hidden = true,
                 WorkbenchRegion::Bottom => state.bottom_hidden = true,
             }
             state.maximized = None;
-        } else if let Some(region) = maximize.get() {
+        } else if let Some(region) = signals.maximize.get() {
             state.maximized = if maximized == Some(region) {
                 None
             } else {
@@ -711,10 +692,9 @@ impl<'a> Region<'a> {
         workbench: Id,
         region: WorkbenchRegion,
         maximized: bool,
-        hide: &Cell<Option<WorkbenchRegion>>,
-        maximize: &Cell<Option<WorkbenchRegion>>,
-        tab: (usize, &Cell<Option<(WorkbenchRegion, usize)>>),
+        signals: &Signals,
     ) {
+        let (hide, maximize) = (&signals.hide, &signals.maximize);
         let label = format!(
             "{} {}",
             if maximized { "Restore" } else { "Maximize" },
@@ -722,7 +702,7 @@ impl<'a> Region<'a> {
         );
         // As in the IntelliJ Islands UI, the header actions fade in while the pointer is
         // anywhere over the tool window (or focus is inside it) and fade out when it leaves.
-        let (mut selected, pick) = tab;
+        let mut selected = signals.tabs[region_index(region)];
         let before = selected;
         let tabs = self.tabs.unwrap_or_default();
         let mut panel = Panel::new(self.title);
@@ -755,7 +735,7 @@ impl<'a> Region<'a> {
                     });
             });
         if selected != before {
-            pick.set(Some((region, selected)));
+            signals.tab.set(Some((region, selected)));
             ui.ctx().request_repaint();
         }
         // Where the island is, to tell next frame whether the focus is in it.
