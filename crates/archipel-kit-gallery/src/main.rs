@@ -98,7 +98,12 @@ struct Gallery {
     last_action: String,
     columns: Vec<Column>,
     row: Option<usize>,
+    /// The sorted (data column, direction); columns can be reordered, so not a position.
     sort: Option<(usize, SortOrder)>,
+    /// The data column shown at each position of the table.
+    column_order: Vec<usize>,
+    /// Edited request texts of the table, by row.
+    requests: std::collections::HashMap<usize, String>,
     documents: Documents,
 }
 
@@ -271,6 +276,8 @@ impl Default for Gallery {
             ],
             row: None,
             sort: None,
+            column_order: vec![0, 1, 2, 3],
+            requests: Default::default(),
             documents: Documents::new(),
         }
     }
@@ -650,20 +657,34 @@ impl Gallery {
             _ => {}
         }
         if self.page == Page::Lists {
-            ui.add(SectionHeader::new("Virtualized table: 100 000 rows"));
+            ui.add(SectionHeader::new(
+                "Virtualized table: 100 000 rows, drag headers to reorder, edit requests",
+            ));
             let len = 100_000;
             let descending = self
                 .sort
                 .is_some_and(|(_, order)| order == SortOrder::Descending);
+            let order = self.column_order.clone();
+            let shown_sort = self
+                .sort
+                .and_then(|(data, order_)| Some((order.iter().position(|d| *d == data)?, order_)));
+            let requests = &self.requests;
             let out = Table::new("gallery-table", &mut self.columns, len, &mut self.row)
-                .sort(self.sort)
+                .sort(shown_sort)
+                .reorderable(true)
                 .height(220.0)
-                .show(ui, |row, col| {
+                .show(ui, |row, position| {
                     let n = if descending { len - 1 - row } else { row };
                     let status = [200, 201, 404, 200, 500, 304][n % 6];
-                    match col {
+                    match order[position] {
                         0 => Cell::new(n.to_string()).muted(),
-                        1 => Cell::new(format!("GET /api/users/{n}")),
+                        1 => Cell::new(
+                            requests
+                                .get(&n)
+                                .cloned()
+                                .unwrap_or_else(|| format!("GET /api/users/{n}")),
+                        )
+                        .editable(true),
                         2 => Cell::new(status.to_string()).tone(match status {
                             500.. => Tone::Error,
                             400.. => Tone::Warning,
@@ -672,11 +693,25 @@ impl Gallery {
                         _ => Cell::new(format!("{} ms", 12 + n * 37 % 300)).muted(),
                     }
                 });
-            if let Some(col) = out.sort_clicked {
+            if let Some(position) = out.sort_clicked {
+                let data = order[position];
                 self.sort = Some(match self.sort {
-                    Some((c, order)) if c == col => (col, order.reversed()),
-                    _ => (col, SortOrder::Ascending),
+                    Some((c, o)) if c == data => (data, o.reversed()),
+                    _ => (data, SortOrder::Ascending),
                 });
+            }
+            if let Some(edit) = out.edited {
+                let n = if descending {
+                    len - 1 - edit.row
+                } else {
+                    edit.row
+                };
+                self.requests.insert(n, edit.text);
+            }
+            // The table reports the new order; the gallery owns the columns and applies it.
+            if let Some(new) = out.column_order {
+                self.columns = new.iter().map(|&i| self.columns[i].clone()).collect();
+                self.column_order = new.iter().map(|&i| order[i]).collect();
             }
             ui.add(SectionHeader::new("Tree table: 100 000 rows, inline edit"));
             self.documents.show(ui);

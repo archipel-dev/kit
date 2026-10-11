@@ -763,3 +763,268 @@ fn tree_table_editing_snapshot() {
     }
     results.unwrap();
 }
+
+// ---- Table: inline edit and column reorder ----
+
+#[derive(Default)]
+struct EditableTable {
+    columns: Vec<Column>,
+    /// The data column shown at each position.
+    order: Vec<usize>,
+    selected: Option<usize>,
+    sort: Option<(usize, SortOrder)>,
+    urls: std::collections::HashMap<usize, String>,
+    edited: Vec<CellEdit>,
+    activated: Vec<usize>,
+    reordered: Vec<Vec<usize>>,
+    cursor: egui::CursorIcon,
+}
+
+fn editable_table_ui(ui: &mut egui::Ui, state: &mut EditableTable) {
+    let order = state.order.clone();
+    let urls = state.urls.clone();
+    let out = Table::new("requests", &mut state.columns, 10_000, &mut state.selected)
+        .sort(state.sort)
+        .reorderable(true)
+        .height(160.0)
+        .show(ui, |row, position| {
+            let data = order[position];
+            match (data, urls.get(&row)) {
+                (1, Some(url)) => Cell::new(url.as_str()).editable(true),
+                (1, None) => request_cell(row, 1).editable(true),
+                _ => request_cell(row, data),
+            }
+        });
+    if let Some(col) = out.sort_clicked {
+        state.sort = Some((col, SortOrder::Ascending));
+    }
+    if let Some(index) = out.activated {
+        state.activated.push(index);
+    }
+    if let Some(edit) = out.edited {
+        state.urls.insert(edit.row, edit.text.clone());
+        state.edited.push(edit);
+    }
+    // The caller owns the column order: apply what the table reports.
+    if let Some(new_order) = out.column_order {
+        state.columns = new_order
+            .iter()
+            .map(|&i| state.columns[i].clone())
+            .collect();
+        state.order = new_order.iter().map(|&i| state.order[i]).collect();
+        state.reordered.push(new_order);
+    }
+    state.cursor = archipel_kit::cursor::current(ui.ctx());
+}
+
+fn editable_table_state() -> EditableTable {
+    EditableTable {
+        columns: request_columns(),
+        order: vec![0, 1, 2, 3],
+        ..EditableTable::default()
+    }
+}
+
+fn editable_table_harness() -> testing::Harness<'static, EditableTable> {
+    let mut harness =
+        testing::harness_state(Theme::dark(), editable_table_state(), editable_table_ui);
+    harness.run();
+    harness
+}
+
+const GET_ROW: &str = "GET, /api/users/1, 201, 49 ms";
+
+#[test]
+fn table_header_drag_reports_the_new_column_order() {
+    let mut harness = editable_table_harness();
+    let from = harness.get_by_label("Method").rect().center();
+    let to = harness.get_by_label("Status").rect().center();
+    harness.hover_at(from);
+    harness.run();
+    assert_eq!(harness.state().cursor, egui::CursorIcon::Grab);
+    harness.drag_at(from);
+    harness.run();
+    harness.hover_at(to);
+    harness.run();
+    harness.drop_at(to);
+    harness.run();
+    // Method moved to Status's place: URL, Status, Method, Time.
+    assert_eq!(harness.state().reordered, vec![vec![1, 2, 0, 3]]);
+    assert_eq!(harness.state().order, vec![1, 2, 0, 3]);
+    // The caller applied it: the headers and the cells follow.
+    assert!(
+        harness
+            .query_by_label("/api/users/1, 201, GET, 49 ms")
+            .is_some()
+    );
+    // A drop on its own header changes nothing, and sorting by click still works.
+    harness.get_by_label("Status").click();
+    harness.run();
+    assert_eq!(harness.state().sort, Some((1, SortOrder::Ascending)));
+    assert_eq!(harness.state().reordered.len(), 1);
+}
+
+#[test]
+fn table_without_reorderable_keeps_headers_as_before() {
+    let mut harness = table_harness();
+    let from = harness.get_by_label("Method").rect().center();
+    let to = harness.get_by_label("Status").rect().center();
+    harness.hover_at(from);
+    harness.run();
+    assert_eq!(
+        harness.get_by_label("Method").rect().center(),
+        from,
+        "headers stay put"
+    );
+    harness.drag_at(from);
+    harness.run();
+    harness.hover_at(to);
+    harness.run();
+    harness.drop_at(to);
+    harness.run();
+    assert_eq!(harness.state().sort, None);
+}
+
+#[test]
+fn table_columns_still_resize_when_reorderable() {
+    let mut harness = editable_table_harness();
+    let method = harness.get_by_label("Method").rect();
+    let edge = egui::pos2(method.right(), method.center().y);
+    harness.hover_at(edge);
+    harness.run();
+    assert_eq!(harness.state().cursor, egui::CursorIcon::ResizeColumn);
+    harness.drag_at(edge);
+    harness.run();
+    harness.hover_at(edge + egui::vec2(30.0, 0.0));
+    harness.run();
+    harness.drop_at(edge + egui::vec2(30.0, 0.0));
+    harness.run();
+    assert!((harness.state().columns[0].width - 100.0).abs() < 1.0);
+    assert!(harness.state().reordered.is_empty());
+}
+
+#[test]
+fn table_f2_and_enter_edit_the_clicked_cell_and_enter_commits() {
+    let mut harness = editable_table_harness();
+    let row = harness.get_by_label(GET_ROW).rect();
+    // The URL column starts at 4 + 70: click inside it, then F2.
+    click_at_table(&mut harness, egui::pos2(row.left() + 120.0, row.center().y));
+    harness.run();
+    harness.key_press(Key::F2);
+    harness.run();
+    harness.get_by_label("Edit URL").type_text("?x=1");
+    harness.run();
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(
+        harness.state().edited,
+        vec![CellEdit {
+            row: 1,
+            column: 1,
+            text: "/api/users/1?x=1".into()
+        }]
+    );
+    assert!(harness.state().activated.is_empty());
+    assert!(harness.query_by_label("Edit URL").is_none());
+    // Escape cancels.
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert!(harness.query_by_label("Edit URL").is_some());
+    harness.key_press(Key::Escape);
+    harness.run();
+    assert_eq!(harness.state().edited.len(), 1);
+}
+
+fn click_at_table(harness: &mut testing::Harness<'_, EditableTable>, pos: egui::Pos2) {
+    harness.hover_at(pos);
+    harness.run();
+    for pressed in [true, false] {
+        harness.event(egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        });
+    }
+}
+
+#[test]
+fn table_double_click_edits_and_the_field_uses_the_text_cursor() {
+    let mut harness = editable_table_harness();
+    let row = harness.get_by_label(GET_ROW).rect();
+    let at = egui::pos2(row.left() + 120.0, row.center().y);
+    click_at_table(&mut harness, at);
+    click_at_table(&mut harness, at);
+    harness.run();
+    assert!(harness.state().activated.is_empty());
+    harness.get_by_label("Edit URL").hover();
+    harness.run();
+    assert_eq!(harness.state().cursor, egui::CursorIcon::Text);
+    harness.get_by_label("Edit URL").type_text("!");
+    harness.run();
+    harness.get_by_label("Method").hover();
+    harness.run();
+    harness.key_press(Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().edited[0].text, "/api/users/1!");
+}
+
+#[test]
+fn table_with_only_non_editable_cells_is_unchanged() {
+    let mut harness = table_harness();
+    harness
+        .get_by_label("GET, /api/users/1, 201, 49 ms")
+        .click();
+    harness.run();
+    harness.key_press(Key::F2);
+    harness.run();
+    assert!(harness.query_by_label_contains("Edit ").is_none());
+}
+
+#[test]
+fn table_editing_snapshot() {
+    let mut results = testing::SnapshotResults::new();
+    for theme in [Theme::dark(), Theme::light()] {
+        let suffix = if theme.dark { "dark" } else { "light" };
+        let egui_theme = if theme.dark {
+            egui::Theme::Dark
+        } else {
+            egui::Theme::Light
+        };
+        let mut pending = Some(theme);
+        let state = EditableTable {
+            selected: Some(1),
+            ..editable_table_state()
+        };
+        let mut harness = testing::builder::<EditableTable>()
+            .with_theme(egui_theme)
+            .with_pixels_per_point(testing::SNAPSHOT_SCALE)
+            .build_ui_state(
+                move |ui, state| {
+                    if let Some(theme) = pending.take() {
+                        archipel_kit::install(ui.ctx(), theme);
+                        ui.ctx().request_repaint();
+                        return;
+                    }
+                    archipel_kit::parts::Surface::Island
+                        .frame(ui.ctx())
+                        .show(ui, |ui| {
+                            ui.set_width(420.0);
+                            editable_table_ui(ui, state);
+                        });
+                },
+                state,
+            );
+        harness.run_ok();
+        harness.get_by_label("Table").focus();
+        harness.run();
+        harness.key_press(Key::F2);
+        harness.run();
+        harness.fit_contents();
+        results.add(harness.try_snapshot_options(
+            format!("table_edit.{suffix}"),
+            &testing::SnapshotOptions::new().output_path(common::IMG),
+        ));
+    }
+    results.unwrap();
+}

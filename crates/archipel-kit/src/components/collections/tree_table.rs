@@ -1,6 +1,6 @@
 //! `TreeTable`: a tree whose rows have columns.
 
-use super::edit::{self, Outcome};
+use super::edit;
 use super::{
     Cell, CollectionResponse, Column, DrawnRow, SortOrder, Spec, TreeRow, apply_tree_key,
     collection, header, paint_cell,
@@ -143,11 +143,10 @@ impl<'a> TreeTable<'a> {
         } = self;
         let ctx = ui.ctx().clone();
         let colors = Theme::colors(&ctx);
-        let sort_clicked = header(ui, id, columns, sort);
+        let (sort_clicked, _) = header(ui, id, columns, sort, false);
         let columns: &[Column] = columns;
-        let editing = edit::current(&ctx, id);
-        let mut editor_drawn = false;
-        let mut outcome = None;
+        let mut editing = edit::Frame::new(&ctx, id);
+        let was_editing = edit::current(&ctx, id).is_some();
 
         let (mut response, keys) = collection(
             ui,
@@ -257,7 +256,6 @@ impl<'a> TreeTable<'a> {
                 if ui.is_rect_visible(rect) {
                     let state = State::of(&response).selected(selected).inactive(!focused);
                     common::row_pill(ui.painter(), rect, state.row_fill(&colors));
-                    let editing_here = |col: usize| editing == Some((index, col));
 
                     // The key column: chevron, icon and key (or its editor).
                     let key_rect = column_rects[0];
@@ -278,7 +276,7 @@ impl<'a> TreeTable<'a> {
                         } else {
                             0.0
                         };
-                    let key_editing = editing_here(0);
+                    let key_editing = editing.is_editing(index, 0);
                     let content = RowContent {
                         icon: tree_row.icon,
                         label: if key_editing { "" } else { &tree_row.label },
@@ -291,20 +289,12 @@ impl<'a> TreeTable<'a> {
                             pos2(label_x - super::CELL_PADDING, key_rect.top()),
                             key_rect.right_bottom(),
                         );
-                        editor_drawn = true;
-                        outcome = Some(edit::show(ui, id, field, columns[0].title(), false));
+                        editing.show(ui, field, columns[0].title(), false);
                     }
 
                     for ((col, column), cell) in columns.iter().enumerate().skip(1).zip(cells) {
-                        if editing_here(col) {
-                            editor_drawn = true;
-                            outcome = Some(edit::show(
-                                ui,
-                                id,
-                                column_rects[col],
-                                column.title(),
-                                column.mono,
-                            ));
+                        if editing.is_editing(index, col) {
+                            editing.show(ui, column_rects[col], column.title(), column.mono);
                         } else {
                             paint_cell(ui, column_rects[col], column, cell, selected);
                         }
@@ -318,49 +308,25 @@ impl<'a> TreeTable<'a> {
             },
         );
 
-        // A row scrolled out of view takes its editor with it: cancel rather than commit
-        // something the user can't see.
-        if editing.is_some() && !editor_drawn {
-            edit::end(&ctx, id, false);
-        }
-        match outcome {
-            Some(Outcome::Commit(edited, refocus)) => {
-                edit::end(&ctx, id, refocus);
-                response.edited = Some(edited);
-            }
-            Some(Outcome::Cancel) => edit::end(&ctx, id, true),
-            Some(Outcome::Open) | None => {}
-        }
-
-        // F2 and Enter start editing the active column of the selected row.
-        if editing.is_none()
-            && (keys.f2 || keys.enter)
-            && let Some(row) = *selected
-        {
-            let mut editable = |col: usize| match col {
-                0 => rows[row].editable,
-                _ => cell(row, col).editable,
-            };
-            let active = edit::active_column(&ctx, id).filter(|col| *col < columns.len());
-            let target = active
-                .filter(|col| editable(*col))
-                .or_else(|| (0..columns.len()).find(|col| editable(*col)));
-            if let Some(col) = target {
-                let text = match col {
-                    0 => rows[row].label.clone(),
-                    _ => cell(row, col).text,
-                };
-                edit::begin(&ctx, id, row, col, &text);
-                if keys.enter {
-                    response.activated = None;
+        editing.finish(
+            &ctx,
+            &mut response,
+            &keys,
+            *selected,
+            columns.len(),
+            |row, col| match col {
+                0 => (rows[row].editable, rows[row].label.clone()),
+                _ => {
+                    let cell = cell(row, col);
+                    (cell.editable, cell.text)
                 }
-            }
-        }
+            },
+        );
 
         apply_tree_key(
             rows,
             selected,
-            keys.horizontal.filter(|_| editing.is_none()),
+            keys.horizontal.filter(|_| !was_editing),
             &mut response,
         );
         response.sort_clicked = sort_clicked;
