@@ -12,6 +12,9 @@ use archipel_kit::components::{
 use archipel_kit::icons::{Category, Language, SymbolKind};
 use archipel_kit::{Glyph, Icon, Theme, egui, tokens};
 
+/// Gap between islands, in whole points for `egui::Margin`.
+const GAP: i8 = tokens::size::ISLAND_GAP as i8;
+
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -160,10 +163,10 @@ impl Gallery {
                 egui::Frame::new()
                     .fill(colors.frame)
                     .inner_margin(egui::Margin {
-                        left: 6,
-                        right: 2,
-                        top: 2,
-                        bottom: 6,
+                        left: GAP,
+                        right: GAP / 2,
+                        top: 0,
+                        bottom: GAP,
                     }),
             )
             .show(ctx, |ui| {
@@ -186,10 +189,10 @@ impl Gallery {
                 egui::Frame::new()
                     .fill(colors.frame)
                     .inner_margin(egui::Margin {
-                        left: 2,
-                        right: 6,
-                        top: 2,
-                        bottom: 6,
+                        left: GAP / 2,
+                        right: GAP,
+                        top: 0,
+                        bottom: GAP,
                     }),
             )
             .show(ctx, |ui| {

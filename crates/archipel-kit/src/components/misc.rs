@@ -3,10 +3,10 @@
 use super::{Button, common};
 use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
-use crate::tokens::{size, typography};
+use crate::tokens::{radius, size, typography};
 use egui::{
-    Align, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo, WidgetType,
-    pos2, vec2,
+    Align, CornerRadius, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo,
+    WidgetType, pos2, vec2,
 };
 
 /// A text link: underlined on hover, pointer cursor.
@@ -115,9 +115,12 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
         let mut changed = false;
         let inner = ui.add_enabled_ui(self.enabled, |ui| {
             ui.spacing_mut().interact_size.y = size::CONTROL_HEIGHT;
-            ui.spacing_mut().button_padding = vec2(8.0, 5.0);
-            ui.style_mut().visuals.widgets.inactive.bg_fill = colors.field;
-            ui.style_mut().visuals.widgets.inactive.weak_bg_fill = colors.field;
+            ui.spacing_mut().button_padding = vec2(9.0, 5.0);
+            let visuals = &mut ui.style_mut().visuals.widgets;
+            for state in [&mut visuals.inactive, &mut visuals.hovered] {
+                state.bg_fill = colors.combo;
+                state.weak_bg_fill = colors.combo;
+            }
             egui::ComboBox::from_id_salt(self.id)
                 .selected_text(self.selected.to_string())
                 .width(self.width)
@@ -130,7 +133,7 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                         Glyph::ChevronDown
                     };
                     let color = if ui.is_enabled() {
-                        colors.text_secondary
+                        colors.combo_arrow
                     } else {
                         colors.text_disabled
                     };
@@ -143,12 +146,21 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                 })
                 .show_ui(ui, |ui| {
                     ui.set_min_width(self.width);
+                    ui.spacing_mut().item_spacing.y = 0.0;
                     for option in &self.options {
                         let selected = option == self.selected;
-                        if ui.selectable_label(selected, option.to_string()).clicked() && !selected
-                        {
-                            *self.selected = option.clone();
-                            changed = true;
+                        // Rows like the rest of the kit: a rounded pill for hover and
+                        // selection, inset from the popup edge.
+                        let row = super::ListRow::new(option.to_string())
+                            .flat(true)
+                            .selected(selected)
+                            .show(ui);
+                        if row.response.clicked() {
+                            if !selected {
+                                *self.selected = option.clone();
+                                changed = true;
+                            }
+                            ui.close();
                         }
                     }
                 })
@@ -258,7 +270,11 @@ impl Widget for MenuItem {
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
             if self.enabled && response.hovered() {
-                painter.rect_filled(rect, 4.0, colors.selection);
+                painter.rect_filled(
+                    rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0)),
+                    CornerRadius::same(radius::ROW),
+                    colors.selection,
+                );
             }
             let icon_rect = Rect::from_min_size(
                 pos2(rect.left() + 4.0, rect.center().y - 8.0),

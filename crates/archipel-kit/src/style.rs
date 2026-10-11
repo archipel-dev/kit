@@ -28,6 +28,10 @@ pub fn install(ctx: &egui::Context, theme: Theme) {
         ]
         .into();
         style.spacing.item_spacing = egui::vec2(6.0, 4.0);
+        // Popups and menus: a small vertical inset, rows reach the sides (their pills inset
+        // themselves), like the reference IDE's popup lists.
+        style.spacing.menu_margin = egui::Margin::symmetric(0, 6);
+        style.spacing.window_margin = egui::Margin::same(size::DIALOG_PADDING as i8);
         style.spacing.button_padding = egui::vec2(8.0, 3.0);
         style.spacing.interact_size.y = size::ROW_HEIGHT;
         style.spacing.scroll = egui::style::ScrollStyle::floating();

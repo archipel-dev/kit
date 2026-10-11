@@ -64,7 +64,7 @@ impl Widget for Spinner {
             ui.painter().circle_stroke(
                 rect.center(),
                 radius,
-                Stroke::new(stroke.width, colors.separator),
+                Stroke::new(stroke.width, colors.progress_track),
             );
             let start = time * TAU * 0.8;
             let points: Vec<_> = (0..=24)
@@ -131,7 +131,8 @@ impl Widget for ProgressBar {
         });
         let track = Rect::from_center_size(outer.center(), vec2(width, 4.0));
         let corner = CornerRadius::same(radius::PILL);
-        ui.painter().rect_filled(track, corner, colors.separator);
+        ui.painter()
+            .rect_filled(track, corner, colors.progress_track);
         let bar = match self.fraction {
             Some(fraction) => Rect::from_min_size(track.min, vec2(width * fraction, 4.0)),
             None => {

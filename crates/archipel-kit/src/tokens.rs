@@ -35,8 +35,8 @@ pub mod size {
     pub const SECTION_SPACING: f32 = 8.0;
     /// Padding inside dialogs, popups and banners.
     pub const DIALOG_PADDING: f32 = 14.0;
-    /// Gap between islands.
-    pub const ISLAND_GAP: f32 = 2.0;
+    /// Gap between islands (the frame shows between them).
+    pub const ISLAND_GAP: f32 = 4.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
 
@@ -52,8 +52,12 @@ pub mod radius {
     pub const ISLAND: u8 = 10;
     /// Popups, menus, dialogs and notifications.
     pub const POPUP: u8 = 8;
-    /// Buttons, inputs, banners.
+    /// Buttons and inputs.
     pub const CONTROL: u8 = 4;
+    /// Banners and callouts.
+    pub const BANNER: u8 = 6;
+    /// Editor tab underline ends.
+    pub const UNDERLINE: u8 = 2;
     /// Toolbar icon buttons.
     pub const ICON_BUTTON: u8 = 6;
     /// Row selection pills.

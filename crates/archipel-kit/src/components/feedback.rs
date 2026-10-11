@@ -109,7 +109,7 @@ impl Banner {
         egui::Frame::new()
             .fill(tint.background)
             .stroke(Stroke::new(1.0_f32, tint.border))
-            .corner_radius(CornerRadius::same(radius::CONTROL))
+            .corner_radius(CornerRadius::same(radius::BANNER))
             .inner_margin(egui::Margin::symmetric(10, 6))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());

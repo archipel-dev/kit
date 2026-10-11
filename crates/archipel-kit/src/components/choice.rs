@@ -142,6 +142,8 @@ impl Widget for Checkbox<'_> {
                         1.0_f32,
                         if enabled && response.hovered() {
                             colors.text_secondary
+                        } else if enabled {
+                            colors.control_border
                         } else {
                             colors.border
                         },
@@ -248,6 +250,8 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
             } else {
                 let outline = if self.enabled && response.hovered() {
                     colors.text_secondary
+                } else if self.enabled {
+                    colors.control_border
                 } else {
                     colors.border
                 };
@@ -321,22 +325,31 @@ impl Widget for Toggle<'_> {
         if ui.is_rect_visible(response.rect) {
             let t = ui.ctx().animate_bool_responsive(response.id, on);
             let painter = ui.painter();
-            let track = if !self.enabled {
-                colors.accent_disabled
+            let (track, outline, knob) = if !self.enabled {
+                (
+                    colors.accent_disabled,
+                    colors.accent_disabled,
+                    colors.text_disabled,
+                )
             } else {
-                colors.border.lerp_to_gamma(colors.accent, t)
+                (
+                    colors.toggle_off.lerp_to_gamma(colors.toggle_on, t),
+                    colors.toggle_off_knob.lerp_to_gamma(colors.toggle_on, t),
+                    colors.toggle_off_knob.lerp_to_gamma(Color32::WHITE, t),
+                )
             };
-            painter.rect_filled(rect, CornerRadius::same(8), track);
+            painter.rect(
+                rect,
+                CornerRadius::same(8),
+                track,
+                Stroke::new(1.0_f32, outline),
+                StrokeKind::Inside,
+            );
             if response.has_focus() {
                 common::focus_ring(painter, rect, 8, &colors);
             }
             let knob_x = egui::lerp(rect.left() + 8.0..=rect.right() - 8.0, t);
-            let knob = if self.enabled {
-                Color32::WHITE
-            } else {
-                colors.text_disabled
-            };
-            painter.circle_filled(pos2(knob_x, rect.center().y), 6.0, knob);
+            painter.circle_filled(pos2(knob_x, rect.center().y), 5.0, knob);
             paint_label(ui, &response, rect, galley, self.enabled);
         }
         response

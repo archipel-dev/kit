@@ -55,6 +55,7 @@ pub struct ListRow {
     label_color: Option<Color32>,
     depth: usize,
     expanded: Option<bool>,
+    flat: bool,
     selected: bool,
     enabled: bool,
 }
@@ -70,6 +71,7 @@ impl ListRow {
             label_color: None,
             depth: 0,
             expanded: None,
+            flat: false,
             selected: false,
             enabled: true,
         }
@@ -109,6 +111,13 @@ impl ListRow {
     /// reserves its space so leaves align with their siblings.
     pub fn expanded(mut self, expanded: Option<bool>) -> Self {
         self.expanded = expanded;
+        self
+    }
+
+    /// A row of a flat list (popup lists, results): no expander column, so the text
+    /// starts at the content inset.
+    pub fn flat(mut self, flat: bool) -> Self {
+        self.flat = flat;
         self
     }
 
@@ -153,9 +162,12 @@ impl ListRow {
                 rect.left() + size::indent(self.depth) - size::ROW_PILL_INSET,
                 rect.center().y - size::CHEVRON_COLUMN / 2.0,
             ),
-            vec2(size::CHEVRON_COLUMN, size::CHEVRON_COLUMN),
+            vec2(
+                if self.flat { 0.0 } else { size::CHEVRON_COLUMN },
+                size::CHEVRON_COLUMN,
+            ),
         );
-        if let Some(expanded) = self.expanded {
+        if let Some(expanded) = self.expanded.filter(|_| !self.flat) {
             let chevron_response =
                 ui.interact(chevron.expand(2.0), response.id.with("chevron"), sense);
             toggled = chevron_response.clicked() || response.double_clicked();
@@ -174,7 +186,7 @@ impl ListRow {
             let fill = if self.selected {
                 colors.selection
             } else if self.enabled && response.hovered() {
-                colors.hover
+                colors.row_hover
             } else {
                 Color32::TRANSPARENT
             };

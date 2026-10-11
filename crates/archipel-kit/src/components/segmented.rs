@@ -74,7 +74,7 @@ impl<T: PartialEq + Clone> Widget for SegmentedControl<'_, T> {
         painter.rect(
             outer,
             CornerRadius::same(radius::CONTROL + 2),
-            colors.frame,
+            Color32::TRANSPARENT,
             Stroke::new(1.0_f32, colors.border),
             StrokeKind::Inside,
         );
@@ -102,14 +102,14 @@ impl<T: PartialEq + Clone> Widget for SegmentedControl<'_, T> {
                 WidgetInfo::selected(WidgetType::RadioButton, self.enabled, selected, label)
             });
             let fill = if selected {
-                colors.island
+                colors.segment_selected
             } else if self.enabled {
                 common::flat_fill(&segment, &colors)
             } else {
                 Color32::TRANSPARENT
             };
             let stroke = if selected {
-                Stroke::new(1.0_f32, colors.border)
+                Stroke::new(1.0_f32, colors.segment_selected_border)
             } else {
                 Stroke::NONE
             };
@@ -241,9 +241,15 @@ impl<'a> TabBar<'a> {
                 let painter = ui.painter().clone();
                 if selected {
                     painter.rect_filled(rect, CornerRadius::ZERO, colors.tab_selected);
-                    let underline =
-                        Rect::from_min_max(pos2(rect.left(), rect.bottom() - 2.0), rect.max);
-                    painter.rect_filled(underline, CornerRadius::ZERO, colors.tab_selected_border);
+                    let underline = Rect::from_min_max(
+                        pos2(rect.left() + 2.0, rect.bottom() - 3.0),
+                        pos2(rect.right() - 2.0, rect.bottom()),
+                    );
+                    painter.rect_filled(
+                        underline,
+                        CornerRadius::same(radius::UNDERLINE),
+                        colors.tab_selected_border,
+                    );
                 } else if response.hovered() {
                     painter.rect_filled(rect, CornerRadius::ZERO, colors.hover);
                 }
@@ -254,10 +260,11 @@ impl<'a> TabBar<'a> {
                     icons::paint(&painter, icon_rect, icon, colors.icon);
                     x += icon_w;
                 }
+                // Unselected tabs are dimmed (75 %), so the current file stands out.
                 let text_color = if selected {
                     colors.text_strong
                 } else {
-                    colors.text
+                    colors.text.gamma_multiply(0.75)
                 };
                 let text_width = galley.size().x;
                 common::text_left(&painter, rect, x, galley, text_color);

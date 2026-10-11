@@ -111,6 +111,24 @@ pub struct Colors {
     pub tab_selected_border: Color32,
     /// Fill of a switched-on toggle.
     pub toggle_on: Color32,
+    /// Track of a switched-off toggle.
+    pub toggle_off: Color32,
+    /// Outline and knob of a switched-off toggle.
+    pub toggle_off_knob: Color32,
+    /// Outline of unchecked checkboxes and radio buttons.
+    pub control_border: Color32,
+    /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
+    pub row_hover: Color32,
+    /// Fill of non-editable dropdowns.
+    pub combo: Color32,
+    /// Dropdown arrow.
+    pub combo_arrow: Color32,
+    /// Fill of the selected segment of a segmented control.
+    pub segment_selected: Color32,
+    /// Outline of the selected segment.
+    pub segment_selected_border: Color32,
+    /// Track of progress bars.
+    pub progress_track: Color32,
     /// Counter badge fill.
     pub counter: Color32,
     /// Counter badge text.
@@ -240,9 +258,18 @@ impl Theme {
                 tab_selected: rgb(0x233558),
                 tab_selected_border: rgb(0x2E4D89),
                 toggle_on: rgb(0x338555),
+                toggle_off: rgb(0x191A1C),
+                toggle_off_knob: rgb(0x5F6269),
+                control_border: rgb(0x6F737A),
+                row_hover: rgba(0xFFFFFF10),
+                combo: rgb(0x26282C),
+                combo_arrow: rgb(0x9A9DA1),
+                segment_selected: rgb(0x26282C),
+                segment_selected_border: rgb(0x5F6269),
+                progress_track: rgb(0x40434A),
                 counter: rgb(0x73767C),
                 counter_text: rgb(0x000000),
-                tag: rgb(0x33353B),
+                tag: rgb(0x26282C),
                 error: rgb(0xF57E84),
                 warning: rgb(0xD59637),
                 success: rgb(0x6DB083),
@@ -328,6 +355,15 @@ impl Theme {
                 tab_selected: rgb(0xE3EBFE),
                 tab_selected_border: rgb(0xA7C5FF),
                 toggle_on: rgb(0x4E9D6C),
+                toggle_off: rgb(0xF7F8F9),
+                toggle_off_knob: rgb(0xC3C5CB),
+                control_border: rgb(0xA8ADBD),
+                row_hover: rgba(0x00000008),
+                combo: rgb(0xFFFFFF),
+                combo_arrow: rgb(0x6E6E6E),
+                segment_selected: rgb(0xFFFFFF),
+                segment_selected_border: rgb(0xB5B7BD),
+                progress_track: rgb(0xDDDFE4),
                 counter: rgb(0x8B8E94),
                 counter_text: rgb(0xFFFFFF),
                 tag: rgb(0xEBECF0),
