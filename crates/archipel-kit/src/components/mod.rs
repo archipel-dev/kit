@@ -20,6 +20,7 @@ mod choice;
 pub mod code;
 mod collections;
 pub(crate) mod common;
+mod completion;
 mod feedback;
 mod form;
 mod icon_button;
@@ -47,6 +48,7 @@ pub use collections::{
     Cell, CellEdit, CollectionResponse, Column, SortOrder, Table, Tree, TreeRow, TreeTable,
     VirtualList,
 };
+pub use completion::{Completer, Completion, Completions};
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
 pub use form::{FieldLabel, Form, FormUi};
 pub use icon_button::IconButton;
@@ -62,7 +64,7 @@ pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
 pub use status_bar::{Breadcrumbs, BreadcrumbsResponse, StatusBarItem};
 pub use stripe::{StripeButton, ToolStripe};
-pub use text_field::{Completer, Completion, Completions, TextField, TextFieldOutput};
+pub use text_field::{TextField, TextFieldOutput};
 pub use toolbar::ToolbarButton;
 pub use window::{WindowChrome, WindowToolbar};
 pub use workbench::{Workbench, WorkbenchPlace, WorkbenchRegion, WorkbenchState};

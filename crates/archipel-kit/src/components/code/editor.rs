@@ -66,6 +66,7 @@ pub struct CodeEditor<'a> {
     height: Option<f32>,
     id: Option<Id>,
     config: Config,
+    completer: Option<&'a dyn super::super::Completer>,
 }
 
 /// How typing behaves.
@@ -91,6 +92,7 @@ impl<'a> CodeEditor<'a> {
             enabled: true,
             height: None,
             id: None,
+            completer: None,
             config: Config {
                 tab_width: 4,
                 use_tabs: false,
@@ -99,6 +101,15 @@ impl<'a> CodeEditor<'a> {
                 tab_indents: true,
             },
         }
+    }
+
+    /// Offers completions while typing, in a list under the caret (fields of a GraphQL
+    /// schema, keywords). <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it explicitly; while it is
+    /// open <kbd>Up</kbd>/<kbd>Down</kbd> move, <kbd>Enter</kbd> or <kbd>Tab</kbd> insert
+    /// and <kbd>Esc</kbd> closes. See [`TextField::completer`](super::super::TextField::completer).
+    pub fn completer(mut self, completer: &'a dyn super::super::Completer) -> Self {
+        self.completer = Some(completer);
+        self
     }
 
     /// The accessible name of the editor ("Request body").
@@ -231,6 +242,9 @@ impl Widget for CodeEditor<'_> {
         let focused = enabled && ctx.memory(|m| m.has_focus(id));
         let mut find = FindState::load(&ctx, id);
         find.keys(ui, focused);
+        // An open completion list takes its keys first: Enter inserts, it does not indent.
+        let (list, _) =
+            super::super::completion::List::begin(ui, id, focused && self.completer.is_some());
         let mut edited = false;
         if focused {
             edited = edit_keys(ui, id, self.text, config);
@@ -298,6 +312,7 @@ impl Widget for CodeEditor<'_> {
         let rows_in_view = (area.height() / line_height).ceil() as usize;
         let jump = std::mem::take(&mut find.jump);
         let mut response = None;
+        let mut caret = None;
         desktop(egui::ScrollArea::new([!wrap, true]))
             .id_salt(id.with("scroll"))
             .auto_shrink(false)
@@ -418,11 +433,22 @@ impl Widget for CodeEditor<'_> {
                         line += 1;
                     }
                 }
+                caret = output.cursor_range.map(|range| {
+                    let r = galley.pos_from_cursor(range.primary);
+                    let rect = Rect::from_min_max(
+                        pos2(r.min.x, r.min.y) + origin.to_vec2(),
+                        pos2(r.min.x + 1.0, r.max.y) + origin.to_vec2(),
+                    );
+                    (range.primary.index, rect)
+                });
                 response = Some(output.response);
             });
         let mut response = response.expect("scroll area ran its content");
         if edited {
             response.mark_changed();
+        }
+        if let Some(completer) = self.completer {
+            list.end(ui, completer, self.text, &mut response, caret);
         }
 
         // Gutter outside the scroll area, so sideways scrolling leaves it in place.

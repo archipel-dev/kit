@@ -133,3 +133,79 @@ fn snapshot() {
         },
     );
 }
+
+/// Fields of a query: the word before the caret, completed with arguments when they need one.
+fn fields(text: &str, caret: usize) -> Option<Completions> {
+    let before: String = text.chars().take(caret).collect();
+    let word_start = before
+        .char_indices()
+        .rev()
+        .take_while(|(_, c)| c.is_alphanumeric())
+        .last()
+        .map_or(caret, |(i, _)| before[..i].chars().count());
+    let typed = &before[before
+        .char_indices()
+        .nth(word_start)
+        .map_or(before.len(), |(i, _)| i)..];
+    Some(Completions {
+        start: word_start,
+        end: caret,
+        items: [("user", "user(id: )", Some(9)), ("users", "users", None)]
+            .into_iter()
+            .filter(|(name, _, _)| name.starts_with(typed))
+            .map(|(name, insert, caret)| {
+                let item = Completion::new(name, insert).detail("User");
+                match caret {
+                    Some(c) => item.caret(c),
+                    None => item,
+                }
+            })
+            .collect(),
+    })
+}
+
+#[test]
+fn code_editor_completes_and_places_the_caret_inside() {
+    use archipel_kit::components::CodeEditor;
+    let mut h = testing::harness_state(Theme::dark(), String::from("query {\n  "), |ui, text| {
+        ui.add(
+            CodeEditor::new(text)
+                .label("Query")
+                .height(160.0)
+                .completer(&fields),
+        );
+    });
+    h.get_by_label("Query").focus();
+    h.run();
+    h.key_press_modifiers(archipel_kit::egui::Modifiers::CTRL, Key::End);
+    h.run();
+    h.get_by_label("Query").type_text("us");
+    h.run();
+    assert!(h.query_by_label_contains("users").is_some(), "list is open");
+    h.key_press(Key::Enter);
+    h.run();
+    assert_eq!(h.state(), "query {\n  user(id: )");
+    // The caret is between the parentheses.
+    h.get_by_label("Query").type_text("7");
+    h.run();
+    assert_eq!(h.state(), "query {\n  user(id: 7)");
+}
+
+#[test]
+fn ctrl_space_opens_the_list_in_a_code_editor() {
+    use archipel_kit::components::CodeEditor;
+    let mut h = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
+        ui.add(
+            CodeEditor::new(text)
+                .label("Query")
+                .height(160.0)
+                .completer(&fields),
+        );
+    });
+    h.get_by_label("Query").focus();
+    h.run();
+    assert!(h.query_by_label_contains("users").is_none());
+    h.key_press_modifiers(archipel_kit::egui::Modifiers::CTRL, Key::Space);
+    h.run();
+    assert!(h.query_by_label_contains("users").is_some());
+}

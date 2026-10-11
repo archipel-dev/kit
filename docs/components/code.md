@@ -109,6 +109,7 @@ it needs. Folding looks at brackets and `"` strings, so it suits JSON and JSON-l
 | `.tab_indents(bool)` | <kbd>Tab</kbd> indents (default); off, it moves focus (for forms). |
 | `.auto_indent(bool)` | <kbd>Enter</kbd> keeps the line's indentation (default on). |
 | `.bracket_pairing(bool)` | Inserts closing brackets and quotes (default on). |
+| `.completer(&dyn Completer)` | A completion list under the caret, as in [single-line fields](#autocomplete); <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it. `Completion::caret(n)` puts the caret inside the insertion (`user(id: \|)`). |
 | `.height(f32)`, `.id(Id)` | As in the view. |
 
 - <kbd>Tab</kbd> inserts spaces up to the next tab stop; over several selected lines it indents
