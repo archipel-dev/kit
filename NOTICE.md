@@ -1,0 +1,22 @@
+# Notices
+
+## Fonts
+
+`crates/archipel-kit/assets/fonts/` bundles:
+
+- **Inter** (Regular, SemiBold), Copyright the Inter Project Authors, licensed under the SIL
+  Open Font License 1.1 (`Inter-OFL.txt`).
+- **JetBrains Mono** (Regular, Bold), Copyright the JetBrains Mono Project Authors, licensed
+  under the SIL Open Font License 1.1 (`JetBrainsMono-OFL.txt`).
+
+## Theme colors
+
+The color values of `Theme::dark()` and `Theme::light()` are facts extracted from the theme
+and color scheme data files of **IntelliJ Community**
+(https://github.com/JetBrains/intellij-community, tag `idea/262.10968.63`), licensed under
+the Apache License 2.0. Upstream notice: "This software includes code from IntelliJ IDEA.
+Copyright (C) JetBrains s.r.o."
+
+Only color values were taken. No source code, icons, images or other artwork were copied;
+the icons in `icons.rs` are original drawings. IntelliJ and JetBrains are trademarks of
+JetBrains s.r.o.; Archipel is not affiliated with or endorsed by JetBrains.
