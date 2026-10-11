@@ -55,6 +55,12 @@ pub mod size {
     pub const DOTTED_DOT: f32 = 1.0;
     /// Distance from the bottom of the line to the underline's dots.
     pub const DOTTED_INSET: f32 = 0.5;
+    /// Space between a row's leading slot and its icon.
+    pub const ROW_LEADING_GAP: f32 = 4.0;
+    /// Space kept between a row's label and its trailing slot.
+    pub const ROW_TRAILING_GAP: f32 = 12.0;
+    /// Least width worth showing of a row's elided secondary text.
+    pub const ROW_MIN_SECONDARY: f32 = 32.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
@@ -63,6 +69,8 @@ pub mod size {
     pub const SPLIT_GRAB: f32 = 2.0;
     /// Distance an arrow key moves a split pane's divider.
     pub const SPLIT_KEY_STEP: f32 = 16.0;
+    /// How far past its minimum size a split pane is dragged before it collapses.
+    pub const SPLIT_COLLAPSE: f32 = 40.0;
     /// Default minimum size of each side of a split pane.
     pub const SPLIT_MIN_PANE: f32 = 120.0;
 
@@ -72,8 +80,10 @@ pub mod size {
     }
 }
 
-/// Opacity factors, 0 to 1.
+/// Opacities, from 0 to 1.
 pub mod opacity {
+    /// Opacity of a row's [`tint`](crate::components::ListRow::tint) over the island.
+    pub const ROW_TINT: f32 = 0.22;
     /// Multiplier of the colors of disabled code and highlighted text.
     pub const DISABLED_CODE: f32 = 0.55;
     /// Multiplier of a color used as a tinted fill behind text of the same color.

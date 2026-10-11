@@ -298,6 +298,7 @@ impl Widget for MenuItem<'_> {
             label_tone: Tone::Default,
             secondary: None,
             trailing: self.shortcut.as_deref().filter(|_| self.submenu.is_none()),
+            ..RowContent::default()
         };
         let width = ui
             .available_width()
