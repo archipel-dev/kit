@@ -12,6 +12,7 @@ for everything inside.
 | List rows, tree rows, table rows, tabs, menu items | Default arrow |
 | Links | Pointing hand |
 | Text fields | Text beam; default over the clear button |
+| Split pane dividers | `ResizeHorizontal` (side by side) or `ResizeVertical` (stacked), also while dragging |
 | Disabled controls | Default arrow |
 | Anything with `.with(Cursor(icon))` | `icon` |
 

@@ -212,3 +212,20 @@ fn conformance_catches_a_button_that_ignores_clicks() {
 fn conformance_catches_a_fake_disabled_state() {
     testing::conformance("Run", |ui, _enabled| ui.add(Button::primary("Run"))).run();
 }
+
+#[test]
+fn split_pane_divider_conforms() {
+    use archipel_kit::components::SplitPane;
+    let mut ratio = 0.5;
+    testing::conformance("Resize sidebar", move |ui, enabled| {
+        ui.allocate_ui(egui::vec2(320.0, 120.0), |ui| {
+            SplitPane::horizontal("conformance", &mut ratio)
+                .label("Resize sidebar")
+                .enabled(enabled)
+                .show(ui, |ui| ui.label("Sidebar"), |ui| ui.label("Request"))
+                .divider
+        })
+        .inner
+    })
+    .run();
+}
