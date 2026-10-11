@@ -91,6 +91,16 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Button | 30 pt, radius 6, 20 pt icon, 40 pt pitch; first button 3 pt below the island's top | `StripeButton` |
 | States | Open: pressed fill (~16 % white); hover: `hover` fill; tooltip beside it with name and shortcut | `ToolStripe::show` |
 
+### Form controls (Settings dialog)
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Buttons | 28 pt, at least 72 pt wide, radius 4, 12 pt apart; **no hover or press change** | `Button` |
+| Focus | The 1 pt border becomes 2 pt in `#3871E1` (both themes), one of them outside; filled buttons get an outer 2 pt ring with a 1 pt gap | `parts::focus_ring`, `Colors::focus_ring` |
+| Checkbox / radio | 16 pt, radius 3; unchecked `#2B2D30` / white with `#5A5D63` / `#A8ADBD` border; checked `#3574F0`; no hover change; focus: 2 pt border in `#3574F0` | `Colors::control`, `control_selected`, `control_border` |
+| Disabled borders | `#33353B` / light `#DDDFE4` | `Colors::border_disabled` |
+| Fields and combo boxes | 28 pt, `#40434A` / `#D1D3D9` border; combo fill `#26282C` / white | `TextField`, `Dropdown` |
+
 ## Fixed invariants
 
 - Body font: Inter 13 pt. Code: the bundled mono font. Existing icon artwork is fixed.

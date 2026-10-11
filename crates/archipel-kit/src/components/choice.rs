@@ -154,26 +154,31 @@ impl Widget for Checkbox<'_> {
             let painter = ui.painter();
             let corner = CornerRadius::same(3);
             let filled = state != CheckState::Off;
+            // Measured on Android Studio: no hover change; checked in its own blue.
             let (fill, stroke) = match (filled, self.enabled) {
-                (true, true) => (colors.accent, Stroke::NONE),
+                (true, true) => (colors.control_selected, Stroke::NONE),
                 (true, false) => (colors.accent_disabled, Stroke::NONE),
                 (false, enabled) => (
-                    colors.field,
+                    colors.control,
                     Stroke::new(
                         1.0_f32,
-                        if enabled && response.hovered() {
-                            colors.text_secondary
-                        } else if enabled {
+                        if enabled {
                             colors.control_border
                         } else {
-                            colors.border
+                            colors.border_disabled
                         },
                     ),
                 ),
             };
             painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
             if response.has_focus() {
-                common::focus_ring(painter, rect, 3, &colors);
+                // The border becomes 2 pt in the checkbox blue, one of them outside.
+                painter.rect_stroke(
+                    rect.expand(1.0),
+                    CornerRadius::same(4),
+                    Stroke::new(size::FOCUS_RING, colors.control_selected),
+                    StrokeKind::Inside,
+                );
             }
             let mark = Stroke::new(1.6_f32, mark_color(ui, &colors, self.enabled));
             let p = |x: f32, y: f32| rect.min + vec2(x, y);
@@ -251,7 +256,7 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
             let center = rect.center();
             if selected {
                 let fill = if self.enabled {
-                    colors.accent
+                    colors.control_selected
                 } else {
                     colors.accent_disabled
                 };
@@ -259,25 +264,24 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
                 let dot = mark_color(ui, &colors, self.enabled);
                 painter.circle_filled(center, 3.0, dot);
             } else {
-                let outline = if self.enabled && response.hovered() {
-                    colors.text_secondary
-                } else if self.enabled {
+                let outline = if self.enabled {
                     colors.control_border
                 } else {
-                    colors.border
+                    colors.border_disabled
                 };
                 painter.circle(
                     center,
                     BOX / 2.0 - 0.5,
-                    colors.field,
+                    colors.control,
                     Stroke::new(1.0_f32, outline),
                 );
             }
             if response.has_focus() {
+                // Like the checkbox: a 2 pt border in the checkbox blue, one of them outside.
                 painter.circle_stroke(
                     center,
-                    BOX / 2.0 + 1.0 + size::FOCUS_RING / 2.0,
-                    Stroke::new(size::FOCUS_RING, colors.focus_ring),
+                    BOX / 2.0,
+                    Stroke::new(size::FOCUS_RING, colors.control_selected),
                 );
             }
             paint_label(ui, &response, rect, galley, self.enabled);

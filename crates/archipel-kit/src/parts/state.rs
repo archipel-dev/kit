@@ -105,11 +105,13 @@ impl State {
 
 /// The keyboard focus ring around `rect`.
 pub fn focus_ring(painter: &Painter, rect: Rect, corner: u8, colors: &Colors) {
+    // As in Android Studio: the control's 1 pt border becomes 2 pt in the focus color, one
+    // of them outside the control.
     painter.rect_stroke(
         rect.expand(1.0),
         CornerRadius::same(corner.saturating_add(1)),
         Stroke::new(size::FOCUS_RING, colors.focus_ring),
-        StrokeKind::Outside,
+        StrokeKind::Inside,
     );
 }
 

@@ -424,9 +424,17 @@ impl TextField<'_> {
                     colors.error,
                 )
             } else if focused {
-                Stroke::new(size::FOCUS_RING, colors.accent)
-            } else {
+                Stroke::new(size::FOCUS_RING, colors.focus_ring)
+            } else if self.enabled {
                 Stroke::new(1.0_f32, colors.border)
+            } else {
+                Stroke::new(1.0_f32, colors.border_disabled)
+            };
+            // As in Android Studio, a 2 pt (focus or error) border reaches 1 pt outside.
+            let border_rect = if stroke.width > 1.0 {
+                rect.expand(1.0)
+            } else {
+                rect
             };
             let fill = if self.enabled {
                 colors.field
@@ -436,7 +444,7 @@ impl TextField<'_> {
             ui.painter().set(
                 background,
                 egui::epaint::RectShape::new(
-                    rect,
+                    border_rect,
                     CornerRadius::same(radius::CONTROL),
                     fill,
                     stroke,

@@ -127,6 +127,12 @@ pub struct Colors {
     pub toggle_off_knob: Color32,
     /// Outline of unchecked checkboxes and radio buttons.
     pub control_border: Color32,
+    /// Border of a disabled button, field or checkbox.
+    pub border_disabled: Color32,
+    /// Fill of an unchecked checkbox or radio button.
+    pub control: Color32,
+    /// Fill of a checked checkbox or radio button, and their focus border.
+    pub control_selected: Color32,
     /// Selection of a list, tree or table that does not have the keyboard focus.
     pub selection_inactive: Color32,
     /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
@@ -318,7 +324,7 @@ impl Theme {
                 accent: rgb(0x3871E1),
                 accent_disabled: rgb(0x4E5157),
                 text_on_accent_disabled: rgb(0xB0B3BA),
-                focus_ring: rgb(0x3D6185),
+                focus_ring: rgb(0x3871E1),
                 border: rgb(0x40434A),
                 separator: rgba(0xFFFFFF21),
                 tab_selected: rgb(0x233558),
@@ -327,7 +333,10 @@ impl Theme {
                 toggle_on: rgb(0x338555),
                 toggle_off: rgb(0x191A1C),
                 toggle_off_knob: rgb(0x5F6269),
-                control_border: rgb(0x6F737A),
+                control_border: rgb(0x5A5D63),
+                control: rgb(0x2B2D30),
+                border_disabled: rgb(0x33353B),
+                control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0x33353B),
                 row_hover: rgba(0xFFFFFF10),
                 combo: rgb(0x26282C),
@@ -451,7 +460,7 @@ impl Theme {
                 accent: rgb(0x3871E1),
                 accent_disabled: rgb(0xDDDFE4),
                 text_on_accent_disabled: rgb(0x60636A),
-                focus_ring: rgb(0x97C3F3),
+                focus_ring: rgb(0x3871E1),
                 border: rgb(0xD1D3D9),
                 separator: rgba(0x00000020),
                 tab_selected: rgb(0xE3EBFE),
@@ -461,6 +470,9 @@ impl Theme {
                 toggle_off: rgb(0xF7F8F9),
                 toggle_off_knob: rgb(0xC3C5CB),
                 control_border: rgb(0xA8ADBD),
+                control: rgb(0xFFFFFF),
+                border_disabled: rgb(0xDDDFE4),
+                control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0xE9EAEE),
                 row_hover: rgba(0x00000008),
                 combo: rgb(0xFFFFFF),
