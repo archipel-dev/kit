@@ -62,6 +62,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Separator | 9 pt row, 1 pt line in the border color, inset like pills | `MenuSeparator` |
 | Group title | "Open Projects": semibold 13 pt, `#73767C`, aligned with icons, 24 pt row, not selectable | `MenuHeader` |
 | Two-line item | 20 pt icon, label, path below in `#73767C`, 48 pt | `MenuItem::description` |
+| Icon column | Reserved only when an item of the menu has an icon or a check | `MenuItem` |
 | Pointer and keys | One highlight, shared; the first pointer move after opening is ignored; it stays on the last item when the pointer leaves; arrows continue from it and skip headers and separators | `MenuItem` |
 
 ### Editor tabs and headers
@@ -69,6 +70,8 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Situation | Android Studio | Kit |
 |---|---|---|
 | Island header (tool window title bar, editor tab bar) | 40 pt high; tool windows with content tabs have a 1 pt line below in the frame color, edge to edge | `tokens::size::HEADER_HEIGHT`, `Panel::header_separator` |
+| Header actions | 22 pt icon buttons, radius 4, 4 pt apart, the last 10 pt from the island's edge; group lines 20 pt in the separator color | `IconButton`, `Separator::group`, `HEADER_ACTIONS_INSET` |
+| View switcher ("Project ▾") | Title + chevron, no hover fill; click opens the views right below the header, content-wide, current one highlighted, no icon column | `Panel::views` |
 | Content tabs (Problems: File, Project Errors) | 22 pt after the title, 10 pt padding and gap; selected: blue while active, gray outline otherwise | `Panel::tabs` |
 | Selected tab | 28 pt pill, radius 6, fill `#233558` / light `#E3EBFE`, 1 pt border `#2E4D89` / `#A7C5FF`, text at full strength | `TabBar` |
 | Other tabs | No fill; title `#AFB1B6` / light `#515151`; on hover a `hover` pill and full-strength title | `Colors::tab_text` |

@@ -114,9 +114,15 @@ impl Widget for IconButton {
             } else {
                 Color32::TRANSPARENT
             };
-            painter.rect_filled(rect, radius::ICON_BUTTON, fill);
+            // Toolbar buttons are rounder than the 22 pt ones inside islands.
+            let corner = if self.large {
+                radius::ICON_BUTTON
+            } else {
+                radius::ICON_BUTTON_SMALL
+            };
+            painter.rect_filled(rect, corner, fill);
             if response.has_focus() {
-                common::focus_ring(painter, rect, radius::ICON_BUTTON, &colors);
+                common::focus_ring(painter, rect, corner, &colors);
             }
             let color = if !self.enabled {
                 colors.text_disabled

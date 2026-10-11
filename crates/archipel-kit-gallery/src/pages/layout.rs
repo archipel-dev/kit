@@ -45,7 +45,7 @@ impl State {
         Panel::new("Project")
             .header(180.0, |ui| {
                 ui.label("Project");
-                ui.add(Separator::length(16.0));
+                ui.add(Separator::group());
                 ui.label("Files");
             })
             .padded(true)

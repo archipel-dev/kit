@@ -33,8 +33,15 @@ pub mod size {
     pub const WINDOW_TOOLBAR_HEIGHT: f32 = 40.0;
     /// macOS native traffic-light region, including the gap before app content.
     pub const NATIVE_WINDOW_CONTROLS: f32 = 80.0;
-    /// Square icon button edge.
-    pub const ICON_BUTTON: f32 = 26.0;
+    /// Square icon button edge: actions in island headers and toolbars inside islands
+    /// (22 pt in Android Studio's Islands UI).
+    pub const ICON_BUTTON: f32 = 22.0;
+    /// Space between an island header's last action and the island's right edge.
+    pub const HEADER_ACTIONS_INSET: f32 = 10.0;
+    /// Space between a tool window's title and its view switcher chevron.
+    pub const TITLE_CHEVRON_GAP: f32 = 2.0;
+    /// Length of the vertical line between groups of header actions.
+    pub const HEADER_DIVIDER: f32 = 20.0;
     /// Square edge of a small icon button: actions inside rows and tabs.
     pub const ICON_BUTTON_SMALL: f32 = 20.0;
     /// Gap between toolbar items.
@@ -302,8 +309,10 @@ pub mod radius {
     pub const BANNER: u8 = 6;
     /// Editor tab underline ends.
     pub const UNDERLINE: u8 = 2;
-    /// Toolbar icon buttons.
+    /// Main toolbar and stripe buttons (30 pt).
     pub const ICON_BUTTON: u8 = 6;
+    /// Icon buttons inside islands (22 pt).
+    pub const ICON_BUTTON_SMALL: u8 = 4;
     /// Editor tab pills.
     pub const TAB: u8 = 6;
     /// Checkboxes (3 pt in Android Studio).

@@ -32,6 +32,7 @@ pub struct Panel<'a> {
     padded: bool,
     header_separator: bool,
     tabs: Option<(&'a [String], &'a mut usize)>,
+    views: Option<(&'a [String], &'a mut usize)>,
 }
 
 type Actions<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
@@ -48,7 +49,17 @@ impl<'a> Panel<'a> {
             padded: false,
             header_separator: false,
             tabs: None,
+            views: None,
         }
+    }
+
+    /// Makes the title a view switcher, like Android Studio's "Project ▾": the title reads the
+    /// selected view with a chevron after it; a click (or <kbd>Enter</kbd>) opens a list of
+    /// the views right below the header, the current one highlighted, and picking one
+    /// selects it. The caller owns the index.
+    pub fn views(mut self, views: &'a [String], selected: &'a mut usize) -> Self {
+        self.views = Some((views, selected));
+        self
     }
 
     /// Content tabs after the title, like Android Studio's Problems tool window ("File",
@@ -139,16 +150,12 @@ impl<'a> Panel<'a> {
                 if self.actions.is_some() || self.on_hide.is_some() {
                     let mut toolbar = ui.new_child(
                         egui::UiBuilder::new()
-                            .max_rect(header.shrink2(vec2(size::CONTENT_INSET - 6.0, 2.0)))
+                            .max_rect(header.shrink2(vec2(size::HEADER_ACTIONS_INSET, 0.0)))
                             .layout(egui::Layout::right_to_left(egui::Align::Center)),
                     );
                     toolbar.set_clip_rect(header.intersect(ui.clip_rect()));
                     toolbar.multiply_opacity(opacity);
-                    toolbar.spacing_mut().item_spacing.x = if self.hover_actions {
-                        size::TOOLBAR_GAP
-                    } else {
-                        2.0
-                    };
+                    toolbar.spacing_mut().item_spacing.x = size::TOOLBAR_GAP;
                     if let Some(hide) = self.on_hide {
                         let button =
                             IconButton::new(Glyph::Minimize, format!("Hide {}", self.title))
@@ -192,12 +199,106 @@ impl<'a> Panel<'a> {
                         content(&mut slot);
                     }
                 } else {
+                    let shown = self
+                        .views
+                        .as_ref()
+                        .and_then(|(views, selected)| views.get(**selected))
+                        .unwrap_or(&self.title)
+                        .clone();
                     let galley = common::galley(
                         ui,
-                        self.title.as_str(),
+                        shown.as_str(),
                         typography::semibold(ui.ctx(), typography::TITLE),
                     );
-                    let title_width = galley.size().x;
+                    let mut title_width = galley.size().x;
+                    if let Some((views, selected)) = self.views {
+                        title_width += size::TITLE_CHEVRON_GAP + size::ICON;
+                        let title_rect = egui::Rect::from_min_size(
+                            egui::pos2(left, header.top()),
+                            vec2(title_width, header.height()),
+                        )
+                        .intersect(content_rect);
+                        let switcher =
+                            ui.interact(title_rect, panel_id.with("views"), Sense::click());
+                        crate::cursor::on_hover_action(&switcher);
+                        switcher.widget_info(|| {
+                            egui::WidgetInfo::labeled(egui::WidgetType::ComboBox, true, &shown)
+                        });
+                        let chevron = egui::Rect::from_min_size(
+                            egui::pos2(
+                                left + galley.size().x + size::TITLE_CHEVRON_GAP,
+                                header.center().y - size::ICON / 2.0,
+                            ),
+                            vec2(size::ICON, size::ICON),
+                        );
+                        crate::icons::paint(
+                            &ui.painter().with_clip_rect(content_rect),
+                            chevron,
+                            Glyph::ChevronDown,
+                            colors.text_secondary,
+                        );
+                        if switcher.has_focus() {
+                            crate::parts::focus_ring(
+                                ui.painter(),
+                                title_rect,
+                                radius::CONTROL,
+                                &colors,
+                            );
+                        }
+                        let open_id = panel_id.with("views-open");
+                        let mut open = ui
+                            .ctx()
+                            .data(|d| d.get_temp::<bool>(open_id))
+                            .unwrap_or(false);
+                        if switcher.clicked() {
+                            open = !open;
+                        }
+                        // The list opens right below the header, at the island's left edge.
+                        let anchor = egui::Rect::from_min_max(
+                            egui::pos2(header.left() + 2.0, title_rect.top()),
+                            egui::pos2(
+                                title_rect.right().max(header.left() + 3.0),
+                                header.bottom() - size::POPUP_PADDING,
+                            ),
+                        );
+                        let mut picked = None;
+                        crate::parts::Popover::new(panel_id.with("views-popup"), anchor)
+                            .width(
+                                views
+                                    .iter()
+                                    .map(|view| {
+                                        common::galley(
+                                            ui,
+                                            view.as_str(),
+                                            typography::body(typography::BODY),
+                                        )
+                                        .size()
+                                        .x
+                                    })
+                                    .fold(0.0, f32::max)
+                                    + 2.0
+                                        * (crate::tokens::popup::ITEM_INSET
+                                            + crate::tokens::popup::ITEM_PADDING),
+                            )
+                            .show(ui.ctx(), &mut open, |ui| {
+                                for (index, view) in views.iter().enumerate() {
+                                    if ui
+                                        .add(
+                                            super::MenuItem::new(view.as_str())
+                                                .highlighted(index == *selected),
+                                        )
+                                        .clicked()
+                                    {
+                                        picked = Some(index);
+                                    }
+                                }
+                            });
+                        if let Some(index) = picked {
+                            *selected = index;
+                            open = false;
+                        }
+                        ui.ctx().data_mut(|d| d.insert_temp(open_id, open));
+                    }
                     if !(actions_shown && title_width > content_rect.width()) {
                         common::text_left(
                             &ui.painter()
@@ -406,6 +507,12 @@ impl Widget for SectionHeader {
 pub struct Separator;
 
 impl Separator {
+    /// The vertical line between groups of actions in an island header or toolbar,
+    /// [`size::HEADER_DIVIDER`] long, as in Android Studio.
+    pub fn group() -> impl Widget {
+        Self::length(size::HEADER_DIVIDER)
+    }
+
     /// A separator with an explicit line length in points, centered in its layout.
     /// Useful for action groups inside panel headers. Invalid lengths become zero.
     pub fn length(points: f32) -> impl Widget {

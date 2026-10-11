@@ -434,11 +434,12 @@ impl Widget for MenuItem<'_> {
             (None, icon) => (icon, None),
         };
         let two_line = self.description.is_some();
+        let reserve_icons = menu_icon_column(ui, icon.is_some() || self.checked.is_some());
         let content = RowContent {
             // A two-line item paints its larger icon itself.
             icon: if two_line { None } else { icon },
             icon_tone,
-            reserve_icon: !two_line,
+            reserve_icon: !two_line && reserve_icons,
             label: &self.label,
             label_tone: Tone::Default,
             secondary: None,
@@ -582,6 +583,13 @@ struct MenuCursor {
     pointer: Option<egui::Pos2>,
     /// Whether the pointer moved in frame `seen`.
     moved: bool,
+    /// Whether an item of this menu has an icon (this frame or the last): only then do the
+    /// items reserve an icon column, as in Android Studio.
+    icons: bool,
+    /// The same, for the frame being drawn.
+    icons_now: bool,
+    /// Whether a frame was already rolled over (the first one keeps `icons` as found).
+    seen_once: bool,
 }
 
 /// Whether the item of `response` is its menu's current row, as in Android Studio: hover and
@@ -590,25 +598,8 @@ struct MenuCursor {
 /// the pointer does not highlight whatever happens to be there.
 fn menu_current(ui: &Ui, response: &Response, enabled: bool) -> bool {
     let ctx = ui.ctx();
-    let key = ui.id().with("kit-menu-cursor");
     let frame = ctx.cumulative_frame_nr();
-    let pointer = ctx.input(|i| i.pointer.hover_pos());
-    let mut cursor = ctx
-        .data(|d| d.get_temp::<MenuCursor>(key))
-        .unwrap_or_default();
-    if cursor.seen + 1 < frame {
-        // Not drawn last frame: the menu (re)opened, under a pointer that has not moved yet.
-        cursor = MenuCursor {
-            pointer,
-            ..MenuCursor::default()
-        };
-    }
-    if cursor.seen != frame {
-        // First item this frame: did the pointer move since the last one?
-        cursor.moved = pointer.is_some() && pointer != cursor.pointer;
-        cursor.pointer = pointer;
-        cursor.seen = frame;
-    }
+    let (key, mut cursor) = menu_cursor(ui);
     let moved = cursor.moved;
     if moved && cursor.armed.is_none() {
         cursor.armed = Some(frame);
@@ -626,6 +617,48 @@ fn menu_current(ui: &Ui, response: &Response, enabled: bool) -> bool {
     }
     ctx.data_mut(|d| d.insert_temp(key, cursor));
     enabled && cursor.item == Some(response.id)
+}
+
+/// Whether the items of the menu `ui` holds reserve an icon column: only when one of them
+/// has an icon, as in Android Studio (a list of plain names starts its text at the pill's
+/// padding). `has_icon` is this item's.
+fn menu_icon_column(ui: &Ui, has_icon: bool) -> bool {
+    let (key, mut cursor) = menu_cursor(ui);
+    cursor.icons_now |= has_icon;
+    ui.ctx().data_mut(|d| d.insert_temp(key, cursor));
+    cursor.icons || cursor.icons_now
+}
+
+/// The shared state of the menu `ui` holds, rolled over to the current frame.
+fn menu_cursor(ui: &Ui) -> (egui::Id, MenuCursor) {
+    let ctx = ui.ctx();
+    let key = ui.id().with("kit-menu-cursor");
+    let frame = ctx.cumulative_frame_nr();
+    let pointer = ctx.input(|i| i.pointer.hover_pos());
+    let mut cursor = ctx
+        .data(|d| d.get_temp::<MenuCursor>(key))
+        .unwrap_or_default();
+    if cursor.seen + 1 < frame {
+        // Not drawn last frame: the menu (re)opened, under a pointer that has not moved yet.
+        // What its items look like (icons) is kept.
+        cursor = MenuCursor {
+            pointer,
+            icons: cursor.icons || cursor.icons_now,
+            ..MenuCursor::default()
+        };
+    }
+    if cursor.seen != frame {
+        // First item this frame: did the pointer move since the last one?
+        cursor.moved = pointer.is_some() && pointer != cursor.pointer;
+        cursor.pointer = pointer;
+        cursor.seen = frame;
+        if cursor.seen_once {
+            cursor.icons = cursor.icons_now;
+        }
+        cursor.icons_now = false;
+        cursor.seen_once = true;
+    }
+    (key, cursor)
 }
 
 /// What to show where a list, table or panel has nothing to display: a title, a hint and

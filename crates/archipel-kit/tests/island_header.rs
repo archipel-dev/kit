@@ -26,7 +26,7 @@ fn harness(theme: Theme, gpu: bool) -> Harness<'static, usize> {
                 Panel::new("Inspector")
                     .header(200.0, |ui| {
                         ui.label("Inspector");
-                        ui.add(Separator::length(16.0));
+                        ui.add(Separator::group());
                         ui.label("JSON");
                     })
                     .padded(true)
@@ -39,7 +39,7 @@ fn harness(theme: Theme, gpu: bool) -> Harness<'static, usize> {
                         {
                             *count += 1;
                         }
-                        ui.add(Separator::length(16.0));
+                        ui.add(Separator::group());
                         ui.add(IconButton::new(Glyph::Search, "Find in inspector"));
                     })
                     .show(ui, |ui| {
@@ -192,4 +192,43 @@ fn content_tabs_select_and_turn_blue_while_the_tool_window_is_active() {
     h.get_by_label("Project Errors").click();
     h.run();
     assert_eq!(*h.state(), 1);
+}
+
+#[test]
+fn the_title_switches_views_like_project_in_android_studio() {
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(420.0, 360.0))
+        .build_state(
+            |ctx, selected| {
+                archipel_kit::install(ctx, Theme::dark());
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    let views = [
+                        "Project".to_owned(),
+                        "Packages".to_owned(),
+                        "Tests".to_owned(),
+                    ];
+                    Panel::new("Project")
+                        .views(&views, selected)
+                        .show(ui, |ui| {
+                            ui.label("tree");
+                        });
+                });
+            },
+            0usize,
+        );
+    h.run();
+    assert!(h.query_by_label("Packages").is_none());
+    h.get_by_label("Project").click();
+    h.run();
+    h.get_by_label("Packages").click();
+    h.run();
+    assert_eq!(*h.state(), 1);
+    // The title now reads the chosen view and the list is closed.
+    assert!(h.query_by_label("Packages").is_some());
+    assert!(h.query_by_label("Tests").is_none());
+    // Enter on the focused title opens it again.
+    h.get_by_label("Packages").focus();
+    h.key_press(egui::Key::Enter);
+    h.run();
+    assert!(h.query_by_label("Tests").is_some());
 }

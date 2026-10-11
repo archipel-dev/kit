@@ -83,7 +83,7 @@ Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs)
 `Panel::header(width, content)` replaces the painted title with a bounded left slot.
 `padded(true)` applies the shared content inset; trees can retain edge-to-edge bodies.
 `header_separator(true)` adds a hairline below the header, edge to edge in the frame color (as under Android Studio's Problems header). Header actions can
-contain `Separator::length(16.0)` between groups. The line length is in logical points.
+contain `Separator::group()` between groups (a 20 pt line, as in Android Studio).
 
 `hover_actions(true)` shows the actions only while the pointer is anywhere over the island
 (header or body) or keyboard focus is inside it, like an Android Studio tool window. The
@@ -108,7 +108,7 @@ Panel::new("Inspector")
     .padded(true).header_separator(true).hover_actions(true)
     .actions(|ui| {
         ui.add(IconButton::new(Glyph::Refresh, "Reload inspector"));
-        ui.add(Separator::length(16.0));
+        ui.add(Separator::group());
         ui.add(IconButton::new(Glyph::Search, "Find in inspector"));
     })
     .show(ui, |ui| { ui.label("Properties"); });
@@ -135,5 +135,24 @@ let mut selected = 0;
 Panel::new("Problems")
     .tabs(&tabs, &mut selected)
     .show(ui, |ui| { ui.label("No problems in main.rs"); });
+# });
+```
+
+## View switcher
+
+`Panel::views(&views, &mut selected)` makes the title a view switcher, like Android Studio's
+"Project ▾": the title reads the selected view with a chevron; a click or <kbd>Enter</kbd>
+opens the list right below the header, as wide as its longest name, with the current view
+highlighted. The title has no hover fill, as in Android Studio.
+
+```rust
+# egui::__run_test_ui(|ui| {
+use archipel_kit::components::Panel;
+
+let views = ["Project".to_owned(), "Packages".to_owned(), "Tests".to_owned()];
+let mut selected = 0;
+Panel::new("Project")
+    .views(&views, &mut selected)
+    .show(ui, |ui| { ui.label("src/"); });
 # });
 ```
