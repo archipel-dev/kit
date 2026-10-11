@@ -10,7 +10,10 @@ the IDE, Nexus HTTP and Mongo Raabit, and their plugins.
 </picture>
 
 - **A complete set for developer tools**: buttons, inputs, choices, tabs, trees, banners,
-  toasts, progress, badges, panels, menus and a vector icon set with file-type icons.
+  toasts, progress, badges, panels and menus.
+- **An icon kit** ([`archipel-icons`](docs/icons/README.md)): 113 designed glyphs stored as
+  data, rendered with egui or exported as SVG, checked by design lints and reviewed at
+  actual size.
 - **Dark and light themes** as plain data, per `egui::Context`, with shared size, radius and
   typography tokens.
 - **Tested like a web framework**: every component has behavior tests that find it by role
@@ -34,6 +37,7 @@ fn connect_form(ui: &mut egui::Ui, url: &mut String) -> bool {
 
 - [Getting started](docs/getting-started.md)
 - [Components](docs/README.md#components), each with images, examples, API and accessibility notes
+- [Icon kit](docs/icons/README.md): [catalog](docs/icons/catalog.md), [design rules](docs/icons/design.md), [review](docs/icons/review.md)
 - [Theming](docs/theming.md)
 - [Testing](docs/testing.md)
 - [Contributing a component](docs/contributing.md)

@@ -1,7 +1,7 @@
 //! Segmented controls and tab bars: pick one of a few options.
 
 use super::common;
-use crate::icons::{self, Icon};
+use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
 use egui::{
@@ -156,8 +156,8 @@ impl Tab {
     }
 
     /// Icon before the title (e.g. [`Icon::for_file`]).
-    pub fn icon(mut self, icon: Icon) -> Self {
-        self.icon = Some(icon);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 
@@ -291,7 +291,7 @@ impl<'a> TabBar<'a> {
                     icons::paint(
                         &painter,
                         close_rect.shrink(3.0),
-                        Icon::Close,
+                        Glyph::Close,
                         colors.text_secondary,
                     );
                     if close.clicked() {

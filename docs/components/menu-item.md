@@ -17,11 +17,11 @@ context menus. A **link** is inline text that performs an action.
 
 ```rust
 use archipel_kit::components::{Button, Link, MenuItem};
-use archipel_kit::{Icon, egui};
+use archipel_kit::{Glyph, Icon, egui};
 
 fn file_row(ui: &mut egui::Ui, wrap: &mut bool) {
     ui.add(Button::secondary("main.rs")).context_menu(|ui| {
-        if ui.add(MenuItem::new("Copy Path").icon(Icon::Copy).shortcut("Ctrl+Shift+C")).clicked() {
+        if ui.add(MenuItem::new("Copy Path").icon(Glyph::Copy).shortcut("Ctrl+Shift+C")).clicked() {
             ui.close();
         }
         if ui.add(MenuItem::new("Soft-Wrap").checked(*wrap)).clicked() {

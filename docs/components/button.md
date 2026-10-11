@@ -13,14 +13,14 @@ dense toolbars and banners, and **danger** for destructive actions.
 
 ```rust
 use archipel_kit::components::Button;
-use archipel_kit::{Icon, egui};
+use archipel_kit::{Glyph, Icon, egui};
 
 fn dialog_buttons(ui: &mut egui::Ui, can_create: bool) -> bool {
     let mut created = false;
     ui.horizontal(|ui| {
         created = ui.add(Button::primary("Create").enabled(can_create)).clicked();
         ui.add(Button::secondary("Cancel"));
-        ui.add(Button::secondary("Run").icon(Icon::Run));
+        ui.add(Button::secondary("Run").icon(Glyph::Run));
     });
     created
 }

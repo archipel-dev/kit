@@ -14,7 +14,7 @@ virtualized table.
 
 ```rust
 use archipel_kit::components::ListRow;
-use archipel_kit::{Icon, egui};
+use archipel_kit::{Glyph, Icon, egui};
 
 struct Tree {
     expanded: bool,
@@ -22,7 +22,7 @@ struct Tree {
 }
 
 fn project_tree(ui: &mut egui::Ui, tree: &mut Tree, files: &[&str]) {
-    let root = ListRow::new("src").icon(Icon::Folder).expanded(Some(tree.expanded)).show(ui);
+    let root = ListRow::new("src").icon(Glyph::Folder).expanded(Some(tree.expanded)).show(ui);
     if root.toggled {
         tree.expanded = !tree.expanded;
     }

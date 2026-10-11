@@ -13,14 +13,14 @@ layout (tool windows, sidebars, inspectors). **Section headers** group content i
 
 ```rust
 use archipel_kit::components::{IconButton, Panel, PropertyGrid, SectionHeader};
-use archipel_kit::{Icon, egui};
+use archipel_kit::{Glyph, egui};
 
 fn response_panel(ui: &mut egui::Ui) {
     Panel::new("Response")
         .actions(|ui| {
             // Laid out right to left: the first action is the rightmost.
-            ui.add(IconButton::new(Icon::More, "More"));
-            ui.add(IconButton::new(Icon::Copy, "Copy"));
+            ui.add(IconButton::new(Glyph::More, "More"));
+            ui.add(IconButton::new(Glyph::Copy, "Copy"));
         })
         .show(ui, |ui| {
             ui.add(SectionHeader::new("General"));

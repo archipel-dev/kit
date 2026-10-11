@@ -12,6 +12,9 @@ Raabit, plugins). Quality bar: it should feel like one polished suite.
 - Components are stateless: they borrow caller state or report what happened. No filesystem,
   network or app policy in the kit.
 - No panics on user input or when `install` was not called (fonts fall back).
+- Icons are data in `crates/archipel-icons/src/glyphs.rs`. New or changed glyphs follow
+  `docs/icons/design.md`, pass the lints, and go through the review in `docs/icons/review.md`
+  (large and actual-size sheets, dark and light); add a line to its review log.
 - Look at the snapshot images you change (`docs/components/img/`) before committing; they
   are the docs.
 - Clean-room: no third-party code, icons or artwork. Theme colors are Apache-2.0 facts (see

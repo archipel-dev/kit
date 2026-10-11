@@ -6,7 +6,7 @@ use archipel_kit::components::{
     Avatar, Counter, IconButton, Kbd, Panel, PropertyGrid, SectionHeader, Separator, Tag,
 };
 use archipel_kit::testing::{self, Queryable};
-use archipel_kit::{Icon, Theme};
+use archipel_kit::{Glyph, Theme};
 
 #[test]
 fn badges_snapshot() {
@@ -48,8 +48,8 @@ fn panel_snapshot() {
     testing::snapshot_themes("panel", common::IMG, |ui| {
         Panel::new("Response")
             .actions(|ui| {
-                ui.add(IconButton::new(Icon::More, "More"));
-                ui.add(IconButton::new(Icon::Copy, "Copy"));
+                ui.add(IconButton::new(Glyph::More, "More"));
+                ui.add(IconButton::new(Glyph::Copy, "Copy"));
             })
             .show(ui, |ui| {
                 ui.add_space(4.0);
@@ -73,7 +73,7 @@ fn panel_title_and_actions_are_accessible() {
     let mut harness = testing::harness_state(Theme::dark(), false, |ui, copied| {
         Panel::new("Response")
             .actions(|ui| {
-                *copied |= ui.add(IconButton::new(Icon::Copy, "Copy")).clicked();
+                *copied |= ui.add(IconButton::new(Glyph::Copy, "Copy")).clicked();
             })
             .show(ui, |ui| {
                 PropertyGrid::new("g").row("Status", "200 OK").show(ui);

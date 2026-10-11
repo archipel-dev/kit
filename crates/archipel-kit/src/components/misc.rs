@@ -1,7 +1,7 @@
 //! Links, dropdowns, menu items, empty states and property grids.
 
 use super::{Button, common};
-use crate::icons::{self, Icon};
+use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{size, typography};
 use egui::{
@@ -125,9 +125,9 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                 .icon(|ui, rect, _visuals, open| {
                     let colors = Theme::colors(ui.ctx());
                     let icon = if open {
-                        Icon::ChevronUp
+                        Glyph::ChevronUp
                     } else {
-                        Icon::ChevronDown
+                        Glyph::ChevronDown
                     };
                     let color = if ui.is_enabled() {
                         colors.text_secondary
@@ -176,10 +176,10 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
-/// use archipel_kit::{Icon, components::MenuItem};
+/// use archipel_kit::{Glyph, components::MenuItem};
 ///
 /// ui.menu_button("Edit", |ui| {
-///     if ui.add(MenuItem::new("Copy").icon(Icon::Copy).shortcut("Ctrl+C")).clicked() {
+///     if ui.add(MenuItem::new("Copy").icon(Glyph::Copy).shortcut("Ctrl+C")).clicked() {
 ///         ui.close();
 ///     }
 /// });
@@ -207,8 +207,8 @@ impl MenuItem {
     }
 
     /// Icon in the left column.
-    pub fn icon(mut self, icon: Icon) -> Self {
-        self.icon = Some(icon);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 
@@ -266,7 +266,7 @@ impl Widget for MenuItem {
             );
             let text = common::enabled_text(self.enabled, colors.text, &colors);
             match (self.checked, self.icon) {
-                (Some(true), _) => icons::paint(painter, icon_rect, Icon::Success, text),
+                (Some(true), _) => icons::paint(painter, icon_rect, Glyph::Success, text),
                 (_, Some(icon)) => icons::paint(
                     painter,
                     icon_rect,
@@ -290,10 +290,10 @@ impl Widget for MenuItem {
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
-/// use archipel_kit::{Icon, components::EmptyState};
+/// use archipel_kit::{Glyph, components::EmptyState};
 ///
 /// let out = EmptyState::new("No requests yet")
-///     .icon(Icon::Send)
+///     .icon(Glyph::Send)
 ///     .hint("Create a request to start testing your API.")
 ///     .action("New request")
 ///     .show(ui);
@@ -325,8 +325,8 @@ impl EmptyState {
     }
 
     /// Large icon above the title.
-    pub fn icon(mut self, icon: Icon) -> Self {
-        self.icon = Some(icon);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 

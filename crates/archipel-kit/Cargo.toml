@@ -15,6 +15,7 @@ categories = ["gui"]
 testing = ["dep:egui_kittest"]
 
 [dependencies]
+archipel-icons = { path = "../archipel-icons", features = ["egui"] }
 egui.workspace = true
 egui_kittest = { workspace = true, optional = true }
 

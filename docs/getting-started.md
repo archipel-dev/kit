@@ -19,7 +19,7 @@ you never mix two egui versions.
 Call `install` once, before the first frame. In eframe that is the app creation closure:
 
 ```rust,no_run
-use archipel_kit::{Theme, egui};
+use archipel_kit::{Glyph, Theme, egui};
 
 fn main() -> eframe::Result {
     eframe::run_native(
@@ -53,12 +53,12 @@ Workbench layouts are islands (panels) on the frame color:
 
 ```rust
 use archipel_kit::components::{IconButton, ListRow, Panel};
-use archipel_kit::{Icon, egui};
+use archipel_kit::{Glyph, Icon, egui};
 
 fn sidebar(ui: &mut egui::Ui, files: &[&str], selected: &mut usize) {
     Panel::new("Project")
         .actions(|ui| {
-            ui.add(IconButton::new(Icon::CollapseAll, "Collapse all"));
+            ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
         })
         .show(ui, |ui| {
             for (index, name) in files.iter().enumerate() {

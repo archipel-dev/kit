@@ -1,40 +1,56 @@
-//! Icon set snapshot: every parameterless icon, so a changed drawing shows up in review.
+//! File-type icons snapshot: the icons the kit draws itself (letter badges, Java types,
+//! colored folders). The glyph set is reviewed in `archipel-icons` (`docs/icons/`).
 
 mod common;
 
-use archipel_kit::Icon;
+use archipel_kit::icons::{FolderKind, TypeKind};
 use archipel_kit::testing;
+use archipel_kit::{Icon, Theme};
 
 #[test]
-fn icon_set_snapshot() {
-    testing::snapshot_themes("icons", common::IMG, |ui| {
-        let color = archipel_kit::Theme::colors(ui.ctx()).icon;
-        for row in Icon::ALL.chunks(13) {
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 8.0;
-                for (icon, _) in row {
-                    archipel_kit::icons::show(ui, *icon, 16.0, color);
-                }
-            });
-        }
+fn file_icons_snapshot() {
+    testing::snapshot_themes("file_icons", common::IMG, |ui| {
+        let color = Theme::colors(ui.ctx()).icon;
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 8.0;
             for name in [
                 "main.rs",
-                "App.java",
                 "build.gradle.kts",
-                "a.kt",
-                "a.json",
+                "App.kt",
+                "data.json",
                 "pom.xml",
-                "a.md",
-                "a.py",
-                "a.ts",
-                "a.sh",
-                "a.png",
-                "a.zip",
+                "README.md",
+                "app.py",
+                "index.ts",
+                "run.sh",
+                "logo.png",
+                "lib.zip",
                 "Cargo.lock",
+                "notes.txt",
             ] {
                 archipel_kit::icons::show(ui, Icon::for_file(name), 16.0, color);
+            }
+        });
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 8.0;
+            for kind in [
+                TypeKind::Class,
+                TypeKind::Interface,
+                TypeKind::Enum,
+                TypeKind::Record,
+                TypeKind::Annotation,
+            ] {
+                archipel_kit::icons::show(ui, Icon::JavaType(kind), 16.0, color);
+            }
+            for kind in [
+                FolderKind::Source,
+                FolderKind::Test,
+                FolderKind::Resources,
+                FolderKind::Excluded,
+                FolderKind::Hidden,
+                FolderKind::Package,
+            ] {
+                archipel_kit::icons::show(ui, Icon::FolderKind(kind), 16.0, color);
             }
         });
     });

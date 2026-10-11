@@ -4,21 +4,21 @@ mod common;
 
 use archipel_kit::components::{Dropdown, Link, MenuItem};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
-use archipel_kit::{Icon, Theme};
+use archipel_kit::{Glyph, Theme};
 
 #[test]
 fn menu_snapshot() {
     testing::snapshot_themes("menu_item", common::IMG, |ui| {
         egui::Frame::popup(ui.style()).show(ui, |ui| {
             ui.set_width(240.0);
-            ui.add(MenuItem::new("Copy").icon(Icon::Copy).shortcut("Ctrl+C"));
+            ui.add(MenuItem::new("Copy").icon(Glyph::Copy).shortcut("Ctrl+C"));
             ui.add(
                 MenuItem::new("Find in Files…")
-                    .icon(Icon::Find)
+                    .icon(Glyph::FindInFiles)
                     .shortcut("Ctrl+Shift+F"),
             );
             ui.add(MenuItem::new("Soft-Wrap").checked(true));
-            ui.add(MenuItem::new("Run").icon(Icon::Run).enabled(false));
+            ui.add(MenuItem::new("Run").icon(Glyph::Run).enabled(false));
         });
     });
 }

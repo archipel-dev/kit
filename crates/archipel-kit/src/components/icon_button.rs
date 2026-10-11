@@ -13,11 +13,11 @@ use egui::{Color32, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, v
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
-/// use archipel_kit::{Icon, components::IconButton};
+/// use archipel_kit::{Glyph, components::IconButton};
 ///
-/// if ui.add(IconButton::new(Icon::Refresh, "Reload")).clicked() { /* ... */ }
+/// if ui.add(IconButton::new(Glyph::Refresh, "Reload")).clicked() { /* ... */ }
 /// let mut pinned = false;
-/// if ui.add(IconButton::new(Icon::Pin, "Pin tab").selected(pinned)).clicked() {
+/// if ui.add(IconButton::new(Glyph::Pin, "Pin tab").selected(pinned)).clicked() {
 ///     pinned = !pinned;
 /// }
 /// # });
@@ -33,9 +33,9 @@ pub struct IconButton {
 
 impl IconButton {
     /// A button showing `icon`, described by `label` (tooltip and accessible name).
-    pub fn new(icon: Icon, label: impl Into<String>) -> Self {
+    pub fn new(icon: impl Into<Icon>, label: impl Into<String>) -> Self {
         Self {
-            icon,
+            icon: icon.into(),
             label: label.into(),
             selected: None,
             enabled: true,

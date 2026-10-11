@@ -1,7 +1,7 @@
 //! Messages: inline banners and toast notifications.
 
 use super::{Button, IconButton};
-use crate::icons::{self, Icon};
+use crate::icons::{self, Glyph};
 use crate::theme::{Colors, Theme, Tint};
 use crate::tokens::{radius, size, typography};
 use egui::{CornerRadius, Stroke, Ui, vec2};
@@ -29,12 +29,12 @@ impl Severity {
         }
     }
 
-    fn icon(self) -> Icon {
+    fn icon(self) -> Glyph {
         match self {
-            Severity::Info => Icon::Info,
-            Severity::Success => Icon::Success,
-            Severity::Warning => Icon::Warning,
-            Severity::Error => Icon::Error,
+            Severity::Info => Glyph::Info,
+            Severity::Success => Glyph::Success,
+            Severity::Warning => Glyph::Warning,
+            Severity::Error => Glyph::Error,
         }
     }
 
@@ -123,7 +123,7 @@ impl Banner {
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if self.dismissible
-                            && ui.add(IconButton::new(Icon::Close, "Dismiss")).clicked()
+                            && ui.add(IconButton::new(Glyph::Close, "Dismiss")).clicked()
                         {
                             out.dismissed = true;
                         }
@@ -233,7 +233,7 @@ impl Toast {
                             );
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                 ui.spacing_mut().interact_size = vec2(20.0, 20.0);
-                                if ui.add(IconButton::new(Icon::Close, "Dismiss")).clicked() {
+                                if ui.add(IconButton::new(Glyph::Close, "Dismiss")).clicked() {
                                     out.dismissed = true;
                                 }
                             });

@@ -4,7 +4,7 @@ mod common;
 
 use archipel_kit::components::{Button, IconButton};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
-use archipel_kit::{Icon, Theme};
+use archipel_kit::{Glyph, Theme};
 
 #[test]
 fn snapshot() {
@@ -18,7 +18,7 @@ fn snapshot() {
         ui.horizontal(|ui| {
             ui.add(Button::primary("Create").enabled(false));
             ui.add(Button::secondary("Cancel").enabled(false));
-            ui.add(Button::secondary("Run").icon(Icon::Run));
+            ui.add(Button::secondary("Run").icon(Glyph::Run));
             ui.add(Button::ghost("Small").small(true));
         });
     });
@@ -28,11 +28,11 @@ fn snapshot() {
 fn icon_button_snapshot() {
     testing::snapshot_themes("icon_button", common::IMG, |ui| {
         ui.horizontal(|ui| {
-            ui.add(IconButton::new(Icon::Refresh, "Reload"));
-            ui.add(IconButton::new(Icon::Run, "Run").color(Theme::colors(ui.ctx()).run));
-            ui.add(IconButton::new(Icon::Stop, "Stop").color(Theme::colors(ui.ctx()).stop));
-            ui.add(IconButton::new(Icon::Pin, "Pin").selected(true));
-            ui.add(IconButton::new(Icon::Debug, "Debug").enabled(false));
+            ui.add(IconButton::new(Glyph::Refresh, "Reload"));
+            ui.add(IconButton::new(Glyph::Run, "Run").color(Theme::colors(ui.ctx()).run));
+            ui.add(IconButton::new(Glyph::Stop, "Stop").color(Theme::colors(ui.ctx()).stop));
+            ui.add(IconButton::new(Glyph::Pin, "Pin").selected(true));
+            ui.add(IconButton::new(Glyph::Debug, "Debug").enabled(false));
         });
     });
 }
@@ -81,7 +81,7 @@ fn keyboard_activates_focused_button() {
 fn icon_button_is_named_by_its_label_and_reports_toggle_state() {
     let mut harness = testing::harness_state(Theme::dark(), false, |ui, pinned| {
         if ui
-            .add(IconButton::new(Icon::Pin, "Pin tab").selected(*pinned))
+            .add(IconButton::new(Glyph::Pin, "Pin tab").selected(*pinned))
             .clicked()
         {
             *pinned = !*pinned;

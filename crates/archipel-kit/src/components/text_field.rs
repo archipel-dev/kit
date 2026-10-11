@@ -1,7 +1,7 @@
 //! Single-line text inputs.
 
 use super::{IconButton, common};
-use crate::icons::{self, Icon};
+use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
 use egui::{Color32, CornerRadius, Response, Stroke, Ui, Widget, vec2};
@@ -61,7 +61,7 @@ impl<'t> TextField<'t> {
     /// A search input: magnifier icon, "Search" placeholder and a clear button.
     pub fn search(text: &'t mut String) -> Self {
         Self::new(text)
-            .leading_icon(Icon::Search)
+            .leading_icon(Glyph::Search)
             .placeholder("Search")
             .clearable(true)
     }
@@ -86,8 +86,8 @@ impl<'t> TextField<'t> {
     }
 
     /// Icon drawn inside the input, before the text.
-    pub fn leading_icon(mut self, icon: Icon) -> Self {
-        self.leading = Some(icon);
+    pub fn leading_icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.leading = Some(icon.into());
         self
     }
 
@@ -174,7 +174,7 @@ impl Widget for TextField<'_> {
             }
             if show_clear
                 && content
-                    .add(IconButton::new(Icon::Close, "Clear"))
+                    .add(IconButton::new(Glyph::Close, "Clear"))
                     .on_hover_cursor(egui::CursorIcon::Default)
                     .clicked()
             {

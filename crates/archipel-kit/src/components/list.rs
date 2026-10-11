@@ -1,7 +1,7 @@
 //! List and tree rows.
 
 use super::common;
-use crate::icons::{self, Icon};
+use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{size, typography};
 use egui::{Color32, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
@@ -24,12 +24,12 @@ pub struct RowResponse {
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
-/// use archipel_kit::{Icon, components::ListRow};
+/// use archipel_kit::{Glyph, Icon, components::ListRow};
 ///
 /// let mut expanded = true;
 /// let mut selected = 1;
 /// let row = ListRow::new("src")
-///     .icon(Icon::Folder)
+///     .icon(Glyph::Folder)
 ///     .expanded(Some(expanded))
 ///     .selected(selected == 0)
 ///     .show(ui);
@@ -82,8 +82,8 @@ impl ListRow {
     }
 
     /// Icon before the label.
-    pub fn icon(mut self, icon: Icon) -> Self {
-        self.icon = Some(icon);
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
         self
     }
 
@@ -190,9 +190,9 @@ impl ListRow {
             let mut x = chevron.right();
             if let Some(expanded) = self.expanded {
                 let icon = if expanded {
-                    Icon::ChevronDown
+                    Glyph::ChevronDown
                 } else {
-                    Icon::ChevronRight
+                    Glyph::ChevronRight
                 };
                 icons::paint(painter, chevron, icon, colors.text_secondary);
             }

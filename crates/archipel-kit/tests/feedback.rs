@@ -4,7 +4,7 @@ mod common;
 
 use archipel_kit::components::{Banner, EmptyState, ProgressBar, Severity, Spinner, Toast};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
-use archipel_kit::{Icon, Theme};
+use archipel_kit::{Glyph, Theme};
 
 #[test]
 fn banner_snapshot() {
@@ -126,7 +126,7 @@ fn progress_reports_percent() {
 fn empty_state_snapshot() {
     testing::snapshot_themes("empty_state", common::IMG, |ui| {
         EmptyState::new("No requests yet")
-            .icon(Icon::Send)
+            .icon(Glyph::Send)
             .hint("Create a request to start testing your API.")
             .action("New request")
             .show(ui);

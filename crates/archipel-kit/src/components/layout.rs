@@ -10,11 +10,11 @@ use egui::{CornerRadius, InnerResponse, Sense, Stroke, Ui, Widget, vec2};
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
-/// use archipel_kit::{Icon, components::{IconButton, Panel}};
+/// use archipel_kit::{Glyph, components::{IconButton, Panel}};
 ///
 /// Panel::new("Project")
 ///     .actions(|ui| {
-///         ui.add(IconButton::new(Icon::CollapseAll, "Collapse all"));
+///         ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
 ///     })
 ///     .show(ui, |ui| {
 ///         ui.label("src/");

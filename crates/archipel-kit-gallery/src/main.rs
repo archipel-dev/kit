@@ -9,7 +9,8 @@ use archipel_kit::components::{
     ListRow, MenuItem, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
     Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
 };
-use archipel_kit::{Icon, Theme, egui, icons, tokens};
+use archipel_kit::icons::Category;
+use archipel_kit::{Glyph, Icon, Theme, egui, tokens};
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -42,16 +43,16 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [(Page, &'static str, Icon); 9] = [
-        (Page::Buttons, "Buttons", Icon::Run),
-        (Page::Inputs, "Text fields", Icon::Search),
-        (Page::Choices, "Choices", Icon::Success),
-        (Page::Navigation, "Tabs & segments", Icon::Structure),
-        (Page::Lists, "Lists & trees", Icon::Project),
-        (Page::Feedback, "Feedback", Icon::Warning),
-        (Page::Data, "Badges & data", Icon::Model),
-        (Page::Layout, "Panels & menus", Icon::Variants),
-        (Page::Icons, "Icons", Icon::Ai),
+    const ALL: [(Page, &'static str, Glyph); 9] = [
+        (Page::Buttons, "Buttons", Glyph::Run),
+        (Page::Inputs, "Text fields", Glyph::Search),
+        (Page::Choices, "Choices", Glyph::Success),
+        (Page::Navigation, "Tabs & segments", Glyph::Structure),
+        (Page::Lists, "Lists & trees", Glyph::Project),
+        (Page::Feedback, "Feedback", Glyph::Warning),
+        (Page::Data, "Badges & data", Glyph::Package),
+        (Page::Layout, "Panels & menus", Glyph::Layers),
+        (Page::Icons, "Icons", Glyph::Sparkle),
     ];
 }
 
@@ -235,10 +236,10 @@ impl Gallery {
                 ui.label(format!("Clicked {} times", self.clicks));
                 ui.add(SectionHeader::new("With icon, small"));
                 ui.horizontal(|ui| {
-                    ui.add(Button::secondary("Run").icon(Icon::Run).enabled(enabled));
+                    ui.add(Button::secondary("Run").icon(Glyph::Run).enabled(enabled));
                     ui.add(
                         Button::secondary("Debug")
-                            .icon(Icon::Debug)
+                            .icon(Glyph::Debug)
                             .enabled(enabled),
                     );
                     ui.add(Button::ghost("Small").small(true).enabled(enabled));
@@ -246,21 +247,21 @@ impl Gallery {
                 ui.add(SectionHeader::new("Icon buttons"));
                 ui.horizontal(|ui| {
                     let colors = Theme::colors(ui.ctx());
-                    ui.add(IconButton::new(Icon::Refresh, "Reload").enabled(enabled));
+                    ui.add(IconButton::new(Glyph::Refresh, "Reload").enabled(enabled));
                     ui.add(
-                        IconButton::new(Icon::Run, "Run")
+                        IconButton::new(Glyph::Run, "Run")
                             .color(colors.run)
                             .enabled(enabled),
                     );
                     ui.add(
-                        IconButton::new(Icon::Stop, "Stop")
+                        IconButton::new(Glyph::Stop, "Stop")
                             .color(colors.stop)
                             .enabled(enabled),
                     );
                     let mut pinned = self.toggles[1];
                     if ui
                         .add(
-                            IconButton::new(Icon::Pin, "Pin")
+                            IconButton::new(Glyph::Pin, "Pin")
                                 .selected(pinned)
                                 .enabled(enabled),
                         )
@@ -385,7 +386,7 @@ impl Gallery {
                     ui,
                     0,
                     ListRow::new("archipel")
-                        .icon(Icon::Project)
+                        .icon(Glyph::Project)
                         .expanded(Some(self.expanded[0])),
                 ) {
                     self.expanded[0] = !self.expanded[0];
@@ -395,7 +396,7 @@ impl Gallery {
                         ui,
                         1,
                         ListRow::new("src")
-                            .icon(Icon::Folder)
+                            .icon(Glyph::Folder)
                             .depth(1)
                             .expanded(Some(self.expanded[1])),
                     ) {
@@ -471,7 +472,7 @@ impl Gallery {
                 ui.add(ProgressBar::new(None));
                 ui.add(SectionHeader::new("Empty state"));
                 EmptyState::new("No requests yet")
-                    .icon(Icon::Send)
+                    .icon(Glyph::Send)
                     .hint("Create a request to start testing your API.")
                     .action("New request")
                     .show(ui);
@@ -511,10 +512,10 @@ impl Gallery {
                 ui.add(SectionHeader::new("Menu"));
                 egui::Frame::popup(ui.style()).show(ui, |ui| {
                     ui.set_width(260.0);
-                    ui.add(MenuItem::new("Copy").icon(Icon::Copy).shortcut("Ctrl+C"));
+                    ui.add(MenuItem::new("Copy").icon(Glyph::Copy).shortcut("Ctrl+C"));
                     ui.add(
                         MenuItem::new("Find in Files…")
-                            .icon(Icon::Find)
+                            .icon(Glyph::FindInFiles)
                             .shortcut("Ctrl+Shift+F"),
                     );
                     let mut wrap = self.toggles[0];
@@ -522,7 +523,7 @@ impl Gallery {
                         wrap = !wrap;
                         self.toggles[0] = wrap;
                     }
-                    ui.add(MenuItem::new("Run").icon(Icon::Run).enabled(false));
+                    ui.add(MenuItem::new("Run").icon(Glyph::Run).enabled(false));
                 });
                 ui.add(SectionHeader::new("Context menu"));
                 ui.add(Button::secondary("Right-click me"))
@@ -532,27 +533,41 @@ impl Gallery {
                     });
             }
             Page::Icons => {
-                ui.add(TextField::search(&mut self.icon_filter).placeholder("Filter icons"));
-                let filter = self.icon_filter.to_lowercase();
+                ui.add(TextField::search(&mut self.icon_filter).placeholder("Search icons"));
                 let color = Theme::colors(ui.ctx()).icon;
-                egui::Grid::new("icons")
-                    .num_columns(4)
-                    .spacing([24.0, 8.0])
-                    .show(ui, |ui| {
-                        for (index, (icon, name)) in Icon::ALL
-                            .iter()
-                            .filter(|(_, name)| name.to_lowercase().contains(&filter))
-                            .enumerate()
-                        {
-                            ui.horizontal(|ui| {
-                                icons::show(ui, *icon, 16.0, color);
-                                ui.label(*name);
-                            });
-                            if index % 4 == 3 {
-                                ui.end_row();
+                let matches: Vec<Glyph> = Glyph::search(&self.icon_filter).collect();
+                for category in Category::ALL {
+                    let glyphs: Vec<Glyph> = matches
+                        .iter()
+                        .copied()
+                        .filter(|g| g.category() == category)
+                        .collect();
+                    if glyphs.is_empty() {
+                        continue;
+                    }
+                    ui.add(SectionHeader::new(category.label()));
+                    egui::Grid::new(category.label())
+                        .num_columns(4)
+                        .spacing([24.0, 8.0])
+                        .show(ui, |ui| {
+                            for (index, glyph) in glyphs.iter().enumerate() {
+                                ui.horizontal(|ui| {
+                                    archipel_kit::icons::show(ui, *glyph, 16.0, color);
+                                    ui.label(glyph.name());
+                                })
+                                .response
+                                .on_hover_text(glyph.keywords().join(", "));
+                                if index % 4 == 3 {
+                                    ui.end_row();
+                                }
                             }
-                        }
-                    });
+                        });
+                }
+                if matches.is_empty() {
+                    EmptyState::new("No icons match")
+                        .hint("Try a keyword such as \"http\" or \"trash\".")
+                        .show(ui);
+                }
             }
         }
     }

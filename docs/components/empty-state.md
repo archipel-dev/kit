@@ -12,12 +12,12 @@ that says how to fill it and optionally one action.
 
 ```rust
 use archipel_kit::components::EmptyState;
-use archipel_kit::{Icon, egui};
+use archipel_kit::{Glyph, Icon, egui};
 
 fn requests(ui: &mut egui::Ui, requests: &mut Vec<String>) {
     if requests.is_empty() {
         let new = EmptyState::new("No requests yet")
-            .icon(Icon::Send)
+            .icon(Glyph::Send)
             .hint("Create a request to start testing your API.")
             .action("New request")
             .show(ui);

@@ -13,14 +13,14 @@ green for Run.
 
 ```rust
 use archipel_kit::components::IconButton;
-use archipel_kit::{Icon, Theme, egui};
+use archipel_kit::{Glyph, Icon, Theme, egui};
 
 fn toolbar(ui: &mut egui::Ui, pinned: &mut bool) {
     let colors = Theme::colors(ui.ctx());
     ui.horizontal(|ui| {
-        ui.add(IconButton::new(Icon::Run, "Run").color(colors.run));
-        ui.add(IconButton::new(Icon::Stop, "Stop").color(colors.stop).enabled(false));
-        if ui.add(IconButton::new(Icon::Pin, "Pin tab").selected(*pinned)).clicked() {
+        ui.add(IconButton::new(Glyph::Run, "Run").color(colors.run));
+        ui.add(IconButton::new(Glyph::Stop, "Stop").color(colors.stop).enabled(false));
+        if ui.add(IconButton::new(Glyph::Pin, "Pin tab").selected(*pinned)).clicked() {
             *pinned = !*pinned;
         }
     });

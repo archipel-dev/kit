@@ -16,7 +16,7 @@
 //!
 //! - [`theme`]: colors of the dark and light looks, stored per [`egui::Context`].
 //! - [`tokens`]: sizes, radii and typography shared by every component.
-//! - [`icons`]: vector icons drawn on a 16×16 grid.
+//! - [`icons`]: the [`Glyph`]s of the `archipel-icons` kit and file-type [`Icon`]s.
 //! - [`components`]: the widgets.
 //! - `testing` (feature `testing`): themed test harnesses and dark + light snapshots, the
 //!   same helpers the kit's own tests use.
@@ -34,7 +34,7 @@ pub mod tokens;
 pub mod testing;
 
 pub use egui;
-pub use icons::Icon;
+pub use icons::{Glyph, Icon};
 pub use style::install;
 pub use theme::Theme;
 
@@ -55,6 +55,7 @@ mod docs {
         GettingStarted = "getting-started.md";
         Theming = "theming.md";
         Testing = "testing.md";
+        IconKit = "icons/README.md";
         Badges = "components/badges.md";
         Banner = "components/banner.md";
         Button = "components/button.md";

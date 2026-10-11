@@ -4,7 +4,7 @@ mod common;
 
 use archipel_kit::components::{ListRow, SegmentedControl, Tab, TabBar};
 use archipel_kit::testing::{self, NodeExt, Queryable};
-use archipel_kit::{Icon, Theme};
+use archipel_kit::{Glyph, Icon, Theme};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum View {
@@ -89,11 +89,11 @@ fn list_row_snapshot() {
     testing::snapshot_themes("list_row", common::IMG, |ui| {
         let colors = Theme::colors(ui.ctx());
         ListRow::new("archipel")
-            .icon(Icon::Project)
+            .icon(Glyph::Project)
             .expanded(Some(true))
             .show(ui);
         ListRow::new("src")
-            .icon(Icon::Folder)
+            .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(true))
             .show(ui);
@@ -108,7 +108,7 @@ fn list_row_snapshot() {
             .label_color(colors.vcs_modified)
             .show(ui);
         ListRow::new("target")
-            .icon(Icon::Folder)
+            .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(false))
             .secondary("excluded")
@@ -119,7 +119,7 @@ fn list_row_snapshot() {
             .secondary("1 KB")
             .show(ui);
         ListRow::new("Disabled")
-            .icon(Icon::File)
+            .icon(Glyph::FileText)
             .depth(1)
             .enabled(false)
             .show(ui);
@@ -135,7 +135,7 @@ struct TreeState {
 
 fn tree(ui: &mut egui::Ui, state: &mut TreeState) {
     let row = ListRow::new("src")
-        .icon(Icon::Folder)
+        .icon(Glyph::Folder)
         .expanded(Some(state.expanded))
         .show(ui);
     if row.toggled {
@@ -147,7 +147,7 @@ fn tree(ui: &mut egui::Ui, state: &mut TreeState) {
     if state.expanded {
         let row = ListRow::new("main.rs")
             .depth(1)
-            .icon(Icon::File)
+            .icon(Glyph::FileText)
             .selected(state.selected == Some("main.rs"))
             .show(ui);
         if row.response.clicked() {

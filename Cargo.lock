@@ -198,9 +198,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "archipel-icons"
+version = "0.1.0"
+dependencies = [
+ "archipel-icons",
+ "egui",
+ "egui_kittest",
+ "image",
+]
+
+[[package]]
 name = "archipel-kit"
 version = "0.1.0"
 dependencies = [
+ "archipel-icons",
  "archipel-kit",
  "eframe",
  "egui",

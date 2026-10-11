@@ -1,0 +1,26 @@
+[package]
+name = "archipel-icons"
+description = "Archipel icon kit: a designed 16×16 outline icon set as data, rendered with egui or exported as SVG."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+keywords = ["icons", "egui", "svg", "ui"]
+categories = ["gui", "graphics"]
+
+[features]
+## Paint glyphs into an `egui::Painter`.
+egui = ["dep:egui"]
+
+[dependencies]
+egui = { workspace = true, optional = true }
+
+[dev-dependencies]
+archipel-icons = { path = ".", features = ["egui"] }
+egui_kittest.workspace = true
+egui.workspace = true
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[lints]
+workspace = true
