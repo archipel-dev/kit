@@ -4,7 +4,7 @@ use super::{IconButton, Tooltip, common};
 use crate::behaviour::WidgetExt;
 use crate::icons::Glyph;
 use crate::theme::Theme;
-use crate::tokens::{radius, size, typography};
+use crate::tokens::{motion, radius, size, typography};
 use egui::{CornerRadius, InnerResponse, Sense, Stroke, Ui, Widget, vec2};
 
 /// An island: a rounded panel with a title bar, the building block of a workbench layout
@@ -109,11 +109,7 @@ impl<'a> Panel<'a> {
             .and_then(|id| ui.ctx().read_response(id))
             .is_some_and(|r| previous.is_some_and(|p| p.contains_rect(r.rect)));
         let opacity = if self.hover_actions {
-            ui.ctx().animate_bool_with_time(
-                panel_id.with("actions"),
-                hovered || focused,
-                size::ISLAND_ACTION_FADE,
-            )
+            actions_opacity(ui.ctx(), panel_id.with("actions"), hovered || focused)
         } else {
             1.0
         };
@@ -151,8 +147,16 @@ impl<'a> Panel<'a> {
                     if let Some(actions) = self.actions {
                         actions(&mut toolbar);
                     }
-                    content_right = toolbar.min_rect().left() - size::TOOLBAR_GAP;
+                    // Hidden actions leave the whole header to the title.
+                    if opacity > 0.0 {
+                        content_right = toolbar.min_rect().left() - size::TOOLBAR_GAP;
+                    }
                 }
+                // Shown actions win over the title: as in the Islands UI, a title that no
+                // longer fits beside them is hidden whole rather than cut, and the actions,
+                // anchored right, are clipped at the island's left edge.
+                let actions_shown =
+                    opacity > 0.0 && content_right < header.right() - size::CONTENT_INSET;
                 let left = (header.left() + size::CONTENT_INSET).min(header.right());
                 content_right = content_right.max(left).min(header.right());
                 let content_rect = egui::Rect::from_min_max(
@@ -160,30 +164,36 @@ impl<'a> Panel<'a> {
                     egui::pos2(content_right, header.bottom()),
                 );
                 if let Some((width, content)) = self.header {
-                    let mut slot = ui.new_child(
-                        egui::UiBuilder::new()
-                            .max_rect(egui::Rect::from_min_size(
-                                content_rect.min,
-                                vec2(width.min(content_rect.width()), content_rect.height()),
-                            ))
-                            .layout(egui::Layout::left_to_right(egui::Align::Center)),
-                    );
-                    slot.set_clip_rect(slot.max_rect().intersect(ui.clip_rect()));
-                    content(&mut slot);
+                    if actions_shown && width > content_rect.width() {
+                        // Squeezed out by the actions; it comes back when they hide.
+                    } else {
+                        let mut slot = ui.new_child(
+                            egui::UiBuilder::new()
+                                .max_rect(egui::Rect::from_min_size(
+                                    content_rect.min,
+                                    vec2(width.min(content_rect.width()), content_rect.height()),
+                                ))
+                                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+                        );
+                        slot.set_clip_rect(slot.max_rect().intersect(ui.clip_rect()));
+                        content(&mut slot);
+                    }
                 } else {
                     let galley = common::galley(
                         ui,
                         self.title.as_str(),
                         typography::semibold(ui.ctx(), typography::TITLE),
                     );
-                    common::text_left(
-                        &ui.painter()
-                            .with_clip_rect(content_rect.intersect(ui.clip_rect())),
-                        header,
-                        left,
-                        galley,
-                        colors.text_strong,
-                    );
+                    if !(actions_shown && galley.size().x > content_rect.width()) {
+                        common::text_left(
+                            &ui.painter()
+                                .with_clip_rect(content_rect.intersect(ui.clip_rect())),
+                            header,
+                            left,
+                            galley,
+                            colors.text_strong,
+                        );
+                    }
                 }
                 if self.header_separator {
                     ui.painter().hline(
@@ -220,6 +230,30 @@ impl<'a> Panel<'a> {
         ui.ctx()
             .data_mut(|d| d.insert_temp(panel_id, result.response.rect));
         result
+    }
+}
+
+/// Opacity of an island's hover actions: 1 at once while `revealed`, then after
+/// [`motion::ISLAND_ACTIONS_HIDE_DELAY`] a short fade to 0 (as measured in Android Studio).
+fn actions_opacity(ctx: &egui::Context, id: egui::Id, revealed: bool) -> f32 {
+    let now = ctx.input(|i| i.time);
+    if revealed {
+        ctx.data_mut(|d| d.insert_temp(id, now));
+        return 1.0;
+    }
+    let Some(last) = ctx.data(|d| d.get_temp::<f64>(id)) else {
+        return 0.0;
+    };
+    let since = (now - last) as f32;
+    let fade = (since - motion::ISLAND_ACTIONS_HIDE_DELAY) / motion::ISLAND_ACTIONS_FADE_OUT;
+    if fade >= 1.0 {
+        0.0
+    } else if fade < 0.0 {
+        ctx.request_repaint_after_secs(motion::ISLAND_ACTIONS_HIDE_DELAY - since);
+        1.0
+    } else {
+        ctx.request_repaint();
+        1.0 - fade
     }
 }
 

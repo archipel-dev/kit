@@ -85,9 +85,19 @@ Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs)
 `header_separator(true)` adds an inset hairline below the header. Header actions can
 contain `Separator::length(16.0)` between groups. The line length is in logical points.
 
-`hover_actions(true)` fades actions over 160 ms when the pointer enters/leaves the entire
-island, including its body. Keyboard focus inside the island also reveals them. Space
-stays reserved during the fade; controls retain accessible names and keyboard access.
+`hover_actions(true)` shows the actions only while the pointer is anywhere over the island
+(header or body) or keyboard focus is inside it, like an Android Studio tool window. The
+timing was measured in Android Studio (Rabbit, Islands UI) at 60 fps:
+
+- **Show:** at once, no fade-in.
+- **Hide:** after `tokens::motion::ISLAND_ACTIONS_HIDE_DELAY` (200 ms), a 70 ms fade
+  (`ISLAND_ACTIONS_FADE_OUT`). Crossing a gap or a scroll bar does not flicker them.
+- **Narrow islands:** hidden actions take no space, so the title gets the whole header.
+  Shown actions win: a title (or `header` slot) that no longer fits beside them is hidden
+  whole, not cut, and the right-anchored actions are clipped at the island's left edge.
+  The title returns when they hide.
+
+Hidden actions keep their accessible names and Tab order; focusing one reveals them.
 Always-visible actions remain the default for compatibility.
 
 ```rust

@@ -87,3 +87,74 @@ fn snapshot() {
     }
     results.unwrap();
 }
+
+/// Whether the last frame painted `text`.
+fn painted(h: &Harness<'_, usize>, text: &str) -> bool {
+    h.output()
+        .shapes
+        .iter()
+        .any(|clipped| match &clipped.shape {
+            egui::Shape::Text(t) => t.galley.text() == text,
+            _ => false,
+        })
+}
+
+/// A narrow tool window, as in Android Studio with the Project island dragged thin:
+/// its title and its actions do not fit side by side.
+fn narrow(theme: Theme) -> Harness<'static, usize> {
+    let mut installed = false;
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(170.0, 160.0))
+        .with_step_dt(0.05)
+        .build_state(
+            move |ctx, _| {
+                if !installed {
+                    archipel_kit::install(ctx, theme.clone());
+                    installed = true;
+                }
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    Panel::new("Project")
+                        .hover_actions(true)
+                        .on_hide(|| {})
+                        .actions(|ui| {
+                            ui.add(IconButton::new(Glyph::More, "Options"));
+                            ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+                            ui.add(IconButton::new(Glyph::Search, "Find"));
+                        })
+                        .show(ui, |ui| {
+                            ui.label("src/");
+                        });
+                });
+            },
+            0,
+        );
+    h.run();
+    h
+}
+
+#[test]
+fn shown_actions_take_a_narrow_header_and_hide_after_a_delay() {
+    let mut h = narrow(Theme::dark());
+    // At rest the actions are hidden and leave the whole header to the title.
+    assert!(painted(&h, "Project"));
+    let body = h.get_by_label("src/").rect().center();
+    h.hover_at(body);
+    h.step();
+    h.step();
+    // They appear at once and, not fitting beside it, push the title out whole.
+    assert!(!painted(&h, "Project"));
+    h.hover_at(egui::pos2(-10.0, -10.0));
+    h.step();
+    h.step();
+    // 0.1 s after leaving: still shown (the hide delay is 0.2 s).
+    assert!(!painted(&h, "Project"));
+    for _ in 0..8 {
+        h.step();
+    }
+    assert!(painted(&h, "Project"));
+    // Keyboard focus inside the island reveals them too.
+    h.get_by_label("Find").focus();
+    h.step();
+    h.step();
+    assert!(!painted(&h, "Project"));
+}

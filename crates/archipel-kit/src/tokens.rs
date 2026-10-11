@@ -3,8 +3,6 @@
 
 /// Spacing and sizes, in points.
 pub mod size {
-    /// Header action fade duration in seconds.
-    pub const ISLAND_ACTION_FADE: f32 = 0.16;
     /// Minimum central work area before docked tool windows are temporarily hidden.
     pub const WORKBENCH_CENTER_MIN: f32 = 200.0;
     /// Left/right inset of panel content.
@@ -113,6 +111,15 @@ pub mod chart {
     pub const LINE_WIDTH: f32 = 1.5;
     /// Stroke width of hairlines: axis baselines.
     pub const HAIRLINE: f32 = 1.0;
+}
+
+/// Motion: delays and durations, in seconds. Measured on Android Studio's Islands UI.
+pub mod motion {
+    /// How long an island's header actions stay after the pointer leaves the island (and
+    /// focus is elsewhere), so passing over a gap does not flicker them. They appear at once.
+    pub const ISLAND_ACTIONS_HIDE_DELAY: f32 = 0.2;
+    /// The fade-out of an island's header actions once the hide delay has passed.
+    pub const ISLAND_ACTIONS_FADE_OUT: f32 = 0.07;
 }
 
 /// Opacities, from 0 to 1.

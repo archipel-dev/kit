@@ -32,9 +32,9 @@ As in the IntelliJ / Android Studio Islands UI:
   pointer shows the resize cursor over it (`SplitPane::line(false)`). Tab still reaches each
   divider, which then shows the focus ring.
 - **Header actions appear on hover.** A tool window's Maximize/Restore and Hide buttons
-  fade in over 160 ms (`tokens::size::ISLAND_ACTION_FADE`) while the pointer is anywhere over
-  that island, header or body, and fade out when it leaves. Keyboard focus inside the
-  island reveals them as well; hidden, they keep their space, names and Tab order.
+  show at once while the pointer is anywhere over that island, header or body, or focus is
+  inside it, and fade out 200 ms after it leaves (timing and narrow-island rules: see
+  [Panel](panel.md#composable-island-headers)). Hidden, they keep their names and Tab order.
 - **Bodies are edge to edge** by default, so trees, lists and consoles bring their own row
   inset. `.padded(WorkbenchRegion::Right, true)` gives a form or text body the content inset.
 
