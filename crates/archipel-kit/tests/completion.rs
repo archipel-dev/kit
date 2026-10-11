@@ -209,3 +209,53 @@ fn ctrl_space_opens_the_list_in_a_code_editor() {
     h.run();
     assert!(h.query_by_label_contains("users").is_some());
 }
+
+/// Waits for a typed letter, but lists everything when asked.
+struct Patient;
+
+impl archipel_kit::components::Completer for Patient {
+    fn complete(&self, text: &str, caret: usize) -> Option<Completions> {
+        let typed = text
+            .chars()
+            .take(caret)
+            .last()
+            .is_some_and(char::is_alphanumeric);
+        typed
+            .then(|| self.complete_on_request(text, caret))
+            .flatten()
+    }
+
+    fn complete_on_request(&self, _text: &str, caret: usize) -> Option<Completions> {
+        Some(Completions {
+            start: caret,
+            end: caret,
+            items: vec![Completion::new("users", "users")],
+        })
+    }
+}
+
+#[test]
+fn a_patient_completer_opens_on_request_only() {
+    use archipel_kit::components::CodeEditor;
+    let mut h = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
+        ui.add(
+            CodeEditor::new(text)
+                .label("Query")
+                .height(160.0)
+                .completer(&Patient),
+        );
+    });
+    h.get_by_label("Query").focus();
+    h.get_by_label("Query").type_text("{ ");
+    h.run();
+    assert!(
+        h.query_by_label_contains("users").is_none(),
+        "no list after `{{ `"
+    );
+    h.key_press_modifiers(archipel_kit::egui::Modifiers::CTRL, Key::Space);
+    h.run();
+    assert!(
+        h.query_by_label_contains("users").is_some(),
+        "Ctrl+Space lists everything"
+    );
+}

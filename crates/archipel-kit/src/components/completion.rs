@@ -61,8 +61,16 @@ pub struct Completions {
 /// text and the caret (a char index), it returns what to offer, or `None` when nothing
 /// completes there. Any `Fn(&str, usize) -> Option<Completions>` is one.
 pub trait Completer {
-    /// The suggestions at `caret` in `text`.
+    /// The suggestions at `caret` in `text`, while the user types.
     fn complete(&self, text: &str, caret: usize) -> Option<Completions>;
+
+    /// The suggestions when the user asked for them (<kbd>Ctrl</kbd>+<kbd>Space</kbd>) or the
+    /// list is already open. The same as [`complete`](Self::complete) by default; override it
+    /// to offer everything where `complete` waits for a typed prefix (a code editor should
+    /// not open a list after every `{`).
+    fn complete_on_request(&self, text: &str, caret: usize) -> Option<Completions> {
+        self.complete(text, caret)
+    }
 }
 
 impl<F: Fn(&str, usize) -> Option<Completions>> Completer for F {
@@ -155,9 +163,13 @@ impl List {
             self.store(ui);
             return;
         };
-        let found = completer
-            .complete(text, caret)
-            .filter(|c| !c.items.is_empty());
+        let asked = keys.explicit || self.state.open;
+        let found = if asked {
+            completer.complete_on_request(text, caret)
+        } else {
+            completer.complete(text, caret)
+        }
+        .filter(|c| !c.items.is_empty());
         if edited.changed() || keys.explicit {
             self.state.open = true;
             self.state.selected = 0;
