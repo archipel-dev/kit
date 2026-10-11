@@ -32,11 +32,42 @@ fn response_panel(ui: &mut egui::Ui) {
 }
 ```
 
+### Tool window header
+
+`.on_hide(|| …)` adds the tool window's hide button at the right end of the title bar (named
+"Hide <title>", tooltip "Hide"). With `.actions(...)` the title bar is the IntelliJ-style
+header: title, action icon buttons, hide. Panels without `on_hide` are unchanged.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/panel_tool_window.dark.png">
+  <img alt="A Project tool window with find and collapse-all actions and a hide button" src="img/panel_tool_window.light.png" width="360">
+</picture>
+
+```rust
+use archipel_kit::components::{IconButton, Panel};
+use archipel_kit::{Glyph, egui};
+
+fn project_window(ui: &mut egui::Ui, visible: &mut bool) {
+    Panel::new("Project")
+        .actions(|ui| {
+            ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+            ui.add(IconButton::new(Glyph::Search, "Find"));
+        })
+        .on_hide(|| *visible = false)
+        .show(ui, |ui| {
+            ui.label("src/");
+        });
+}
+```
+
+The kit has one container with a title bar, so the header is part of `Panel` rather than a
+second component that would paint the same title and toolbar.
+
 ## API
 
 | Component | API |
 |---|---|
-| `Panel::new(title)` | `.actions(|ui| …)` toolbar on the right of the title (right to left), `.show(ui, |ui| body)`. |
+| `Panel::new(title)` | `.actions(|ui| …)` toolbar on the right of the title (right to left), `.on_hide(\|\| …)` hide button, `.show(ui, |ui| body)`. |
 | `SectionHeader::new(title)` | Title with a hairline, with section spacing above. |
 | `Separator` | 1 pt line across the available width, or a vertical one in a horizontal layout. |
 | `PropertyGrid::new(id)` | `.row(key, value)`, `.mono_row(key, value)`, `.show(ui)`. |

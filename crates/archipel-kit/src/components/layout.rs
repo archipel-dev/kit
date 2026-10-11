@@ -1,6 +1,8 @@
 //! Containers: islands (panels) with a header, section headers and separators.
 
-use super::common;
+use super::{IconButton, Tooltip, common};
+use crate::behaviour::WidgetExt;
+use crate::icons::Glyph;
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
 use egui::{CornerRadius, InnerResponse, Sense, Stroke, Ui, Widget, vec2};
@@ -24,6 +26,7 @@ use egui::{CornerRadius, InnerResponse, Sense, Stroke, Ui, Widget, vec2};
 pub struct Panel<'a> {
     title: String,
     actions: Option<Actions<'a>>,
+    on_hide: Option<Box<dyn FnOnce() + 'a>>,
 }
 
 type Actions<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
@@ -34,6 +37,7 @@ impl<'a> Panel<'a> {
         Self {
             title: title.into(),
             actions: None,
+            on_hide: None,
         }
     }
 
@@ -41,6 +45,15 @@ impl<'a> Panel<'a> {
     /// laid out right to left: the first one added is the rightmost.
     pub fn actions(mut self, actions: impl FnOnce(&mut Ui) + 'a) -> Self {
         self.actions = Some(Box::new(actions));
+        self
+    }
+
+    /// Adds the tool window's hide button (a minimize icon, named "Hide <title>") as the
+    /// rightmost button of the title bar; `hide` runs when it is clicked. With
+    /// [`actions`](Self::actions) the panel is an IntelliJ-style tool window header: title,
+    /// action buttons, hide.
+    pub fn on_hide(mut self, hide: impl FnOnce() + 'a) -> Self {
+        self.on_hide = Some(Box::new(hide));
         self
     }
 
@@ -68,14 +81,24 @@ impl<'a> Panel<'a> {
                     galley,
                     colors.text_strong,
                 );
-                if let Some(actions) = self.actions {
+                if self.actions.is_some() || self.on_hide.is_some() {
                     let mut toolbar = ui.new_child(
                         egui::UiBuilder::new()
                             .max_rect(header.shrink2(vec2(size::CONTENT_INSET - 6.0, 2.0)))
                             .layout(egui::Layout::right_to_left(egui::Align::Center)),
                     );
                     toolbar.spacing_mut().item_spacing.x = 2.0;
-                    actions(&mut toolbar);
+                    if let Some(hide) = self.on_hide {
+                        let button =
+                            IconButton::new(Glyph::Minimize, format!("Hide {}", self.title))
+                                .with(Tooltip::new("Hide"));
+                        if toolbar.add(button).clicked() {
+                            hide();
+                        }
+                    }
+                    if let Some(actions) = self.actions {
+                        actions(&mut toolbar);
+                    }
                 }
                 ui.spacing_mut().item_spacing.y = ui.ctx().style().spacing.item_spacing.y;
                 egui::Frame::new()
