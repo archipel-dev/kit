@@ -5,8 +5,8 @@ use crate::parts::Tone;
 use crate::theme::{Theme, avatar_color};
 use crate::tokens::{radius, typography};
 use egui::{
-    Color32, CornerRadius, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo, WidgetType,
-    vec2,
+    Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo,
+    WidgetType, vec2,
 };
 
 /// A rounded count, e.g. the number of problems or unread notifications. Counts above
@@ -108,29 +108,40 @@ impl Tag {
     }
 }
 
-impl Widget for Tag {
-    fn ui(self, ui: &mut Ui) -> Response {
+impl Tag {
+    /// Like [`tone`](Self::tone), with `None` for the neutral tag.
+    pub(crate) fn tone_opt(mut self, tone: Option<Tone>) -> Self {
+        self.tone = tone;
+        self
+    }
+
+    /// The size the tag takes: its text plus padding, 18 pt high.
+    pub(crate) fn size(&self, ui: &Ui) -> egui::Vec2 {
+        vec2(Self::galley(ui, &self.text).size().x + 12.0, 18.0)
+    }
+
+    fn galley(ui: &Ui, text: &str) -> std::sync::Arc<egui::Galley> {
+        common::galley(ui, text, typography::semibold(ui.ctx(), typography::SMALL))
+    }
+
+    /// Paints the tag centered in `rect`, without allocating a widget (table cells).
+    pub(crate) fn paint(&self, ui: &Ui, painter: &egui::Painter, rect: Rect) {
         let colors = Theme::colors(ui.ctx());
-        let galley = common::galley(
-            ui,
-            self.text.as_str(),
-            typography::semibold(ui.ctx(), typography::SMALL),
-        );
-        let (rect, response) =
-            ui.allocate_exact_size(vec2(galley.size().x + 12.0, 18.0), Sense::hover());
-        response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &self.text));
+        let galley = Self::galley(ui, &self.text);
         let (fill, text) = match self.tone.map(|tone| tone.color(&colors)) {
             Some(color) => (color.gamma_multiply(0.18), color),
             None => (colors.tag, colors.text_secondary),
         };
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(radius::CONTROL), fill);
-        common::text(
-            ui.painter(),
-            rect.center() - galley.size() / 2.0,
-            galley,
-            text,
-        );
+        painter.rect_filled(rect, CornerRadius::same(radius::CONTROL), fill);
+        common::text(painter, rect.center() - galley.size() / 2.0, galley, text);
+    }
+}
+
+impl Widget for Tag {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let (rect, response) = ui.allocate_exact_size(self.size(ui), Sense::hover());
+        response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, &self.text));
+        self.paint(ui, ui.painter(), rect);
         response
     }
 }

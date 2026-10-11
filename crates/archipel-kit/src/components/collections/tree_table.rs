@@ -158,6 +158,7 @@ impl<'a> TreeTable<'a> {
                 name: &name,
             },
             selected,
+            None,
             |ui, index, selected, focused| {
                 let tree_row = &rows[index];
                 let (rect, response) = ui.allocate_exact_size(

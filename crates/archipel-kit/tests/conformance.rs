@@ -9,7 +9,7 @@ use archipel_kit::components::{
     TreeTable, VirtualList,
 };
 use archipel_kit::testing::{self, Problem, Queryable};
-use archipel_kit::{Glyph, Theme};
+use archipel_kit::{Glyph, Theme, Tone};
 
 #[test]
 fn buttons_conform() {
@@ -167,6 +167,50 @@ fn tree_table_conforms() {
                 .name("Document")
                 .height(96.0)
                 .show(ui, |_, _| Cell::new("value").editable(true))
+                .response
+        })
+        .inner
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+/// A log that follows its tail and a tree with a busy row hold the focus like any collection.
+#[test]
+fn follow_tail_list_and_busy_tree_conform() {
+    let mut selected = None;
+    let mut follow = true;
+    testing::conformance("Messages", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            VirtualList::new("log", 30, &mut selected)
+                .name("Messages")
+                .height(96.0)
+                .follow_tail(&mut follow)
+                .show(ui, |i| ListRow::new(format!("message {i}")))
+                .response
+        })
+        .inner
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+
+    let rows = vec![
+        TreeRow::new("orders", 0)
+            .icon(Glyph::Folder)
+            .icon_tone(Tone::Warning)
+            .parent(true)
+            .busy(true),
+        TreeRow::new("users", 0).icon(Glyph::Folder).parent(false),
+    ];
+    let mut selected = None;
+    testing::conformance("Databases", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            Tree::new("db", &rows, &mut selected)
+                .name("Databases")
+                .height(72.0)
+                .show(ui)
                 .response
         })
         .inner
