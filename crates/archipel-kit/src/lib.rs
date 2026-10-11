@@ -73,11 +73,13 @@ mod docs {
         Badges = "components/badges.md";
         Banner = "components/banner.md";
         Button = "components/button.md";
+        Chart = "components/chart.md";
         Choice = "components/choice.md";
         Code = "components/code.md";
         Dropdown = "components/dropdown.md";
         EmptyState = "components/empty-state.md";
         IconButton = "components/icon-button.md";
+        KeyValueTable = "components/key-value-table.md";
         Icons = "components/icons.md";
         ListRow = "components/list-row.md";
         MenuItem = "components/menu-item.md";

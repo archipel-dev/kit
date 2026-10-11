@@ -5,16 +5,18 @@
 //! ```
 
 use archipel_kit::behaviour::ContextMenu;
-use archipel_kit::components::code::Json;
+use archipel_kit::components::code::{Json, TemplateHighlighter, TemplateToken};
 use archipel_kit::components::{
-    Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
-    Dropdown, EmptyState, IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, NumberField,
-    Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity,
-    Side, SortOrder, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast,
-    Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
+    Avatar, Banner, Bucket, Button, Cell, ChartColor, Checkbox, CodeEditor, CodeView, Column,
+    Counter, Dialog, Dropdown, EmptyState, Histogram, IconButton, Kbd, KeyValueEntry,
+    KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, NumberField, Panel, ProgressBar,
+    PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity, Side, SortOrder,
+    Sparkline, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast,
+    Toggle, Tooltip, TooltipExt, Tree, TreeRow, TreeTable,
 };
+use archipel_kit::egui::{Key, Modifiers};
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
-use archipel_kit::parts::{Slot, Surface};
+use archipel_kit::parts::{Popover, Slot, Surface};
 use archipel_kit::{Glyph, Icon, Theme, Tone, ValueKind, cursor, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
@@ -46,6 +48,7 @@ enum Page {
     Lists,
     Feedback,
     Data,
+    Charts,
     Layout,
     Overlays,
     Code,
@@ -53,7 +56,7 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [(Page, &'static str, Glyph); 11] = [
+    const ALL: [(Page, &'static str, Glyph); 12] = [
         (Page::Buttons, "Buttons", Glyph::Run),
         (Page::Inputs, "Text fields", Glyph::Search),
         (Page::Choices, "Choices", Glyph::Success),
@@ -61,6 +64,7 @@ impl Page {
         (Page::Lists, "Lists & trees", Glyph::Project),
         (Page::Feedback, "Feedback", Glyph::Warning),
         (Page::Data, "Badges & data", Glyph::Package),
+        (Page::Charts, "Charts", Glyph::Structure),
         (Page::Layout, "Panels & menus", Glyph::Layers),
         (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
         (Page::Code, "Code", Glyph::Code),
@@ -96,7 +100,11 @@ struct Gallery {
     name: String,
     query: String,
     port: String,
+    iterations: u32,
+    delay: f64,
     password: String,
+    body: String,
+    params: Vec<KeyValueEntry>,
     checks: [bool; 3],
     indent: usize,
     toggles: [bool; 2],
@@ -105,12 +113,12 @@ struct Gallery {
     tabs: Vec<Tab>,
     expanded: [bool; 2],
     selected: usize,
+    loading_selected: Option<usize>,
     method: &'static str,
-    environment: &'static str,
-    iterations: u32,
-    delay: f64,
     banners: [bool; 4],
     progress: f32,
+    bucket: Option<usize>,
+    city: Option<usize>,
     icon_filter: String,
     dialog: Option<GalleryDialog>,
     branch: String,
@@ -128,6 +136,8 @@ struct Gallery {
     /// Edited request texts of the table, by row.
     requests: std::collections::HashMap<usize, String>,
     documents: Documents,
+    url_bar: UrlBar,
+    header: String,
 }
 
 /// Documents in the tree table page, and fields per document: 1 000 × (1 + 99) rows.
@@ -279,7 +289,18 @@ impl Default for Gallery {
             name: String::new(),
             query: String::new(),
             port: "8080".into(),
+            iterations: 10,
+            delay: 0.5,
             password: "hunter2".into(),
+            body: "{\n  \"name\": \"archipel\"\n}".into(),
+            params: vec![
+                KeyValueEntry::new("page", "1"),
+                KeyValueEntry::new("limit", "50"),
+                KeyValueEntry {
+                    enabled: false,
+                    ..KeyValueEntry::new("debug", "true")
+                },
+            ],
             checks: [true, false, false],
             indent: 1,
             toggles: [true, false],
@@ -291,12 +312,12 @@ impl Default for Gallery {
                 .collect(),
             expanded: [true, true],
             selected: 2,
+            loading_selected: None,
             method: "GET",
-            environment: "Staging",
-            iterations: 10,
-            delay: 0.5,
             banners: [true; 4],
             progress: 0.4,
+            bucket: None,
+            city: Some(0),
             icon_filter: String::new(),
             dialog: None,
             branch: "feature/islands".into(),
@@ -316,6 +337,11 @@ impl Default for Gallery {
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
             documents: Documents::new(),
+            url_bar: UrlBar {
+                url: "{{base_url}}/users/{{user_id}}?key={{token}}&q={{missing}}".into(),
+                ..UrlBar::default()
+            },
+            header: "Bearer {{token}}".into(),
         }
     }
 }
@@ -422,6 +448,77 @@ impl Gallery {
                         });
                 });
             });
+    }
+
+    fn charts(&mut self, ui: &mut egui::Ui) {
+        let price = [
+            Bucket::range(0.0, 20.0, 31),
+            Bucket::range(20.0, 40.0, 148),
+            Bucket::range(40.0, 60.0, 96),
+            Bucket::range(60.0, 80.0, 44),
+            Bucket::range(80.0, 100.0, 12),
+            Bucket::range(100.0, 980.0, 3),
+        ];
+        let cities = [
+            Bucket::new("Berlin", 482),
+            Bucket::new("Hamburg", 301),
+            Bucket::new("Munich", 255),
+            Bucket::new("Köln", 120),
+            Bucket::new("Leipzig", 40),
+        ];
+        let latency = [
+            12.0, 14.5, 11.0, 13.0, 30.0, 18.0, 16.5, 15.0, 14.0, 17.0, 12.5, 13.5,
+        ];
+        ui.add(SectionHeader::new("Histogram: value distribution"));
+        Histogram::new("price", &price).show(ui);
+        ui.add(SectionHeader::new("Selectable, on the sequential ramp"));
+        let out = Histogram::new("price", &price)
+            .selectable(true)
+            .ramp(true)
+            .selected(self.bucket)
+            .show(ui);
+        if out.selected.is_some() {
+            self.bucket = out.selected;
+        }
+        if let Some(index) = out.clicked {
+            self.last_action = format!("Bucket {} activated", price[index].label());
+        }
+        ui.add(SectionHeader::new("Top values (horizontal)"));
+        let out = Histogram::new("city", &cities)
+            .horizontal(true)
+            .selectable(true)
+            .selected(self.city)
+            .show(ui);
+        if out.selected.is_some() {
+            self.city = out.selected;
+        }
+        ui.add(SectionHeader::new("Disabled and empty"));
+        Histogram::new("price", &price)
+            .height(56.0)
+            .enabled(false)
+            .show(ui);
+        Histogram::new("price", &[]).height(40.0).show(ui);
+        ui.add(SectionHeader::new("Sparklines"));
+        ui.horizontal(|ui| {
+            ui.label("p95 latency");
+            ui.add(Sparkline::new("p95 latency", &latency).tooltip(true));
+            ui.add(
+                Sparkline::new("p95 latency", &latency)
+                    .last_marker(true)
+                    .min_max_band(true)
+                    .tooltip(true),
+            );
+            ui.add(
+                Sparkline::new("errors", &latency)
+                    .color(ChartColor::Tone(Tone::Error))
+                    .last_marker(true),
+            );
+            ui.add(Sparkline::new("one value", &[4.0]).last_marker(true));
+            ui.add(Sparkline::new("no data", &[]));
+        });
+        if !self.last_action.is_empty() {
+            ui.label(&self.last_action);
+        }
     }
 
     fn show_dialog(&mut self, ctx: &egui::Context) {
@@ -544,37 +641,20 @@ impl Gallery {
                         .password(true)
                         .enabled(enabled),
                 );
-                ui.add(SectionHeader::new("Dropdown"));
                 ui.add(
-                    Dropdown::new(
-                        "method",
-                        &mut self.method,
-                        ["GET", "POST", "PUT", "PATCH", "DELETE"],
-                    )
-                    .label("HTTP method")
-                    .enabled(enabled),
+                    TextField::new(&mut self.body)
+                        .label("Request body")
+                        .multiline(4)
+                        .monospace(true)
+                        .enabled(enabled),
                 );
-                let colors = Theme::colors(ui.ctx());
-                ui.add(
-                    Dropdown::new(
-                        "environment",
-                        &mut self.environment,
-                        ["Local", "Staging", "Production"],
-                    )
-                    .label("Environment")
-                    .leading(move |env| {
-                        let color = match *env {
-                            "Local" => colors.success,
-                            "Staging" => colors.warning,
-                            _ => colors.error,
-                        };
-                        Slot::ui_width(16.0, move |ui| {
-                            ui.painter()
-                                .circle_filled(ui.max_rect().center(), 4.0, color);
-                        })
-                    })
-                    .enabled(enabled),
-                );
+                ui.add(SectionHeader::new("Key/value table"));
+                // Disabling the page makes the table read-only.
+                KeyValueTable::new("params", &mut self.params)
+                    .key_placeholder("Add parameter")
+                    .value_placeholder("value")
+                    .read_only(!enabled)
+                    .show(ui);
                 ui.add(SectionHeader::new("Number field"));
                 ui.add(
                     NumberField::new(&mut self.iterations)
@@ -588,6 +668,17 @@ impl Gallery {
                         .min(0.0)
                         .step(0.1)
                         .enabled(enabled),
+                );
+                ui.add(SectionHeader::new("Dropdown"));
+                ui.add(
+                    Dropdown::new(
+                        "method",
+                        &mut self.method,
+                        ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                    )
+                    .label("HTTP method")
+                    .leading(|_| Slot::icon(Glyph::Send))
+                    .enabled(enabled),
                 );
             }
             Page::Choices => {
@@ -634,6 +725,21 @@ impl Gallery {
                     .enabled(enabled),
                 );
                 ui.add(SectionHeader::new("Tab bar"));
+                ui.add(
+                    SegmentedControl::new(
+                        &mut self.view,
+                        [
+                            (View::Pretty, "Pretty"),
+                            (View::Raw, "Raw"),
+                            (View::Preview, "Preview"),
+                        ],
+                    )
+                    .icon(View::Pretty, Glyph::Code)
+                    .icon(View::Raw, Glyph::File)
+                    .icon(View::Preview, Glyph::Eye)
+                    .icon_only(true)
+                    .enabled(enabled),
+                );
                 let out = TabBar::new(&self.tabs, self.tab).show(ui);
                 if let Some(index) = out.selected {
                     self.tab = index;
@@ -705,6 +811,16 @@ impl Gallery {
                     );
                 }
                 ui.add(SectionHeader::new("Slots and behaviours"));
+                let loading = [TreeRow::new("Collections", 0)
+                    .icon(Glyph::Database)
+                    .icon_tone(Tone::Warning)
+                    .busy(true)
+                    .parent(false)];
+                ui.add_enabled_ui(enabled, |ui| {
+                    Tree::new("gallery-busy-tree", &loading, &mut self.loading_selected)
+                        .height(32.0)
+                        .show(ui);
+                });
                 ListRow::new("Problems")
                     .icon(Glyph::Warning)
                     .trailing(Slot::text("12"))
@@ -912,6 +1028,7 @@ impl Gallery {
                     .mono_row("Content-Type", "application/json")
                     .show(ui);
             }
+            Page::Charts => self.charts(ui),
             Page::Layout => {
                 ui.add(SectionHeader::new("Menu"));
                 egui::Frame::popup(ui.style()).show(ui, |ui| {
@@ -1089,6 +1206,22 @@ impl Gallery {
                 self.show_dialog(ui.ctx());
             }
             Page::Code => {
+                ui.add(SectionHeader::new("Template variables"));
+                let submitted = self.url_bar.show(ui, enabled);
+                if submitted {
+                    self.last_action = format!("Sent {}", self.url_bar.url);
+                }
+                ui.label(
+                    "Type {{ for suggestions: Up/Down move, Enter or a click completes, Esc closes.",
+                );
+                let highlighter = TemplateHighlighter::new(resolve_variable);
+                ui.add(
+                    TextField::new(&mut self.header)
+                        .label("Header value")
+                        .highlighter(&highlighter)
+                        .clearable(true)
+                        .enabled(enabled),
+                );
                 ui.add(SectionHeader::new("Code view"));
                 CodeView::new(CODE_SAMPLE)
                     .label("Response body")
@@ -1250,6 +1383,102 @@ fn swatch(ui: &mut egui::Ui, color: egui::Color32) {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), egui::Sense::hover());
     ui.painter()
         .rect_filled(rect, tokens::radius::CONTROL, color);
+}
+
+const VARIABLES: [&str; 4] = ["base_url", "user_id", "user_name", "token"];
+
+fn resolve_variable(name: &str) -> TemplateToken {
+    match name {
+        "token" => TemplateToken::Secret,
+        name if VARIABLES.contains(&name) => TemplateToken::Resolved,
+        _ => TemplateToken::Unresolved,
+    }
+}
+
+/// A URL bar with `{{variable}}` highlighting and autocomplete, as documented on the code
+/// page. The state is the gallery's; the kit keeps none.
+#[derive(Default)]
+struct UrlBar {
+    url: String,
+    open: bool,
+    selected: usize,
+    matches: Vec<&'static str>,
+}
+
+impl UrlBar {
+    /// Returns `true` when Enter was pressed with no list open.
+    fn show(&mut self, ui: &mut egui::Ui, enabled: bool) -> bool {
+        let highlighter = TemplateHighlighter::new(resolve_variable);
+        // The list was open last frame: it owns the navigation keys.
+        let listing = self.open && !self.matches.is_empty();
+        let (mut down, mut up, mut accept) = (false, false, false);
+        if listing {
+            ui.input_mut(|i| {
+                down = i.consume_key(Modifiers::NONE, Key::ArrowDown);
+                up = i.consume_key(Modifiers::NONE, Key::ArrowUp);
+                accept = i.consume_key(Modifiers::NONE, Key::Enter);
+                if i.consume_key(Modifiers::NONE, Key::Escape) {
+                    self.open = false;
+                }
+            });
+        }
+        let out = TextField::new(&mut self.url)
+            .label("URL")
+            .placeholder("https://example.com")
+            .monospace(true)
+            .clearable(true)
+            .enabled(enabled)
+            .highlighter(&highlighter)
+            .show(ui);
+        self.matches = match &out.template {
+            Some(token) => VARIABLES
+                .into_iter()
+                .filter(|v| v.starts_with(token.partial.as_str()))
+                .collect(),
+            None => Vec::new(),
+        };
+        if out.response.changed() {
+            self.open = true;
+            self.selected = 0;
+        }
+        let clicking = ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released());
+        if self.matches.is_empty() || out.response.lost_focus() && !clicking {
+            self.open = false;
+        }
+        let last = self.matches.len().saturating_sub(1);
+        if down {
+            self.selected = (self.selected + 1).min(last);
+        }
+        if up {
+            self.selected = self.selected.saturating_sub(1);
+        }
+        self.selected = self.selected.min(last);
+        if accept && let Some(name) = self.matches.get(self.selected) {
+            out.insert_completion(ui.ctx(), &mut self.url, name);
+            self.open = false;
+        }
+        if let Some(caret) = out.caret_rect {
+            let (matches, selected) = (self.matches.clone(), self.selected);
+            let mut picked = None;
+            Popover::new("gallery-url-completions", caret)
+                .width(220.0)
+                .show(ui.ctx(), &mut self.open, |ui| {
+                    for (i, name) in matches.iter().enumerate() {
+                        if ui
+                            .add(MenuItem::new(*name).highlighted(i == selected))
+                            .clicked()
+                        {
+                            picked = Some(*name);
+                        }
+                    }
+                });
+            if let Some(name) = picked {
+                out.insert_completion(ui.ctx(), &mut self.url, name);
+                self.open = false;
+            }
+        }
+        out.submitted && !accept
+    }
 }
 
 #[cfg(test)]

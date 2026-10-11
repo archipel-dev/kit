@@ -1,5 +1,18 @@
 # Dropdown
 
+Open with Enter/Space or Down. While open, Up/Down, Home/End and Page Up/Down move the
+highlight without changing the value. Enter commits; Escape cancels and returns focus
+to the button.
+
+Use `.leading(|value| Slot::icon(...))` for a per-option icon, or a decorative
+`Slot::ui_width` for a themed color dot. The same factory draws the selected value and
+each popup option; each option keeps its text as its accessible name.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dropdown_leading.dark.png">
+  <img alt="Environment dropdowns with leading icons, enabled and disabled" src="img/dropdown_leading.light.png" width="360">
+</picture>
+
 Picks one value from a list, in a popup. Use it for more than five options or when space is
 tight; for fewer, prefer a [segmented control](segmented-control.md) or
 [radio buttons](choice.md).
@@ -27,53 +40,24 @@ fn method_picker(ui: &mut egui::Ui, method: &mut &'static str) {
 Any `PartialEq + Clone + ToString` value works, including your own enums with a `Display`
 impl.
 
-## Leading content
-
-`.leading(|value| Slot)` puts a [`Slot`](../building-components.md) (the one
-[`ListRow`](list-row.md) takes) before every option and before the selected value in the
-closed button: an icon, or a color dot for an environment picker. The slot is painted, so use
-`Slot::icon`, `Slot::icon_tone` or a `Slot::ui_width` that draws; widgets in it would sit on
-top of the button.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/dropdown_leading.dark.png">
-  <img alt="Dropdowns with a green dot, a folder icon, and a disabled one" src="img/dropdown_leading.light.png" width="200">
-</picture>
-
-```rust
-use archipel_kit::components::Dropdown;
-use archipel_kit::parts::Slot;
-use archipel_kit::{Theme, egui};
-
-fn environment_picker(ui: &mut egui::Ui, env: &mut &'static str) {
-    let colors = Theme::colors(ui.ctx());
-    ui.add(
-        Dropdown::new("env", env, ["Local", "Staging", "Production"])
-            .label("Environment")
-            .leading(move |env| {
-                let color = if *env == "Production" { colors.error } else { colors.success };
-                Slot::ui_width(16.0, move |ui| {
-                    ui.painter().circle_filled(ui.max_rect().center(), 4.0, color);
-                })
-            }),
-    );
-}
-```
-
 ## API
 
 | Builder | Effect |
 |---|---|
 | `Dropdown::new(id_salt, &mut T, options)` | `id_salt` must be unique among dropdowns in the same `Ui`. |
 | `.label(str)` | Accessible name (default: the selected value). |
-| `.leading(Fn(&T) -> Slot)` | Leading content per value, in the open list and the closed button. |
 | `.width(f32)` | Width, 160 pt by default. |
 | `.enabled(bool)` | Disabled dropdowns are dimmed and cannot open. |
 
+## Behavior
+
+<kbd>Escape</kbd> closes the popup without picking anything and returns the focus to the
+dropdown button. The key is used up: in a [dialog](dialog.md) the first <kbd>Escape</kbd>
+only closes the popup, the next one dismisses the dialog.
+
 ## Accessibility
 
-Role `ComboBox`, named by `.label` and with the selected value as its value. Leading content
-is decoration: it does not change the names of the control or its options.
+Role `ComboBox`, named by `.label` and with the selected value as its value.
 
 ## Testing
 

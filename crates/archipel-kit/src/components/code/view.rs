@@ -1,7 +1,7 @@
 //! [`CodeView`]: read-only, virtualized code.
 
 use super::find::{self, FindState};
-use super::highlight::{Highlighter, PlainText, Span, TokenKind};
+use super::highlight::{Highlighter, PlainText, Span, styled_job, token_format};
 use super::text::{self, Cache};
 use super::{
     A11Y_VALUE_LIMIT, code_font, gutter_width, paint_background, paint_border, paint_number,
@@ -11,9 +11,8 @@ use crate::parts::desktop;
 use crate::theme::Theme;
 use crate::tokens::{radius, size};
 use crate::{Glyph, cursor};
-use egui::text::{LayoutJob, TextFormat};
 use egui::{
-    Align, CornerRadius, CursorIcon, Event, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Ui,
+    CornerRadius, CursorIcon, Event, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Ui,
     UiBuilder, Vec2, Widget, WidgetInfo, WidgetType, accesskit, pos2, vec2,
 };
 use std::borrow::Cow;
@@ -921,34 +920,8 @@ fn layout_row(
     spans: &[Span],
     offset: usize,
 ) -> Arc<egui::Galley> {
-    let mut job = LayoutJob::default();
-    job.wrap.max_width = f32::INFINITY;
-    let format = |kind: TokenKind| TextFormat {
-        font_id: font.clone(),
-        color: kind.color(colors),
-        line_height: Some(size::CODE_LINE_HEIGHT),
-        ..TextFormat::default()
-    };
-    let end = offset + slice.len();
-    let mut at = offset;
-    for span in &spans[spans.partition_point(|s| s.end <= offset)..] {
-        if span.start >= end {
-            break;
-        }
-        let (a, b) = (span.start.max(offset), span.end.min(end));
-        if a > at {
-            job.append(
-                &slice[at - offset..a - offset],
-                0.0,
-                format(TokenKind::Plain),
-            );
-        }
-        job.append(&slice[a - offset..b - offset], 0.0, format(span.kind));
-        at = b;
-    }
-    if at < end {
-        job.append(&slice[at - offset..], 0.0, format(TokenKind::Plain));
-    }
-    let _ = Align::LEFT;
+    let job = styled_job(slice, offset, spans, f32::INFINITY, |kind| {
+        token_format(kind, font, colors, Some(size::CODE_LINE_HEIGHT), true)
+    });
     ui.fonts_mut(|fonts| fonts.layout_job(job))
 }

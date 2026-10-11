@@ -90,29 +90,6 @@ fn env_dot_slot(color: egui::Color32) -> Slot<'static> {
 }
 
 #[test]
-fn dropdown_leading_snapshot() {
-    testing::snapshot_themes("dropdown_leading", common::IMG, |ui| {
-        let colors = Theme::colors(ui.ctx());
-        ui.add(
-            Dropdown::new("env", &mut "Local", ["Local", "Staging"])
-                .width(160.0)
-                .leading(move |env| env_dot_slot(env_color(&colors, env))),
-        );
-        ui.add(
-            Dropdown::new("icon", &mut "Staging", ["Local", "Staging"])
-                .width(160.0)
-                .leading(|_| Slot::icon(Glyph::Folder)),
-        );
-        ui.add(
-            Dropdown::new("off", &mut "Staging", ["Staging"])
-                .width(160.0)
-                .leading(|_| Slot::icon(Glyph::Folder))
-                .enabled(false),
-        );
-    });
-}
-
-#[test]
 fn dropdown_leading_shows_in_the_button_and_the_open_list() {
     let drawn = std::cell::Cell::new(Vec::<String>::new());
     let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {

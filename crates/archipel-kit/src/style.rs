@@ -11,7 +11,7 @@ use std::sync::Arc;
 /// themes later with [`Theme::apply`].
 pub fn install(ctx: &egui::Context, theme: Theme) {
     install_fonts(ctx);
-    ctx.style_mut(|style| {
+    ctx.all_styles_mut(|style| {
         use egui::{FontId, TextStyle};
         style.text_styles = [
             (TextStyle::Small, FontId::proportional(typography::SMALL)),
@@ -98,6 +98,11 @@ fn install_fonts(ctx: &egui::Context) {
 
 /// Rebuilds egui's visuals from `theme`, so plain egui widgets match the kit's components.
 pub(crate) fn apply_visuals(ctx: &egui::Context, theme: &Theme) {
+    ctx.set_theme(if theme.dark {
+        egui::Theme::Dark
+    } else {
+        egui::Theme::Light
+    });
     let c = &theme.colors;
     ctx.style_mut(|style| {
         let visuals = &mut style.visuals;

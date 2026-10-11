@@ -31,8 +31,17 @@ fn view_switch(ui: &mut egui::Ui, view: &mut View) {
 |---|---|
 | `SegmentedControl::new(&mut T, [(T, label)])` | Options as value/label pairs. |
 | `.enabled(bool)` | Disabled controls are dimmed and ignore clicks. |
+| `.icon(value, Icon)` | Leading icon for the matching segment. |
+| `.icon_only(bool)` | Hide labels on segments with icons; retain accessible names and tooltips. |
 
 The returned `Response` is `changed()` when the selection changed.
+Left/Right moves selection and focus between segments. Enter/Space activates the focused
+segment; Tab visits the segments.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/segmented_icons.dark.png">
+  <img alt="Segments with icons and labels, icon-only segments and disabled segments" src="img/segmented_icons.light.png" width="300">
+</picture>
 
 ## Accessibility
 

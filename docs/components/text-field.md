@@ -1,6 +1,6 @@
 # TextField
 
-A single-line text input with an optional label, placeholder, leading icon, clear button and
+A single-line or multi-line text input with an optional label, placeholder, leading icon, clear button and
 validation message. `TextField::search` is the preset for filter and search boxes.
 
 <picture>
@@ -28,6 +28,8 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 | `TextField::new(&mut String)` | Edits the string in place. `.id(Id)` sets the text edit's id (like `egui::TextEdit::id`): `response.id == id`, so `ctx.memory_mut(\|m\| m.request_focus(id))` focuses the field. |
 | `TextField::search(&mut String)` | Magnifier icon, "Search" placeholder, clear button. |
 | `.label(str)` | Visible label above the input, also its accessible name. |
+| `.name(str)` | Accessible name without a visible label; defaults to the label or placeholder. |
+| `.multiline(rows)` | At least two visible lines, wrapping and internal scrolling; Enter inserts a newline. |
 | `.placeholder(str)` | Hint shown while empty. |
 | `.error(Option<str>)` | Error outline and message below; `None` clears it, so `.error(validate(&text))` works. |
 | `.leading_icon(Icon)` | Icon inside the input, before the text. |
@@ -35,19 +37,29 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 | `.password(bool)` | Masks the text. |
 | `.monospace(bool)` | Code font, for paths, URLs and ids. |
 | `.enabled(bool)` | Disabled inputs are dimmed and read-only. |
+| `.highlighter(&dyn Highlighter)` | Colors the text (URLs, `{{variables}}`); see [single-line fields](code.md#single-line-fields-and-variables). |
 | `.width(f32)` | Total width (default: the available width). |
 
 Returns the text edit's `Response`: `changed()` after each edit, `lost_focus()` when the user
-leaves the field.
+leaves the field. `.show(ui)` returns a `TextFieldOutput` instead: the response, `submitted`
+(<kbd>Enter</kbd>), the `caret_rect` and the `{{variable}}` at the caret, for autocomplete.
 
 ## Behavior
 
 - Focus draws a 2 pt accent outline; an error keeps the outline red.
 - The clear button empties the field and keeps the focus in it.
+- Multi-line fields insert newlines with Enter and leave the field with Tab. `submitted` is
+  always false for them. Password masking and highlighting still apply.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/text_field_multiline.dark.png">
+  <img alt="Multi-line request body and a disabled host list" src="img/text_field_multiline.light.png" width="360">
+</picture>
 
 ## Accessibility
 
-Role `TextInput` (or `PasswordInput`), labelled by the visible label. The error message is
+Role `TextInput`, `MultilineTextInput` (or `PasswordInput`), named explicitly with `.name`,
+otherwise by the visible label or placeholder. The error message is
 also the input's tooltip.
 
 ## Testing

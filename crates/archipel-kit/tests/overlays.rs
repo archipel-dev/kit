@@ -248,3 +248,303 @@ fn fallback_loses_to_children() {
     harness.run();
     assert_eq!(*harness.state(), CursorIcon::Grab);
 }
+
+/// A dialog with a multiline field (focused) and a single-line one.
+fn field_dialog_harness(
+    multiline: bool,
+) -> testing::Harness<'static, (Option<DialogAction>, String)> {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (None, String::new()),
+        move |ui, (action, text)| {
+            let shown = Dialog::new("Note")
+                .content(|ui| {
+                    let edit = if multiline {
+                        egui::TextEdit::multiline(text)
+                    } else {
+                        egui::TextEdit::singleline(text)
+                    };
+                    ui.add(edit.id(egui::Id::new("note")));
+                })
+                .primary("Save")
+                .secondary("Cancel")
+                .show(ui.ctx());
+            if let Some(done) = shown {
+                action.get_or_insert(done);
+            }
+        },
+    );
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run();
+    harness
+        .get_by_role(egui::accesskit::Role::MultilineTextInput)
+        .click();
+    harness.run();
+    harness
+}
+
+#[test]
+fn dialog_enter_in_multiline_field_is_a_new_line() {
+    let mut harness = field_dialog_harness(true);
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().0, None);
+    assert_eq!(harness.state().1, "\n");
+}
+
+#[test]
+fn dialog_ctrl_enter_confirms_from_a_multiline_field() {
+    for modifiers in [egui::Modifiers::CTRL, egui::Modifiers::COMMAND] {
+        let mut harness = field_dialog_harness(true);
+        harness.key_combination_modifiers(modifiers, &[egui::Key::Enter]);
+        harness.run();
+        assert_eq!(harness.state().0, Some(DialogAction::Primary));
+    }
+}
+
+#[test]
+fn dialog_enter_in_single_line_field_confirms() {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (None, String::from("x")),
+        |ui, (action, text)| {
+            let shown = Dialog::new("Note")
+                .content(|ui| {
+                    ui.add(egui::TextEdit::singleline(text));
+                })
+                .primary("Save")
+                .show(ui.ctx());
+            if let Some(done) = shown {
+                action.get_or_insert(done);
+            }
+        },
+    );
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run();
+    harness
+        .get_by_role(egui::accesskit::Role::TextInput)
+        .click();
+    harness.run();
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().0, Some(DialogAction::Primary));
+}
+
+#[test]
+fn dialog_enter_on_a_focused_button_keeps_working() {
+    let mut harness = field_dialog_harness(true);
+    harness.get_by_label("Cancel").focus();
+    harness.run();
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().0, Some(DialogAction::Secondary));
+}
+
+fn list_dialog(ui: &mut egui::Ui, lines: usize) {
+    let _ = Dialog::new("Select files")
+        .content(|ui| {
+            for i in 0..lines {
+                ui.label(format!("file-{i}.rs"));
+            }
+        })
+        .primary("Open")
+        .secondary("Cancel")
+        .show(ui.ctx());
+}
+
+#[test]
+fn dialog_is_as_tall_as_its_content() {
+    let height = |lines: usize| {
+        let mut harness = testing::harness(Theme::dark(), move |ui| list_dialog(ui, lines));
+        harness.set_size(egui::vec2(520.0, 600.0));
+        harness.run_steps(3);
+        harness.get_by_label("Open").rect().bottom()
+            - harness.get_by_label("Select files").rect().top()
+    };
+    let (one, three) = (height(1), height(3));
+    assert!(three > one + 20.0, "{one} {three}");
+    assert!(
+        three < 200.0,
+        "a short dialog shrinks to its content: {three}"
+    );
+}
+
+#[test]
+fn dialog_scrolls_beyond_its_max_height() {
+    let mut harness = testing::harness(Theme::dark(), |ui| list_dialog(ui, 60));
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run_steps(3);
+    let buttons = harness.get_by_label("Open").rect();
+    let title = harness.get_by_label("Select files").rect();
+    assert!(
+        buttons.bottom() <= 300.0,
+        "buttons stay on screen: {buttons:?}"
+    );
+    assert!(title.top() >= 0.0, "title stays on screen: {title:?}");
+}
+
+#[test]
+fn dialog_scroll_snapshot() {
+    testing::snapshot_themes_sized(
+        "dialog_scroll",
+        common::IMG,
+        egui::vec2(520.0, 300.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            list_dialog(ui, 60);
+        },
+    );
+}
+
+#[test]
+fn dialog_short_content_snapshot() {
+    testing::snapshot_themes_sized(
+        "dialog_short",
+        common::IMG,
+        egui::vec2(520.0, 400.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            list_dialog(ui, 2);
+        },
+    );
+}
+
+#[test]
+fn dialog_tertiary_button_reports_and_sits_left() {
+    let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
+        if let Some(done) = tertiary_dialog(ui, 2) {
+            action.get_or_insert(done);
+        }
+    });
+    harness.set_size(egui::vec2(520.0, 400.0));
+    harness.run_steps(3);
+    let reset = harness.get_by_label("Reset").rect();
+    let cancel = harness.get_by_label("Cancel").rect();
+    assert!(reset.right() < cancel.left(), "{reset:?} {cancel:?}");
+    harness.get_by_label("Reset").click();
+    harness.run_steps(3);
+    assert_eq!(*harness.state(), Some(DialogAction::Tertiary));
+}
+
+#[test]
+fn dialog_tertiary_stays_reachable_when_content_scrolls() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = tertiary_dialog(ui, 60);
+    });
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run_steps(3);
+    let reset = harness.get_by_label("Reset").rect();
+    assert!(reset.bottom() <= 300.0 && reset.top() >= 0.0, "{reset:?}");
+}
+
+fn tertiary_dialog(ui: &mut egui::Ui, lines: usize) -> Option<DialogAction> {
+    Dialog::new("Select files")
+        .content(|ui| {
+            for i in 0..lines {
+                ui.label(format!("file-{i}.rs"));
+            }
+        })
+        .tertiary("Reset")
+        .primary("Open")
+        .secondary("Cancel")
+        .show(ui.ctx())
+}
+
+#[test]
+fn dialog_tertiary_snapshot() {
+    testing::snapshot_themes_sized(
+        "dialog_tertiary",
+        common::IMG,
+        egui::vec2(520.0, 300.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            let _ = tertiary_dialog(ui, 60);
+        },
+    );
+}
+
+#[test]
+fn dialog_tab_order_follows_the_visual_order() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = tertiary_dialog(ui, 2);
+    });
+    harness.set_size(egui::vec2(520.0, 400.0));
+    harness.run_steps(3);
+    let mut order = Vec::new();
+    for _ in 0..6 {
+        harness.key_press(egui::Key::Tab);
+        harness.run_steps(2);
+        for label in ["Reset", "Cancel", "Open"] {
+            if harness.get_by_label(label).is_focused() {
+                order.push(label);
+            }
+        }
+    }
+    assert_eq!(
+        order,
+        ["Reset", "Cancel", "Open", "Reset", "Cancel", "Open"]
+    );
+}
+
+/// A focusable widget that is not a text field keeps the focus on Enter: Enter confirms.
+#[test]
+fn dialog_enter_confirms_with_a_custom_widget_holding_focus() {
+    let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
+        let shown = Dialog::new("Pick")
+            .content(|ui| {
+                let (_, response) = ui.allocate_exact_size(
+                    egui::vec2(80.0, 24.0),
+                    egui::Sense::focusable_noninteractive(),
+                );
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "Swatch")
+                });
+                if !ui.memory(|m| m.has_focus(response.id)) {
+                    response.request_focus();
+                }
+            })
+            .primary("Save")
+            .show(ui.ctx());
+        if let Some(done) = shown {
+            action.get_or_insert(done);
+        }
+    });
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run_steps(3);
+    harness.key_press(egui::Key::Enter);
+    harness.run_steps(2);
+    assert_eq!(*harness.state(), Some(DialogAction::Primary));
+}
+
+/// The first frame a dialog is visible must already be final: no jump of the buttons or
+/// of the dialog itself when it opens.
+#[test]
+fn dialog_first_visible_frame_is_the_final_frame() {
+    for theme in [Theme::dark(), Theme::light()] {
+        let mut harness = testing::harness(theme, |ui| {
+            let _ = tertiary_dialog(ui, 3);
+        });
+        harness.set_size(egui::vec2(520.0, 400.0));
+        let mut first = None;
+        for _ in 0..10 {
+            harness.step();
+            if first.is_none() && harness.query_by_label("Open").is_some() {
+                first = Some((
+                    harness.render().expect("render"),
+                    harness.get_by_label("Open").rect(),
+                ));
+            }
+        }
+        let (image, open) = first.expect("the dialog became visible");
+        assert_eq!(
+            harness.get_by_label("Open").rect(),
+            open,
+            "the buttons moved"
+        );
+        let settled = harness.render().expect("render");
+        assert!(
+            image == settled,
+            "the first visible frame differs from the settled one"
+        );
+    }
+}
