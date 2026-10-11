@@ -81,6 +81,7 @@ mod docs {
         Icons = "components/icons.md";
         ListRow = "components/list-row.md";
         MenuItem = "components/menu-item.md";
+        NumberField = "components/number-field.md";
         Panel = "components/panel.md";
         Progress = "components/progress.md";
         SegmentedControl = "components/segmented-control.md";

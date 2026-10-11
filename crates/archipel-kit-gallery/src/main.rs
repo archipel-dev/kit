@@ -8,9 +8,9 @@ use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::code::Json;
 use archipel_kit::components::{
     Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
-    Dropdown, EmptyState, IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel,
-    ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity, Side,
-    SortOrder, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast,
+    Dropdown, EmptyState, IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, NumberField,
+    Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity,
+    Side, SortOrder, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast,
     Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
@@ -106,6 +106,9 @@ struct Gallery {
     expanded: [bool; 2],
     selected: usize,
     method: &'static str,
+    environment: &'static str,
+    iterations: u32,
+    delay: f64,
     banners: [bool; 4],
     progress: f32,
     icon_filter: String,
@@ -289,6 +292,9 @@ impl Default for Gallery {
             expanded: [true, true],
             selected: 2,
             method: "GET",
+            environment: "Staging",
+            iterations: 10,
+            delay: 0.5,
             banners: [true; 4],
             progress: 0.4,
             icon_filter: String::new(),
@@ -547,6 +553,41 @@ impl Gallery {
                     )
                     .label("HTTP method")
                     .enabled(enabled),
+                );
+                let colors = Theme::colors(ui.ctx());
+                ui.add(
+                    Dropdown::new(
+                        "environment",
+                        &mut self.environment,
+                        ["Local", "Staging", "Production"],
+                    )
+                    .label("Environment")
+                    .leading(move |env| {
+                        let color = match *env {
+                            "Local" => colors.success,
+                            "Staging" => colors.warning,
+                            _ => colors.error,
+                        };
+                        Slot::ui_width(16.0, move |ui| {
+                            ui.painter()
+                                .circle_filled(ui.max_rect().center(), 4.0, color);
+                        })
+                    })
+                    .enabled(enabled),
+                );
+                ui.add(SectionHeader::new("Number field"));
+                ui.add(
+                    NumberField::new(&mut self.iterations)
+                        .label("Iterations")
+                        .range(1..=1000)
+                        .enabled(enabled),
+                );
+                ui.add(
+                    NumberField::new(&mut self.delay)
+                        .label("Delay (s)")
+                        .min(0.0)
+                        .step(0.1)
+                        .enabled(enabled),
                 );
             }
             Page::Choices => {

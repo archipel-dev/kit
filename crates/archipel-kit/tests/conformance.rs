@@ -5,9 +5,10 @@ mod common;
 
 use archipel_kit::components::{
     Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link, ListRow,
-    MenuItem, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow,
-    TreeTable, VirtualList,
+    MenuItem, NumberField, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree,
+    TreeRow, TreeTable, VirtualList,
 };
+use archipel_kit::parts::{Slot, Tone};
 use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
 
@@ -131,6 +132,36 @@ fn code_view_and_editor_compose_audit_clean() {
         );
     });
     testing::audit(&mut harness).assert_clean();
+}
+
+#[test]
+fn number_field_conforms() {
+    let mut count = 10_i32;
+    testing::conformance("Iterations", move |ui, enabled| {
+        ui.add(
+            NumberField::new(&mut count)
+                .label("Iterations")
+                .range(1..=100)
+                .enabled(enabled),
+        )
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+#[test]
+fn dropdown_with_leading_content_conforms() {
+    let mut env = "Staging";
+    testing::conformance("Environment", move |ui, enabled| {
+        ui.add(
+            Dropdown::new("env", &mut env, ["Local", "Staging"])
+                .label("Environment")
+                .leading(|_| Slot::icon_tone(Glyph::Warning, Tone::Warning))
+                .enabled(enabled),
+        )
+    })
+    .run();
 }
 
 #[test]

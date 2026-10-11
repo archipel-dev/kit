@@ -17,6 +17,7 @@
 | [Button](components/button.md) | <img src="components/img/button.dark.png" width="160"> | Actions: primary, secondary, ghost, danger. |
 | [IconButton](components/icon-button.md) | <img src="components/img/icon_button.dark.png" width="160"> | Toolbar actions and toggles. |
 | [TextField](components/text-field.md) | <img src="components/img/text_field.dark.png" width="160"> | Text input, search, validation. |
+| [NumberField](components/number-field.md) | <img src="components/img/number_field.dark.png" width="160"> | Numeric input with min, max, step and arrow keys. |
 | [Checkbox, Radio, Toggle](components/choice.md) | <img src="components/img/choice.dark.png" width="160"> | Booleans and one-of-many choices. |
 | [Dropdown](components/dropdown.md) | <img src="components/img/dropdown.dark.png" width="100"> | Picking one value from a long list. |
 | [SegmentedControl](components/segmented-control.md) | <img src="components/img/segmented_control.dark.png" width="140"> | Switching views. |

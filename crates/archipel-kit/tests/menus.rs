@@ -3,6 +3,7 @@
 mod common;
 
 use archipel_kit::components::{Dropdown, Link, MenuItem, MenuSeparator};
+use archipel_kit::parts::Slot;
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme};
 
@@ -70,6 +71,106 @@ fn dropdown_picks_an_option() {
     harness.get_by_label("PUT").click();
     harness.run();
     assert_eq!(*harness.state(), "PUT");
+}
+
+/// The color of an environment, from the theme.
+fn env_color(colors: &archipel_kit::theme::Colors, env: &str) -> egui::Color32 {
+    if env == "Local" {
+        colors.success
+    } else {
+        colors.warning
+    }
+}
+
+fn env_dot_slot(color: egui::Color32) -> Slot<'static> {
+    Slot::ui_width(16.0, move |ui| {
+        ui.painter()
+            .circle_filled(ui.max_rect().center(), 4.0, color);
+    })
+}
+
+#[test]
+fn dropdown_leading_snapshot() {
+    testing::snapshot_themes("dropdown_leading", common::IMG, |ui| {
+        let colors = Theme::colors(ui.ctx());
+        ui.add(
+            Dropdown::new("env", &mut "Local", ["Local", "Staging"])
+                .width(160.0)
+                .leading(move |env| env_dot_slot(env_color(&colors, env))),
+        );
+        ui.add(
+            Dropdown::new("icon", &mut "Staging", ["Local", "Staging"])
+                .width(160.0)
+                .leading(|_| Slot::icon(Glyph::Folder)),
+        );
+        ui.add(
+            Dropdown::new("off", &mut "Staging", ["Staging"])
+                .width(160.0)
+                .leading(|_| Slot::icon(Glyph::Folder))
+                .enabled(false),
+        );
+    });
+}
+
+#[test]
+fn dropdown_leading_shows_in_the_button_and_the_open_list() {
+    let drawn = std::cell::Cell::new(Vec::<String>::new());
+    let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {
+        ui.add(
+            Dropdown::new("method", method, ["GET", "POST"]).leading(|value| {
+                let mut seen = drawn.take();
+                seen.push(value.to_string());
+                drawn.set(seen);
+                Slot::icon(Glyph::Folder)
+            }),
+        );
+    });
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 240.0));
+    harness.run();
+    // Closed: only the selected value asks for its leading content.
+    let closed = drawn.take();
+    assert!(
+        !closed.is_empty() && closed.iter().all(|v| v == "GET"),
+        "{closed:?}"
+    );
+    harness.get_by_role(Role::ComboBox).click();
+    harness.run();
+    let open = drawn.take();
+    assert!(
+        open.iter().any(|v| v == "POST"),
+        "options are led: {open:?}"
+    );
+    harness.get_by_label("POST").click();
+    harness.run();
+    assert_eq!(*harness.state(), "POST");
+    // The button now leads with the new selection.
+    harness.run_steps(10);
+    drawn.take();
+    harness.run();
+    assert!(drawn.take().iter().all(|v| v == "POST"));
+}
+
+#[test]
+fn dropdown_leading_is_audited_and_keeps_its_name() {
+    let mut harness = testing::harness_state(Theme::dark(), "Staging", |ui, env| {
+        let colors = Theme::colors(ui.ctx());
+        ui.add(
+            Dropdown::new("env", env, ["Local", "Staging"])
+                .label("Environment")
+                .leading(move |env| env_dot_slot(env_color(&colors, env))),
+        );
+    });
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 240.0));
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    let combo = harness.get_by_role(Role::ComboBox);
+    assert_eq!(combo.accessible_label().as_deref(), Some("Environment"));
+    // The open list: the options keep their names with the leading content. (The audit is
+    // not run on it: egui's popup frame is an unnamed node, with or without a leading slot.)
+    combo.click();
+    harness.run();
+    harness.get_by_label("Local");
+    harness.get_by_label("Staging");
 }
 
 #[test]

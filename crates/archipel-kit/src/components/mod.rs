@@ -4,7 +4,7 @@
 //! | Group | Components |
 //! |---|---|
 //! | Actions | [`Button`], [`IconButton`], [`Link`], [`MenuItem`], [`MenuSeparator`] |
-//! | Inputs | [`TextField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
+//! | Inputs | [`TextField`], [`NumberField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
 //! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
@@ -19,11 +19,13 @@ mod choice;
 pub mod code;
 mod collections;
 pub(crate) mod common;
+mod dropdown;
 mod feedback;
 mod icon_button;
 mod layout;
 mod list;
 mod misc;
+mod number_field;
 mod overlay;
 mod progress;
 mod segmented;
@@ -39,11 +41,13 @@ pub use collections::{
     Cell, CellEdit, CollectionResponse, Column, SortOrder, Table, Tree, TreeRow, TreeTable,
     VirtualList,
 };
+pub use dropdown::Dropdown;
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
 pub use icon_button::IconButton;
 pub use layout::{Panel, SectionHeader, Separator};
 pub use list::{ListRow, RowResponse};
-pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
+pub use misc::{EmptyState, Link, MenuItem, PropertyGrid};
+pub use number_field::{Number, NumberField};
 pub use overlay::{Dialog, DialogAction, MenuSeparator, Tooltip, TooltipExt};
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
