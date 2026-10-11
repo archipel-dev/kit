@@ -17,6 +17,7 @@ fn complete(text: &str, caret: usize) -> Option<Completions> {
     }
     Some(Completions {
         start: before[..open].chars().count(),
+        end: caret,
         items: VARIABLES
             .iter()
             .filter(|v| v.starts_with(typed))

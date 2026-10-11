@@ -68,7 +68,7 @@ pub struct Completion {
     pub label: String,
     /// A gray note after the label (a variable's value, what a function does).
     pub detail: String,
-    /// The text that replaces the typed part, from [`Completions::start`] to the caret.
+    /// The text that replaces [`Completions::start`]..[`Completions::end`].
     pub insert: String,
 }
 
@@ -92,8 +92,11 @@ impl Completion {
 /// The suggestions for the text before the caret.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Completions {
-    /// Char index where the replaced part starts; it ends at the caret.
+    /// Char index where the replaced part starts.
     pub start: usize,
+    /// Char index where the replaced part ends: usually the caret, or after a closing
+    /// `}}` already typed behind it.
+    pub end: usize,
     /// The suggestions, best first.
     pub items: Vec<Completion>,
 }
@@ -566,7 +569,8 @@ impl TextField<'_> {
                     }
                 }
                 if let (Some(item), Some(found)) = (chosen, &found) {
-                    apply_completion(ui.ctx(), edited.id, self.text, found.start, caret, &item);
+                    let end = found.end.max(found.start);
+                    apply_completion(ui.ctx(), edited.id, self.text, found.start, end, &item);
                     edited.mark_changed();
                     completion.open = false;
                 }
@@ -702,14 +706,14 @@ fn clear_button(ui: &Ui, field: Rect, field_id: Id) -> Response {
     response
 }
 
-/// Replaces the chars `start..caret` of `text` with the completion, puts the caret after it
+/// Replaces the chars `start..end` of `text` with the completion, puts the caret after it
 /// and keeps the focus in the field.
 fn apply_completion(
     ctx: &egui::Context,
     id: Id,
     text: &mut String,
     start: usize,
-    caret: usize,
+    end: usize,
     item: &Completion,
 ) {
     let byte = |chars: usize| {
@@ -717,9 +721,9 @@ fn apply_completion(
             .nth(chars)
             .map_or(text.len(), |(b, _)| b)
     };
-    let (from, to) = (byte(start.min(caret)), byte(caret));
+    let (from, to) = (byte(start), byte(end));
     text.replace_range(from..to, &item.insert);
-    let after = start.min(caret) + item.insert.chars().count();
+    let after = start + item.insert.chars().count();
     let mut state = egui::text_edit::TextEditState::load(ctx, id).unwrap_or_default();
     state
         .cursor

@@ -240,6 +240,7 @@ fn variables(text: &str, caret: usize) -> Option<Completions> {
     let typed = &before[open + 2..];
     (!typed.contains("}}")).then(|| Completions {
         start: before[..open].chars().count(),
+        end: caret,
         items: ["base_url", "token"]
             .into_iter()
             .filter(|v| v.starts_with(typed))
