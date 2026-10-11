@@ -16,6 +16,9 @@ pub enum Surface {
     Tooltip,
     /// A modal dialog: island radius, generous padding.
     Dialog,
+    /// The workbench chrome: the frame around the islands, toolbars and the status bar, in
+    /// the theme's frame color (square, with a gap's padding so islands do not touch it).
+    Chrome,
     /// An input field's box (without focus or error state; see [`Surface::field_stroke`]).
     Field,
 }
@@ -45,6 +48,9 @@ impl Surface {
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
                 .corner_radius(CornerRadius::same(radius::ISLAND))
                 .inner_margin(Margin::same(size::DIALOG_PADDING as i8 + 4)),
+            Surface::Chrome => egui::Frame::new()
+                .fill(colors.frame)
+                .inner_margin(Margin::same(size::ISLAND_GAP as i8)),
             Surface::Field => egui::Frame::new()
                 .fill(colors.field)
                 .stroke(Stroke::new(1.0_f32, colors.border))
