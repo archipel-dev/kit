@@ -102,7 +102,7 @@ pub(super) fn set_active_column(ctx: &Context, id: Id, column: usize) {
 /// Draws the editor over a cell. `rect` is the cell; `title` names the field for screen
 /// readers. The field is placed through a [`Slot`], so it is a widget in the cell like any
 /// other slot content.
-pub(super) fn show(ui: &mut Ui, id: Id, rect: Rect, title: &str, mono: bool) -> Outcome {
+fn field(ui: &mut Ui, id: Id, rect: Rect, title: &str, mono: bool) -> Outcome {
     let Some(mut session) = ui.ctx().data(|d| d.get_temp::<Session>(session_id(id))) else {
         return Outcome::Cancel;
     };
@@ -180,4 +180,79 @@ pub(super) fn show(ui: &mut Ui, id: Id, rect: Rect, title: &str, mono: bool) -> 
     ui.ctx()
         .data_mut(|d| d.insert_temp(session_id(id), session));
     outcome
+}
+
+/// The edit session of one frame of a collection: which cell is open, whether its editor was
+/// drawn, and what it did. Shared by [`Table`](super::Table) and
+/// [`TreeTable`](super::TreeTable) so both edit the same way.
+pub(super) struct Frame {
+    id: Id,
+    editing: Option<(usize, usize)>,
+    drawn: bool,
+    outcome: Option<Outcome>,
+}
+
+impl Frame {
+    pub(super) fn new(ctx: &Context, id: Id) -> Self {
+        Self {
+            id,
+            editing: current(ctx, id),
+            drawn: false,
+            outcome: None,
+        }
+    }
+
+    /// Whether the editor is open on this cell.
+    pub(super) fn is_editing(&self, row: usize, column: usize) -> bool {
+        self.editing == Some((row, column))
+    }
+
+    /// Draws the editor over the cell `rect` (call it instead of painting the cell).
+    pub(super) fn show(&mut self, ui: &mut Ui, rect: Rect, title: &str, mono: bool) {
+        self.drawn = true;
+        self.outcome = Some(field(ui, self.id, rect, title, mono));
+    }
+
+    /// Ends the frame: applies what the editor did to `response`, and starts an edit when
+    /// <kbd>F2</kbd> or <kbd>Enter</kbd> was pressed on the selected row (the last clicked
+    /// column, else the first editable one). `Enter` then doesn't activate the row.
+    pub(super) fn finish(
+        self,
+        ctx: &Context,
+        response: &mut super::CollectionResponse,
+        keys: &super::Keys,
+        selected: Option<usize>,
+        columns: usize,
+        mut cell: impl FnMut(usize, usize) -> (bool, String),
+    ) {
+        let id = self.id;
+        // A row scrolled out of view takes its editor with it: cancel rather than commit
+        // something the user can't see.
+        if self.editing.is_some() && !self.drawn {
+            end(ctx, id, false);
+        }
+        match self.outcome {
+            Some(Outcome::Commit(edited, refocus)) => {
+                end(ctx, id, refocus);
+                response.edited = Some(edited);
+            }
+            Some(Outcome::Cancel) => end(ctx, id, true),
+            Some(Outcome::Open) | None => {}
+        }
+        if self.editing.is_none()
+            && (keys.f2 || keys.enter)
+            && let Some(row) = selected
+        {
+            let active = active_column(ctx, id).filter(|col| *col < columns);
+            let target = active
+                .filter(|col| cell(row, *col).0)
+                .or_else(|| (0..columns).find(|col| cell(row, *col).0));
+            if let Some(col) = target {
+                begin(ctx, id, row, col, &cell(row, col).1);
+                if keys.enter {
+                    response.activated = None;
+                }
+            }
+        }
+    }
 }
