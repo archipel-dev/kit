@@ -732,7 +732,7 @@ impl Widget for Sparkline<'_> {
                             pos2(plot.right(), b.max(a + 1.0)),
                         ),
                         CornerRadius::same(2),
-                        color.gamma_multiply(metrics::BAND_OPACITY),
+                        color.gamma_multiply(crate::tokens::opacity::CHART_BAND),
                     );
                 }
                 let stroke = Stroke::new(metrics::LINE_WIDTH, color);

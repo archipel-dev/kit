@@ -47,7 +47,7 @@ fn inspections(ui: &mut egui::Ui, children: &mut [bool; 3]) {
 
 | Component | Builders |
 |---|---|
-| `Checkbox::new(&mut bool, label)` | `.mixed(bool)`, `.enabled(bool)` |
+| `Checkbox::new(&mut bool, label)` | `.mixed(bool)`, `.enabled(bool)`, `.label_visible(bool)` (off: the label is only the accessible name, e.g. in a row's leading slot) |
 | `Radio::new(&mut T, value, label)` | `.enabled(bool)`; selected when `*current == value` |
 | `Toggle::new(&mut bool, label)` | `.enabled(bool)` |
 

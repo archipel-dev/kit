@@ -49,6 +49,12 @@ pub mod size {
     pub const CODE_LINE_HEIGHT: f32 = 20.0;
     /// Padding inside code views and editors, and between gutter and text.
     pub const CODE_PADDING: f32 = 8.0;
+    /// Space between a row's leading slot and its icon.
+    pub const ROW_LEADING_GAP: f32 = 4.0;
+    /// Space kept between a row's label and its trailing slot.
+    pub const ROW_TRAILING_GAP: f32 = 12.0;
+    /// Least width worth showing of a row's elided secondary text.
+    pub const ROW_MIN_SECONDARY: f32 = 32.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
@@ -57,6 +63,8 @@ pub mod size {
     pub const SPLIT_GRAB: f32 = 2.0;
     /// Distance an arrow key moves a split pane's divider.
     pub const SPLIT_KEY_STEP: f32 = 16.0;
+    /// How far past its minimum size a split pane is dragged before it collapses.
+    pub const SPLIT_COLLAPSE: f32 = 40.0;
     /// Default minimum size of each side of a split pane.
     pub const SPLIT_MIN_PANE: f32 = 120.0;
     /// Default height of a vertical histogram.
@@ -86,8 +94,14 @@ pub mod chart {
     pub const LINE_WIDTH: f32 = 1.5;
     /// Stroke width of hairlines: axis baselines.
     pub const HAIRLINE: f32 = 1.0;
+}
+
+/// Opacities, from 0 to 1.
+pub mod opacity {
+    /// Opacity of a row's [`tint`](crate::components::ListRow::tint) over the island.
+    pub const ROW_TINT: f32 = 0.22;
     /// Opacity of a sparkline's min/max band.
-    pub const BAND_OPACITY: f32 = 0.12;
+    pub const CHART_BAND: f32 = 0.12;
 }
 
 /// Corner radii, in points.

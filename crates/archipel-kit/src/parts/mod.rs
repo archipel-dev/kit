@@ -28,7 +28,7 @@ mod surface;
 mod tone;
 
 pub use popover::Popover;
-pub use row::RowContent;
+pub use row::{IconPainter, RowContent};
 pub use slot::Slot;
 pub use state::{State, focus_ring, row_pill};
 pub use surface::{Surface, desktop, scroll_vertical};
