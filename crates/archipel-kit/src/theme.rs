@@ -252,6 +252,16 @@ pub struct EditorColors {
     pub punctuation: Color32,
     /// Comments (also null in data views).
     pub comment: Color32,
+    /// Markup tags.
+    pub tag: Color32,
+    /// Markup attributes.
+    pub attribute: Color32,
+    /// Variables and identifiers with meaning.
+    pub variable: Color32,
+    /// Invalid or unterminated tokens.
+    pub invalid: Color32,
+    /// The current find match, stronger than `search_result`.
+    pub search_result_current: Color32,
 }
 
 impl Colors {
@@ -397,6 +407,11 @@ impl Theme {
                 property: rgb(0xC77DBB),
                 punctuation: rgb(0x9FA2A8),
                 comment: rgb(0x7A7E85),
+                tag: rgb(0xE8BA36),
+                attribute: rgb(0xB3AE60),
+                variable: rgb(0x56A8F5),
+                invalid: rgb(0xFA6675),
+                search_result_current: rgb(0x1F7C94),
             },
         }
     }
@@ -522,6 +537,11 @@ impl Theme {
                 property: rgb(0x871094),
                 punctuation: rgb(0x5C5F6B),
                 comment: rgb(0x7C7F8A),
+                tag: rgb(0x0033B3),
+                attribute: rgb(0x174AD4),
+                variable: rgb(0x00627A),
+                invalid: rgb(0xF50000),
+                search_result_current: rgb(0xF2A33A),
             },
         }
     }

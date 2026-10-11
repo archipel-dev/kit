@@ -45,6 +45,10 @@ pub mod size {
     pub const STATUS_ITEM_PADDING: f32 = 6.0;
     /// Vertical padding of a popup and the gap between a popup and what it is attached to.
     pub const POPUP_PADDING: f32 = 4.0;
+    /// Line height of code views and editors.
+    pub const CODE_LINE_HEIGHT: f32 = 20.0;
+    /// Padding inside code views and editors, and between gutter and text.
+    pub const CODE_PADDING: f32 = 8.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.

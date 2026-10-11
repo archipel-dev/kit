@@ -21,6 +21,7 @@
 | [Dropdown](components/dropdown.md) | <img src="components/img/dropdown.dark.png" width="100"> | Picking one value from a long list. |
 | [SegmentedControl](components/segmented-control.md) | <img src="components/img/segmented_control.dark.png" width="140"> | Switching views. |
 | [TabBar](components/tab-bar.md) | <img src="components/img/tab_bar.dark.png" width="160"> | Editor tabs. |
+| [CodeView, CodeEditor](components/code.md) | <img src="components/img/code_view.dark.png" width="160"> | Read-only and editable code with highlighting and find. |
 | [VirtualList, Tree, Table](components/collections.md) | <img src="components/img/table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
 | [ListRow](components/list-row.md) | <img src="components/img/list_row.dark.png" width="160"> | Lists and trees. |
