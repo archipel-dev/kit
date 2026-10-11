@@ -123,6 +123,40 @@ pub fn snapshot_themes(name: &str, dir: impl AsRef<Path>, mut app: impl FnMut(&m
     results.unwrap();
 }
 
+/// Like [`snapshot_themes`] on a canvas of fixed `size` (in points) instead of one fitted
+/// to the content: for overlays such as dialogs, which float above the island.
+///
+/// # Panics
+/// If an image differs from its snapshot (or none exists and `UPDATE_SNAPSHOTS` is unset).
+#[track_caller]
+pub fn snapshot_themes_sized(
+    name: &str,
+    dir: impl AsRef<Path>,
+    size: egui::Vec2,
+    mut app: impl FnMut(&mut egui::Ui),
+) {
+    let mut results = SnapshotResults::new();
+    for theme in [Theme::dark(), Theme::light()] {
+        let suffix = if theme.dark { "dark" } else { "light" };
+        let draw = |ui: &mut egui::Ui, _: &mut ()| {
+            // The whole canvas is the window's frame color, like the area around islands.
+            let colors = Theme::colors(ui.ctx());
+            ui.ctx()
+                .layer_painter(egui::LayerId::background())
+                .rect_filled(ui.ctx().content_rect(), 0.0, colors.frame);
+            app(ui);
+        };
+        let mut harness = build(theme, (), draw, SNAPSHOT_SCALE);
+        harness.set_size(size);
+        harness.run_ok();
+        results.add(harness.try_snapshot_options(
+            format!("{name}.{suffix}"),
+            &SnapshotOptions::new().output_path(dir.as_ref()),
+        ));
+    }
+    results.unwrap();
+}
+
 /// Draws `add` on a rounded island with content padding, like a panel in an app.
 fn island(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
     let colors = Theme::colors(ui.ctx());

@@ -3,12 +3,13 @@
 //!
 //! | Group | Components |
 //! |---|---|
-//! | Actions | [`Button`], [`IconButton`], [`Link`], [`MenuItem`] |
+//! | Actions | [`Button`], [`IconButton`], [`Link`], [`MenuItem`], [`MenuSeparator`] |
 //! | Inputs | [`TextField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`] |
+//! | Overlays | [`Tooltip`] ([`TooltipExt`]), [`Dialog`] |
 
 mod badges;
 mod button;
@@ -19,6 +20,7 @@ mod icon_button;
 mod layout;
 mod list;
 mod misc;
+mod overlay;
 mod progress;
 mod segmented;
 mod text_field;
@@ -31,6 +33,7 @@ pub use icon_button::IconButton;
 pub use layout::{Panel, SectionHeader, Separator};
 pub use list::{ListRow, RowResponse};
 pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
+pub use overlay::{Dialog, DialogAction, MenuSeparator, Tooltip, TooltipExt};
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use text_field::TextField;

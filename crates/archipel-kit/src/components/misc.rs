@@ -36,7 +36,7 @@ impl Widget for Link {
         let galley = common::galley(ui, self.text.as_str(), typography::body(typography::BODY));
         let (rect, response) = ui.allocate_exact_size(galley.size(), Sense::click());
         response.widget_info(|| WidgetInfo::labeled(WidgetType::Link, true, &self.text));
-        let response = response.on_hover_cursor(CursorIcon::PointingHand);
+        crate::cursor::on_hover(&response, CursorIcon::PointingHand);
         if response.hovered() {
             ui.painter().hline(
                 rect.x_range(),
@@ -170,6 +170,7 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
             response.mark_changed();
         }
         let selected = self.selected.to_string();
+        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         response.widget_info(|| {
             let mut info = WidgetInfo::labeled(
                 WidgetType::ComboBox,
@@ -261,6 +262,7 @@ impl Widget for MenuItem {
             Sense::hover()
         };
         let (rect, response) = ui.allocate_exact_size(vec2(width, size::ROW_HEIGHT), sense);
+        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         response.widget_info(|| match self.checked {
             Some(checked) => {
                 WidgetInfo::selected(WidgetType::Checkbox, self.enabled, checked, &self.label)

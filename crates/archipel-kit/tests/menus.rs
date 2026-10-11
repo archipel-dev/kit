@@ -2,7 +2,7 @@
 
 mod common;
 
-use archipel_kit::components::{Dropdown, Link, MenuItem};
+use archipel_kit::components::{Dropdown, Link, MenuItem, MenuSeparator};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme};
 
@@ -17,6 +17,7 @@ fn menu_snapshot() {
                     .icon(Glyph::FindInFiles)
                     .shortcut("Ctrl+Shift+F"),
             );
+            ui.add(MenuSeparator);
             ui.add(MenuItem::new("Soft-Wrap").checked(true));
             ui.add(MenuItem::new("Run").icon(Glyph::Run).enabled(false));
         });

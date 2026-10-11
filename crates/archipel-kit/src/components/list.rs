@@ -143,6 +143,7 @@ impl ListRow {
         };
         let (rect, response) =
             ui.allocate_exact_size(vec2(ui.available_width(), size::ROW_HEIGHT), sense);
+        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         response.widget_info(|| {
             let mut info = WidgetInfo::selected(
                 WidgetType::SelectableLabel,

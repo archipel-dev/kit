@@ -5,12 +5,13 @@
 //! ```
 
 use archipel_kit::components::{
-    Avatar, Banner, Button, Checkbox, Counter, Dropdown, EmptyState, IconButton, Kbd, Link,
-    ListRow, MenuItem, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
-    Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
+    Avatar, Banner, Button, Checkbox, Counter, Dialog, Dropdown, EmptyState, IconButton, Kbd, Link,
+    ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader,
+    SegmentedControl, Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
+    Tooltip, TooltipExt,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
-use archipel_kit::{Glyph, Icon, Theme, egui, tokens};
+use archipel_kit::{Glyph, Icon, Theme, cursor, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
 const GAP: i8 = tokens::size::ISLAND_GAP as i8;
@@ -42,11 +43,12 @@ enum Page {
     Feedback,
     Data,
     Layout,
+    Overlays,
     Icons,
 }
 
 impl Page {
-    const ALL: [(Page, &'static str, Glyph); 9] = [
+    const ALL: [(Page, &'static str, Glyph); 10] = [
         (Page::Buttons, "Buttons", Glyph::Run),
         (Page::Inputs, "Text fields", Glyph::Search),
         (Page::Choices, "Choices", Glyph::Success),
@@ -55,6 +57,7 @@ impl Page {
         (Page::Feedback, "Feedback", Glyph::Warning),
         (Page::Data, "Badges & data", Glyph::Package),
         (Page::Layout, "Panels & menus", Glyph::Layers),
+        (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
         (Page::Icons, "Icons", Glyph::Sparkle),
     ];
 }
@@ -87,6 +90,16 @@ struct Gallery {
     banners: [bool; 4],
     progress: f32,
     icon_filter: String,
+    dialog: Option<GalleryDialog>,
+    branch: String,
+    busy: bool,
+    last_action: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GalleryDialog {
+    Delete,
+    NewBranch,
 }
 
 impl Default for Gallery {
@@ -115,6 +128,10 @@ impl Default for Gallery {
             banners: [true; 4],
             progress: 0.4,
             icon_filter: String::new(),
+            dialog: None,
+            branch: "feature/islands".into(),
+            busy: false,
+            last_action: String::new(),
         }
     }
 }
@@ -223,6 +240,36 @@ impl Gallery {
             });
     }
 
+    fn show_dialog(&mut self, ctx: &egui::Context) {
+        let action = match self.dialog {
+            None => return,
+            Some(GalleryDialog::Delete) => Dialog::new("Delete “main.rs”?")
+                .icon(Glyph::Warning)
+                .message("The file will be moved to the trash. You can restore it from there.")
+                .primary("Delete")
+                .danger(true)
+                .secondary("Cancel")
+                .show(ctx),
+            Some(GalleryDialog::NewBranch) => {
+                let valid = !self.branch.trim().is_empty();
+                let branch = &mut self.branch;
+                Dialog::new("New Branch")
+                    .content(|ui| {
+                        ui.add(TextField::new(branch).label("Branch name"));
+                    })
+                    .primary("Create")
+                    .primary_enabled(valid)
+                    .secondary("Cancel")
+                    .width(360.0)
+                    .show(ctx)
+            }
+        };
+        if let Some(action) = action {
+            self.last_action = format!("{action:?}");
+            self.dialog = None;
+        }
+    }
+
     fn page(&mut self, ui: &mut egui::Ui) {
         let enabled = self.enabled;
         match self.page {
@@ -254,7 +301,8 @@ impl Gallery {
                 ui.add(SectionHeader::new("Icon buttons"));
                 ui.horizontal(|ui| {
                     let colors = Theme::colors(ui.ctx());
-                    ui.add(IconButton::new(Glyph::Refresh, "Reload").enabled(enabled));
+                    ui.add(IconButton::new(Glyph::Refresh, "Reload").enabled(enabled))
+                        .tooltip_with(Tooltip::new("Reload from Disk").shortcut("Ctrl+Alt+Y"));
                     ui.add(
                         IconButton::new(Glyph::Run, "Run")
                             .color(colors.run)
@@ -525,6 +573,7 @@ impl Gallery {
                             .icon(Glyph::FindInFiles)
                             .shortcut("Ctrl+Shift+F"),
                     );
+                    ui.add(MenuSeparator);
                     let mut wrap = self.toggles[0];
                     if ui.add(MenuItem::new("Soft-Wrap").checked(wrap)).clicked() {
                         wrap = !wrap;
@@ -538,6 +587,57 @@ impl Gallery {
                         ui.add(MenuItem::new("Rename…").shortcut("Shift+F6"));
                         ui.add(MenuItem::new("Delete").shortcut("Delete"));
                     });
+            }
+            Page::Overlays => {
+                ui.add(SectionHeader::new("Tooltips"));
+                ui.horizontal(|ui| {
+                    ui.add(Button::secondary("Hover me"))
+                        .tooltip_with(Tooltip::new("Run 'gallery'").shortcut("Shift+F10"));
+                    ui.add(Button::secondary("With hint")).tooltip_with(
+                        Tooltip::new("Search Everywhere")
+                            .shortcut("Double Shift")
+                            .hint("Find files, actions, classes and symbols in one place."),
+                    );
+                    ui.add(Button::primary("Deploy").enabled(false))
+                        .tooltip("Connect a cluster first");
+                });
+                ui.add(SectionHeader::new("Dialogs"));
+                ui.horizontal(|ui| {
+                    if ui.add(Button::danger("Delete file…")).clicked() {
+                        self.dialog = Some(GalleryDialog::Delete);
+                    }
+                    if ui.add(Button::secondary("New branch…")).clicked() {
+                        self.dialog = Some(GalleryDialog::NewBranch);
+                    }
+                });
+                if !self.last_action.is_empty() {
+                    ui.label(format!("Last dialog: {}", self.last_action));
+                }
+                ui.add(SectionHeader::new("Context menu"));
+                ui.add(Button::secondary("Right-click me"))
+                    .context_menu(|ui| {
+                        ui.add(MenuItem::new("Rename…").shortcut("Shift+F6"));
+                        ui.add(MenuItem::new("Copy Path").icon(Glyph::Copy));
+                        ui.add(MenuSeparator);
+                        ui.add(
+                            MenuItem::new("Delete")
+                                .icon(Glyph::Delete)
+                                .shortcut("Delete"),
+                        );
+                    });
+                ui.add(SectionHeader::new("Cursors"));
+                ui.add(Checkbox::new(
+                    &mut self.busy,
+                    "Busy: override every cursor below",
+                ));
+                cursor::override_in(ui, self.busy.then_some(egui::CursorIcon::Progress), |ui| {
+                    ui.horizontal(|ui| {
+                        ui.add(Button::secondary("Arrow"));
+                        ui.add(Link::new("Hand"));
+                        ui.add(TextField::new(&mut self.query).placeholder("Text beam"));
+                    });
+                });
+                self.show_dialog(ui.ctx());
             }
             Page::Icons => {
                 ui.add(TextField::search(&mut self.icon_filter).placeholder("Search icons"));

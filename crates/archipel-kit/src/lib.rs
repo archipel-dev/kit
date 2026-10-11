@@ -25,6 +25,7 @@
 //! testing harness find it by its visible text.
 
 pub mod components;
+pub mod cursor;
 pub mod icons;
 mod style;
 pub mod theme;
@@ -55,6 +56,9 @@ mod docs {
         GettingStarted = "getting-started.md";
         Theming = "theming.md";
         Testing = "testing.md";
+        Cursors = "cursors.md";
+        Tooltip = "components/tooltip.md";
+        DialogPage = "components/dialog.md";
         IconKit = "icons/README.md";
         Badges = "components/badges.md";
         Banner = "components/banner.md";

@@ -3,6 +3,7 @@
 - [Getting started](getting-started.md): add the crate, install the theme, build a panel.
 - [Theming](theming.md): colors, tokens, dark and light, custom themes.
 - [Testing](testing.md): behavior, accessibility and snapshot tests for your own UI.
+- [Cursors](cursors.md): which cursor shows where, and how parents override it.
 - [Icon kit](icons/README.md): 113 designed glyphs, [78 language icons](icons/languages.md), [code symbols](icons/symbols.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
 - [Terminal UI](tui/README.md): the same theme, icons and components in the terminal (ratatui).
 - [Contributing a component](contributing.md): the checklist every component meets.
@@ -25,7 +26,9 @@
 | [EmptyState](components/empty-state.md) | <img src="components/img/empty_state.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
-| [MenuItem, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
+| [MenuItem, MenuSeparator, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
+| [Tooltip](components/tooltip.md) | <img src="components/img/tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
+| [Dialog](components/dialog.md) | <img src="components/img/dialog.dark.png" width="160"> | Decisions and short forms. |
 | [Icons](components/icons.md) | <img src="icons/img/actual-size.dark.png" width="160"> | Glyphs and file-type icons. |
 
 Every image on these pages is a snapshot test: it is rendered by `cargo test` and compared

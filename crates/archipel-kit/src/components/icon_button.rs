@@ -74,6 +74,7 @@ impl Widget for IconButton {
         let (rect, response) =
             ui.allocate_exact_size(vec2(size::ICON_BUTTON, size::ICON_BUTTON), sense);
         let selected = self.selected.unwrap_or(false);
+        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         response.widget_info(|| match self.selected {
             Some(selected) => {
                 WidgetInfo::selected(WidgetType::Button, self.enabled, selected, &self.label)

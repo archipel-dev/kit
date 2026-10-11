@@ -131,6 +131,7 @@ impl Widget for Button {
             Sense::hover()
         };
         let (rect, response) = ui.allocate_exact_size(vec2(width, height), sense);
+        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         response
             .widget_info(|| WidgetInfo::labeled(WidgetType::Button, self.enabled, galley.text()));
         if !ui.is_rect_visible(rect) {

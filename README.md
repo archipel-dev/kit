@@ -44,6 +44,7 @@ fn connect_form(ui: &mut egui::Ui, url: &mut String) -> bool {
 - [Terminal UI](docs/tui/README.md): `archipel-kit-tui`, the kit for ratatui
 - [Theming](docs/theming.md)
 - [Testing](docs/testing.md)
+- [Cursors](docs/cursors.md)
 - [Contributing a component](docs/contributing.md)
 
 Run the gallery to try every component live:
