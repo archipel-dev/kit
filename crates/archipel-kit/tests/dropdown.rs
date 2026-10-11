@@ -2,9 +2,9 @@
 
 mod common;
 
-use archipel_kit::components::{Dialog, DialogAction, Dropdown};
-use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::Theme;
+use archipel_kit::components::{Dialog, DialogAction, Dropdown};
+use archipel_kit::testing::{self, Queryable, Role};
 
 fn open_dropdown() -> testing::Harness<'static, &'static str> {
     let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {
@@ -23,7 +23,10 @@ fn escape_closes_the_popup_and_refocuses_the_button() {
     let mut harness = open_dropdown();
     harness.key_press(egui::Key::Escape);
     harness.run_steps(3);
-    assert!(harness.query_by_label("PUT").is_none(), "the popup is closed");
+    assert!(
+        harness.query_by_label("PUT").is_none(),
+        "the popup is closed"
+    );
     assert!(harness.get_by_role(Role::ComboBox).is_focused());
     assert_eq!(*harness.state(), "GET", "Escape picks nothing");
 }
@@ -52,7 +55,10 @@ fn escape_in_a_dropdown_does_not_close_the_dialog() {
     assert!(harness.query_by_label("PUT").is_some(), "the popup is open");
     harness.key_press(egui::Key::Escape);
     harness.run_steps(3);
-    assert!(harness.query_by_label("PUT").is_none(), "the popup is closed");
+    assert!(
+        harness.query_by_label("PUT").is_none(),
+        "the popup is closed"
+    );
     assert_eq!(harness.state().1, None, "the dialog stays open");
     assert!(harness.get_by_role(Role::ComboBox).is_focused());
     // A second Escape, with no popup open, dismisses the dialog.

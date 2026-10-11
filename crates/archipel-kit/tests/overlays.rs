@@ -276,7 +276,9 @@ fn field_dialog_harness(
     );
     harness.set_size(egui::vec2(520.0, 300.0));
     harness.run();
-    harness.get_by_role(egui::accesskit::Role::MultilineTextInput).click();
+    harness
+        .get_by_role(egui::accesskit::Role::MultilineTextInput)
+        .click();
     harness.run();
     harness
 }
@@ -319,7 +321,9 @@ fn dialog_enter_in_single_line_field_confirms() {
     );
     harness.set_size(egui::vec2(520.0, 300.0));
     harness.run();
-    harness.get_by_role(egui::accesskit::Role::TextInput).click();
+    harness
+        .get_by_role(egui::accesskit::Role::TextInput)
+        .click();
     harness.run();
     harness.key_press(egui::Key::Enter);
     harness.run();
@@ -354,11 +358,15 @@ fn dialog_is_as_tall_as_its_content() {
         let mut harness = testing::harness(Theme::dark(), move |ui| list_dialog(ui, lines));
         harness.set_size(egui::vec2(520.0, 600.0));
         harness.run_steps(3);
-        harness.get_by_label("Open").rect().bottom() - harness.get_by_label("Select files").rect().top()
+        harness.get_by_label("Open").rect().bottom()
+            - harness.get_by_label("Select files").rect().top()
     };
     let (one, three) = (height(1), height(3));
     assert!(three > one + 20.0, "{one} {three}");
-    assert!(three < 200.0, "a short dialog shrinks to its content: {three}");
+    assert!(
+        three < 200.0,
+        "a short dialog shrinks to its content: {three}"
+    );
 }
 
 #[test]
@@ -368,22 +376,35 @@ fn dialog_scrolls_beyond_its_max_height() {
     harness.run_steps(3);
     let buttons = harness.get_by_label("Open").rect();
     let title = harness.get_by_label("Select files").rect();
-    assert!(buttons.bottom() <= 300.0, "buttons stay on screen: {buttons:?}");
+    assert!(
+        buttons.bottom() <= 300.0,
+        "buttons stay on screen: {buttons:?}"
+    );
     assert!(title.top() >= 0.0, "title stays on screen: {title:?}");
 }
 
 #[test]
 fn dialog_scroll_snapshot() {
-    testing::snapshot_themes_sized("dialog_scroll", common::IMG, egui::vec2(520.0, 300.0), |ui| {
-        ui.label("Editor content behind the dialog");
-        list_dialog(ui, 60);
-    });
+    testing::snapshot_themes_sized(
+        "dialog_scroll",
+        common::IMG,
+        egui::vec2(520.0, 300.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            list_dialog(ui, 60);
+        },
+    );
 }
 
 #[test]
 fn dialog_short_content_snapshot() {
-    testing::snapshot_themes_sized("dialog_short", common::IMG, egui::vec2(520.0, 400.0), |ui| {
-        ui.label("Editor content behind the dialog");
-        list_dialog(ui, 2);
-    });
+    testing::snapshot_themes_sized(
+        "dialog_short",
+        common::IMG,
+        egui::vec2(520.0, 400.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            list_dialog(ui, 2);
+        },
+    );
 }

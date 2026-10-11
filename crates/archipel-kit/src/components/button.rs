@@ -151,9 +151,11 @@ impl Widget for Button {
                 Stroke::NONE,
                 colors.text_on_accent,
             ),
-            (ButtonVariant::Primary | ButtonVariant::Danger, false) => {
-                (colors.accent_disabled, Stroke::NONE, colors.text_disabled)
-            }
+            (ButtonVariant::Primary | ButtonVariant::Danger, false) => (
+                colors.accent_disabled,
+                Stroke::NONE,
+                colors.text_on_accent_disabled,
+            ),
             (ButtonVariant::Secondary, enabled) => (
                 if pressed {
                     colors.pressed
