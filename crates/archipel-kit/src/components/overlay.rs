@@ -369,10 +369,7 @@ impl<'a> Dialog<'a> {
                 // Drawn left to right so Tab follows reading order: tertiary, secondary,
                 // primary. The secondary and primary buttons sit at the right edge: their
                 // widths are measured first, so the first frame is already right.
-                let secondary = self
-                    .secondary
-                    .as_deref()
-                    .map(|label| Button::secondary(label));
+                let secondary = self.secondary.as_deref().map(Button::secondary);
                 let primary = self.primary.as_deref().map(|label| {
                     let button = if self.danger {
                         Button::danger(label)
