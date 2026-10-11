@@ -47,6 +47,8 @@ pub mod size {
     /// A field's clear button: a round 16 pt target (measured on Android Studio's search
     /// fields).
     pub const CLEAR_BUTTON: f32 = 16.0;
+    /// Width of a field's completion list.
+    pub const COMPLETION_WIDTH: f32 = 280.0;
     /// Distance from a field's right edge to the center of its clear button.
     pub const CLEAR_BUTTON_INSET: f32 = 15.0;
     /// Size the close glyph is drawn at in a clear button, so its cross is 8 pt.

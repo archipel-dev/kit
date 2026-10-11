@@ -187,6 +187,12 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("CellEdit", "table edit state"),
     ("ChartColor", "enum"),
     ("CollectionResponse", "response"),
+    (
+        "Completer",
+        "trait: suggestions for TextField, tested in tests/completion.rs",
+    ),
+    ("Completion", "data"),
+    ("Completions", "data"),
     ("Counter", "display only"),
     (
         "Dialog",

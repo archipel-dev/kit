@@ -58,6 +58,67 @@ pub struct TextField<'t> {
     width: Option<f32>,
     id: Option<Id>,
     highlighter: Option<&'t dyn Highlighter>,
+    completer: Option<&'t dyn Completer>,
+}
+
+/// One suggestion of a [`Completer`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Completion {
+    /// What the list shows.
+    pub label: String,
+    /// A gray note after the label (a variable's value, what a function does).
+    pub detail: String,
+    /// The text that replaces the typed part, from [`Completions::start`] to the caret.
+    pub insert: String,
+}
+
+impl Completion {
+    /// A suggestion inserting `insert`, listed as `label`.
+    pub fn new(label: impl Into<String>, insert: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            detail: String::new(),
+            insert: insert.into(),
+        }
+    }
+
+    /// A gray note after the label.
+    pub fn detail(mut self, detail: impl Into<String>) -> Self {
+        self.detail = detail.into();
+        self
+    }
+}
+
+/// The suggestions for the text before the caret.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Completions {
+    /// Char index where the replaced part starts; it ends at the caret.
+    pub start: usize,
+    /// The suggestions, best first.
+    pub items: Vec<Completion>,
+}
+
+/// Suggests completions for a [`TextField`]: `{{variables}}` in a URL, field names in a
+/// query. Given the text and the caret (a char index), it returns what to offer, or `None`
+/// when the caret is not where anything completes. Any
+/// `Fn(&str, usize) -> Option<Completions>` is one.
+pub trait Completer {
+    /// The suggestions at `caret` in `text`.
+    fn complete(&self, text: &str, caret: usize) -> Option<Completions>;
+}
+
+impl<F: Fn(&str, usize) -> Option<Completions>> Completer for F {
+    fn complete(&self, text: &str, caret: usize) -> Option<Completions> {
+        self(text, caret)
+    }
+}
+
+/// Where the completion list of a field is, between frames.
+#[derive(Debug, Clone, Copy, Default)]
+struct CompletionState {
+    open: bool,
+    selected: usize,
+    count: usize,
 }
 
 /// What [`TextField::show`] reports besides the usual [`Response`].
@@ -120,7 +181,17 @@ impl<'t> TextField<'t> {
             width: None,
             id: None,
             highlighter: None,
+            completer: None,
         }
+    }
+
+    /// Offers completions while typing: a list under the caret, filled by `completer`.
+    /// <kbd>Up</kbd>/<kbd>Down</kbd> move in it, <kbd>Enter</kbd> or <kbd>Tab</kbd> insert the
+    /// suggestion, <kbd>Esc</kbd> closes it; a click inserts one too. The list opens on
+    /// every edit that has suggestions and closes when the field loses focus.
+    pub fn completer(mut self, completer: &'t dyn Completer) -> Self {
+        self.completer = Some(completer);
+        self
     }
 
     /// A search input: magnifier icon, "Search" placeholder and a clear button.
@@ -249,6 +320,25 @@ impl TextField<'_> {
                 ui.allocate_exact_size(vec2(width, height), egui::Sense::hover());
             // Painted after the content, once focus is known, but drawn beneath it.
             let background = ui.painter().add(egui::Shape::Noop);
+            // An open completion list owns the navigation keys, before the edit sees them.
+            let completion_key = frame_response.id.with("archipel-completions");
+            let mut completion: CompletionState = ui
+                .data(|d| d.get_temp(completion_key))
+                .filter(|_| self.completer.is_some())
+                .unwrap_or_default();
+            let (mut down, mut up, mut accept, mut escaped) = (false, false, false, false);
+            if completion.open && completion.count > 0 {
+                ui.input_mut(|i| {
+                    down = i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown);
+                    up = i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp);
+                    accept = i.consume_key(egui::Modifiers::NONE, egui::Key::Enter)
+                        | i.consume_key(egui::Modifiers::NONE, egui::Key::Tab);
+                    if i.consume_key(egui::Modifiers::NONE, egui::Key::Escape) {
+                        completion.open = false;
+                        escaped = true;
+                    }
+                });
+            }
             let mut content = ui.new_child(
                 egui::UiBuilder::new()
                     .max_rect(rect.shrink2(vec2(
@@ -414,8 +504,78 @@ impl TextField<'_> {
                 }
                 None => (None, None),
             };
-            let submitted =
-                !multiline && edited.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            if escaped {
+                // egui drops the focus on Escape before any widget runs; this Escape only
+                // closed the list, so the field keeps it (a second Escape leaves).
+                edited.request_focus();
+            }
+            if let (Some(completer), Some(range)) = (self.completer, cursor) {
+                let caret = range.primary.index;
+                let found = completer
+                    .complete(self.text, caret)
+                    .filter(|c| !c.items.is_empty());
+                if edited.changed() {
+                    completion.open = true;
+                    completion.selected = 0;
+                }
+                let clicking = ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released());
+                if found.is_none() || (!focused && !clicking && !escaped) {
+                    completion.open = false;
+                }
+                let count = found.as_ref().map_or(0, |c| c.items.len());
+                completion.count = count;
+                let last = count.saturating_sub(1);
+                if down {
+                    completion.selected = (completion.selected + 1).min(last);
+                }
+                if up {
+                    completion.selected = completion.selected.saturating_sub(1);
+                }
+                completion.selected = completion.selected.min(last);
+                let mut chosen = None;
+                if let Some(found) = &found {
+                    if accept {
+                        chosen = found.items.get(completion.selected).cloned();
+                    }
+                    if completion.open
+                        && let Some(anchor) = caret_rect
+                    {
+                        let mut open = true;
+                        let selected = completion.selected;
+                        let picked =
+                            super::super::parts::Popover::new(completion_key.with("list"), anchor)
+                                .width(size::COMPLETION_WIDTH)
+                                .show(ui.ctx(), &mut open, |ui| {
+                                    let mut picked = None;
+                                    for (i, item) in found.items.iter().enumerate() {
+                                        let mut row = super::MenuItem::new(item.label.as_str())
+                                            .highlighted(i == selected);
+                                        if !item.detail.is_empty() {
+                                            row = row.shortcut(item.detail.as_str());
+                                        }
+                                        if ui.add(row).clicked() {
+                                            picked = Some(item.clone());
+                                        }
+                                    }
+                                    picked
+                                });
+                        if let Some(Some(item)) = picked {
+                            chosen = Some(item);
+                        }
+                        completion.open &= open;
+                    }
+                }
+                if let (Some(item), Some(found)) = (chosen, &found) {
+                    apply_completion(ui.ctx(), edited.id, self.text, found.start, caret, &item);
+                    edited.mark_changed();
+                    completion.open = false;
+                }
+                ui.data_mut(|d| d.insert_temp(completion_key, completion));
+            }
+            let submitted = !multiline
+                && !accept
+                && edited.lost_focus()
+                && ui.input(|i| i.key_pressed(egui::Key::Enter));
             let stroke = if self.error.is_some() {
                 Stroke::new(
                     if focused { size::FOCUS_RING } else { 1.0_f32 },
@@ -540,4 +700,30 @@ fn clear_button(ui: &Ui, field: Rect, field_id: Id) -> Response {
         },
     );
     response
+}
+
+/// Replaces the chars `start..caret` of `text` with the completion, puts the caret after it
+/// and keeps the focus in the field.
+fn apply_completion(
+    ctx: &egui::Context,
+    id: Id,
+    text: &mut String,
+    start: usize,
+    caret: usize,
+    item: &Completion,
+) {
+    let byte = |chars: usize| {
+        text.char_indices()
+            .nth(chars)
+            .map_or(text.len(), |(b, _)| b)
+    };
+    let (from, to) = (byte(start.min(caret)), byte(caret));
+    text.replace_range(from..to, &item.insert);
+    let after = start.min(caret) + item.insert.chars().count();
+    let mut state = egui::text_edit::TextEditState::load(ctx, id).unwrap_or_default();
+    state
+        .cursor
+        .set_char_range(Some(CCursorRange::one(CCursor::new(after))));
+    state.store(ctx, id);
+    ctx.memory_mut(|m| m.request_focus(id));
 }

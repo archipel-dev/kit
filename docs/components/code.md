@@ -218,7 +218,52 @@ fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
 }
 ```
 
-### The caret and autocomplete
+### Autocomplete
+
+`.completer(&dyn Completer)` gives a field a completion list, drawn and operated by the kit.
+The completer is any `Fn(&str, usize) -> Option<Completions>`: given the text and the caret
+(a char index) it returns where the replaced part starts and the suggestions, or `None` when
+nothing completes there. The kit opens the list under the caret on every edit with
+suggestions, moves in it with <kbd>Up</kbd>/<kbd>Down</kbd>, inserts with <kbd>Enter</kbd>,
+<kbd>Tab</kbd> or a click (caret after the insertion, focus kept), and closes it on
+<kbd>Esc</kbd> (the field keeps the focus) or when the field loses focus. <kbd>Enter</kbd> with
+no list open still submits.
+
+```rust
+use archipel_kit::components::{Completion, Completions, TextField};
+use archipel_kit::egui;
+
+/// `{{` before the caret: offer the environment's variables.
+fn variables(text: &str, caret: usize) -> Option<Completions> {
+    let before: String = text.chars().take(caret).collect();
+    let open = before.rfind("{{")?;
+    let typed = &before[open + 2..];
+    (!typed.contains("}}")).then(|| Completions {
+        start: before[..open].chars().count(),
+        items: ["base_url", "token"]
+            .into_iter()
+            .filter(|v| v.starts_with(typed))
+            .map(|v| Completion::new(v, format!("{{{{{v}}}}}")).detail("Local"))
+            .collect(),
+    })
+}
+
+fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
+    TextField::new(url).name("URL").monospace(true).completer(&variables).show(ui).submitted
+}
+```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/text_field_completion.dark.png">
+  <img alt="A URL field with the variables starting with us listed under the caret" src="img/text_field_completion.light.png" width="400">
+</picture>
+
+Each suggestion is one row: the label, and its `detail` dimmed at the right end. Tests:
+[`tests/completion.rs`](../../crates/archipel-kit/tests/completion.rs).
+
+### The caret and your own list
+
+To draw a different list, the field reports the caret instead:
 
 `TextField::show` returns a `TextFieldOutput`:
 

@@ -38,6 +38,7 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 | `.monospace(bool)` | Code font, for paths, URLs and ids. |
 | `.enabled(bool)` | Disabled inputs are dimmed and read-only. |
 | `.highlighter(&dyn Highlighter)` | Colors the text (URLs, `{{variables}}`); see [single-line fields](code.md#single-line-fields-and-variables). |
+| `.completer(&dyn Completer)` | A completion list under the caret, operated by the kit; see [autocomplete](code.md#autocomplete). |
 | `.width(f32)` | Total width (default: the available width). |
 
 Returns the text edit's `Response`: `changed()` after each edit, `lost_focus()` when the user
