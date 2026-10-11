@@ -4,10 +4,11 @@
 mod common;
 
 use archipel_kit::components::{
-    Button, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link, ListRow, MenuItem,
-    Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow, VirtualList,
+    Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link, ListRow,
+    MenuItem, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow,
+    TreeTable, VirtualList,
 };
-use archipel_kit::testing::{self, Problem};
+use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
 
 #[test]
@@ -145,6 +146,109 @@ fn dropdown_conforms() {
     .run();
 }
 
+fn tree_table_rows() -> Vec<TreeRow> {
+    vec![
+        TreeRow::new("name", 0).editable(true),
+        TreeRow::new("address", 0).icon(Glyph::Folder).parent(true),
+        TreeRow::new("city", 1),
+    ]
+}
+
+/// The collection holds the focus as a whole (Tab reaches it once); its rows are pointer
+/// targets and its keys are the arrows, not Enter/Space.
+#[test]
+fn tree_table_conforms() {
+    let rows = tree_table_rows();
+    let mut columns = vec![Column::new("Key", 120.0), Column::new("Value", 120.0)];
+    let mut selected = None;
+    testing::conformance("Document", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            TreeTable::new("doc", &mut columns, &rows, &mut selected)
+                .name("Document")
+                .height(96.0)
+                .show(ui, |_, _| Cell::new("value").editable(true))
+                .response
+        })
+        .inner
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+#[test]
+fn reorderable_editable_table_conforms_and_passes_the_audit() {
+    let mut columns = vec![
+        Column::new("Name", 120.0),
+        Column::new("Size", 80.0).right(),
+    ];
+    let mut selected = None;
+    testing::conformance("Files", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            Table::new("files", &mut columns, 5, &mut selected)
+                .name("Files")
+                .reorderable(true)
+                .height(96.0)
+                .show(ui, |r, c| Cell::new(format!("{r}:{c}")).editable(c == 0))
+                .response
+        })
+        .inner
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+
+    let mut columns = vec![
+        Column::new("Name", 120.0),
+        Column::new("Size", 80.0).right(),
+    ];
+    let mut selected = Some(0);
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = Table::new("files", &mut columns, 5, &mut selected)
+            .name("Files")
+            .reorderable(true)
+            .height(96.0)
+            .show(ui, |r, c| Cell::new(format!("{r}:{c}")).editable(c == 0));
+    });
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    harness.get_by_label("Files").focus();
+    harness.key_press(egui::Key::F2);
+    harness.run();
+    assert!(harness.query_by_label("Edit Name").is_some());
+    let audit = testing::audit(&mut harness);
+    for problem in [Problem::MissingName, Problem::SmallTarget, Problem::Overlap] {
+        assert!(audit.of(problem).is_empty(), "{problem:?}: {audit:?}");
+    }
+}
+
+/// The audit passes at rest, and with the editor open the field is named, big enough and
+/// clear of other targets.
+#[test]
+fn tree_table_passes_the_audit_while_editing() {
+    let rows = tree_table_rows();
+    let mut columns = vec![Column::new("Key", 120.0), Column::new("Value", 120.0)];
+    let mut selected = Some(0);
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = TreeTable::new("doc", &mut columns, &rows, &mut selected)
+            .name("Document")
+            .height(96.0)
+            .show(ui, |_, _| Cell::new("value").editable(true));
+    });
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    harness.get_by_label("Document").focus();
+    harness.key_press(egui::Key::F2);
+    harness.run();
+    assert!(harness.query_by_label("Edit Key").is_some());
+    // Tab leaves (and so commits) the field, so reachability is not meaningful while it is
+    // open; the field must still be named, big enough and clear of the other targets.
+    let audit = testing::audit(&mut harness);
+    for problem in [Problem::MissingName, Problem::SmallTarget, Problem::Overlap] {
+        assert!(audit.of(problem).is_empty(), "{problem:?}: {audit:?}");
+    }
+}
+
 #[test]
 fn screens_with_navigation_and_collections_pass_the_audit() {
     let mut selected = 1;
@@ -161,6 +265,8 @@ fn screens_with_navigation_and_collections_pass_the_audit() {
         Column::new("Size", 80.0).right(),
     ];
     let mut table_row = None;
+    let mut tree_columns = columns.clone();
+    let mut tree_table_row = None;
     let mut harness = testing::harness(Theme::dark(), |ui| {
         ui.add(SegmentedControl::new(
             &mut selected,
@@ -175,6 +281,9 @@ fn screens_with_navigation_and_collections_pass_the_audit() {
             .show(ui);
         let _ = Table::new("table", &mut columns, 20, &mut table_row)
             .height(72.0)
+            .show(ui, |r, c| format!("{r}:{c}").into());
+        let _ = TreeTable::new("tree-table", &mut tree_columns, &rows, &mut tree_table_row)
+            .height(48.0)
             .show(ui, |r, c| format!("{r}:{c}").into());
     });
     testing::audit(&mut harness).assert_clean();
@@ -247,4 +356,21 @@ fn conformance_catches_a_button_that_ignores_clicks() {
 #[should_panic(expected = "doesn't report disabled")]
 fn conformance_catches_a_fake_disabled_state() {
     testing::conformance("Run", |ui, _enabled| ui.add(Button::primary("Run"))).run();
+}
+
+#[test]
+fn split_pane_divider_conforms() {
+    use archipel_kit::components::SplitPane;
+    let mut ratio = 0.5;
+    testing::conformance("Resize sidebar", move |ui, enabled| {
+        ui.allocate_ui(egui::vec2(320.0, 120.0), |ui| {
+            SplitPane::horizontal("conformance", &mut ratio)
+                .label("Resize sidebar")
+                .enabled(enabled)
+                .show(ui, |ui| ui.label("Sidebar"), |ui| ui.label("Request"))
+                .divider
+        })
+        .inner
+    })
+    .run();
 }

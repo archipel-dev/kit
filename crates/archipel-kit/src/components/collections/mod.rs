@@ -5,7 +5,14 @@
 //! (`&mut Option<usize>`), the widget draws the visible rows, moves the selection with the
 //! keyboard and reports what happened in a [`CollectionResponse`].
 
+mod edit;
+mod tree_table;
+
+pub use edit::CellEdit;
+pub use tree_table::TreeTable;
+
 use super::{ListRow, common};
+use crate::behaviour::{Behaviour, DragSource, DropTarget};
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::Tone;
 use crate::theme::Theme;
@@ -15,7 +22,7 @@ use egui::{
     WidgetType, pos2, vec2,
 };
 
-/// What happened in a [`VirtualList`], [`Tree`] or [`Table`] this frame.
+/// What happened in a [`VirtualList`], [`Tree`], [`Table`] or [`TreeTable`] this frame.
 #[derive(Debug)]
 pub struct CollectionResponse {
     /// The scroll area's response.
@@ -29,12 +36,32 @@ pub struct CollectionResponse {
     pub toggled: Option<usize>,
     /// A table header was clicked to sort by that column.
     pub sort_clicked: Option<usize>,
+    /// An inline edit was committed with <kbd>Enter</kbd> (or by leaving the field): the
+    /// row, column and new text. The caller stores the text; the widget never changes data.
+    pub edited: Option<CellEdit>,
+    /// A [`Table`] header was dragged to a new place (with [`Table::reorderable`]): the new
+    /// column order as indices into the columns you passed (`order[new_position] =
+    /// old_index`). Reorder your columns with it; the table never does.
+    pub column_order: Option<Vec<usize>>,
 }
 
 /// One drawn row: its response and whether its chevron asked to toggle.
 struct DrawnRow {
     response: Response,
     toggled: bool,
+    /// The row consumed its double-click itself (it started an edit): don't activate.
+    handled: bool,
+}
+
+/// Keys the engine saw while the collection had focus, for the widgets that react to them.
+#[derive(Default)]
+struct Keys {
+    /// <kbd>←</kbd> or <kbd>→</kbd> (trees).
+    horizontal: Option<Key>,
+    /// <kbd>Enter</kbd> was pressed (it also reports `activated`).
+    enter: bool,
+    /// <kbd>F2</kbd> was pressed.
+    f2: bool,
 }
 
 /// Scroll position and viewport height from the last frame.
@@ -60,7 +87,7 @@ fn collection(
     spec: Spec<'_>,
     selected: &mut Option<usize>,
     mut row: impl FnMut(&mut Ui, usize, bool, bool) -> DrawnRow,
-) -> (CollectionResponse, Option<Key>) {
+) -> (CollectionResponse, Keys) {
     let Spec {
         id,
         len,
@@ -74,7 +101,7 @@ fn collection(
     let viewport: Option<Viewport> = ui.ctx().data(|d| d.get_temp(id));
     let mut selection_changed = false;
     let mut activated = None;
-    let mut horizontal = None;
+    let mut keys = Keys::default();
     let mut scroll_to = None;
 
     if *selected >= Some(len) {
@@ -103,11 +130,13 @@ fn collection(
         ui.input(|i| {
             if i.key_pressed(Key::Enter) {
                 activated = *selected;
+                keys.enter = true;
             }
+            keys.f2 = i.key_pressed(Key::F2);
             if i.key_pressed(Key::ArrowLeft) {
-                horizontal = Some(Key::ArrowLeft);
+                keys.horizontal = Some(Key::ArrowLeft);
             } else if i.key_pressed(Key::ArrowRight) {
-                horizontal = Some(Key::ArrowRight);
+                keys.horizontal = Some(Key::ArrowRight);
             }
         });
     }
@@ -140,7 +169,7 @@ fn collection(
                 let drawn = row(ui, index, *selected == Some(index), focused);
                 if drawn.toggled {
                     toggled = Some(index);
-                } else if drawn.response.double_clicked() {
+                } else if drawn.response.double_clicked() && !drawn.handled {
                     activated = Some(index);
                 }
                 if drawn.response.clicked() || drawn.response.double_clicked() {
@@ -196,8 +225,10 @@ fn collection(
             activated,
             toggled,
             sort_clicked: None,
+            edited: None,
+            column_order: None,
         },
-        horizontal,
+        keys,
     )
 }
 
@@ -280,6 +311,7 @@ impl<'a> VirtualList<'a> {
                 DrawnRow {
                     response: shown.response,
                     toggled: shown.toggled,
+                    handled: false,
                 }
             },
         );
@@ -297,6 +329,7 @@ pub struct TreeRow {
     depth: usize,
     children: bool,
     expanded: bool,
+    editable: bool,
 }
 
 impl TreeRow {
@@ -309,7 +342,19 @@ impl TreeRow {
             depth,
             children: false,
             expanded: false,
+            editable: false,
         }
+    }
+
+    /// The label.
+    pub fn label(&self) -> &str {
+        &self.label
+    }
+
+    /// The key (first column of a [`TreeTable`]) can be edited inline.
+    pub fn editable(mut self, editable: bool) -> Self {
+        self.editable = editable;
+        self
     }
 
     /// A node with children, shown expanded or collapsed.
@@ -412,7 +457,7 @@ impl<'a> Tree<'a> {
     /// Draws the visible rows and reports clicks, keys and toggles.
     pub fn show(self, ui: &mut Ui) -> CollectionResponse {
         let rows = self.rows;
-        let (mut response, horizontal) = collection(
+        let (mut response, keys) = collection(
             ui,
             Spec {
                 id: self.id,
@@ -440,37 +485,50 @@ impl<'a> Tree<'a> {
                 DrawnRow {
                     response: shown.response,
                     toggled: shown.toggled,
+                    handled: false,
                 }
             },
         );
-        if let (Some(key), Some(index)) = (horizontal, *self.selected) {
-            let row = &rows[index];
-            let mut select = |target: usize| {
-                if *self.selected != Some(target) {
-                    *self.selected = Some(target);
-                    response.selection_changed = true;
-                }
-            };
-            match key {
-                Key::ArrowRight if row.children && !row.expanded => response.toggled = Some(index),
-                Key::ArrowRight if row.is_expanded() => {
-                    if rows
-                        .get(index + 1)
-                        .is_some_and(|next| next.depth > row.depth)
-                    {
-                        select(index + 1);
-                    }
-                }
-                Key::ArrowLeft if row.is_expanded() => response.toggled = Some(index),
-                Key::ArrowLeft => {
-                    if let Some(parent) = rows[..index].iter().rposition(|r| r.depth < row.depth) {
-                        select(parent);
-                    }
-                }
-                _ => {}
+        apply_tree_key(rows, self.selected, keys.horizontal, &mut response);
+        response
+    }
+}
+
+/// <kbd>→</kbd>/<kbd>←</kbd> on the selected row of a tree: expand, collapse, or move to the
+/// first child or the parent.
+fn apply_tree_key(
+    rows: &[TreeRow],
+    selected: &mut Option<usize>,
+    key: Option<Key>,
+    response: &mut CollectionResponse,
+) {
+    let (Some(key), Some(index)) = (key, *selected) else {
+        return;
+    };
+    let row = &rows[index];
+    let mut select = |target: usize| {
+        if *selected != Some(target) {
+            *selected = Some(target);
+            response.selection_changed = true;
+        }
+    };
+    match key {
+        Key::ArrowRight if row.children && !row.expanded => response.toggled = Some(index),
+        Key::ArrowRight if row.is_expanded() => {
+            if rows
+                .get(index + 1)
+                .is_some_and(|next| next.depth > row.depth)
+            {
+                select(index + 1);
             }
         }
-        response
+        Key::ArrowLeft if row.is_expanded() => response.toggled = Some(index),
+        Key::ArrowLeft => {
+            if let Some(parent) = rows[..index].iter().rposition(|r| r.depth < row.depth) {
+                select(parent);
+            }
+        }
+        _ => {}
     }
 }
 
@@ -539,6 +597,7 @@ pub struct Cell {
     text: String,
     icon: Option<Icon>,
     tone: Option<Tone>,
+    editable: bool,
 }
 
 impl Cell {
@@ -563,6 +622,14 @@ impl Cell {
         self
     }
 
+    /// The cell can be edited inline (<kbd>F2</kbd>, <kbd>Enter</kbd> or a double-click) in
+    /// widgets that support editing; the new text arrives in
+    /// [`CollectionResponse::edited`].
+    pub fn editable(mut self, editable: bool) -> Self {
+        self.editable = editable;
+        self
+    }
+
     /// Secondary text (null values, timestamps): [`Tone::Secondary`].
     pub fn muted(self) -> Self {
         self.tone(Tone::Secondary)
@@ -582,9 +649,11 @@ impl From<String> for Cell {
 }
 
 /// Horizontal padding inside a cell.
-const CELL_PADDING: f32 = 8.0;
+pub(super) const CELL_PADDING: f32 = 8.0;
+/// Width of the column resize handle, centered on the column edge.
+const HANDLE_WIDTH: f32 = 7.0;
 /// Narrowest a column can be dragged.
-const MIN_COLUMN: f32 = 40.0;
+pub(super) const MIN_COLUMN: f32 = 40.0;
 
 /// A virtualized table: a header with sort indicators and resizable columns, and rows
 /// that are drawn only when visible. Query results, request history, headers.
@@ -624,6 +693,7 @@ pub struct Table<'a> {
     selected: &'a mut Option<usize>,
     sort: Option<(usize, SortOrder)>,
     height: f32,
+    reorderable: bool,
 }
 
 impl<'a> Table<'a> {
@@ -642,12 +712,21 @@ impl<'a> Table<'a> {
             selected,
             sort: None,
             height: 240.0,
+            reorderable: false,
         }
     }
 
     /// The column and direction the rows are sorted by (shown in the header).
     pub fn sort(mut self, sort: Option<(usize, SortOrder)>) -> Self {
         self.sort = sort;
+        self
+    }
+
+    /// Headers can be dragged to reorder the columns. Dropping one on another header reports
+    /// the new order in [`CollectionResponse::column_order`]; you own the column order, so
+    /// reorder your columns (and the indices your cell callback gets) with it.
+    pub fn reorderable(mut self, reorderable: bool) -> Self {
+        self.reorderable = reorderable;
         self
     }
 
@@ -671,9 +750,13 @@ impl<'a> Table<'a> {
         mut cell: impl FnMut(usize, usize) -> Cell,
     ) -> CollectionResponse {
         let colors = Theme::colors(ui.ctx());
-        let sort_clicked = header(ui, self.id, self.columns, self.sort);
+        let ctx = ui.ctx().clone();
+        let (sort_clicked, column_order) =
+            header(ui, self.id, self.columns, self.sort, self.reorderable);
         let columns: &[Column] = self.columns;
-        let (mut response, _) = collection(
+        let id = self.id;
+        let mut editing = edit::Frame::new(&ctx, id);
+        let (mut response, keys) = collection(
             ui,
             Spec {
                 id: self.id,
@@ -699,52 +782,123 @@ impl<'a> Table<'a> {
                         label.join(", "),
                     )
                 });
+                let mut x = rect.left() + size::ROW_PILL_INSET;
+                let column_rects: Vec<Rect> = columns
+                    .iter()
+                    .map(|column| {
+                        let cell_rect = Rect::from_min_max(
+                            pos2(x, rect.top()),
+                            pos2(x + column.width, rect.bottom()),
+                        );
+                        x += column.width;
+                        cell_rect.intersect(rect)
+                    })
+                    .collect();
+                // The edited column is the one clicked last; a double-click on an editable
+                // cell opens the editor instead of activating the row.
+                let clicked_column = || {
+                    response.interact_pointer_pos().and_then(|pos| {
+                        column_rects
+                            .iter()
+                            .position(|r| r.x_range().contains(pos.x))
+                    })
+                };
+                let mut handled = false;
+                if (response.clicked() || response.double_clicked())
+                    && let Some(col) = clicked_column()
+                {
+                    edit::set_active_column(ui.ctx(), id, col);
+                    if response.double_clicked() && cells[col].editable {
+                        edit::begin(ui.ctx(), id, index, col, &cells[col].text);
+                        handled = true;
+                    }
+                }
                 if ui.is_rect_visible(rect) {
                     let state = crate::parts::State::of(&response)
                         .selected(selected)
                         .inactive(!focused);
                     let fill = state.row_fill(&colors);
                     common::row_pill(ui.painter(), rect, fill);
-                    let mut x = rect.left() + size::ROW_PILL_INSET;
-                    for (column, cell) in columns.iter().zip(cells) {
-                        let cell_rect = Rect::from_min_max(
-                            pos2(x, rect.top()),
-                            pos2(x + column.width, rect.bottom()),
-                        );
-                        paint_cell(ui, cell_rect.intersect(rect), column, cell, selected);
-                        x += column.width;
+                    for (col, (column, cell)) in columns.iter().zip(cells).enumerate() {
+                        if editing.is_editing(index, col) {
+                            editing.show(ui, column_rects[col], column.title(), column.mono);
+                        } else {
+                            paint_cell(ui, column_rects[col], column, cell, selected);
+                        }
                     }
                 }
                 DrawnRow {
                     response,
                     toggled: false,
+                    handled,
                 }
             },
         );
+        editing.finish(
+            &ctx,
+            &mut response,
+            &keys,
+            *self.selected,
+            columns.len(),
+            |row, col| {
+                let cell = cell(row, col);
+                (cell.editable, cell.text)
+            },
+        );
         response.sort_clicked = sort_clicked;
+        response.column_order = column_order;
         response
     }
 }
 
-/// Draws the header row; returns the column whose title was clicked.
-fn header(
+/// A column header being dragged: the table it belongs to and its index.
+#[derive(Clone)]
+struct ColumnDrag {
+    table: Id,
+    index: usize,
+}
+
+/// Draws the header row; returns the column whose title was clicked, and the new column
+/// order if a header was dropped on another.
+pub(super) fn header(
     ui: &mut Ui,
     id: Id,
     columns: &mut [Column],
     sort: Option<(usize, SortOrder)>,
-) -> Option<usize> {
+    reorder: bool,
+) -> (Option<usize>, Option<Vec<usize>>) {
     let colors = Theme::colors(ui.ctx());
     let height = size::ROW_HEIGHT + 4.0;
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     let font = typography::semibold(ui.ctx(), typography::BODY);
     let mut clicked = None;
+    let mut moved: Option<(usize, usize)> = None;
     let mut x = rect.left() + size::ROW_PILL_INSET;
     for (index, column) in columns.iter_mut().enumerate() {
         let cell = Rect::from_min_max(pos2(x, rect.top()), pos2(x + column.width, rect.bottom()))
             .intersect(rect);
-        let title = ui.interact(cell, id.with(("header", index)), Sense::click());
+        // The title's target stops short of the edges, which belong to the resize handles.
+        let title = ui.interact(
+            cell.shrink2(vec2(HANDLE_WIDTH / 2.0, 0.0)),
+            id.with(("header", index)),
+            Sense::click(),
+        );
         crate::cursor::on_hover_action(&title);
         title.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &column.title));
+        // Reordering: the header is a drag source and a drop target for columns of this
+        // table. The drag cursor (open and closed hand) replaces the pointing hand.
+        let title = if reorder {
+            let title = DragSource(ColumnDrag { table: id, index }).attach(ui, title);
+            let mut over: Option<ColumnDrag> = None;
+            let title = DropTarget::new(&mut over).attach(ui, title);
+            if let Some(from) = over.filter(|drag| drag.table == id) {
+                moved = Some((from.index, index));
+            }
+            title
+        } else {
+            title
+        };
+        // After the drag source: its response senses the click too.
         if title.clicked() {
             clicked = Some(index);
         }
@@ -786,7 +940,10 @@ fn header(
             icons::paint(&painter, icon, glyph, colors.text_secondary);
         }
         // Resize handle on the right edge.
-        let edge = Rect::from_center_size(pos2(cell.right(), cell.center().y), vec2(7.0, height));
+        let edge = Rect::from_center_size(
+            pos2(cell.right(), cell.center().y),
+            vec2(HANDLE_WIDTH, height),
+        );
         let handle = ui.interact(edge, id.with(("resize", index)), Sense::drag());
         crate::cursor::on_hover(&handle, CursorIcon::ResizeColumn);
         ui.ctx().accesskit_node_builder(handle.id, |node| {
@@ -814,10 +971,16 @@ fn header(
         rect.bottom() - 0.5,
         Stroke::new(1.0_f32, colors.separator),
     );
-    clicked
+    let order = moved.filter(|(from, to)| from != to).map(|(from, to)| {
+        let mut order: Vec<usize> = (0..columns.len()).collect();
+        let moved = order.remove(from);
+        order.insert(to, moved);
+        order
+    });
+    (clicked, order)
 }
 
-fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selected: bool) {
+pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selected: bool) {
     let colors = Theme::colors(ui.ctx());
     let painter = ui
         .painter()

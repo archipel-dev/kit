@@ -179,6 +179,14 @@ pub struct Colors {
     pub icon: Color32,
     /// Folder icon fill.
     pub folder_fill: Color32,
+
+    // Data visualization.
+    /// Eight distinguishable series colors for charts, each at least 3:1 against `island`.
+    /// Use [`Colors::chart`] to index them.
+    pub categorical: [Color32; 8],
+    /// Sequential ramp from "little" to "much" (heatmaps, histograms). Luminance moves away
+    /// from `island` as the value grows. Use [`Colors::ramp`] to sample it.
+    pub sequential: [Color32; 5],
 }
 
 /// Code editor colors.
@@ -224,28 +232,51 @@ pub struct EditorColors {
     pub error_stripe: Color32,
     /// Warning marks in the scrollbar stripe.
     pub warning_stripe: Color32,
-    /// Keywords.
-    pub syntax_keyword: Color32,
+
+    // Syntax: the colors of code and of typed values in data views (see `ValueKind`).
     /// String literals.
-    pub syntax_string: Color32,
-    /// Numbers and constants.
-    pub syntax_number: Color32,
-    /// Comments.
-    pub syntax_comment: Color32,
-    /// Brackets, commas and operators.
-    pub syntax_punctuation: Color32,
-    /// Property names: JSON keys, object fields.
-    pub syntax_property: Color32,
+    pub string: Color32,
+    /// Numbers.
+    pub number: Color32,
+    /// Keywords (also booleans in data views).
+    pub keyword: Color32,
+    /// Constants (also dates in data views).
+    pub constant: Color32,
+    /// Type names (also ids in data views).
+    pub type_name: Color32,
+    /// Annotations and metadata (also binary values in data views).
+    pub annotation: Color32,
+    /// Properties and keys.
+    pub property: Color32,
+    /// Punctuation: braces, brackets, commas, colons.
+    pub punctuation: Color32,
+    /// Comments (also null in data views).
+    pub comment: Color32,
     /// Markup tags.
-    pub syntax_tag: Color32,
+    pub tag: Color32,
     /// Markup attributes.
-    pub syntax_attribute: Color32,
+    pub attribute: Color32,
     /// Variables and identifiers with meaning.
-    pub syntax_variable: Color32,
+    pub variable: Color32,
     /// Invalid or unterminated tokens.
-    pub syntax_error: Color32,
+    pub invalid: Color32,
     /// The current find match, stronger than `search_result`.
     pub search_result_current: Color32,
+}
+
+impl Colors {
+    /// Series color `index` of the categorical chart palette; wraps after 8 series.
+    pub fn chart(&self, index: usize) -> Color32 {
+        self.categorical[index % self.categorical.len()]
+    }
+
+    /// Samples the sequential ramp at `t` (clamped to 0..=1), blending between its stops.
+    pub fn ramp(&self, t: f32) -> Color32 {
+        let t = if t.is_nan() { 0.0 } else { t.clamp(0.0, 1.0) };
+        let scaled = t * (self.sequential.len() - 1) as f32;
+        let low = (scaled.floor() as usize).min(self.sequential.len() - 2);
+        self.sequential[low].lerp_to_gamma(self.sequential[low + 1], scaled - low as f32)
+    }
 }
 
 impl Default for Theme {
@@ -326,6 +357,23 @@ impl Theme {
                 vcs_ignored: rgb(0x6F737A),
                 icon: rgb(0xCED0D6),
                 folder_fill: rgb(0x43454A),
+                categorical: [
+                    rgb(0x5B9CF6),
+                    rgb(0xE8935A),
+                    rgb(0x5FBF7F),
+                    rgb(0xC77DDA),
+                    rgb(0xF0D34E),
+                    rgb(0x3FC1C9),
+                    rgb(0xEF6F8B),
+                    rgb(0xA3C44F),
+                ],
+                sequential: [
+                    rgb(0x1E3558),
+                    rgb(0x28569A),
+                    rgb(0x3A7FD5),
+                    rgb(0x78B0EE),
+                    rgb(0xBFDDFF),
+                ],
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
@@ -350,16 +398,19 @@ impl Theme {
                 inline_value: rgb(0x666D75),
                 error_stripe: rgb(0xD64D5B),
                 warning_stripe: rgb(0xC29E4A),
-                syntax_keyword: rgb(0xCF8E6D),
-                syntax_string: rgb(0x6AAB73),
-                syntax_number: rgb(0x2AACB8),
-                syntax_comment: rgb(0x7A7E85),
-                syntax_punctuation: rgb(0xA1A3AB),
-                syntax_property: rgb(0xC77DBB),
-                syntax_tag: rgb(0xE8BA36),
-                syntax_attribute: rgb(0xB3AE60),
-                syntax_variable: rgb(0x56A8F5),
-                syntax_error: rgb(0xFA6675),
+                string: rgb(0x6AAB73),
+                number: rgb(0x2AACB8),
+                keyword: rgb(0xCF8E6D),
+                constant: rgb(0x9E86C8),
+                type_name: rgb(0x16BAAC),
+                annotation: rgb(0xB3AE60),
+                property: rgb(0xC77DBB),
+                punctuation: rgb(0x9FA2A8),
+                comment: rgb(0x7A7E85),
+                tag: rgb(0xE8BA36),
+                attribute: rgb(0xB3AE60),
+                variable: rgb(0x56A8F5),
+                invalid: rgb(0xFA6675),
                 search_result_current: rgb(0x1F7C94),
             },
         }
@@ -436,6 +487,23 @@ impl Theme {
                 vcs_ignored: rgb(0x818594),
                 icon: rgb(0x73767C),
                 folder_fill: rgb(0xEBECF0),
+                categorical: [
+                    rgb(0x2F6FDE),
+                    rgb(0xD9661F),
+                    rgb(0x1E9A4A),
+                    rgb(0x9A4FC0),
+                    rgb(0x9C8200),
+                    rgb(0x0E8F9B),
+                    rgb(0xD6457A),
+                    rgb(0x5C8A0A),
+                ],
+                sequential: [
+                    rgb(0xDCE9FB),
+                    rgb(0xA3C6F2),
+                    rgb(0x5C97E6),
+                    rgb(0x2A63C2),
+                    rgb(0x0F3A82),
+                ],
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
@@ -460,19 +528,27 @@ impl Theme {
                 inline_value: rgb(0x868686),
                 error_stripe: rgb(0xCF5B56),
                 warning_stripe: rgb(0xF2BF57),
-                syntax_keyword: rgb(0x0033B3),
-                syntax_string: rgb(0x067D17),
-                syntax_number: rgb(0x1750EB),
-                syntax_comment: rgb(0x8C8C8C),
-                syntax_punctuation: rgb(0x5C5F6B),
-                syntax_property: rgb(0x871094),
-                syntax_tag: rgb(0x0033B3),
-                syntax_attribute: rgb(0x174AD4),
-                syntax_variable: rgb(0x00627A),
-                syntax_error: rgb(0xF50000),
+                string: rgb(0x067D17),
+                number: rgb(0x1750EB),
+                keyword: rgb(0x0033B3),
+                constant: rgb(0x7A3E9D),
+                type_name: rgb(0x00627A),
+                annotation: rgb(0x8A6D00),
+                property: rgb(0x871094),
+                punctuation: rgb(0x5C5F6B),
+                comment: rgb(0x7C7F8A),
+                tag: rgb(0x0033B3),
+                attribute: rgb(0x174AD4),
+                variable: rgb(0x00627A),
+                invalid: rgb(0xF50000),
                 search_result_current: rgb(0xF2A33A),
             },
         }
+    }
+
+    /// Series color `index` of the chart palette (wraps after 8 series).
+    pub fn chart(&self, index: usize) -> Color32 {
+        self.colors.chart(index)
     }
 
     /// The theme installed in `ctx`, or [`Theme::dark`] if [`crate::install`] was never called.
@@ -562,8 +638,82 @@ mod tests {
     }
 
     #[test]
+    fn chart_palette_is_readable_and_distinct() {
+        for theme in [Theme::dark(), Theme::light()] {
+            let island = theme.colors.island;
+            for (i, color) in theme.colors.categorical.iter().enumerate() {
+                let ratio = contrast(*color, island);
+                assert!(
+                    ratio >= 3.0,
+                    "{}: series {i} contrast {ratio:.2}",
+                    theme.name
+                );
+            }
+            let all = &theme.colors.categorical;
+            for i in 0..all.len() {
+                for j in i + 1..all.len() {
+                    let d = |a: u8, b: u8| (a as f32 - b as f32).powi(2);
+                    let dist = (d(all[i].r(), all[j].r())
+                        + d(all[i].g(), all[j].g())
+                        + d(all[i].b(), all[j].b()))
+                    .sqrt();
+                    assert!(
+                        dist >= 60.0,
+                        "{}: series {i} and {j} too close ({dist:.0})",
+                        theme.name
+                    );
+                }
+            }
+            assert_eq!(theme.chart(8), theme.chart(0));
+        }
+    }
+
+    #[test]
+    fn sequential_ramp_grows_away_from_the_island() {
+        for theme in [Theme::dark(), Theme::light()] {
+            let c = &theme.colors;
+            let gaps: Vec<f32> = c
+                .sequential
+                .iter()
+                .map(|s| contrast(*s, c.island))
+                .collect();
+            assert!(
+                gaps.windows(2).all(|w| w[1] > w[0]),
+                "{}: ramp must separate steadily from the island: {gaps:?}",
+                theme.name
+            );
+            assert!(gaps[4] >= 7.0, "{}: top of ramp {:.1}", theme.name, gaps[4]);
+            assert_eq!(c.ramp(0.0), c.sequential[0]);
+            assert_eq!(c.ramp(1.0), c.sequential[4]);
+            assert_eq!(c.ramp(f32::NAN), c.sequential[0]);
+        }
+    }
+
+    #[test]
     fn avatar_color_is_stable() {
         assert_eq!(avatar_color("archipel"), avatar_color("archipel"));
+    }
+
+    /// Value colors are readable on the editor background (they match the code editor).
+    #[test]
+    fn syntax_colors_are_readable_in_the_editor() {
+        for theme in [Theme::dark(), Theme::light()] {
+            let e = &theme.editor;
+            for (name, color) in [
+                ("string", e.string),
+                ("number", e.number),
+                ("keyword", e.keyword),
+                ("constant", e.constant),
+                ("type", e.type_name),
+                ("annotation", e.annotation),
+                ("property", e.property),
+                ("punctuation", e.punctuation),
+                ("comment", e.comment),
+            ] {
+                let ratio = contrast(color, e.background);
+                assert!(ratio >= 3.0, "{}: {name} contrast {ratio:.2}", theme.name);
+            }
+        }
     }
 
     /// WCAG 2 contrast ratio.
