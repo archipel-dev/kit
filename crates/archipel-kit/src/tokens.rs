@@ -17,8 +17,8 @@ pub mod size {
     pub const CHEVRON_COLUMN: f32 = 16.0;
     /// Icon edge length.
     pub const ICON: f32 = 16.0;
-    /// Gap between an icon and its text.
-    pub const ICON_TEXT_GAP: f32 = 6.0;
+    /// Gap between an icon and its text (rows, menus, tabs: 4 pt in Android Studio).
+    pub const ICON_TEXT_GAP: f32 = 4.0;
     /// Gap between a primary and a secondary text in a row.
     pub const SECONDARY_GAP: f32 = 8.0;
     /// Panel title bar height.
@@ -49,7 +49,8 @@ pub mod size {
     pub const SUBMENU_WIDTH: f32 = 200.0;
     /// Space inside a status bar item at each end.
     pub const STATUS_ITEM_PADDING: f32 = 6.0;
-    /// Vertical padding of a popup and the gap between a popup and what it is attached to.
+    /// Gap between a popup and what it is attached to (its own padding is
+    /// [`popup::PADDING`](super::popup::PADDING)).
     pub const POPUP_PADDING: f32 = 4.0;
     /// Line height of code views and editors.
     pub const CODE_LINE_HEIGHT: f32 = 20.0;
@@ -111,6 +112,24 @@ pub mod chart {
     pub const LINE_WIDTH: f32 = 1.5;
     /// Stroke width of hairlines: axis baselines.
     pub const HAIRLINE: f32 = 1.0;
+}
+
+/// Popups and menus, in points. Measured on Android Studio's Islands UI.
+pub mod popup {
+    /// Space above the first and below the last item of a popup.
+    pub const PADDING: f32 = 8.0;
+    /// Inset of an item's highlight pill (and of separators) from the popup's sides.
+    pub const ITEM_INSET: f32 = 8.0;
+    /// Space inside the pill before the icon column and after the shortcut or chevron.
+    pub const ITEM_PADDING: f32 = 8.0;
+    /// Height of a section header row ("Open Projects").
+    pub const HEADER_HEIGHT: f32 = 24.0;
+    /// Height of a separator row; the line is on its fifth pixel row.
+    pub const SEPARATOR_HEIGHT: f32 = 9.0;
+    /// Icon edge of a two-line item (an item with a description).
+    pub const LARGE_ICON: f32 = 20.0;
+    /// Height of the description line under a two-line item's label.
+    pub const DESCRIPTION_HEIGHT: f32 = 24.0;
 }
 
 /// Motion: delays and durations, in seconds. Measured on Android Studio's Islands UI.

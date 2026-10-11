@@ -2,15 +2,16 @@
 
 mod common;
 
-use archipel_kit::components::{Dropdown, Link, MenuItem, MenuSeparator};
+use archipel_kit::components::{Dropdown, Link, MenuHeader, MenuItem, MenuSeparator};
+use archipel_kit::parts::Surface;
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme};
 
 #[test]
 fn menu_snapshot() {
     testing::snapshot_themes("menu_item", common::IMG, |ui| {
-        egui::Frame::popup(ui.style()).show(ui, |ui| {
-            ui.set_width(240.0);
+        Surface::Popup.frame(ui.ctx()).show(ui, |ui| {
+            ui.set_width(260.0);
             ui.add(MenuItem::new("Copy").icon(Glyph::Copy).shortcut("Ctrl+C"));
             ui.add(
                 MenuItem::new("Find in Files…")
@@ -20,6 +21,13 @@ fn menu_snapshot() {
             ui.add(MenuSeparator);
             ui.add(MenuItem::new("Soft-Wrap").checked(true));
             ui.add(MenuItem::new("Run").icon(Glyph::Run).enabled(false));
+            ui.add(MenuSeparator);
+            ui.add(MenuHeader::new("Open Projects"));
+            ui.add(
+                MenuItem::new("archipel")
+                    .icon(Glyph::Folder)
+                    .description("~/code/archipel"),
+            );
         });
     });
 }
@@ -284,4 +292,68 @@ mod submenu {
                 .expect("snapshot matches");
         }
     }
+}
+
+/// Whether the item labeled `label` is painted highlighted: its row has the selection pill.
+fn highlighted(harness: &egui_kittest::Harness<'_>, label: &str) -> bool {
+    let rect = harness.get_by_label(label).rect();
+    let selection = Theme::dark().colors.selection;
+    harness
+        .output()
+        .shapes
+        .iter()
+        .any(|clipped| match &clipped.shape {
+            egui::Shape::Rect(r) => r.fill == selection && r.rect.center().y == rect.center().y,
+            _ => false,
+        })
+}
+
+fn three_items() -> egui_kittest::Harness<'static> {
+    testing::harness(Theme::dark(), |ui| {
+        ui.add(MenuItem::new("New Project…"));
+        ui.add(MenuItem::new("Open…"));
+        ui.add(MenuItem::new("Clone Repository…"));
+    })
+}
+
+#[test]
+fn menu_rows_touch_whatever_the_parent_spacing() {
+    let harness = three_items();
+    let first = harness.get_by_label("New Project…").rect();
+    let second = harness.get_by_label("Open…").rect();
+    assert_eq!(second.top(), first.bottom());
+}
+
+#[test]
+fn first_pointer_move_after_opening_is_ignored() {
+    // As in Android Studio: a menu that opens under the pointer highlights nothing until the
+    // pointer really moves over it.
+    let mut harness = three_items();
+    let open = harness.get_by_label("Open…").rect().center();
+    harness.hover_at(open);
+    harness.run();
+    assert!(!highlighted(&harness, "Open…"));
+    harness.hover_at(open + egui::vec2(1.0, 0.0));
+    harness.run();
+    assert!(highlighted(&harness, "Open…"));
+}
+
+#[test]
+fn highlight_stays_when_the_pointer_leaves_and_keys_continue_from_it() {
+    let mut harness = three_items();
+    let open = harness.get_by_label("Open…").rect().center();
+    harness.hover_at(open);
+    harness.run();
+    harness.hover_at(open + egui::vec2(1.0, 0.0));
+    harness.run();
+    harness.hover_at(egui::pos2(-50.0, -50.0));
+    harness.run();
+    assert!(
+        highlighted(&harness, "Open…"),
+        "stays on the last hovered item"
+    );
+    harness.key_press(egui::Key::ArrowDown);
+    harness.run();
+    assert!(highlighted(&harness, "Clone Repository…"));
+    assert!(!highlighted(&harness, "Open…"), "one highlight per menu");
 }

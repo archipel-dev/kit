@@ -4,7 +4,7 @@ use super::{Button, common};
 use crate::icons::{self, Glyph};
 use crate::parts::Surface;
 use crate::theme::Theme;
-use crate::tokens::{size, typography};
+use crate::tokens::{popup, size, typography};
 use egui::{Align, Key, Layout, Response, Sense, Stroke, Ui, Widget, vec2};
 
 /// A tooltip: a label, an optional shortcut after it, and an optional hint below, on the
@@ -138,12 +138,67 @@ impl Widget for MenuSeparator {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let width = ui.available_width().max(1.0);
-        let (rect, response) = ui.allocate_exact_size(vec2(width, 9.0), Sense::hover());
-        let inset = size::ROW_PILL_INSET + 4.0;
+        super::misc::menu_rows(ui);
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(width, popup::SEPARATOR_HEIGHT), Sense::hover());
+        // As in Android Studio: inset like the item pills, in the popup's border color.
         ui.painter().hline(
-            (rect.left() + inset)..=(rect.right() - inset),
-            rect.center().y,
-            Stroke::new(1.0_f32, colors.separator),
+            (rect.left() + popup::ITEM_INSET)..=(rect.right() - popup::ITEM_INSET),
+            rect.top() + (popup::SEPARATOR_HEIGHT / 2.0).floor() + 0.5,
+            Stroke::new(1.0_f32, colors.popup_border),
+        );
+        response
+    }
+}
+
+/// A section title inside a menu or popup, like "Open Projects" in Android Studio's project
+/// picker: dimmed semibold text aligned with the items' icons. It is not focusable.
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::components::{MenuHeader, MenuItem, MenuSeparator};
+///
+/// ui.add(MenuItem::new("Open…"));
+/// ui.add(MenuSeparator);
+/// ui.add(MenuHeader::new("Open Projects"));
+/// ui.add(MenuItem::new("archipel").description("~/code/archipel"));
+/// # });
+/// ```
+#[must_use = "add it with `ui.add(header)`"]
+pub struct MenuHeader {
+    title: String,
+}
+
+impl MenuHeader {
+    /// A header reading `title`.
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+        }
+    }
+}
+
+impl Widget for MenuHeader {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let colors = Theme::colors(ui.ctx());
+        let galley = common::galley(
+            ui,
+            self.title.as_str(),
+            typography::semibold(ui.ctx(), typography::BODY),
+        );
+        let x = popup::ITEM_INSET + popup::ITEM_PADDING;
+        let width = ui.available_width().max(galley.size().x + 2.0 * x);
+        super::misc::menu_rows(ui);
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(width, popup::HEADER_HEIGHT), Sense::hover());
+        response
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.title));
+        common::text_left(
+            ui.painter(),
+            rect,
+            rect.left() + x,
+            galley,
+            colors.text_placeholder,
         );
         response
     }

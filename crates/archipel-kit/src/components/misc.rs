@@ -4,10 +4,10 @@ use super::{Button, common};
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{RowContent, Slot, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{size, typography};
+use crate::tokens::{popup, radius, size, typography};
 use egui::{
-    Align, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo, WidgetType,
-    pos2, vec2,
+    Align, Color32, CornerRadius, CursorIcon, Layout, Rect, Response, Sense, Stroke, Ui, Widget,
+    WidgetInfo, WidgetType, pos2, vec2,
 };
 
 /// A text link: underlined on hover, pointer cursor.
@@ -357,6 +357,7 @@ pub struct MenuItem<'a> {
     enabled: bool,
     checked: Option<bool>,
     highlighted: bool,
+    description: Option<String>,
     submenu: Option<Submenu<'a>>,
 }
 
@@ -373,8 +374,16 @@ impl<'a> MenuItem<'a> {
             enabled: true,
             checked: None,
             highlighted: false,
+            description: None,
             submenu: None,
         }
+    }
+
+    /// A second, dimmed line under the label, like the path under a project in Android
+    /// Studio's project picker. The item becomes two lines high with a larger icon.
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
     }
 
     /// Makes the item open a submenu drawn by `add` (with [`MenuItem`]s). A chevron
@@ -424,21 +433,28 @@ impl Widget for MenuItem<'_> {
             (Some(false), _) => (None, None),
             (None, icon) => (icon, None),
         };
+        let two_line = self.description.is_some();
         let content = RowContent {
-            icon,
+            // A two-line item paints its larger icon itself.
+            icon: if two_line { None } else { icon },
             icon_tone,
-            reserve_icon: true,
+            reserve_icon: !two_line,
             label: &self.label,
             label_tone: Tone::Default,
             secondary: None,
             trailing: self.shortcut.as_deref().filter(|_| self.submenu.is_none()),
             ..RowContent::default()
         };
+        // Geometry measured on Android Studio: the highlight pill is inset from the popup's
+        // sides, and the icon column is inset inside the pill.
+        let chrome = 2.0 * (popup::ITEM_INSET + popup::ITEM_PADDING);
+        let large_icon = popup::LARGE_ICON + 2.0 * size::ICON_TEXT_GAP;
         let width = ui
             .available_width()
             .max(
                 content.min_width(ui)
-                    + 10.0
+                    + chrome
+                    + if two_line { large_icon } else { 0.0 }
                     + if self.submenu.is_some() {
                         size::ICON
                     } else {
@@ -446,29 +462,85 @@ impl Widget for MenuItem<'_> {
                     },
             )
             .max(180.0);
+        let height = if two_line {
+            size::ROW_HEIGHT + popup::DESCRIPTION_HEIGHT
+        } else {
+            size::ROW_HEIGHT
+        };
         let sense = if self.enabled {
             Sense::click()
         } else {
             Sense::hover()
         };
-        let (rect, response) = ui.allocate_exact_size(vec2(width, size::ROW_HEIGHT), sense);
+        menu_rows(ui);
+        let (rect, response) = ui.allocate_exact_size(vec2(width, height), sense);
         crate::cursor::on_hover(&response, egui::CursorIcon::Default);
-        response.widget_info(|| match self.checked {
-            Some(checked) => {
-                WidgetInfo::selected(WidgetType::Checkbox, self.enabled, checked, &self.label)
+        response.widget_info(|| {
+            let mut info = match self.checked {
+                Some(checked) => {
+                    WidgetInfo::selected(WidgetType::Checkbox, self.enabled, checked, &self.label)
+                }
+                None => WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.label),
+            };
+            if let Some(description) = &self.description {
+                info.label = Some(format!("{} {description}", self.label));
             }
-            None => WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.label),
+            info
         });
+        let current = menu_current(ui, &response, self.enabled);
         if ui.is_rect_visible(rect) {
             let mut state = State::of(&response);
-            state.hovered |= self.highlighted && self.enabled;
-            common::row_pill(ui.painter(), rect, state.menu_fill(&colors));
-            content.paint(ui, rect, rect.left() + 4.0, state);
+            state.hovered = self.enabled && (self.highlighted || current);
+            let pill = rect.shrink2(vec2(popup::ITEM_INSET, 0.0));
+            let fill = state.menu_fill(&colors);
+            if fill != Color32::TRANSPARENT {
+                ui.painter()
+                    .rect_filled(pill, CornerRadius::same(radius::ROW), fill);
+            }
+            let x = pill.left() + popup::ITEM_PADDING;
+            if let Some(description) = &self.description {
+                let line = Rect::from_min_size(pill.min, vec2(pill.width(), size::ROW_HEIGHT));
+                if let Some(icon) = icon {
+                    let icon_rect = Rect::from_center_size(
+                        pos2(x + popup::LARGE_ICON / 2.0, line.center().y),
+                        vec2(popup::LARGE_ICON, popup::LARGE_ICON),
+                    );
+                    icons::paint(
+                        ui.painter(),
+                        icon_rect,
+                        icon,
+                        state.icon(icon_tone.unwrap_or(Tone::Icon), &colors),
+                    );
+                }
+                let text_x = x + large_icon;
+                content.paint(ui, line, text_x, state);
+                let below = Rect::from_min_size(
+                    pos2(line.left(), line.bottom()),
+                    vec2(
+                        line.width(),
+                        popup::DESCRIPTION_HEIGHT - 2.0 * size::ICON_TEXT_GAP,
+                    ),
+                );
+                let galley = common::galley_elided(
+                    ui,
+                    description,
+                    typography::body(typography::BODY),
+                    (pill.right() - popup::ITEM_PADDING - text_x).max(0.0),
+                );
+                let color = if self.enabled {
+                    colors.text_placeholder
+                } else {
+                    colors.text_disabled
+                };
+                common::text_left(ui.painter(), below, text_x, galley, color);
+            } else {
+                content.paint(ui, pill, x, state);
+            }
             if self.submenu.is_some() {
                 let chevron = Rect::from_min_size(
                     pos2(
-                        rect.right() - size::ROW_PILL_INSET - size::ICON,
-                        rect.center().y - size::ICON / 2.0,
+                        pill.right() - size::ROW_PILL_INSET - size::ICON,
+                        rect.top() + (size::ROW_HEIGHT - size::ICON) / 2.0,
                     ),
                     vec2(size::ICON, size::ICON),
                 );
@@ -489,6 +561,71 @@ impl Widget for MenuItem<'_> {
         }
         response
     }
+}
+
+/// Menu rows touch, 24 pt apart, as in Android Studio. Menu widgets set it on the `Ui` they
+/// are added to, so a menu looks right in any popup, not only in the kit's.
+pub(crate) fn menu_rows(ui: &mut Ui) {
+    ui.spacing_mut().item_spacing.y = 0.0;
+}
+
+/// The row a menu's pointer and keyboard share, per menu (the `Ui` its items are in).
+#[derive(Clone, Copy, Default)]
+struct MenuCursor {
+    /// The current item: the last one hovered or focused. It stays when the pointer leaves.
+    item: Option<egui::Id>,
+    /// The frame the pointer first moved after the menu opened; that move is ignored.
+    armed: Option<u64>,
+    /// The last frame the menu was drawn, to notice it was closed and reopened.
+    seen: u64,
+    /// Where the pointer was, to tell a real move from a frame drawn under a still pointer.
+    pointer: Option<egui::Pos2>,
+    /// Whether the pointer moved in frame `seen`.
+    moved: bool,
+}
+
+/// Whether the item of `response` is its menu's current row, as in Android Studio: hover and
+/// arrow keys move one shared highlight; it stays on the last item when the pointer leaves;
+/// and the first pointer move after the menu opens is ignored, so a menu that opens under
+/// the pointer does not highlight whatever happens to be there.
+fn menu_current(ui: &Ui, response: &Response, enabled: bool) -> bool {
+    let ctx = ui.ctx();
+    let key = ui.id().with("kit-menu-cursor");
+    let frame = ctx.cumulative_frame_nr();
+    let pointer = ctx.input(|i| i.pointer.hover_pos());
+    let mut cursor = ctx
+        .data(|d| d.get_temp::<MenuCursor>(key))
+        .unwrap_or_default();
+    if cursor.seen + 1 < frame {
+        // Not drawn last frame: the menu (re)opened, under a pointer that has not moved yet.
+        cursor = MenuCursor {
+            pointer,
+            ..MenuCursor::default()
+        };
+    }
+    if cursor.seen != frame {
+        // First item this frame: did the pointer move since the last one?
+        cursor.moved = pointer.is_some() && pointer != cursor.pointer;
+        cursor.pointer = pointer;
+        cursor.seen = frame;
+    }
+    let moved = cursor.moved;
+    if moved && cursor.armed.is_none() {
+        cursor.armed = Some(frame);
+    }
+    let armed = cursor.armed.is_some_and(|f| f < frame);
+    if enabled && response.hovered() && moved && armed {
+        cursor.item = Some(response.id);
+        // The keyboard continues from where the pointer is.
+        if !response.has_focus() {
+            response.request_focus();
+        }
+    }
+    if enabled && response.has_focus() {
+        cursor.item = Some(response.id);
+    }
+    ctx.data_mut(|d| d.insert_temp(key, cursor));
+    enabled && cursor.item == Some(response.id)
 }
 
 /// What to show where a list, table or panel has nothing to display: a title, a hint and

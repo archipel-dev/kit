@@ -39,7 +39,7 @@
 | [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |
 | [WindowToolbar](components/window.md) | <img src="components/img/window_toolbar.dark.png" width="160"> | Integrated native title area and application actions. |
 | [Workbench](components/workbench.md) | <img src="components/img/workbench_4.dark.png" width="160"> | Shared docked island shell with caller-owned layout. |
-| [MenuItem, MenuSeparator, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
+| [MenuItem, MenuSeparator, MenuHeader, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
 | [Tooltip](components/tooltip.md) | <img src="components/img/tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
 | [Dialog](components/dialog.md) | <img src="components/img/dialog.dark.png" width="160"> | Decisions and short forms. |
 | [Icons](components/icons.md) | <img src="icons/img/actual-size.dark.png" width="160"> | Glyphs and file-type icons. |

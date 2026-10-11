@@ -3,7 +3,7 @@
 //!
 //! | Group | Components |
 //! |---|---|
-//! | Actions | [`Button`], [`IconButton`], [`Link`], [`MenuItem`], [`MenuSeparator`] |
+//! | Actions | [`Button`], [`IconButton`], [`Link`], [`MenuItem`], [`MenuSeparator`], [`MenuHeader`] |
 //! | Inputs | [`TextField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
@@ -52,7 +52,7 @@ pub use key_value::{
 pub use layout::{Panel, SectionHeader, Separator};
 pub use list::{ListRow, RowResponse};
 pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
-pub use overlay::{Dialog, DialogAction, MenuSeparator, Tooltip, TooltipExt};
+pub use overlay::{Dialog, DialogAction, MenuHeader, MenuSeparator, Tooltip, TooltipExt};
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
 pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};

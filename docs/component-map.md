@@ -36,7 +36,9 @@ Charts, HTTP key/value editors, avatars and some tag compositions have no direct
 in the inspected Android Studio surfaces. They inherit the same surface, padding, type,
 focus, disabled and popup rules, rather than pretending an exact reference was observed.
 
-## Measured island behavior
+## Measured behavior
+
+### Islands
 
 Observed in Android Studio Rabbit 1 (2026.2.1, Islands Dark, 100% scale) by driving it with
 pointer and keyboard and recording the screen at 60 fps. The kit reproduces each point.
@@ -50,6 +52,17 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Narrow island, actions shown | The title disappears whole (no ellipsis). Actions stay right-anchored and are clipped at the island's left edge until only Hide remains. | Same. |
 | Island minimum width | About 38 pt; tree labels are clipped hard at the edge. | `SplitPane` minimum sizes |
 | Gap between islands | No line; the resize cursor is the only feedback. | `SplitPane::line(false)` |
+
+### Popups and menus
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Popup surface | `#26282C`, 1 pt border `#33353B`, 8 pt padding top and bottom | `Surface::Popup`, `tokens::popup::PADDING` |
+| Items | 24 pt, touching; pill inset 8 pt, radius 4, `#2A4371`; icon 8 pt inside the pill; text 4 pt after the icon; shortcut ends 8 pt before the pill's end | `MenuItem`, `tokens::popup` |
+| Separator | 9 pt row, 1 pt line in the border color, inset like pills | `MenuSeparator` |
+| Group title | "Open Projects": semibold 13 pt, `#73767C`, aligned with icons, 24 pt row, not selectable | `MenuHeader` |
+| Two-line item | 20 pt icon, label, path below in `#73767C`, 48 pt | `MenuItem::description` |
+| Pointer and keys | One highlight, shared; the first pointer move after opening is ignored; it stays on the last item when the pointer leaves; arrows continue from it and skip headers and separators | `MenuItem` |
 
 ## Fixed invariants
 
