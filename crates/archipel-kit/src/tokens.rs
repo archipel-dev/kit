@@ -63,6 +63,11 @@ pub mod size {
     pub const ROW_MIN_SECONDARY: f32 = 32.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Number of gaps between the four parts of a key/value row: checkbox, fields, delete.
+    pub const KEY_VALUE_ROW_GAPS: f32 = 3.0;
+    /// Share of a key/value table's field width that goes to the key column; the value
+    /// column gets the rest.
+    pub const KEY_COLUMN_SHARE: f32 = 0.4;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
     pub const SPLIT_DIVIDER: f32 = ISLAND_GAP;
     /// Extra pointer reach on each side of a split pane's divider, so it is easy to grab.

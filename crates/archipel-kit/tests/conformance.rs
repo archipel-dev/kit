@@ -359,6 +359,63 @@ fn conformance_catches_a_fake_disabled_state() {
 }
 
 #[test]
+fn key_value_text_cells_conform() {
+    use archipel_kit::components::{KeyValueEntry, KeyValueTable};
+    for label in ["Key, row 1", "Value, row 1"] {
+        let mut rows = vec![KeyValueEntry::new("page", "1")];
+        testing::conformance(label, move |ui, enabled| {
+            KeyValueTable::new("params", &mut rows)
+                .read_only(!enabled)
+                .show(ui)
+                .response
+        })
+        .no_click()
+        .keys(&[])
+        .run();
+    }
+}
+
+/// The table reports its cells through `changes`, not through one response: turns "this
+/// change was reported" into the `clicked()` that `conformance` counts as an activation.
+fn activated_if(mut response: egui::Response, activated: bool) -> egui::Response {
+    if activated {
+        response
+            .flags
+            .insert(egui::response::Flags::FAKE_PRIMARY_CLICKED);
+    }
+    response
+}
+
+#[test]
+fn key_value_enable_checkbox_conforms() {
+    use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+    let mut rows = vec![KeyValueEntry::new("page", "1")];
+    testing::conformance("Enabled, row 1", move |ui, enabled| {
+        let out = KeyValueTable::new("params", &mut rows)
+            .read_only(!enabled)
+            .show(ui);
+        activated_if(out.response, out.changes.contains(&Change::Toggled(0)))
+    })
+    .run();
+}
+
+#[test]
+fn key_value_remove_button_conforms() {
+    use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+    // Read-only tables have no delete button: the disabled state is a disabled `Ui`.
+    testing::conformance("Remove, row 1", |ui, enabled| {
+        // Rebuilt every frame: a removed row would take the button with it.
+        let mut rows = vec![KeyValueEntry::new("page", "1")];
+        ui.add_enabled_ui(enabled, |ui| {
+            let out = KeyValueTable::new("params", &mut rows).show(ui);
+            activated_if(out.response, out.changes.contains(&Change::Removed(0)))
+        })
+        .inner
+    })
+    .run();
+}
+
+#[test]
 fn split_pane_divider_conforms() {
     use archipel_kit::components::SplitPane;
     let mut ratio = 0.5;

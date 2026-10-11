@@ -7,7 +7,7 @@
 //! | Inputs | [`TextField`], [`Checkbox`], [`Radio`], [`Toggle`], [`Dropdown`], [`SegmentedControl`] |
 //! | Navigation | [`TabBar`], [`ListRow`] |
 //! | Feedback | [`Banner`], [`Toast`], [`Spinner`], [`ProgressBar`], [`EmptyState`] |
-//! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`] |
+//! | Collections | [`VirtualList`], [`Tree`], [`Table`], [`TreeTable`], [`KeyValueTable`] |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`PropertyGrid`] |
 //! | Code | [`CodeView`], [`CodeEditor`], and the [`code::Highlighter`]s |
 //! | Layout | [`Panel`], [`SectionHeader`], [`Separator`], [`SplitPane`], [`StatusBarItem`] |
@@ -21,6 +21,7 @@ mod collections;
 pub(crate) mod common;
 mod feedback;
 mod icon_button;
+mod key_value;
 mod layout;
 mod list;
 mod misc;
@@ -41,6 +42,9 @@ pub use collections::{
 };
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
 pub use icon_button::IconButton;
+pub use key_value::{
+    Change, KeyValueEntry, KeyValueRow, KeyValueTable, KeyValueTableResponse, ValueCell,
+};
 pub use layout::{Panel, SectionHeader, Separator};
 pub use list::{ListRow, RowResponse};
 pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
