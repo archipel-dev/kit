@@ -2,7 +2,6 @@
 
 mod common;
 
-use archipel_kit::behaviour::WidgetExt;
 use archipel_kit::components::{IconButton, StatusBarItem, Tooltip};
 use archipel_kit::parts::Surface;
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
@@ -81,6 +80,27 @@ fn long_text_is_elided_and_shown_in_full_as_the_tooltip() {
         harness.query_all_by_label(long).count(),
         2,
         "name + tooltip"
+    );
+}
+
+#[test]
+fn caller_tooltip_replaces_the_elision_tooltip() {
+    let long = "A very long branch name that cannot fit here";
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        ui.add(
+            StatusBarItem::new(long)
+                .max_width(90.0)
+                .with(Tooltip::new("Git branch")),
+        );
+    });
+    harness.run();
+    harness.get_by_label(long).hover();
+    harness.run_steps(40);
+    assert!(harness.query_by_label("Git branch").is_some());
+    assert_eq!(
+        harness.query_all_by_label(long).count(),
+        1,
+        "no second tooltip"
     );
 }
 

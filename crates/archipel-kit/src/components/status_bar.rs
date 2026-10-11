@@ -1,6 +1,7 @@
 //! Status bar widgets.
 
 use super::{Tooltip, common};
+use crate::behaviour::{Behaviour, Behaviours};
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{State, Tone};
 use crate::theme::Theme;
@@ -31,16 +32,17 @@ use egui::{CornerRadius, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetTy
 /// # });
 /// ```
 #[must_use = "add it with `ui.add(item)`"]
-pub struct StatusBarItem {
+pub struct StatusBarItem<'a> {
     text: String,
     icon: Option<Icon>,
     chevron: bool,
     tone: Tone,
     enabled: bool,
     max_width: Option<f32>,
+    behaviours: Behaviours<'a>,
 }
 
-impl StatusBarItem {
+impl<'a> StatusBarItem<'a> {
     /// An item reading `text`.
     pub fn new(text: impl Into<String>) -> Self {
         Self {
@@ -50,6 +52,7 @@ impl StatusBarItem {
             tone: Tone::Default,
             enabled: true,
             max_width: None,
+            behaviours: Behaviours::default(),
         }
     }
 
@@ -77,6 +80,13 @@ impl StatusBarItem {
         self
     }
 
+    /// Adds `behaviour` (a tooltip, context menu …) to the item. A tooltip replaces the one
+    /// the item shows for elided text.
+    pub fn with(mut self, behaviour: impl Behaviour + 'a) -> Self {
+        self.behaviours.push(behaviour);
+        self
+    }
+
     /// The widest the item may be (default: the available width).
     pub fn max_width(mut self, width: f32) -> Self {
         self.max_width = Some(width);
@@ -84,10 +94,7 @@ impl StatusBarItem {
     }
 }
 
-/// Space inside the item at each end.
-const PADDING: f32 = 6.0;
-
-impl Widget for StatusBarItem {
+impl Widget for StatusBarItem<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let font = typography::body(typography::BODY);
@@ -98,7 +105,7 @@ impl Widget for StatusBarItem {
             0.0
         };
         let chevron = if self.chevron { size::ICON } else { 0.0 };
-        let extra = 2.0 * PADDING + icon + chevron;
+        let extra = 2.0 * size::STATUS_ITEM_PADDING + icon + chevron;
         let limit = self
             .max_width
             .unwrap_or_else(|| ui.available_width())
@@ -124,7 +131,7 @@ impl Widget for StatusBarItem {
             if response.has_focus() {
                 common::focus_ring(painter, rect, radius::CONTROL, &colors);
             }
-            let mut x = rect.left() + PADDING;
+            let mut x = rect.left() + size::STATUS_ITEM_PADDING;
             if let Some(icon) = self.icon {
                 let icon_rect = Rect::from_min_size(
                     pos2(x, rect.center().y - size::ICON / 2.0),
@@ -138,7 +145,7 @@ impl Widget for StatusBarItem {
                 icons::paint(painter, icon_rect, icon, state.icon(tone, &colors));
                 x += size::ICON + size::ICON_TEXT_GAP;
             }
-            let room = rect.right() - PADDING - chevron - x;
+            let room = rect.right() - size::STATUS_ITEM_PADDING - chevron - x;
             let galley = if elided {
                 common::galley_elided(ui, &self.text, font, room.max(0.0))
             } else {
@@ -148,7 +155,7 @@ impl Widget for StatusBarItem {
             if self.chevron {
                 let chevron_rect = Rect::from_min_size(
                     pos2(
-                        rect.right() - PADDING - size::ICON + 2.0,
+                        rect.right() - size::STATUS_ITEM_PADDING - size::ICON,
                         rect.center().y - size::ICON / 2.0,
                     ),
                     vec2(size::ICON, size::ICON),
@@ -161,9 +168,9 @@ impl Widget for StatusBarItem {
                 );
             }
         }
-        if elided {
+        if elided && !self.behaviours.has_tooltip() {
             Tooltip::new(self.text.clone()).show_for(&response);
         }
-        response
+        self.behaviours.attach(ui, response)
     }
 }

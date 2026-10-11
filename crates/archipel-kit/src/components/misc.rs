@@ -322,7 +322,7 @@ impl Widget for MenuItem<'_> {
             if self.submenu.is_some() {
                 let chevron = Rect::from_min_size(
                     pos2(
-                        rect.right() - 4.0 - size::ICON,
+                        rect.right() - size::ROW_PILL_INSET - size::ICON,
                         rect.center().y - size::ICON / 2.0,
                     ),
                     vec2(size::ICON, size::ICON),
@@ -504,6 +504,10 @@ struct SubmenuState {
 /// Opens, shows and closes the submenu of the item `response`.
 fn show_submenu(ui: &mut Ui, response: &Response, add: Submenu<'_>) {
     let ctx = ui.ctx().clone();
+    // The state outlives the menu, which stops drawing its items when it closes: nothing
+    // tells the item it was closed. So the item records the frame it was last drawn in, and
+    // an item that was not drawn in the previous frame (its menu was closed and has just
+    // reopened) starts closed instead of showing a stale open submenu.
     let frame = ctx.cumulative_frame_nr();
     let mut state: SubmenuState = ctx.data(|d| d.get_temp(response.id)).unwrap_or_default();
     if frame > state.seen + 1 {
@@ -546,7 +550,7 @@ fn show_submenu(ui: &mut Ui, response: &Response, add: Submenu<'_>) {
     }
     let mut open = state.open;
     let shown = crate::parts::Popover::right_of(popup_id, response)
-        .width(SUBMENU_WIDTH)
+        .width(size::SUBMENU_WIDTH)
         .show(&ctx, &mut open, add);
     if state.open && !open {
         // Escape (or a click outside) closed it: keep the item focused for the next key.
@@ -563,6 +567,3 @@ fn show_submenu(ui: &mut Ui, response: &Response, add: Submenu<'_>) {
         node.set_has_popup(egui::accesskit::HasPopup::Menu);
     });
 }
-
-/// Width of a submenu.
-const SUBMENU_WIDTH: f32 = 200.0;

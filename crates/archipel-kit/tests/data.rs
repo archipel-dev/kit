@@ -148,7 +148,10 @@ fn tool_window_header_snapshot() {
             .on_hide(|| {})
             .show(ui, |ui| {
                 ui.add_space(4.0);
-                ui.label("src/");
+                // Content aligns with the title: both start at the content inset.
+                egui::Frame::new()
+                    .inner_margin(egui::Margin::symmetric(12, 0))
+                    .show(ui, |ui| ui.label("src/"));
             });
     });
 }

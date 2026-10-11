@@ -39,6 +39,12 @@ pub mod size {
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
     pub const ISLAND_GAP: f32 = 4.0;
+    /// Width of a submenu.
+    pub const SUBMENU_WIDTH: f32 = 200.0;
+    /// Space inside a status bar item at each end.
+    pub const STATUS_ITEM_PADDING: f32 = 6.0;
+    /// Vertical padding of a popup and the gap between a popup and what it is attached to.
+    pub const POPUP_PADDING: f32 = 4.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.

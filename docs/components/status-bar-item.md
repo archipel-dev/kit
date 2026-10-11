@@ -11,12 +11,18 @@ the tooltip.
   <img alt="A toolbar with a run button and a configuration dropdown, and a status bar with branch, encoding, an error count, a disabled item and an elided one" src="img/status_bar_item.light.png" width="420">
 </picture>
 
+## Why not `Button::ghost`
+
+`Button::ghost` is a button: a minimum width of 72 points, 10 to 14 points of padding, the
+button text style, no chevron and no eliding. A status bar item is denser (6 points of
+padding, the body text size), shows a chevron for items that open a popup, and shrinks to the
+available width, so it is a separate component.
+
 ## Usage
 
 Draw the bar on `Surface::Chrome`, the frame color of the workbench.
 
 ```rust
-use archipel_kit::behaviour::WidgetExt;
 use archipel_kit::components::{StatusBarItem, Tooltip};
 use archipel_kit::parts::Surface;
 use archipel_kit::{Glyph, Tone, egui};
@@ -47,7 +53,7 @@ fn status_bar(ui: &mut egui::Ui, branch: &str, errors: usize) {
 | `.tone(Tone)` | Meaning of the text and icon color. |
 | `.enabled(bool)` | Disabled items are dimmed and ignore clicks. |
 | `.max_width(f32)` | Widest the item may be; text is elided beyond it. |
-| `.with(behaviour)` | A tooltip, context menu … (see [behaviours](../behaviours.md)). A tooltip you attach replaces the one for elided text. |
+| `.with(behaviour)` | A tooltip, context menu … (see [behaviours](../behaviours.md)). A tooltip you attach replaces the automatic one for elided text, so only one shows. |
 
 ## Behavior
 
