@@ -27,3 +27,11 @@ JetBrains s.r.o.; Archipel is not affiliated with or endorsed by JetBrains.
 **GitHub Linguist** (https://github.com/github-linguist/linguist), Copyright (c) 2017 GitHub,
 Inc., licensed under the MIT License: language names, colors, extensions and file names.
 The language icons are original designs (tiles with letters); no logos are used.
+
+## Nerd Font codepoints
+
+`crates/archipel-kit-tui/src/glyphs.rs` maps kit glyphs, languages and symbols to codepoints
+listed in `glyphnames.json` of **Nerd Fonts** (https://github.com/ryanoasis/nerd-fonts,
+v3.5.1), Copyright (c) 2014 Ryan L McIntyre, licensed under the MIT License. Only codepoints
+and names were taken. No font or glyph drawings are included: the terminal's installed Nerd
+Font draws them, and the docs images draw Archipel's own icons in their place.

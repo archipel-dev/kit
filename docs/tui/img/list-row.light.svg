@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="336.0" height="162.0" viewBox="0 0 336.0 162.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="8.4" y="0.0" width="319.2" height="18" fill="#FFFFFF"/>
+<rect x="327.6" y="0.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="4.2" y="0.0" width="4.2" height="18.0" fill="#FFFFFF"/>
+<rect x="0.0" y="9.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+<rect x="327.6" y="0.0" width="4.2" height="18.0" fill="#FFFFFF"/>
+<rect x="331.8" y="9.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+<rect x="0.0" y="18.0" width="336.0" height="18" fill="#FFFFFF"/>
+<svg x="25.7" y="20.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 8 9.5 11.5 6" fill="none" stroke="#5F6269" stroke-width="1"/></svg>
+<svg x="42.5" y="20.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="1.5 3 6 3 7.5 5 14.5 5 14.5 13 1.5 13" fill="none" stroke="#73767C" stroke-width="1"/></svg>
+<text x="58.8" y="31.5" fill="#000000">k</text>
+<text x="67.2" y="31.5" fill="#000000">i</text>
+<text x="75.6" y="31.5" fill="#000000">t</text>
+<text x="92.4" y="31.5" fill="#73767C">~</text>
+<text x="100.8" y="31.5" fill="#73767C">/</text>
+<text x="109.2" y="31.5" fill="#73767C">a</text>
+<text x="117.6" y="31.5" fill="#73767C">r</text>
+<text x="126.0" y="31.5" fill="#73767C">c</text>
+<text x="134.4" y="31.5" fill="#73767C">h</text>
+<text x="142.8" y="31.5" fill="#73767C">i</text>
+<text x="151.2" y="31.5" fill="#73767C">p</text>
+<text x="159.6" y="31.5" fill="#73767C">e</text>
+<text x="168.0" y="31.5" fill="#73767C">l</text>
+<rect x="0.0" y="36.0" width="336.0" height="18" fill="#FFFFFF"/>
+<svg x="42.5" y="38.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 8 9.5 11.5 6" fill="none" stroke="#5F6269" stroke-width="1"/></svg>
+<svg x="59.3" y="38.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="1.5 3 6 3 7.5 5 14.5 5 14.5 13 1.5 13" fill="none" stroke="#73767C" stroke-width="1"/></svg>
+<text x="75.6" y="49.5" fill="#000000">s</text>
+<text x="84.0" y="49.5" fill="#000000">r</text>
+<text x="92.4" y="49.5" fill="#000000">c</text>
+<rect x="0.0" y="54.0" width="25.2" height="18" fill="#FFFFFF"/>
+<rect x="25.2" y="54.0" width="285.6" height="18" fill="#D0DFFE"/>
+<rect x="310.8" y="54.0" width="25.2" height="18" fill="#FFFFFF"/>
+<g shape-rendering="geometricPrecision"><path d="M25.5 54.0 A8.4 9.0 0 0 0 25.5 72.0 Z" fill="#D0DFFE"/></g>
+<svg x="76.1" y="56.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#B2846A" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#B2846A" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#DEA584"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#000000">Rs</text></svg>
+<text x="92.4" y="67.5" fill="#000000">m</text>
+<text x="100.8" y="67.5" fill="#000000">a</text>
+<text x="109.2" y="67.5" fill="#000000">i</text>
+<text x="117.6" y="67.5" fill="#000000">n</text>
+<text x="126.0" y="67.5" fill="#000000">.</text>
+<text x="134.4" y="67.5" fill="#000000">r</text>
+<text x="142.8" y="67.5" fill="#000000">s</text>
+<g shape-rendering="geometricPrecision"><path d="M310.5 54.0 A8.4 9.0 0 0 1 310.5 72.0 Z" fill="#D0DFFE"/></g>
+<rect x="0.0" y="72.0" width="336.0" height="18" fill="#FFFFFF"/>
+<svg x="76.1" y="74.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#3572A5" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#3572A5" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#3572A5"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">Py</text></svg>
+<text x="92.4" y="85.5" fill="#000000">t</text>
+<text x="100.8" y="85.5" fill="#000000">h</text>
+<text x="109.2" y="85.5" fill="#000000">e</text>
+<text x="117.6" y="85.5" fill="#000000">m</text>
+<text x="126.0" y="85.5" fill="#000000">e</text>
+<text x="134.4" y="85.5" fill="#000000">.</text>
+<text x="142.8" y="85.5" fill="#000000">p</text>
+<text x="151.2" y="85.5" fill="#000000">y</text>
+<rect x="0.0" y="90.0" width="336.0" height="18" fill="#FFFFFF"/>
+<svg x="42.5" y="92.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 4.5 9.5 8 6 11.5" fill="none" stroke="#5F6269" stroke-width="1"/></svg>
+<svg x="59.3" y="92.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="1.5 3 6 3 7.5 5 14.5 5 14.5 13 1.5 13" fill="none" stroke="#73767C" stroke-width="1"/></svg>
+<text x="75.6" y="103.5" fill="#000000">t</text>
+<text x="84.0" y="103.5" fill="#000000">e</text>
+<text x="92.4" y="103.5" fill="#000000">s</text>
+<text x="100.8" y="103.5" fill="#000000">t</text>
+<text x="109.2" y="103.5" fill="#000000">s</text>
+<rect x="0.0" y="108.0" width="336.0" height="18" fill="#FFFFFF"/>
+<svg x="42.5" y="110.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5" fill="#246FC5"/><text x="8" y="8" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">C</text></svg>
+<text x="58.8" y="121.5" fill="#000000">T</text>
+<text x="67.2" y="121.5" fill="#000000">h</text>
+<text x="75.6" y="121.5" fill="#000000">e</text>
+<text x="84.0" y="121.5" fill="#000000">m</text>
+<text x="92.4" y="121.5" fill="#000000">e</text>
+<rect x="0.0" y="126.0" width="336.0" height="18" fill="#FFFFFF"/>
+<svg x="59.3" y="128.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="13" height="13" rx="3.5" fill="#CC344F"/><text x="8" y="8" font-family="Inter, system-ui, sans-serif" font-size="9.5" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">m</text></svg>
+<text x="75.6" y="139.5" fill="#000000">a</text>
+<text x="84.0" y="139.5" fill="#000000">p</text>
+<text x="92.4" y="139.5" fill="#000000">p</text>
+<text x="100.8" y="139.5" fill="#000000">l</text>
+<text x="109.2" y="139.5" fill="#000000">y</text>
+<text x="117.6" y="139.5" fill="#000000">(</text>
+<text x="126.0" y="139.5" fill="#000000">c</text>
+<text x="134.4" y="139.5" fill="#000000">t</text>
+<text x="142.8" y="139.5" fill="#000000">x</text>
+<text x="151.2" y="139.5" fill="#000000">)</text>
+<rect x="0.0" y="144.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="8.4" y="144.0" width="319.2" height="18" fill="#FFFFFF"/>
+<rect x="327.6" y="144.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="0.0" y="144.0" width="8.4" height="9.0" fill="#FFFFFF"/>
+<rect x="4.2" y="153.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+<rect x="327.6" y="144.0" width="8.4" height="9.0" fill="#FFFFFF"/>
+<rect x="327.6" y="153.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+</svg>

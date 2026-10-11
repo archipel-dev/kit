@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="369.6" height="144.0" viewBox="0 0 369.6 144.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="8.4" y="0.0" width="352.8" height="18" fill="#FFFFFF"/>
+<rect x="361.2" y="0.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="4.2" y="0.0" width="4.2" height="18.0" fill="#FFFFFF"/>
+<rect x="0.0" y="9.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+<rect x="361.2" y="0.0" width="4.2" height="18.0" fill="#FFFFFF"/>
+<rect x="365.4" y="9.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+<rect x="0.0" y="18.0" width="369.6" height="18" fill="#FFFFFF"/>
+<g shape-rendering="geometricPrecision"><rect x="18.8" y="21.5" width="11.0" height="11.0" rx="2" fill="#3871E1"/><polyline points="21.2,27.2 23.4,29.4 27.4,24.8" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="33.6" y="31.5" fill="#000000">C</text>
+<text x="42.0" y="31.5" fill="#000000">h</text>
+<text x="50.4" y="31.5" fill="#000000">e</text>
+<text x="58.8" y="31.5" fill="#000000">c</text>
+<text x="67.2" y="31.5" fill="#000000">k</text>
+<text x="75.6" y="31.5" fill="#000000">e</text>
+<text x="84.0" y="31.5" fill="#000000">d</text>
+<g shape-rendering="geometricPrecision"><circle cx="192.3" cy="27.0" r="5.5" fill="none" stroke="#3871E1" stroke-width="1.5"/><circle cx="192.3" cy="27.0" r="2.8" fill="#3871E1"/></g>
+<text x="201.6" y="31.5" fill="#000000">S</text>
+<text x="210.0" y="31.5" fill="#000000">e</text>
+<text x="218.4" y="31.5" fill="#000000">l</text>
+<text x="226.8" y="31.5" fill="#000000">e</text>
+<text x="235.2" y="31.5" fill="#000000">c</text>
+<text x="243.6" y="31.5" fill="#000000">t</text>
+<text x="252.0" y="31.5" fill="#000000">e</text>
+<text x="260.4" y="31.5" fill="#000000">d</text>
+<rect x="0.0" y="36.0" width="369.6" height="18" fill="#FFFFFF"/>
+<g shape-rendering="geometricPrecision"><rect x="19.5" y="40.2" width="9.5" height="9.5" rx="2" fill="none" stroke="#A8ADBD" stroke-width="1.5"/></g>
+<text x="33.6" y="49.5" fill="#000000">U</text>
+<text x="42.0" y="49.5" fill="#000000">n</text>
+<text x="50.4" y="49.5" fill="#000000">c</text>
+<text x="58.8" y="49.5" fill="#000000">h</text>
+<text x="67.2" y="49.5" fill="#000000">e</text>
+<text x="75.6" y="49.5" fill="#000000">c</text>
+<text x="84.0" y="49.5" fill="#000000">k</text>
+<text x="92.4" y="49.5" fill="#000000">e</text>
+<text x="100.8" y="49.5" fill="#000000">d</text>
+<g shape-rendering="geometricPrecision"><circle cx="192.3" cy="45.0" r="5.5" fill="none" stroke="#A8ADBD" stroke-width="1.5"/></g>
+<text x="201.6" y="49.5" fill="#000000">O</text>
+<text x="210.0" y="49.5" fill="#000000">p</text>
+<text x="218.4" y="49.5" fill="#000000">t</text>
+<text x="226.8" y="49.5" fill="#000000">i</text>
+<text x="235.2" y="49.5" fill="#000000">o</text>
+<text x="243.6" y="49.5" fill="#000000">n</text>
+<rect x="0.0" y="54.0" width="369.6" height="18" fill="#FFFFFF"/>
+<g shape-rendering="geometricPrecision"><rect x="18.8" y="57.5" width="11.0" height="11.0" rx="2" fill="#3871E1"/><line x1="21.5" y1="63.0" x2="27.0" y2="63.0" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/></g>
+<text x="33.6" y="67.5" fill="#000000">M</text>
+<text x="42.0" y="67.5" fill="#000000">i</text>
+<text x="50.4" y="67.5" fill="#000000">x</text>
+<text x="58.8" y="67.5" fill="#000000">e</text>
+<text x="67.2" y="67.5" fill="#000000">d</text>
+<rect x="0.0" y="72.0" width="193.2" height="18" fill="#FFFFFF"/>
+<rect x="193.2" y="72.0" width="16.8" height="18" fill="#4E9D6C"/>
+<rect x="210.0" y="72.0" width="159.6" height="18" fill="#FFFFFF"/>
+<g shape-rendering="geometricPrecision"><rect x="18.8" y="75.5" width="11.0" height="11.0" rx="2" fill="#9FA2A8"/><polyline points="21.2,81.2 23.4,83.4 27.4,78.8" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="33.6" y="85.5" fill="#9FA2A8">D</text>
+<text x="42.0" y="85.5" fill="#9FA2A8">i</text>
+<text x="50.4" y="85.5" fill="#9FA2A8">s</text>
+<text x="58.8" y="85.5" fill="#9FA2A8">a</text>
+<text x="67.2" y="85.5" fill="#9FA2A8">b</text>
+<text x="75.6" y="85.5" fill="#9FA2A8">l</text>
+<text x="84.0" y="85.5" fill="#9FA2A8">e</text>
+<text x="92.4" y="85.5" fill="#9FA2A8">d</text>
+<g shape-rendering="geometricPrecision"><path d="M193.5 72.0 A8.4 9.0 0 0 0 193.5 90.0 Z" fill="#4E9D6C"/></g>
+<text x="201.6" y="85.5" fill="#FFFFFF">●</text>
+<g shape-rendering="geometricPrecision"><path d="M209.7 72.0 A8.4 9.0 0 0 1 209.7 90.0 Z" fill="#4E9D6C"/></g>
+<text x="226.8" y="85.5" fill="#000000">O</text>
+<text x="235.2" y="85.5" fill="#000000">n</text>
+<rect x="0.0" y="90.0" width="193.2" height="18" fill="#FFFFFF"/>
+<rect x="193.2" y="90.0" width="16.8" height="18" fill="#A8ADBD"/>
+<rect x="210.0" y="90.0" width="159.6" height="18" fill="#FFFFFF"/>
+<g shape-rendering="geometricPrecision"><path d="M193.5 90.0 A8.4 9.0 0 0 0 193.5 108.0 Z" fill="#A8ADBD"/></g>
+<text x="193.2" y="103.5" fill="#C3C5CB">●</text>
+<g shape-rendering="geometricPrecision"><path d="M209.7 90.0 A8.4 9.0 0 0 1 209.7 108.0 Z" fill="#A8ADBD"/></g>
+<text x="226.8" y="103.5" fill="#000000">O</text>
+<text x="235.2" y="103.5" fill="#000000">f</text>
+<text x="243.6" y="103.5" fill="#000000">f</text>
+<rect x="0.0" y="108.0" width="369.6" height="18" fill="#FFFFFF"/>
+<rect x="0.0" y="126.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="8.4" y="126.0" width="352.8" height="18" fill="#FFFFFF"/>
+<rect x="361.2" y="126.0" width="8.4" height="18" fill="#E9EAEE"/>
+<rect x="0.0" y="126.0" width="8.4" height="9.0" fill="#FFFFFF"/>
+<rect x="4.2" y="135.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+<rect x="361.2" y="126.0" width="8.4" height="9.0" fill="#FFFFFF"/>
+<rect x="361.2" y="135.0" width="4.2" height="9.0" fill="#FFFFFF"/>
+</svg>

@@ -19,6 +19,9 @@ the IDE, Nexus HTTP and Mongo Raabit, and their plugins.
 - **Tested like a web framework**: every component has behavior tests that find it by role
   and label, accessibility assertions, and pixel snapshots in both themes. The same helpers
   are public (`archipel_kit::testing`) for your own panels and plugins.
+- **A terminal version** ([`archipel-kit-tui`](docs/tui/README.md)): the same theme, icons
+  and components for [ratatui](https://ratatui.rs), so a tool can run in a terminal and look
+  the same.
 - **Docs that cannot rot**: every image in the docs is a snapshot test and every code block is
   a doctest.
 
@@ -38,6 +41,7 @@ fn connect_form(ui: &mut egui::Ui, url: &mut String) -> bool {
 - [Getting started](docs/getting-started.md)
 - [Components](docs/README.md#components), each with images, examples, API and accessibility notes
 - [Icon kit](docs/icons/README.md): [catalog](docs/icons/catalog.md), [design rules](docs/icons/design.md), [review](docs/icons/review.md)
+- [Terminal UI](docs/tui/README.md): `archipel-kit-tui`, the kit for ratatui
 - [Theming](docs/theming.md)
 - [Testing](docs/testing.md)
 - [Contributing a component](docs/contributing.md)

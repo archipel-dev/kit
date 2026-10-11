@@ -4,6 +4,7 @@
 - [Theming](theming.md): colors, tokens, dark and light, custom themes.
 - [Testing](testing.md): behavior, accessibility and snapshot tests for your own UI.
 - [Icon kit](icons/README.md): 113 designed glyphs, [78 language icons](icons/languages.md), [code symbols](icons/symbols.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
+- [Terminal UI](tui/README.md): the same theme, icons and components in the terminal (ratatui).
 - [Contributing a component](contributing.md): the checklist every component meets.
 
 ## Components

@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="537.6" height="162.0" viewBox="0 0 537.6 162.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="8.4" height="18" fill="#26282C"/>
+<rect x="8.4" y="0.0" width="520.8" height="18" fill="#191A1C"/>
+<rect x="529.2" y="0.0" width="8.4" height="18" fill="#26282C"/>
+<rect x="4.2" y="0.0" width="4.2" height="18.0" fill="#191A1C"/>
+<rect x="0.0" y="9.0" width="4.2" height="9.0" fill="#191A1C"/>
+<rect x="529.2" y="0.0" width="4.2" height="18.0" fill="#191A1C"/>
+<rect x="533.4" y="9.0" width="4.2" height="9.0" fill="#191A1C"/>
+<rect x="0.0" y="18.0" width="25.2" height="18" fill="#191A1C"/>
+<rect x="25.2" y="18.0" width="487.2" height="18" fill="#233558"/>
+<rect x="512.4" y="18.0" width="25.2" height="18" fill="#191A1C"/>
+<g shape-rendering="geometricPrecision"><path d="M25.5 18.0 A8.4 9.0 0 0 0 25.5 36.0 Z" fill="#233558"/></g>
+<svg x="34.1" y="20.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5" fill="#71A1FE"/><polyline points="8 7.25 8 11.5" fill="none" stroke="#233558" stroke-width="1.5"/><circle cx="8" cy="4.75" r="1" fill="#233558"/></svg>
+<text x="50.4" y="31.5" fill="#DFE1E5">I</text>
+<text x="58.8" y="31.5" fill="#DFE1E5">n</text>
+<text x="67.2" y="31.5" fill="#DFE1E5">d</text>
+<text x="75.6" y="31.5" fill="#DFE1E5">e</text>
+<text x="84.0" y="31.5" fill="#DFE1E5">x</text>
+<text x="92.4" y="31.5" fill="#DFE1E5">i</text>
+<text x="100.8" y="31.5" fill="#DFE1E5">n</text>
+<text x="109.2" y="31.5" fill="#DFE1E5">g</text>
+<text x="126.0" y="31.5" fill="#DFE1E5">f</text>
+<text x="134.4" y="31.5" fill="#DFE1E5">i</text>
+<text x="142.8" y="31.5" fill="#DFE1E5">n</text>
+<text x="151.2" y="31.5" fill="#DFE1E5">i</text>
+<text x="159.6" y="31.5" fill="#DFE1E5">s</text>
+<text x="168.0" y="31.5" fill="#DFE1E5">h</text>
+<text x="176.4" y="31.5" fill="#DFE1E5">e</text>
+<text x="184.8" y="31.5" fill="#DFE1E5">d</text>
+<g shape-rendering="geometricPrecision"><path d="M512.1 18.0 A8.4 9.0 0 0 1 512.1 36.0 Z" fill="#233558"/></g>
+<rect x="0.0" y="36.0" width="537.6" height="18" fill="#191A1C"/>
+<rect x="0.0" y="54.0" width="25.2" height="18" fill="#191A1C"/>
+<rect x="25.2" y="54.0" width="487.2" height="18" fill="#203B2A"/>
+<rect x="512.4" y="54.0" width="25.2" height="18" fill="#191A1C"/>
+<g shape-rendering="geometricPrecision"><path d="M25.5 54.0 A8.4 9.0 0 0 0 25.5 72.0 Z" fill="#203B2A"/></g>
+<svg x="34.1" y="56.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="2.5 8.5 6 12 13.5 4.5" fill="none" stroke="#6DB083" stroke-width="1.5"/></svg>
+<text x="50.4" y="67.5" fill="#DFE1E5">B</text>
+<text x="58.8" y="67.5" fill="#DFE1E5">u</text>
+<text x="67.2" y="67.5" fill="#DFE1E5">i</text>
+<text x="75.6" y="67.5" fill="#DFE1E5">l</text>
+<text x="84.0" y="67.5" fill="#DFE1E5">d</text>
+<text x="100.8" y="67.5" fill="#DFE1E5">s</text>
+<text x="109.2" y="67.5" fill="#DFE1E5">u</text>
+<text x="117.6" y="67.5" fill="#DFE1E5">c</text>
+<text x="126.0" y="67.5" fill="#DFE1E5">c</text>
+<text x="134.4" y="67.5" fill="#DFE1E5">e</text>
+<text x="142.8" y="67.5" fill="#DFE1E5">e</text>
+<text x="151.2" y="67.5" fill="#DFE1E5">d</text>
+<text x="159.6" y="67.5" fill="#DFE1E5">e</text>
+<text x="168.0" y="67.5" fill="#DFE1E5">d</text>
+<g shape-rendering="geometricPrecision"><path d="M512.1 54.0 A8.4 9.0 0 0 1 512.1 72.0 Z" fill="#203B2A"/></g>
+<rect x="0.0" y="72.0" width="537.6" height="18" fill="#191A1C"/>
+<rect x="0.0" y="90.0" width="25.2" height="18" fill="#191A1C"/>
+<rect x="25.2" y="90.0" width="411.6" height="18" fill="#44321D"/>
+<rect x="436.8" y="90.0" width="58.8" height="18" fill="#694820"/>
+<rect x="495.6" y="90.0" width="16.8" height="18" fill="#44321D"/>
+<rect x="512.4" y="90.0" width="25.2" height="18" fill="#191A1C"/>
+<g shape-rendering="geometricPrecision"><path d="M25.5 90.0 A8.4 9.0 0 0 0 25.5 108.0 Z" fill="#44321D"/></g>
+<svg x="34.1" y="92.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="8 1.5 15 14 1 14" fill="#D59637"/><polyline points="8 5.75 8 9.5" fill="none" stroke="#44321D" stroke-width="1.5"/><circle cx="8" cy="11.75" r="0.9" fill="#44321D"/></svg>
+<text x="50.4" y="103.5" fill="#DFE1E5">L</text>
+<text x="58.8" y="103.5" fill="#DFE1E5">o</text>
+<text x="67.2" y="103.5" fill="#DFE1E5">w</text>
+<text x="84.0" y="103.5" fill="#DFE1E5">d</text>
+<text x="92.4" y="103.5" fill="#DFE1E5">i</text>
+<text x="100.8" y="103.5" fill="#DFE1E5">s</text>
+<text x="109.2" y="103.5" fill="#DFE1E5">k</text>
+<text x="126.0" y="103.5" fill="#DFE1E5">s</text>
+<text x="134.4" y="103.5" fill="#DFE1E5">p</text>
+<text x="142.8" y="103.5" fill="#DFE1E5">a</text>
+<text x="151.2" y="103.5" fill="#DFE1E5">c</text>
+<text x="159.6" y="103.5" fill="#DFE1E5">e</text>
+<g shape-rendering="geometricPrecision"><path d="M437.1 90.0 A8.4 9.0 0 0 0 437.1 108.0 Z" fill="#694820"/></g>
+<text x="445.2" y="103.5" fill="#DFE1E5">C</text>
+<text x="453.6" y="103.5" fill="#DFE1E5">l</text>
+<text x="462.0" y="103.5" fill="#DFE1E5">e</text>
+<text x="470.4" y="103.5" fill="#DFE1E5">a</text>
+<text x="478.8" y="103.5" fill="#DFE1E5">n</text>
+<g shape-rendering="geometricPrecision"><path d="M495.3 90.0 A8.4 9.0 0 0 1 495.3 108.0 Z" fill="#694820"/></g>
+<g shape-rendering="geometricPrecision"><path d="M512.1 90.0 A8.4 9.0 0 0 1 512.1 108.0 Z" fill="#44321D"/></g>
+<rect x="0.0" y="108.0" width="537.6" height="18" fill="#191A1C"/>
+<rect x="0.0" y="126.0" width="25.2" height="18" fill="#191A1C"/>
+<rect x="25.2" y="126.0" width="310.8" height="18" fill="#56272B"/>
+<rect x="336.0" y="126.0" width="58.8" height="18" fill="#80383E"/>
+<rect x="394.8" y="126.0" width="25.2" height="18" fill="#56272B"/>
+<rect x="420.0" y="126.0" width="75.6" height="18" fill="#80383E"/>
+<rect x="495.6" y="126.0" width="16.8" height="18" fill="#56272B"/>
+<rect x="512.4" y="126.0" width="25.2" height="18" fill="#191A1C"/>
+<g shape-rendering="geometricPrecision"><path d="M25.5 126.0 A8.4 9.0 0 0 0 25.5 144.0 Z" fill="#56272B"/></g>
+<svg x="34.1" y="128.0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6" fill="none" stroke="#F57E84" stroke-width="1"/><polyline points="8 5 8 9" fill="none" stroke="#F57E84" stroke-width="1"/><circle cx="8" cy="11.25" r="0.9" fill="#F57E84"/></svg>
+<text x="50.4" y="139.5" fill="#DFE1E5">C</text>
+<text x="58.8" y="139.5" fill="#DFE1E5">o</text>
+<text x="67.2" y="139.5" fill="#DFE1E5">n</text>
+<text x="75.6" y="139.5" fill="#DFE1E5">n</text>
+<text x="84.0" y="139.5" fill="#DFE1E5">e</text>
+<text x="92.4" y="139.5" fill="#DFE1E5">c</text>
+<text x="100.8" y="139.5" fill="#DFE1E5">t</text>
+<text x="109.2" y="139.5" fill="#DFE1E5">i</text>
+<text x="117.6" y="139.5" fill="#DFE1E5">o</text>
+<text x="126.0" y="139.5" fill="#DFE1E5">n</text>
+<text x="142.8" y="139.5" fill="#DFE1E5">l</text>
+<text x="151.2" y="139.5" fill="#DFE1E5">o</text>
+<text x="159.6" y="139.5" fill="#DFE1E5">s</text>
+<text x="168.0" y="139.5" fill="#DFE1E5">t</text>
+<g shape-rendering="geometricPrecision"><path d="M336.3 126.0 A8.4 9.0 0 0 0 336.3 144.0 Z" fill="#80383E"/></g>
+<text x="344.4" y="139.5" fill="#DFE1E5">R</text>
+<text x="352.8" y="139.5" fill="#DFE1E5">e</text>
+<text x="361.2" y="139.5" fill="#DFE1E5">t</text>
+<text x="369.6" y="139.5" fill="#DFE1E5">r</text>
+<text x="378.0" y="139.5" fill="#DFE1E5">y</text>
+<g shape-rendering="geometricPrecision"><path d="M394.5 126.0 A8.4 9.0 0 0 1 394.5 144.0 Z" fill="#80383E"/></g>
+<g shape-rendering="geometricPrecision"><path d="M420.3 126.0 A8.4 9.0 0 0 0 420.3 144.0 Z" fill="#80383E"/></g>
+<text x="428.4" y="139.5" fill="#DFE1E5">D</text>
+<text x="436.8" y="139.5" fill="#DFE1E5">i</text>
+<text x="445.2" y="139.5" fill="#DFE1E5">s</text>
+<text x="453.6" y="139.5" fill="#DFE1E5">m</text>
+<text x="462.0" y="139.5" fill="#DFE1E5">i</text>
+<text x="470.4" y="139.5" fill="#DFE1E5">s</text>
+<text x="478.8" y="139.5" fill="#DFE1E5">s</text>
+<g shape-rendering="geometricPrecision"><path d="M495.3 126.0 A8.4 9.0 0 0 1 495.3 144.0 Z" fill="#80383E"/></g>
+<g shape-rendering="geometricPrecision"><path d="M512.1 126.0 A8.4 9.0 0 0 1 512.1 144.0 Z" fill="#56272B"/></g>
+<rect x="0.0" y="144.0" width="8.4" height="18" fill="#26282C"/>
+<rect x="8.4" y="144.0" width="520.8" height="18" fill="#191A1C"/>
+<rect x="529.2" y="144.0" width="8.4" height="18" fill="#26282C"/>
+<rect x="0.0" y="144.0" width="8.4" height="9.0" fill="#191A1C"/>
+<rect x="4.2" y="153.0" width="4.2" height="9.0" fill="#191A1C"/>
+<rect x="529.2" y="144.0" width="8.4" height="9.0" fill="#191A1C"/>
+<rect x="529.2" y="153.0" width="4.2" height="9.0" fill="#191A1C"/>
+</svg>
