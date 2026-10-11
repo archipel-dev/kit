@@ -33,4 +33,6 @@ Snapshot tests need a GPU or `mesa-vulkan-drivers`. Accept intended image change
 artifacts and git-ignored.
 
 Commit messages and PR titles are Conventional Commits (`feat`, `fix`, `perf`, `refactor`,
-`docs`, `test`, `chore`, `ci`; `!` for breaking).
+`docs`, `test`, `chore`, `ci`; `!` for breaking). They drive semantic releases:
+release-please keeps a release PR open on main; merging it tags `v<version>` and publishes
+the GitHub release. Don't bump versions by hand.
