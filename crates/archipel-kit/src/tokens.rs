@@ -39,11 +39,25 @@ pub mod size {
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
     pub const ISLAND_GAP: f32 = 4.0;
+    /// Line height of code views and editors.
+    pub const CODE_LINE_HEIGHT: f32 = 20.0;
+    /// Padding inside code views and editors, and between gutter and text.
+    pub const CODE_PADDING: f32 = 8.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Number of gaps between the four parts of a key/value row: checkbox, fields, delete.
+    pub const KEY_VALUE_ROW_GAPS: f32 = 3.0;
     /// Share of a key/value table's field width that goes to the key column; the value
     /// column gets the rest.
     pub const KEY_COLUMN_SHARE: f32 = 0.4;
+    /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
+    pub const SPLIT_DIVIDER: f32 = ISLAND_GAP;
+    /// Extra pointer reach on each side of a split pane's divider, so it is easy to grab.
+    pub const SPLIT_GRAB: f32 = 2.0;
+    /// Distance an arrow key moves a split pane's divider.
+    pub const SPLIT_KEY_STEP: f32 = 16.0;
+    /// Default minimum size of each side of a split pane.
+    pub const SPLIT_MIN_PANE: f32 = 120.0;
 
     /// Distance from a row's left edge to the first column at `depth`.
     pub fn indent(depth: usize) -> f32 {

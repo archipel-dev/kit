@@ -4,8 +4,9 @@
 mod common;
 
 use archipel_kit::components::{
-    Button, Cell, Checkbox, Column, Dropdown, IconButton, Link, ListRow, MenuItem, Radio,
-    SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow, TreeTable, VirtualList,
+    Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link, ListRow,
+    MenuItem, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow,
+    TreeTable, VirtualList,
 };
 use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
@@ -94,6 +95,42 @@ fn text_field_conforms() {
     .no_click()
     .keys(&[])
     .run();
+}
+
+#[test]
+fn code_editor_conforms() {
+    let mut text = String::from("let a = 1;");
+    testing::conformance("Script", move |ui, enabled| {
+        ui.add(
+            CodeEditor::new(&mut text)
+                .label("Script")
+                .enabled(enabled)
+                .height(80.0),
+        )
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+#[test]
+fn code_view_and_editor_compose_audit_clean() {
+    let mut text = String::from("{\n  \"a\": 1\n}");
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        CodeView::new("{\n  \"a\": 1\n}")
+            .label("Response")
+            .line_numbers(true)
+            .folding(true)
+            .height(80.0)
+            .show(ui);
+        ui.add(
+            CodeEditor::new(&mut text)
+                .label("Request")
+                .line_numbers(true)
+                .height(80.0),
+        );
+    });
+    testing::audit(&mut harness).assert_clean();
 }
 
 #[test]
@@ -336,4 +373,61 @@ fn key_value_text_cells_conform() {
         .keys(&[])
         .run();
     }
+}
+
+/// The table reports its cells through `changes`, not through one response: turns "this
+/// change was reported" into the `clicked()` that `conformance` counts as an activation.
+fn activated_if(mut response: egui::Response, activated: bool) -> egui::Response {
+    if activated {
+        response
+            .flags
+            .insert(egui::response::Flags::FAKE_PRIMARY_CLICKED);
+    }
+    response
+}
+
+#[test]
+fn key_value_enable_checkbox_conforms() {
+    use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+    let mut rows = vec![KeyValueEntry::new("page", "1")];
+    testing::conformance("Enabled, row 1", move |ui, enabled| {
+        let out = KeyValueTable::new("params", &mut rows)
+            .read_only(!enabled)
+            .show(ui);
+        activated_if(out.response, out.changes.contains(&Change::Toggled(0)))
+    })
+    .run();
+}
+
+#[test]
+fn key_value_remove_button_conforms() {
+    use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+    // Read-only tables have no delete button: the disabled state is a disabled `Ui`.
+    testing::conformance("Remove, row 1", |ui, enabled| {
+        // Rebuilt every frame: a removed row would take the button with it.
+        let mut rows = vec![KeyValueEntry::new("page", "1")];
+        ui.add_enabled_ui(enabled, |ui| {
+            let out = KeyValueTable::new("params", &mut rows).show(ui);
+            activated_if(out.response, out.changes.contains(&Change::Removed(0)))
+        })
+        .inner
+    })
+    .run();
+}
+
+#[test]
+fn split_pane_divider_conforms() {
+    use archipel_kit::components::SplitPane;
+    let mut ratio = 0.5;
+    testing::conformance("Resize sidebar", move |ui, enabled| {
+        ui.allocate_ui(egui::vec2(320.0, 120.0), |ui| {
+            SplitPane::horizontal("conformance", &mut ratio)
+                .label("Resize sidebar")
+                .enabled(enabled)
+                .show(ui, |ui| ui.label("Sidebar"), |ui| ui.label("Request"))
+                .divider
+        })
+        .inner
+    })
+    .run();
 }

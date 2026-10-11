@@ -74,6 +74,7 @@ mod docs {
         Banner = "components/banner.md";
         Button = "components/button.md";
         Choice = "components/choice.md";
+        Code = "components/code.md";
         Dropdown = "components/dropdown.md";
         EmptyState = "components/empty-state.md";
         IconButton = "components/icon-button.md";
@@ -84,6 +85,7 @@ mod docs {
         Panel = "components/panel.md";
         Progress = "components/progress.md";
         SegmentedControl = "components/segmented-control.md";
+        SplitPane = "components/split-pane.md";
         TabBar = "components/tab-bar.md";
         TextField = "components/text-field.md";
         Toast = "components/toast.md";

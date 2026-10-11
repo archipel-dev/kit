@@ -14,7 +14,7 @@ pub use tree_table::TreeTable;
 use super::{ListRow, common};
 use crate::behaviour::{Behaviour, DragSource, DropTarget};
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::Tone;
+use crate::parts::{Tone, ValueKind};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
 use egui::{
@@ -591,12 +591,19 @@ impl Column {
     }
 }
 
+/// How a cell's text is colored: by meaning (a tone) or by value type.
+#[derive(Debug, Clone, Copy)]
+enum CellColor {
+    Tone(Tone),
+    Kind(ValueKind),
+}
+
 /// The content of a table cell.
 #[derive(Debug, Clone, Default)]
 pub struct Cell {
     text: String,
     icon: Option<Icon>,
-    tone: Option<Tone>,
+    color: Option<CellColor>,
     editable: bool,
 }
 
@@ -618,7 +625,7 @@ impl Cell {
     /// Meaning of the text's color: [`Tone::Error`] for a 500, [`Tone::Muted`] for nulls
     /// and timestamps.
     pub fn tone(mut self, tone: Tone) -> Self {
-        self.tone = Some(tone);
+        self.color = Some(CellColor::Tone(tone));
         self
     }
 
@@ -627,6 +634,15 @@ impl Cell {
     /// [`CollectionResponse::edited`].
     pub fn editable(mut self, editable: bool) -> Self {
         self.editable = editable;
+        self
+    }
+
+    /// The type of the value, colored like the code editor does ([`ValueKind::String`],
+    /// [`ValueKind::Number`], [`ValueKind::Null`] …): for document and JSON views. Like a
+    /// tone it keeps its color when the row is selected. Replaces an earlier
+    /// [`tone`](Self::tone) (and the other way round): the last call wins.
+    pub fn value_kind(mut self, kind: ValueKind) -> Self {
+        self.color = Some(CellColor::Kind(kind));
         self
     }
 
@@ -990,8 +1006,9 @@ pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selec
     } else {
         typography::body(typography::BODY)
     };
-    let color = match (cell.tone, selected) {
-        (Some(tone), _) => tone.color(&colors),
+    let color = match (cell.color, selected) {
+        (Some(CellColor::Tone(tone)), _) => tone.color(&colors),
+        (Some(CellColor::Kind(kind)), _) => kind.resolve(ui.ctx()),
         (None, true) => colors.text_strong,
         (None, false) => colors.text,
     };

@@ -48,7 +48,7 @@ A double-click on a *non-editable* cell toggles a parent or activates a leaf, as
 
 ```rust
 use archipel_kit::components::{Cell, Column, TreeRow, TreeTable};
-use archipel_kit::{Glyph, egui};
+use archipel_kit::{Glyph, ValueKind, egui};
 
 struct Doc {
     columns: Vec<Column>,
@@ -69,9 +69,9 @@ fn document(ui: &mut egui::Ui, doc: &mut Doc) {
     let out = TreeTable::new("document", &mut doc.columns, &rows, &mut doc.selected)
         .name("Document")
         .show(ui, |row, col| match (row, col) {
-            (0, 1) => Cell::new(name.as_str()).editable(true),
-            (1, 1) => Cell::new("{ 1 field }").muted(),
-            (_, 1) => Cell::new("London"),
+            (0, 1) => Cell::new(name.as_str()).value_kind(ValueKind::String).editable(true),
+            (1, 1) => Cell::new("{ 1 field }").value_kind(ValueKind::Punctuation),
+            (_, 1) => Cell::new("London").value_kind(ValueKind::String),
             (1, _) => Cell::new("Object").muted(),
             _ => Cell::new("String").muted(),
         });
@@ -92,7 +92,7 @@ fn document(ui: &mut egui::Ui, doc: &mut Doc) {
 |---|---|
 | `TreeTable::new(id, &mut columns, &rows, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.name(str)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `TreeRow` | `.editable(bool)` for the key, plus `.parent`, `.icon`, `.secondary` as for `Tree` |
-| `Cell` | `.editable(bool)`, plus `.icon`, `.tone`, `.muted` as for `Table` |
+| `Cell` | `.editable(bool)`, `.value_kind(ValueKind)` (values in the editor's syntax colors, see [collections](collections.md#typed-values)), plus `.icon`, `.tone`, `.muted` as for `Table` |
 | `CellEdit` | `row`, `column`, `text` |
 | `CollectionResponse` | `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited` |
 

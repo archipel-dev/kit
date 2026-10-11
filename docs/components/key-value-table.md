@@ -18,7 +18,7 @@ your own model type so the table edits your rows in place, without copying them 
 use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
 use archipel_kit::egui;
 
-fn query_params(ui: &mut egui::Ui, params: &mut Vec<KeyValueEntry>) {
+fn query_params(ui: &mut egui::Ui, params: &mut Vec<KeyValueEntry>, sent: &mut Vec<bool>) {
     let out = KeyValueTable::new("params", params)
         .key_placeholder("Add parameter")
         .value_placeholder("value")
@@ -28,7 +28,12 @@ fn query_params(ui: &mut egui::Ui, params: &mut Vec<KeyValueEntry>) {
             Change::Added(row) | Change::KeyEdited(row) | Change::ValueEdited(row) => {
                 let _ = row; // rebuild the URL preview
             }
-            Change::Toggled(_) | Change::Removed(_) => {}
+            Change::Removed(row) => {
+                // The table already removed the row from `params`; `row` is its index
+                // before removal. Apply it to your own per-row state in the same order.
+                sent.remove(*row);
+            }
+            Change::Toggled(_) => {}
         }
     }
 }

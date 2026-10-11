@@ -5,12 +5,13 @@
 //! ```
 
 use archipel_kit::behaviour::ContextMenu;
+use archipel_kit::components::code::Json;
 use archipel_kit::components::{
-    Avatar, Banner, Button, Cell, Checkbox, Column, Counter, Dialog, Dropdown, EmptyState,
-    IconButton, Kbd, KeyValueEntry, KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, Panel,
-    ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity,
-    SortOrder, Spinner, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
-    TreeRow, TreeTable,
+    Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
+    Dropdown, EmptyState, IconButton, Kbd, KeyValueEntry, KeyValueTable, Link, ListRow, MenuItem,
+    MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
+    Separator, Severity, SortOrder, Spinner, SplitPane, Tab, TabBar, Table, Tag, TextField, Toast,
+    Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::parts::Slot;
@@ -47,11 +48,12 @@ enum Page {
     Data,
     Layout,
     Overlays,
+    Code,
     Icons,
 }
 
 impl Page {
-    const ALL: [(Page, &'static str, Glyph); 10] = [
+    const ALL: [(Page, &'static str, Glyph); 11] = [
         (Page::Buttons, "Buttons", Glyph::Run),
         (Page::Inputs, "Text fields", Glyph::Search),
         (Page::Choices, "Choices", Glyph::Success),
@@ -61,9 +63,23 @@ impl Page {
         (Page::Data, "Badges & data", Glyph::Package),
         (Page::Layout, "Panels & menus", Glyph::Layers),
         (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
+        (Page::Code, "Code", Glyph::Code),
         (Page::Icons, "Icons", Glyph::Sparkle),
     ];
 }
+
+/// The JSON of the Code page.
+const CODE_SAMPLE: &str = r#"{
+  "id": 7,
+  "name": "archipel",
+  "active": true,
+  "tags": ["ui", "rust"],
+  "owner": {
+    "login": "henry",
+    "email": null
+  },
+  "score": 4.5e2
+}"#;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum View {
@@ -102,6 +118,8 @@ struct Gallery {
     row: Option<usize>,
     /// The sorted (data column, direction); columns can be reordered, so not a position.
     sort: Option<(usize, SortOrder)>,
+    code: String,
+    splits: [f32; 3],
     /// The data column shown at each position of the table.
     column_order: Vec<usize>,
     /// Edited request texts of the table, by row.
@@ -200,9 +218,17 @@ impl Documents {
         .name("Documents")
         .height(220.0)
         .show(ui, |row, col| match self.index[row] {
-            (_, None) if col == 1 => Cell::new(format!("{{ {FIELDS} fields }}")).muted(),
+            (_, None) if col == 1 => {
+                Cell::new(format!("{{ {FIELDS} fields }}")).value_kind(ValueKind::Punctuation)
+            }
             (_, None) => Cell::new("Object").muted(),
-            (doc, Some(field)) if col == 1 => Cell::new(self.value(doc, field)).editable(true),
+            (doc, Some(field)) if col == 1 => Cell::new(self.value(doc, field))
+                .value_kind(match field % 3 {
+                    0 => ValueKind::Number,
+                    1 => ValueKind::String,
+                    _ => ValueKind::Boolean,
+                })
+                .editable(true),
             (_, Some(field)) => Cell::new(["Int32", "String", "Boolean"][field % 3]).muted(),
         });
         self.columns = columns;
@@ -286,6 +312,8 @@ impl Default for Gallery {
             ],
             row: None,
             sort: None,
+            code: CODE_SAMPLE.into(),
+            splits: [0.25, 0.5, 0.5],
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
             documents: Documents::new(),
@@ -837,6 +865,44 @@ impl Gallery {
                         ui.add(MenuItem::new("Rename…").shortcut("Shift+F6"));
                         ui.add(MenuItem::new("Delete").shortcut("Delete"));
                     });
+                ui.add(SectionHeader::new("Split pane"));
+                ui.label("Drag the dividers, double-click to reset, or Tab to one and use the arrow keys.");
+                let size = egui::vec2(ui.available_width(), 260.0);
+                let enabled = self.enabled;
+                let [sidebar, request, response] = &mut self.splits;
+                ui.allocate_ui(size, |ui| {
+                    SplitPane::horizontal("gallery-sidebar", sidebar)
+                        .default_ratio(0.25)
+                        .min_size(100.0)
+                        .label("Resize sidebar")
+                        .enabled(enabled)
+                        .with(Tooltip::new("Resize sidebar").hint("Double-click to reset"))
+                        .show(
+                            ui,
+                            |ui| split_island(ui, "Collections", "src/\ntests/"),
+                            |ui| {
+                                SplitPane::vertical("gallery-stack", request)
+                                    .min_size(60.0)
+                                    .label("Resize response")
+                                    .enabled(enabled)
+                                    .show(
+                                        ui,
+                                        |ui| split_island(ui, "Request", "GET /api/users"),
+                                        |ui| {
+                                            SplitPane::horizontal("gallery-response", response)
+                                                .min_size(60.0)
+                                                .label("Resize headers")
+                                                .enabled(enabled)
+                                                .show(
+                                                    ui,
+                                                    |ui| split_island(ui, "Body", "200 OK"),
+                                                    |ui| split_island(ui, "Headers", "ETag"),
+                                                );
+                                        },
+                                    );
+                            },
+                        );
+                });
             }
             Page::Overlays => {
                 ui.add(SectionHeader::new("Tooltips"));
@@ -888,6 +954,25 @@ impl Gallery {
                     });
                 });
                 self.show_dialog(ui.ctx());
+            }
+            Page::Code => {
+                ui.add(SectionHeader::new("Code view"));
+                CodeView::new(CODE_SAMPLE)
+                    .label("Response body")
+                    .highlighter(&Json)
+                    .line_numbers(true)
+                    .folding(true)
+                    .height(236.0)
+                    .show(ui);
+                ui.add(SectionHeader::new("Code editor"));
+                ui.add(
+                    CodeEditor::new(&mut self.code)
+                        .label("Request body")
+                        .highlighter(&Json)
+                        .line_numbers(true)
+                        .enabled(enabled)
+                        .height(236.0),
+                );
             }
             Page::Icons => {
                 ui.add(TextField::search(&mut self.icon_filter).placeholder("Search icons"));
@@ -981,6 +1066,18 @@ impl Gallery {
             _ => {}
         }
     }
+}
+
+/// A pane of the split demo: an island filling it, with a title and some text.
+fn split_island(ui: &mut egui::Ui, title: &str, text: &str) {
+    Panel::new(title).show(ui, |ui| {
+        ui.set_min_size(ui.available_size());
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.add_space(tokens::size::CONTENT_INSET);
+            ui.label(text);
+        });
+    });
 }
 
 /// Typed-value, chart, ramp and method/status colors.

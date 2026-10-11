@@ -22,6 +22,7 @@
 | [SegmentedControl](components/segmented-control.md) | <img src="components/img/segmented_control.dark.png" width="140"> | Switching views. |
 | [TabBar](components/tab-bar.md) | <img src="components/img/tab_bar.dark.png" width="160"> | Editor tabs. |
 | [KeyValueTable](components/key-value-table.md) | <img src="components/img/key_value.dark.png" width="160"> | Query parameters, headers, form fields, environment variables. |
+| [CodeView, CodeEditor](components/code.md) | <img src="components/img/code_view.dark.png" width="160"> | Read-only and editable code with highlighting and find. |
 | [VirtualList, Tree, Table](components/collections.md) | <img src="components/img/table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
 | [ListRow](components/list-row.md) | <img src="components/img/list_row.dark.png" width="160"> | Lists and trees. |
@@ -31,6 +32,7 @@
 | [EmptyState](components/empty-state.md) | <img src="components/img/empty_state.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
+| [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |
 | [MenuItem, MenuSeparator, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
 | [Tooltip](components/tooltip.md) | <img src="components/img/tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
 | [Dialog](components/dialog.md) | <img src="components/img/dialog.dark.png" width="160"> | Decisions and short forms. |

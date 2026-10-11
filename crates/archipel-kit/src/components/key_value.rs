@@ -135,12 +135,17 @@ type ValueCellFn<'a> = Box<dyn FnMut(&mut Ui, ValueCell<'_>) -> Response + 'a>;
 /// use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
 ///
 /// let mut params = vec![KeyValueEntry::new("page", "1")];
+/// let mut sent = vec![false]; // caller state, parallel to `params`
 /// let out = KeyValueTable::new("params", &mut params)
 ///     .key_placeholder("Add parameter")
 ///     .value_placeholder("value")
 ///     .show(ui);
-/// if out.changes.contains(&Change::Added(1)) {
-///     // refresh the request preview, …
+/// for change in &out.changes {
+///     if let Change::Removed(index) = change {
+///         // `index` refers to the Vec before removal; the table already removed
+///         // the row from `params`. Apply it to anything you keep per row.
+///         sent.remove(*index);
+///     }
 /// }
 /// # });
 /// ```
@@ -257,7 +262,7 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
 
         // Fixed parts (box, delete button, gaps) first; keys and values split the rest.
         let gap = size::TOOLBAR_GAP;
-        let fixed = size::ICON + size::ICON_BUTTON_SMALL + 3.0 * gap;
+        let fixed = size::ICON + size::ICON_BUTTON_SMALL + size::KEY_VALUE_ROW_GAPS * gap;
         let fields = (ui.available_width() - fixed).max(0.0);
         let key_width = (fields * size::KEY_COLUMN_SHARE).floor();
         let value_width = fields - key_width;
