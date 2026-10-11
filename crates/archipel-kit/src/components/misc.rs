@@ -114,7 +114,17 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let mut changed = false;
+        let mut escaped = false;
         let inner = ui.add_enabled_ui(self.enabled, |ui| {
+            // Escape closes the popup and is used up, so a surrounding dialog stays open.
+            // `ComboBox::from_id_salt` hashes the salt once more.
+            let button_id = ui.make_persistent_id(egui::Id::new(self.id));
+            if egui::ComboBox::is_open(ui.ctx(), button_id)
+                && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+            {
+                egui::Popup::close_id(ui.ctx(), button_id.with("popup"));
+                escaped = true;
+            }
             ui.spacing_mut().interact_size.y = size::CONTROL_HEIGHT;
             ui.spacing_mut().button_padding = vec2(9.0, 5.0);
             let visuals = &mut ui.style_mut().visuals.widgets;
@@ -167,6 +177,9 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                 })
         });
         let mut response = inner.inner.response;
+        if escaped {
+            response.request_focus();
+        }
         if changed {
             response.mark_changed();
         }
