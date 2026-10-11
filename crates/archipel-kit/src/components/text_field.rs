@@ -4,7 +4,7 @@ use super::{IconButton, common};
 use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
-use egui::{Color32, CornerRadius, Response, Stroke, Ui, Widget, vec2};
+use egui::{Color32, CornerRadius, Id, Response, Stroke, Ui, Widget, vec2};
 
 /// A single-line text input with an optional label, placeholder, leading icon, clear
 /// button and validation message.
@@ -39,6 +39,7 @@ pub struct TextField<'t> {
     enabled: bool,
     monospace: bool,
     width: Option<f32>,
+    id: Option<Id>,
 }
 
 impl<'t> TextField<'t> {
@@ -55,6 +56,7 @@ impl<'t> TextField<'t> {
             enabled: true,
             monospace: false,
             width: None,
+            id: None,
         }
     }
 
@@ -115,6 +117,14 @@ impl<'t> TextField<'t> {
         self
     }
 
+    /// The id of the text edit, like [`egui::TextEdit::id`]: the response's `id` is exactly
+    /// this one, so a caller can move focus to the field with
+    /// `ctx.memory_mut(|m| m.request_focus(id))` or `ui.memory_mut(...)`.
+    pub fn id(mut self, id: Id) -> Self {
+        self.id = Some(id);
+        self
+    }
+
     /// Total width in points (default: the available width).
     pub fn width(mut self, width: f32) -> Self {
         self.width = Some(width);
@@ -161,6 +171,9 @@ impl Widget for TextField<'_> {
                 .text_color(common::enabled_text(self.enabled, colors.text, &colors))
                 .desired_width(content.available_width() - clear_width)
                 .margin(vec2(0.0, 0.0));
+            if let Some(id) = self.id {
+                edit = edit.id(id);
+            }
             if self.monospace {
                 edit = edit.font(egui::TextStyle::Monospace);
             }

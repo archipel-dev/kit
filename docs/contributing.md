@@ -35,6 +35,15 @@ feel like one suite instead of a pile of widgets.
     `testing::audit`, and so does its gallery page. Run the audit with the slots filled:
     no unnamed controls, no target under 16×16, no partly overlapping targets, nothing
     <kbd>Tab</kbd> can't reach.
+13. **No duplicates**: before writing a helper (elision, span layout, a popup, a color
+    mapping), search the kit for one; extend it instead of adding a second. One concept,
+    one place: a token kind has one color, wherever it is drawn.
+14. **API that can grow**: public enums that may get variants (actions, kinds, events)
+    and structs callers may build by literal are `#[non_exhaustive]`, with constructors.
+    A change that breaks callers anyway is marked `!` in the PR title with a
+    `BREAKING CHANGE:` footer, so release-please bumps the version.
+15. **Proof stays out of the repo**: verification screenshots go in the PR description.
+    Only snapshot images a docs page uses live under `docs/`.
 
 A component that fails conformance or the audit is not done, whatever its snapshot looks
 like: they are the checks a user would otherwise do by hand.

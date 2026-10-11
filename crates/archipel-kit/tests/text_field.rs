@@ -80,3 +80,27 @@ fn disabled_field_is_read_only() {
     harness.run();
     assert_eq!(harness.state(), "fixed");
 }
+
+#[test]
+fn id_is_the_text_edits_id_and_requests_focus() {
+    let id = egui::Id::new("find-input");
+    let mut harness =
+        testing::harness_state(Theme::dark(), (String::new(), None), |ui, (text, seen)| {
+            let response = ui.add(TextField::new(text).label("Find").id(id));
+            *seen = Some(response.id);
+        });
+    harness.run();
+    assert_eq!(
+        harness.state().1,
+        Some(id),
+        "the response is the TextEdit's, with the given id"
+    );
+    assert!(!harness.ctx.memory(|m| m.has_focus(id)));
+    harness.ctx.memory_mut(|m| m.request_focus(id));
+    harness.run();
+    assert!(harness.ctx.memory(|m| m.has_focus(id)));
+    harness.key_press(egui::Key::A);
+    harness.event(egui::Event::Text("a".into()));
+    harness.run();
+    assert_eq!(harness.state().0, "a");
+}

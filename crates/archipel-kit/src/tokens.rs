@@ -39,6 +39,12 @@ pub mod size {
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
     pub const ISLAND_GAP: f32 = 4.0;
+    /// Width of a submenu.
+    pub const SUBMENU_WIDTH: f32 = 200.0;
+    /// Space inside a status bar item at each end.
+    pub const STATUS_ITEM_PADDING: f32 = 6.0;
+    /// Vertical padding of a popup and the gap between a popup and what it is attached to.
+    pub const POPUP_PADDING: f32 = 4.0;
     /// Line height of code views and editors.
     pub const CODE_LINE_HEIGHT: f32 = 20.0;
     /// Padding inside code views and editors, and between gutter and text.
