@@ -207,6 +207,186 @@ fn drag_source_keeps_clicks() {
     assert_eq!(*harness.state(), 1);
 }
 
+#[test]
+fn draggable_expandable_row_keeps_its_tab_order() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        ListRow::new("src")
+            .icon(Glyph::Folder)
+            .expanded(Some(true))
+            .with(DragSource("src".to_string()))
+            .with(ContextMenu::new(|ui| {
+                ui.add(MenuItem::new("Rename…"));
+            }))
+            .show(ui);
+        ListRow::new("main.rs")
+            .depth(1)
+            .with(DragSource("main.rs".to_string()))
+            .show(ui);
+    });
+    harness.run();
+    // Row, chevron and the file row: every one reachable by Tab, in order.
+    testing::audit(&mut harness).assert_clean();
+}
+
+#[test]
+fn draggable_folder_still_toggles_and_clicks() {
+    let mut harness = testing::harness_state(Theme::dark(), (0, 0), |ui, (clicks, toggles)| {
+        let row = ListRow::new("src")
+            .expanded(Some(true))
+            .with(DragSource(1u32))
+            .show(ui);
+        *clicks += row.response.clicked() as u32;
+        *toggles += row.toggled as u32;
+    });
+    harness.get_by_label("Collapse src").click();
+    harness.run();
+    assert_eq!(harness.state().1, 1);
+    harness.get_by_label("src").click();
+    harness.run();
+    assert_eq!(harness.state().0, 1);
+}
+
+#[test]
+fn list_row_options_snapshot() {
+    testing::snapshot_themes("list_row_options", common::IMG, |ui| {
+        ui.set_width(300.0);
+        ListRow::new("Gradle")
+            .icon(Glyph::Folder)
+            .expanded(Some(true))
+            .strong(true)
+            .show(ui);
+        ListRow::new("Search hit in main.rs")
+            .icon(Icon::for_file("main.rs"))
+            .tint(Tone::Warning)
+            .depth(1)
+            .show(ui);
+        ListRow::new("app (running)")
+            .icon(Glyph::Run)
+            .icon_tone(Tone::Run)
+            .tint(Tone::Success)
+            .strong(true)
+            .selected(true)
+            .show(ui);
+        ListRow::new("Failed: tests")
+            .icon(Glyph::Error)
+            .icon_tone(Tone::Error)
+            .tint(Tone::Error)
+            .show(ui);
+        ListRow::new("theme.rs")
+            .icon(Icon::for_file("theme.rs"))
+            .leading(Slot::ui_width(22.0, |ui| {
+                ui.add(
+                    archipel_kit::components::Checkbox::new(&mut true, "Include theme.rs")
+                        .label_visible(false),
+                );
+            }))
+            .secondary("src/")
+            .show(ui);
+        ListRow::new("Badged.rs")
+            .icon_painter(|painter, rect, color| {
+                painter.rect_filled(rect.shrink(2.0), 3.0, color);
+                painter.circle_filled(
+                    rect.right_bottom() - egui::vec2(3.0, 3.0),
+                    3.5,
+                    Tone::Error.resolve(painter.ctx()),
+                );
+            })
+            .show(ui);
+        ListRow::new("A very long file name that does not fit into this row at all.kt")
+            .icon(Icon::for_file("a.kt"))
+            .secondary("with/a/long/path")
+            .trailing(Slot::text("12"))
+            .show(ui);
+        ListRow::new("A very long file name that does not fit into this row at all.kt")
+            .icon(Icon::for_file("a.kt"))
+            .enabled(false)
+            .show(ui);
+    });
+}
+
+#[test]
+fn long_label_is_elided_with_its_full_text_as_tooltip() {
+    let long = "A very long file name that does not fit into this row at all.kt";
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        ui.set_width(160.0);
+        ListRow::new(long).trailing(Slot::text("12")).show(ui);
+    });
+    harness.run();
+    harness.get_by_label(long).hover();
+    harness.run_steps(40);
+    // The row's name plus the tooltip showing the label in full.
+    assert_eq!(harness.query_all_by_label(long).count(), 2);
+}
+
+#[test]
+fn short_label_has_no_tooltip() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        ListRow::new("main.rs").show(ui);
+    });
+    harness.get_by_label("main.rs").hover();
+    harness.run_steps(40);
+    assert_eq!(harness.query_all_by_label("main.rs").count(), 1);
+}
+
+#[test]
+fn rows_with_leading_slot_pass_conformance_and_the_audit() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let mut checked = true;
+        ListRow::new("theme.rs")
+            .leading(Slot::ui_width(22.0, |ui| {
+                ui.add(
+                    archipel_kit::components::Checkbox::new(&mut checked, "Include theme.rs")
+                        .label_visible(false),
+                );
+            }))
+            .tint(Tone::Warning)
+            .strong(true)
+            .show(ui);
+    });
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    testing::conformance("theme.rs", |ui, enabled| {
+        ListRow::new("theme.rs")
+            .strong(true)
+            .tint(Tone::Success)
+            .icon_painter(|painter, rect, color| {
+                painter.circle_filled(rect.center(), 4.0, color);
+            })
+            .enabled(enabled)
+            .show(ui)
+            .response
+    })
+    .run();
+}
+
+#[test]
+fn rows_with_a_leading_checkbox_and_a_drag_source_conform() {
+    testing::conformance("theme.rs", |ui, enabled| {
+        let mut checked = true;
+        ListRow::new("theme.rs")
+            .leading(Slot::ui_width(22.0, |ui| {
+                ui.add(
+                    archipel_kit::components::Checkbox::new(&mut checked, "Include theme.rs")
+                        .label_visible(false),
+                );
+            }))
+            .enabled(enabled)
+            .show(ui)
+            .response
+    })
+    .run();
+    testing::conformance("src", |ui, enabled| {
+        ListRow::new("src")
+            .icon(Glyph::Folder)
+            .expanded(Some(true))
+            .with(DragSource("src".to_string()))
+            .enabled(enabled)
+            .show(ui)
+            .response
+    })
+    .run();
+}
+
 /// Nexus HTTP's sidebar (kit issue #21): draggable `ListRow`s in a `VirtualList` are
 /// reached with the arrow keys after Tab focuses the list. `DragSource` must not make the
 /// rows Tab stops of their own, or the audit reports them as unreachable.
