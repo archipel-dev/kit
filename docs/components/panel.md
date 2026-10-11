@@ -82,7 +82,7 @@ Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs)
 
 `Panel::header(width, content)` replaces the painted title with a bounded left slot.
 `padded(true)` applies the shared content inset; trees can retain edge-to-edge bodies.
-`header_separator(true)` adds an inset hairline below the header. Header actions can
+`header_separator(true)` adds a hairline below the header, edge to edge in the frame color (as under Android Studio's Problems header). Header actions can
 contain `Separator::length(16.0)` between groups. The line length is in logical points.
 
 `hover_actions(true)` shows the actions only while the pointer is anywhere over the island
@@ -117,3 +117,23 @@ Panel::new("Inspector")
 
 ![Composed island dark](img/island_header.dark.png)
 ![Composed island light](img/island_header.light.png)
+
+## Content tabs
+
+`Panel::tabs(&tabs, &mut selected)` puts content tabs after the title, like Android Studio's
+Problems tool window ("File", "Project Errors"), and draws the header hairline. Measured
+there: 22 pt after the title, 10 pt inside each tab, 10 pt between tabs, 28 pt pills. The
+selected tab is blue while the tool window is active (keyboard focus inside it) and outlined
+gray otherwise; the others show a hover fill.
+
+```rust
+# egui::__run_test_ui(|ui| {
+use archipel_kit::components::Panel;
+
+let tabs = ["File".to_owned(), "Project Errors".to_owned()];
+let mut selected = 0;
+Panel::new("Problems")
+    .tabs(&tabs, &mut selected)
+    .show(ui, |ui| { ui.label("No problems in main.rs"); });
+# });
+```

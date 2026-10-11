@@ -11,7 +11,7 @@ use egui::{Id, Response, Ui};
 use std::cell::Cell;
 
 /// A docked tool-window region that can occupy the entire work area.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub enum WorkbenchRegion {
     /// The left tool window.
@@ -248,15 +248,19 @@ impl<'a> Workbench<'a> {
         // Tool window stripes on the frame, beside the islands.
         let mut rect = full;
         let stripe_width = tokens::stripe::WIDTH - tokens::size::ISLAND_GAP;
-        let button = |region: &Option<Region<'_>>, hidden: bool| {
+        let ctx = ui.ctx().clone();
+        let button = |region: &Option<Region<'_>>, kind: WorkbenchRegion, hidden: bool| {
             region.as_ref().and_then(|r| {
-                r.icon
-                    .map(|icon| StripeButton::new(icon, r.title.clone()).open(!hidden))
+                r.icon.map(|icon| {
+                    StripeButton::new(icon, r.title.clone())
+                        .open(!hidden)
+                        .active(!hidden && region_active(&ctx, id, kind))
+                })
             })
         };
-        let left_top = button(&left, state.left_hidden);
-        let left_bottom = button(&bottom, state.bottom_hidden);
-        let right_top = button(&right, state.right_hidden);
+        let left_top = button(&left, WorkbenchRegion::Left, state.left_hidden);
+        let left_bottom = button(&bottom, WorkbenchRegion::Bottom, state.bottom_hidden);
+        let right_top = button(&right, WorkbenchRegion::Right, state.right_hidden);
         let mut toggled = None;
         if left_top.is_some() || left_bottom.is_some() {
             let stripe = egui::Rect::from_min_max(
@@ -317,6 +321,7 @@ impl<'a> Workbench<'a> {
                 if let Some(region) = maximized_region {
                     region.show(
                         ui,
+                        id,
                         maximized.unwrap_or(WorkbenchRegion::Left),
                         true,
                         &hide,
@@ -361,6 +366,7 @@ impl<'a> Workbench<'a> {
                                             if ui.is_visible() {
                                                 region.show(
                                                     ui,
+                                                    id,
                                                     WorkbenchRegion::Right,
                                                     false,
                                                     &hide,
@@ -398,6 +404,7 @@ impl<'a> Workbench<'a> {
                                     if ui.is_visible() {
                                         region.show(
                                             ui,
+                                            id,
                                             WorkbenchRegion::Left,
                                             false,
                                             &hide,
@@ -424,7 +431,14 @@ impl<'a> Workbench<'a> {
                         .enabled(!auto_bottom)
                         .show(ui, main, |ui| {
                             if ui.is_visible() {
-                                region.show(ui, WorkbenchRegion::Bottom, false, &hide, &maximize);
+                                region.show(
+                                    ui,
+                                    id,
+                                    WorkbenchRegion::Bottom,
+                                    false,
+                                    &hide,
+                                    &maximize,
+                                );
                             }
                         });
                     if split.divider.changed() {
@@ -466,6 +480,7 @@ impl<'a> Region<'a> {
     fn show(
         self,
         ui: &mut Ui,
+        workbench: Id,
         region: WorkbenchRegion,
         maximized: bool,
         hide: &Cell<Option<WorkbenchRegion>>,
@@ -495,7 +510,26 @@ impl<'a> Region<'a> {
                     .auto_shrink([false, false])
                     .show(ui, self.content);
             });
+        // Where the island is, to tell next frame whether the focus is in it.
+        let rect = ui.min_rect();
+        ui.ctx()
+            .data_mut(|d| d.insert_temp(region_key(workbench, region), rect));
     }
+}
+
+fn region_key(workbench: Id, region: WorkbenchRegion) -> Id {
+    workbench.with(("kit-region-rect", region))
+}
+
+/// Whether the keyboard focus is inside `region`'s island (as drawn last frame): that tool
+/// window is the active one.
+fn region_active(ctx: &egui::Context, workbench: Id, region: WorkbenchRegion) -> bool {
+    let Some(rect) = ctx.data(|d| d.get_temp::<egui::Rect>(region_key(workbench, region))) else {
+        return false;
+    };
+    ctx.memory(|m| m.focused())
+        .and_then(|id| ctx.read_response(id))
+        .is_some_and(|response| rect.contains_rect(response.rect))
 }
 
 fn center_island(ui: &mut Ui, padded: bool, content: impl FnOnce(&mut Ui)) {

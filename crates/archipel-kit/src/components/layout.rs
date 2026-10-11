@@ -4,7 +4,7 @@ use super::{IconButton, Tooltip, common};
 use crate::behaviour::WidgetExt;
 use crate::icons::Glyph;
 use crate::theme::Theme;
-use crate::tokens::{motion, radius, size, typography};
+use crate::tokens::{motion, radius, size, tab, typography};
 use egui::{CornerRadius, InnerResponse, Sense, Stroke, Ui, Widget, vec2};
 
 /// An island: a rounded panel with a title bar, the building block of a workbench layout
@@ -31,6 +31,7 @@ pub struct Panel<'a> {
     hover_actions: bool,
     padded: bool,
     header_separator: bool,
+    tabs: Option<(&'a [String], &'a mut usize)>,
 }
 
 type Actions<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
@@ -46,7 +47,18 @@ impl<'a> Panel<'a> {
             hover_actions: false,
             padded: false,
             header_separator: false,
+            tabs: None,
         }
+    }
+
+    /// Content tabs after the title, like Android Studio's Problems tool window ("File",
+    /// "Project Errors"): the caller owns the selected index, a click selects. The selected
+    /// tab is blue while the tool window has the focus and outlined gray otherwise; others
+    /// show a hover fill. Adds the header hairline.
+    pub fn tabs(mut self, tabs: &'a [String], selected: &'a mut usize) -> Self {
+        self.tabs = Some((tabs, selected));
+        self.header_separator = true;
+        self
     }
 
     /// Toolbar buttons on the right of the title bar (usually [`super::IconButton`]s),
@@ -83,7 +95,8 @@ impl<'a> Panel<'a> {
         self
     }
 
-    /// Draw an inset horizontal hairline below the header.
+    /// Draw a hairline below the header, edge to edge in the frame color (Android Studio's
+    /// tool windows with content tabs, like Problems).
     pub fn header_separator(mut self, enabled: bool) -> Self {
         self.header_separator = enabled;
         self
@@ -184,7 +197,8 @@ impl<'a> Panel<'a> {
                         self.title.as_str(),
                         typography::semibold(ui.ctx(), typography::TITLE),
                     );
-                    if !(actions_shown && galley.size().x > content_rect.width()) {
+                    let title_width = galley.size().x;
+                    if !(actions_shown && title_width > content_rect.width()) {
                         common::text_left(
                             &ui.painter()
                                 .with_clip_rect(content_rect.intersect(ui.clip_rect())),
@@ -194,14 +208,77 @@ impl<'a> Panel<'a> {
                             colors.text_strong,
                         );
                     }
+                    if let Some((tabs, selected)) = self.tabs {
+                        let clip = content_rect.intersect(ui.clip_rect());
+                        let mut x = left + title_width + tab::CONTENT_TITLE_GAP;
+                        for (index, label) in tabs.iter().enumerate() {
+                            let galley = common::galley(
+                                ui,
+                                label.as_str(),
+                                typography::body(typography::BODY),
+                            );
+                            let width = galley.size().x + 2.0 * tab::CONTENT_PADDING;
+                            let rect = egui::Rect::from_center_size(
+                                egui::pos2(x + width / 2.0, header.center().y),
+                                vec2(width, tab::HEIGHT),
+                            );
+                            x += width + tab::CONTENT_GAP;
+                            let response = ui.interact(
+                                rect.intersect(clip),
+                                panel_id.with(("content-tab", index)),
+                                Sense::click(),
+                            );
+                            let is_selected = *selected == index;
+                            response.widget_info(|| {
+                                egui::WidgetInfo::selected(
+                                    egui::WidgetType::SelectableLabel,
+                                    true,
+                                    is_selected,
+                                    label,
+                                )
+                            });
+                            if response.clicked() {
+                                *selected = index;
+                            }
+                            let painter = ui.painter().with_clip_rect(clip);
+                            let corner = CornerRadius::same(radius::TAB);
+                            if is_selected {
+                                // Blue while the tool window is active, gray otherwise.
+                                let (fill, border) = if focused {
+                                    (colors.tab_selected, colors.tab_selected_border)
+                                } else {
+                                    (colors.frame, colors.border)
+                                };
+                                painter.rect_filled(rect, corner, fill);
+                                painter.rect_stroke(
+                                    rect,
+                                    corner,
+                                    Stroke::new(1.0_f32, border),
+                                    egui::StrokeKind::Inside,
+                                );
+                            } else if response.hovered() {
+                                painter.rect_filled(rect, corner, colors.hover);
+                            }
+                            if response.has_focus() {
+                                crate::parts::focus_ring(&painter, rect, radius::TAB, &colors);
+                            }
+                            common::text_left(
+                                &painter,
+                                rect,
+                                rect.left() + tab::CONTENT_PADDING,
+                                galley,
+                                colors.text,
+                            );
+                        }
+                    }
                 }
                 if self.header_separator {
+                    // As in Android Studio: a 1 pt line in the frame color, from edge to edge,
+                    // right below the 40 pt header.
                     ui.painter().hline(
-                        (header.left() + size::CONTENT_INSET)
-                            ..=(header.right() - size::CONTENT_INSET)
-                                .max(header.left() + size::CONTENT_INSET),
-                        header.bottom(),
-                        Stroke::new(1.0_f32, colors.border),
+                        header.x_range(),
+                        header.bottom() + 0.5,
+                        Stroke::new(1.0_f32, colors.frame),
                     );
                 }
                 ui.spacing_mut().item_spacing.y = ui.ctx().style().spacing.item_spacing.y;

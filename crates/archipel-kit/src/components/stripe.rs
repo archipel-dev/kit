@@ -15,6 +15,7 @@ pub struct StripeButton {
     label: String,
     shortcut: Option<String>,
     open: bool,
+    active: bool,
     id_salt: Option<egui::Id>,
 }
 
@@ -26,8 +27,16 @@ impl StripeButton {
             label: label.into(),
             shortcut: None,
             open: false,
+            active: false,
             id_salt: None,
         }
+    }
+
+    /// Whether the tool window is the active one (it has the keyboard focus): its button is
+    /// filled with the accent color, as in Android Studio. Implies open.
+    pub fn active(mut self, active: bool) -> Self {
+        self.active = active;
+        self
     }
 
     fn id_salt(mut self, id: egui::Id) -> Self {
@@ -155,12 +164,19 @@ impl Widget for StripeButton {
         let enabled = response.enabled();
         crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
-            WidgetInfo::selected(WidgetType::Button, enabled, self.open, &self.label)
+            WidgetInfo::selected(
+                WidgetType::Button,
+                enabled,
+                self.open || self.active,
+                &self.label,
+            )
         });
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
             // Open: filled like a pressed button; otherwise the usual hover and press.
-            let fill = if self.open {
+            let fill = if self.active && enabled {
+                colors.accent
+            } else if self.open || self.active {
                 colors.pressed
             } else if enabled {
                 common::flat_fill(&response, &colors)
@@ -172,7 +188,9 @@ impl Widget for StripeButton {
                 common::focus_ring(painter, rect, radius::ICON_BUTTON, &colors);
             }
             let icon = Rect::from_center_size(rect.center(), vec2(stripe::ICON, stripe::ICON));
-            let color = if enabled {
+            let color = if self.active && enabled {
+                colors.text_on_accent
+            } else if enabled {
                 Tone::Icon.color(&colors)
             } else {
                 colors.text_disabled

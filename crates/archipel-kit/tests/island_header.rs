@@ -158,3 +158,38 @@ fn shown_actions_take_a_narrow_header_and_hide_after_a_delay() {
     h.step();
     assert!(!painted(&h, "Project"));
 }
+
+#[test]
+fn content_tabs_select_and_turn_blue_while_the_tool_window_is_active() {
+    let colors = Theme::dark().colors;
+    let selected_fill = |h: &Harness<'_, usize>| {
+        let rect = h.get_by_label("File").rect();
+        h.output().shapes.iter().find_map(|c| match &c.shape {
+            egui::Shape::Rect(r) if r.rect.center() == rect.center() => Some(r.fill),
+            _ => None,
+        })
+    };
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(520.0, 160.0))
+        .build_state(
+            |ctx, selected| {
+                archipel_kit::install(ctx, Theme::dark());
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    let tabs = ["File".to_owned(), "Project Errors".to_owned()];
+                    Panel::new("Problems").tabs(&tabs, selected).show(ui, |ui| {
+                        ui.add(Button::secondary("Inside"));
+                    });
+                });
+            },
+            0usize,
+        );
+    h.run();
+    // Inactive tool window: the selected tab is outlined gray, as in Android Studio.
+    assert_eq!(selected_fill(&h), Some(colors.frame));
+    h.get_by_label("Inside").focus();
+    h.run();
+    assert_eq!(selected_fill(&h), Some(colors.tab_selected));
+    h.get_by_label("Project Errors").click();
+    h.run();
+    assert_eq!(*h.state(), 1);
+}

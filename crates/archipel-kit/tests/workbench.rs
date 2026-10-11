@@ -332,3 +332,22 @@ fn stripe_tooltips_show_at_once() {
         "the tooltip shows next to the panel title"
     );
 }
+
+#[test]
+fn the_focused_tool_window_has_an_accent_stripe_button() {
+    let accent = Theme::dark().colors.accent;
+    let filled = |h: &Harness<'_, WorkbenchState>, label: &str| {
+        let rect = h.get_by_role_and_label(Role::Button, label).rect();
+        h.output().shapes.iter().any(|c| match &c.shape {
+            egui::Shape::Rect(r) => r.fill == accent && r.rect.center() == rect.center(),
+            _ => false,
+        })
+    };
+    let mut h = harness(Theme::dark(), 920.0, true, false);
+    assert!(!filled(&h, "Browser"));
+    // Focus inside the Browser tool window makes it the active one, as in Android Studio.
+    h.get_by_label("Collections").focus();
+    h.run();
+    assert!(filled(&h, "Browser"));
+    assert!(!filled(&h, "Messages"));
+}

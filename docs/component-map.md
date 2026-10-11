@@ -68,7 +68,8 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 
 | Situation | Android Studio | Kit |
 |---|---|---|
-| Island header (tool window title bar, editor tab bar) | 40 pt high, no line below | `tokens::size::HEADER_HEIGHT` |
+| Island header (tool window title bar, editor tab bar) | 40 pt high; tool windows with content tabs have a 1 pt line below in the frame color, edge to edge | `tokens::size::HEADER_HEIGHT`, `Panel::header_separator` |
+| Content tabs (Problems: File, Project Errors) | 22 pt after the title, 10 pt padding and gap; selected: blue while active, gray outline otherwise | `Panel::tabs` |
 | Selected tab | 28 pt pill, radius 6, fill `#233558` / light `#E3EBFE`, 1 pt border `#2E4D89` / `#A7C5FF`, text at full strength | `TabBar` |
 | Other tabs | No fill; title `#AFB1B6` / light `#515151`; on hover a `hover` pill and full-strength title | `Colors::tab_text` |
 | Close button | Only on the selected and the hovered tab; its room is always kept; small cross; round hover behind it | `tokens::tab` |
@@ -89,7 +90,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 |---|---|---|
 | Stripe | 38 pt on the frame beside the islands (islands start at 42 pt); top and bottom groups | `ToolStripe`, `tokens::stripe` |
 | Button | 30 pt, radius 6, 20 pt icon, 40 pt pitch; first button 3 pt below the island's top | `StripeButton` |
-| States | Open: pressed fill (~16 % white); hover: `hover` fill; tooltip beside it with name and shortcut | `ToolStripe::show` |
+| States | Open: pressed fill (~16 % white); active (focus in the tool window): accent fill, white icon; hover: `hover` fill; tooltip beside it at once | `StripeButton::open`, `active` |
 
 ### Form controls (Settings dialog)
 

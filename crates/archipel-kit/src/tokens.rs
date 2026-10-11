@@ -168,6 +168,12 @@ pub mod tab {
     pub const CLOSE: f32 = 16.0;
     /// Edge the close cross is drawn in: smaller than an icon, as in Android Studio.
     pub const CLOSE_GLYPH: f32 = 10.0;
+    /// Space between a tool window's title and its first content tab.
+    pub const CONTENT_TITLE_GAP: f32 = 22.0;
+    /// Space inside a content tab at each end.
+    pub const CONTENT_PADDING: f32 = 10.0;
+    /// Space between two content tabs.
+    pub const CONTENT_GAP: f32 = 10.0;
     /// Radius of the round hover behind the close button.
     pub const CLOSE_HOVER_RADIUS: f32 = 9.0;
 }
