@@ -41,6 +41,14 @@ pub mod size {
     pub const ISLAND_GAP: f32 = 4.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
+    pub const SPLIT_DIVIDER: f32 = ISLAND_GAP;
+    /// Extra pointer reach on each side of a split pane's divider, so it is easy to grab.
+    pub const SPLIT_GRAB: f32 = 2.0;
+    /// Distance an arrow key moves a split pane's divider.
+    pub const SPLIT_KEY_STEP: f32 = 16.0;
+    /// Default minimum size of each side of a split pane.
+    pub const SPLIT_MIN_PANE: f32 = 120.0;
     /// Default height of a vertical histogram.
     pub const CHART_HEIGHT: f32 = 120.0;
     /// Height of a sparkline: it sits inline with text.
