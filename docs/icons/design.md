@@ -41,18 +41,20 @@ rules are enforced by `crates/archipel-icons/tests/lint.rs`; the rest are judged
 - **Convex polygons only** (checked): egui fills convex polygons; anything else is built from
   several shapes.
 
-## Language tiles and the label font
+## Language icons
 
-- Tile: rounded rect 1..15, radius 3, filled with the language color.
-- Label: one or two characters of the stroke font in `letters.rs`: capitals, `+ # { } < > @`,
-  each 4×6 units (stroke centers 3×5), two letters with a two-unit gap. One letter is
-  centered on 8; two letters span 3.5..12.5. Cap height runs 5.5..10.5, centered on 8.
-- Label color: black or white, whichever contrasts more with the tile; at least 4.5:1
-  (checked). Pure black and white guarantee that for any tile color.
-- Outline: tiles below 1.6:1 against the dark background or 1.3:1 against the light one
+- **File outline** in the ink color, from 1.5 to 6.5: the page ends half a unit above the
+  band, so the band never fights the outline.
+- **Band** 1..15 × 7.5..15, radius 2, in the language's Linguist color.
+- **Label**: one to three characters in the bold UI font, centered on its ink (not its line
+  box) at (8, 11.25); 7.4 units for one or two characters, 6.2 for three. Mixed case reads
+  better than capitals at this size (`Rs`, `Kt`, `Py`); symbols where a format is better
+  known by them (`{}` JSON, `</>` XML, `>_` Shell, `#` CSS).
+- **Label color**: black or white, whichever contrasts more with the band; at least 4.5:1
+  (checked). Pure black and white guarantee that for any band color.
+- **Outline**: bands below 1.6:1 against the dark background or 1.3:1 against the light one
   get a 1-unit outline mixed halfway towards mid-gray, so they read on both.
-- Labels are unique (checked) and avoid brand marks: the icons identify languages without
-  using their logos.
+- Labels are unique (checked) and no language logos are used.
 
 ## Color
 

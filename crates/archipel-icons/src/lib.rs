@@ -29,7 +29,6 @@
 
 mod glyphs;
 mod languages;
-pub mod letters;
 #[cfg(feature = "egui")]
 mod paint;
 mod svg;
@@ -61,7 +60,7 @@ pub enum Tone {
     Run,
     /// Stop actions and breakpoints (red).
     Stop,
-    /// A fixed color, `0xRRGGBB` (language tiles and their labels).
+    /// A fixed color, `0xRRGGBB` (language bands and their labels).
     Rgb(u32),
 }
 
@@ -165,12 +164,16 @@ pub enum Shape {
         /// End angle in degrees.
         to: f32,
     },
-    /// A character of the [`letters`] font, its 4×6 cell's top-left at `origin`.
-    Letter {
-        /// The character (`A`-`Z`, `+`, `#`, `{`, `}`, `<`, `>`, `@`).
-        letter: char,
-        /// Top-left of the cell.
-        origin: Point,
+    /// A short bold label (language and type badges), centered on `center` by its ink, in
+    /// the renderer's bold UI font (egui: the font family named `semibold` when the app
+    /// registered one, as Archipel Kit does; SVG: Inter, then the system UI font).
+    Text {
+        /// The label, one to three characters.
+        text: &'static str,
+        /// Center of the label's ink.
+        center: Point,
+        /// Font size in grid units.
+        size: f32,
     },
     /// An axis-aligned rectangle with rounded corners.
     Rect {
@@ -287,36 +290,12 @@ impl Glyph {
     }
 }
 
-impl Shape {
-    /// The polylines a [`Shape::Letter`] expands to, offset to its origin (empty for other
-    /// shapes and for characters the font lacks).
-    pub fn letter_lines(&self) -> Vec<Vec<Point>> {
-        let Shape::Letter { letter, origin } = *self else {
-            return Vec::new();
-        };
-        letters::strokes(letter)
-            .unwrap_or(&[])
-            .iter()
-            .map(|stroke| {
-                stroke
-                    .iter()
-                    .map(|(x, y)| (origin.0 + x, origin.1 + y))
-                    .collect()
-            })
-            .collect()
+/// A label part: `text` centered on `center`, `size` units tall, in `tone`.
+pub const fn label(text: &'static str, center: Point, size: f32, tone: Tone) -> Part {
+    Part {
+        shape: Shape::Text { text, center, size },
+        paint: Paint::Fill(tone),
     }
-}
-
-/// Parts drawing `text` in the [`letters`] font, centered on `center`, in `tone`.
-pub fn label(text: &str, center: Point, tone: Tone) -> Vec<Part> {
-    let chars: Vec<char> = text.chars().collect();
-    letters::origins(chars.len(), center)
-        .zip(chars)
-        .map(|(origin, letter)| Part {
-            shape: Shape::Letter { letter, origin },
-            paint: Paint::Stroke { width: 1.0, tone },
-        })
-        .collect()
 }
 
 impl Language {
@@ -349,27 +328,35 @@ impl Language {
             .map(|(language, _)| language)
     }
 
-    /// The icon: a rounded tile in the language color with its label.
+    /// The icon: a file outline in the ink color with a band in the language color
+    /// carrying its label.
     pub fn parts(self) -> Vec<Part> {
-        let label_color = if self.dark_label() {
-            0x1E1F22
-        } else {
-            0xFFFFFF
-        };
-        let mut parts = vec![Part {
-            shape: Shape::Rect {
-                min: (1.0, 1.0),
-                max: (15.0, 15.0),
-                radius: 3.0,
+        let ink = |points| Part {
+            shape: Shape::Line(points),
+            paint: Paint::Stroke {
+                width: 1.0,
+                tone: Tone::Ink,
             },
-            paint: Paint::Fill(Tone::Rgb(self.color())),
-        }];
+        };
+        let mut parts = vec![
+            // The page stops above the band, with half a unit of air between them.
+            ink(&[(3.5, 6.5), (3.5, 1.5), (9.5, 1.5), (12.5, 4.5), (12.5, 6.5)]),
+            ink(&[(9.5, 1.5), (9.5, 4.5), (12.5, 4.5)]),
+            Part {
+                shape: Shape::Rect {
+                    min: (1.0, 7.5),
+                    max: (15.0, 15.0),
+                    radius: 2.0,
+                },
+                paint: Paint::Fill(Tone::Rgb(self.color())),
+            },
+        ];
         if let Some(outline) = self.outline() {
             parts.push(Part {
                 shape: Shape::Rect {
-                    min: (1.5, 1.5),
+                    min: (1.5, 8.0),
                     max: (14.5, 14.5),
-                    radius: 2.5,
+                    radius: 1.5,
                 },
                 paint: Paint::Stroke {
                     width: 1.0,
@@ -377,11 +364,26 @@ impl Language {
                 },
             });
         }
-        parts.extend(label(self.label(), (8.0, 8.0), Tone::Rgb(label_color)));
+        let label_color = if self.dark_label() {
+            0x000000
+        } else {
+            0xFFFFFF
+        };
+        let size = if self.label().chars().count() <= 2 {
+            7.4
+        } else {
+            6.2
+        };
+        parts.push(label(
+            self.label(),
+            (8.0, 11.25),
+            size,
+            Tone::Rgb(label_color),
+        ));
         parts
     }
 
-    /// An outline for tiles that would melt into a dark or a light background: the tile
+    /// An outline for bands that would melt into a dark or a light background: the band
     /// color mixed towards mid-gray, so it reads on both.
     fn outline(self) -> Option<u32> {
         let color = self.color();

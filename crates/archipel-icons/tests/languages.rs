@@ -1,27 +1,21 @@
 //! Language icons: labels, colors, file matching, and the catalog images.
 
-use archipel_icons::{Language, contrast, letters};
+use archipel_icons::{Language, contrast};
 use egui::{Color32, Rect, pos2, vec2};
 use egui_kittest::{Harness, SnapshotOptions, SnapshotResults};
 use std::collections::HashSet;
 
 #[test]
-fn labels_are_unique_short_and_in_the_font() {
+fn labels_are_unique_and_short() {
     let mut seen = HashSet::new();
     for language in Language::ALL {
         let label = language.label();
         assert!(seen.insert(label), "{label} is used twice");
         assert!(
-            (1..=2).contains(&label.chars().count()),
-            "{label}: one or two characters"
+            (1..=3).contains(&label.chars().count()),
+            "{label}: one to three characters"
         );
-        for c in label.chars() {
-            assert!(
-                letters::strokes(c).is_some(),
-                "{}: the font has no {c:?}",
-                language.name()
-            );
-        }
+        assert!(label.is_ascii(), "{label}: ASCII, so every font renders it");
     }
 }
 
@@ -101,18 +95,38 @@ fn slugs_are_unique_kebab_case() {
     }
 }
 
-const LOOKS: [(&str, Color32, Color32); 2] = [
+/// (name, background, caption text, icon ink): the Archipel Kit island colors.
+const LOOKS: [(&str, Color32, Color32, Color32); 2] = [
     (
         "dark",
         Color32::from_rgb(0x19, 0x1A, 0x1C),
         Color32::from_rgb(0x9F, 0xA2, 0xA8),
+        Color32::from_rgb(0xCE, 0xD0, 0xD6),
     ),
     (
         "light",
         Color32::from_rgb(0xFF, 0xFF, 0xFF),
         Color32::from_rgb(0x5F, 0x62, 0x69),
+        Color32::from_rgb(0x73, 0x76, 0x7C),
     ),
 ];
+
+/// Registers the bold label font the way Archipel Kit does (family `semibold`), so the
+/// sheets show the labels users see.
+fn install_fonts(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    fonts.font_data.insert(
+        "inter-semibold".into(),
+        std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
+            "../../archipel-kit/assets/fonts/Inter-SemiBold.ttf"
+        ))),
+    );
+    fonts.families.insert(
+        egui::FontFamily::Name("semibold".into()),
+        vec!["inter-semibold".into()],
+    );
+    ctx.set_fonts(fonts);
+}
 
 fn sheet<'a>(
     size: egui::Vec2,
@@ -120,15 +134,23 @@ fn sheet<'a>(
     background: Color32,
     mut draw: impl FnMut(&egui::Painter) + 'a,
 ) -> Harness<'a> {
+    let mut installed = false;
     let mut harness = Harness::builder()
         .with_size(size)
         .with_pixels_per_point(scale)
         .wgpu()
         .build(move |ctx| {
+            if !installed {
+                installed = true;
+                install_fonts(ctx);
+                ctx.request_repaint();
+                return;
+            }
             egui::CentralPanel::default()
                 .frame(egui::Frame::new().fill(background))
                 .show(ctx, |ui| draw(ui.painter()));
         });
+    harness.run();
     harness.run();
     harness
 }
@@ -138,7 +160,7 @@ fn language_sheets() {
     let mut results = SnapshotResults::new();
     const COLUMNS: usize = 8;
     const CELL: egui::Vec2 = vec2(80.0, 52.0);
-    for (name, background, text) in LOOKS {
+    for (name, background, text, ink) in LOOKS {
         let rows = Language::ALL.len().div_ceil(COLUMNS);
         let size = vec2(COLUMNS as f32 * CELL.x + 16.0, rows as f32 * CELL.y + 16.0);
         let mut harness = sheet(size, 2.0, background, |painter| {
@@ -149,7 +171,7 @@ fn language_sheets() {
                 );
                 let icon =
                     Rect::from_center_size(cell + vec2(CELL.x / 2.0, 16.0), vec2(16.0, 16.0));
-                archipel_icons::paint_language(painter, icon, *language);
+                archipel_icons::paint_language(painter, icon, *language, ink);
                 painter.text(
                     cell + vec2(CELL.x / 2.0, 36.0),
                     egui::Align2::CENTER_CENTER,
@@ -178,6 +200,7 @@ fn language_sheets() {
                     painter,
                     Rect::from_min_size(min, vec2(16.0, 16.0)),
                     *language,
+                    ink,
                 );
             }
         });

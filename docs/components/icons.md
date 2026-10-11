@@ -6,7 +6,7 @@ The kit draws two kinds of icons:
   designed outline icons for actions, navigation, files, development, version control,
   status and data. Re-exported as `archipel_kit::Glyph`.
 - **Language tiles** from the icon kit: [78 languages and formats](../icons/languages.md),
-  each a tile in its Linguist color with a centered label.
+  each a file outline with a band in its Linguist color and a centered label.
 - **File-type icons** (`archipel_kit::Icon`): Java type circles and folders tinted by their
   role. `Icon::for_file` picks the right icon for a file name.
 

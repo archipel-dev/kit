@@ -196,7 +196,7 @@ const ARCHIVE_EXTENSIONS: [&str; 7] = ["jar", "zip", "tar", "gz", "tgz", "war", 
 pub enum Icon {
     /// A designed glyph from `archipel-icons`.
     Glyph(Glyph),
-    /// A language tile from `archipel-icons`.
+    /// A language icon from `archipel-icons`.
     Language(Language),
     /// A Java type: a filled circle with C, I, E, R or @.
     JavaType(TypeKind),
@@ -221,7 +221,7 @@ impl From<Language> for Icon {
 }
 
 impl Icon {
-    /// File icon by name: Java sources show their type circle, other languages their tile
+    /// File icon by name: Java sources show their type circle, other languages their icon
     /// (by exact name, then the longest extension), images and archives their glyph, and
     /// everything else a text page.
     pub fn for_file(name: &str) -> Icon {
@@ -291,7 +291,7 @@ pub fn paint(
     let tones = tones(&theme);
     match icon.into() {
         Icon::Glyph(glyph) => archipel_icons::paint(painter, rect, glyph, color, &tones),
-        Icon::Language(language) => archipel_icons::paint_language(painter, rect, language),
+        Icon::Language(language) => archipel_icons::paint_language(painter, rect, language, color),
         Icon::FileImage => archipel_icons::paint(painter, rect, Glyph::Image, IMAGE, &tones),
         Icon::FileArchive => archipel_icons::paint(painter, rect, Glyph::Archive, ARCHIVE, &tones),
         Icon::JavaType(kind) => {
@@ -302,9 +302,10 @@ pub fn paint(
                 },
                 paint: Paint::Fill(Tone::Rgb(hex(kind.color()))),
             }];
-            parts.extend(archipel_icons::label(
+            parts.push(archipel_icons::label(
                 kind.letter(),
                 (8.0, 8.0),
+                8.5,
                 Tone::Knockout,
             ));
             archipel_icons::paint_parts(painter, rect, &parts, color, &tones);

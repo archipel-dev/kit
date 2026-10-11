@@ -15,15 +15,10 @@ pub fn paint(painter: &Painter, rect: Rect, glyph: Glyph, ink: Color32, tones: &
     paint_parts(painter, rect, glyph.parts(), ink, tones);
 }
 
-/// Paints the icon of `language` into the square centered in `rect`.
-pub fn paint_language(painter: &Painter, rect: Rect, language: crate::Language) {
-    paint_parts(
-        painter,
-        rect,
-        &language.parts(),
-        Color32::WHITE,
-        &Tones::dark(),
-    );
+/// Paints the icon of `language` into the square centered in `rect`, its file outline in
+/// `ink`.
+pub fn paint_language(painter: &Painter, rect: Rect, language: crate::Language, ink: Color32) {
+    paint_parts(painter, rect, &language.parts(), ink, &Tones::dark());
 }
 
 /// Paints `parts` (16×16 grid) into the square centered in `rect`.
@@ -77,10 +72,28 @@ pub fn paint_parts(
                 let points = crate::arc_points(center, radius, from, to);
                 painter.add(PathShape::line(points.into_iter().map(p).collect(), stroke));
             }
-            Shape::Letter { .. } => {
-                for line in part.shape.letter_lines() {
-                    painter.add(PathShape::line(line.into_iter().map(p).collect(), stroke));
-                }
+            Shape::Text { text, center, size } => {
+                let family = egui::FontFamily::Name("semibold".into());
+                let bold = painter
+                    .ctx()
+                    .fonts(|fonts| fonts.definitions().families.contains_key(&family));
+                let font = egui::FontId::new(
+                    size * scale,
+                    if bold {
+                        family
+                    } else {
+                        egui::FontFamily::Proportional
+                    },
+                );
+                let color = if fill == Color32::TRANSPARENT {
+                    stroke.color
+                } else {
+                    fill
+                };
+                let galley = painter.layout_no_wrap(text.to_owned(), font, color);
+                // Center the ink, not the line box, so every label sits in the optical middle.
+                let pos = p(center) - galley.mesh_bounds.center().to_vec2();
+                painter.galley_with_override_text_color(pos, galley, color);
             }
             Shape::Rect { min, max, radius } => {
                 painter.rect(

@@ -72,12 +72,17 @@ pub fn parts_to_svg(parts: &[crate::Part], size: f32, tones: &Tones) -> String {
                     start.0, start.1, end.0, end.1
                 )
             }
-            Shape::Letter { .. } => {
-                for line in part.shape.letter_lines() {
-                    let _ = write!(out, "<polyline points=\"{}\" {paint}/>", points(&line));
-                }
-                Ok(())
-            }
+            Shape::Text { text, center, size } => write!(
+                out,
+                "<text x=\"{}\" y=\"{}\" font-family=\"Inter, system-ui, sans-serif\" \
+                 font-size=\"{size}\" font-weight=\"600\" text-anchor=\"middle\" \
+                 dominant-baseline=\"central\" {paint}>{}</text>",
+                center.0,
+                center.1,
+                text.replace('&', "&amp;")
+                    .replace('<', "&lt;")
+                    .replace('>', "&gt;")
+            ),
             Shape::Rect { min, max, radius } => write!(
                 out,
                 "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"{radius}\" {paint}/>",

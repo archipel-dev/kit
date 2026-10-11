@@ -56,5 +56,20 @@ should have an icon".
 | Label contrast | Mid-tone tiles (Java) reached only 4.1:1 with near-black. | Labels are pure black or white: at least 4.58:1 on any tile (checked at 4.5:1). |
 | Dark and very light tiles | Crystal, JSON, Ignore List, Lua, Gradle vanished on dark islands; EditorConfig and INI on white. | Low-contrast tiles get a soft outline that reads on both themes. |
 
+### 2026-10 · Round 3: language icon design (user feedback)
+
+Feedback: "the language icons don't look well designed". Five directions were prototyped
+side by side at 16 and 24 px in dark and light: the stroke-font tile (then current), a tile
+with a real font, a file outline with a color band, a tinted file and a circle. The user
+picked **file outline + color band**.
+
+| Item | Finding | Resolution |
+|---|---|---|
+| Stroke font | The 4×6 stroke letters looked like a pixel font; capitals (`RS`, `PY`) were stiff. | Removed. Labels use the bold UI font, centered on their ink; mixed case (`Rs`, `Py`). |
+| Shape | A bare colored tile did not read as a file next to the glyphs. | File outline in the ink color with the language color as a band. |
+| Light theme | First render drew the outline in white (invisible on white). | The renderer takes the theme ink. |
+| Actual size | Labels at 6.4 units were mush at 1×. | Band and label enlarged (7.4 units); sheets now render with Inter SemiBold like the kit. |
+| Java types | Same stroke font in the C/I/E/R/@ circles. | Same bold font, centered on its ink. |
+
 Open follow-ups: an outline/filled pair for toggles (star, pin, bookmark), and a 20 px
 optical size for dense toolbars on high-DPI screens.

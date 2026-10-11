@@ -35,7 +35,7 @@ fn extent(shape: &Shape, pad: f32) -> (f32, f32, f32, f32) {
             points.push(min);
             points.push(max);
         }
-        Shape::Letter { .. } => points.extend(shape.letter_lines().into_iter().flatten()),
+        Shape::Text { center, .. } => points.push(center),
     }
     let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
     for (x, y) in points {

@@ -29,8 +29,8 @@ cargo test --workspace
 ```
 
 Snapshot tests need a GPU or `mesa-vulkan-drivers`. Accept intended image changes with
-`UPDATE_SNAPSHOTS=1 cargo test` and delete `*.old.png` / `*.diff.png` leftovers (a test
-fails on them).
+`UPDATE_SNAPSHOTS=1 cargo test`; `*.old.png`, `*.new.png` and `*.diff.png` are comparison
+artifacts and git-ignored.
 
 Commit messages and PR titles are Conventional Commits (`feat`, `fix`, `perf`, `refactor`,
 `docs`, `test`, `chore`, `ci`; `!` for breaking).

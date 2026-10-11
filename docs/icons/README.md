@@ -54,21 +54,21 @@ archipel-icons = { git = "https://github.com/archipel-dev/kit", features = ["egu
 
 ## Language icons
 
-Every language gets the same kind of icon: a rounded tile in its GitHub Linguist color with
-a one- or two-letter label (`RS`, `PY`, `C#`, `{}`). The labels are drawn in the kit's own
-stroke font, so they are centered exactly and stay crisp, and the label is white or black,
-whichever contrasts more with the tile (at least 4.5:1). Tiles too dark for dark themes or
-too light for light themes get a soft outline.
+Every language gets the same kind of icon: a file outline in the ink color with a band in
+its GitHub Linguist color carrying a short label (`Rs`, `Py`, `C#`, `{}`). Labels are set in
+the app's bold UI font (Inter SemiBold in Archipel Kit) and centered on their ink, white or
+black, whichever contrasts more with the band (at least 4.5:1). Bands too dark for dark
+themes or too light for light themes get a soft outline.
 
 ```rust
 use archipel_icons::Language;
 
 assert_eq!(Language::from_file_name("build.gradle.kts"), Some(Language::GradleKotlin));
 assert_eq!(Language::from_file_name("Dockerfile"), Some(Language::Dockerfile));
-assert_eq!(Language::Rust.label(), "RS");
+assert_eq!(Language::Rust.label(), "Rs");
 ```
 
-In Archipel Kit, `Icon::for_file(name)` returns the language tile (or a Java type circle,
+In Archipel Kit, `Icon::for_file(name)` returns the language icon (or a Java type circle,
 image, archive or text page).
 
 ## Tones
