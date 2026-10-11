@@ -337,3 +337,48 @@ fn split_pane_divider_conforms() {
     })
     .run();
 }
+
+/// A row the arrow keys reach but Tab never focuses: a bare accessibility node.
+fn roving_row(ui: &mut egui::Ui, id: &str, label: &str) {
+    use egui::accesskit::{Action, Role};
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(120.0, 20.0), egui::Sense::hover());
+    ui.ctx()
+        .accesskit_node_builder(egui::Id::new(id), |node| {
+            node.set_role(Role::ListItem);
+            node.set_label(label);
+            node.add_action(Action::Focus);
+            node.set_bounds(egui::accesskit::Rect {
+                x0: rect.min.x.into(),
+                y0: rect.min.y.into(),
+                x1: rect.max.x.into(),
+                y1: rect.max.y.into(),
+            });
+        });
+}
+
+#[test]
+fn audit_accepts_rows_reached_by_a_collections_arrow_keys() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let top = ui.cursor().min;
+        roving_row(ui, "row-a", "Row A");
+        roving_row(ui, "row-b", "Row B");
+        let rect = egui::Rect::from_min_max(top, ui.cursor().min + egui::vec2(120.0, 0.0));
+        let id = egui::Id::new("collection");
+        ui.interact(rect, id, egui::Sense::focusable_noninteractive());
+        ui.ctx().accesskit_node_builder(id, |node| {
+            node.set_role(egui::accesskit::Role::List);
+            node.set_label("Items");
+        });
+    });
+    let audit = testing::audit(&mut harness);
+    assert!(audit.of(Problem::Unreachable).is_empty(), "{audit:?}");
+}
+
+#[test]
+fn audit_still_catches_a_focusable_row_outside_any_collection() {
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        roving_row(ui, "lonely", "Lonely row");
+    });
+    let audit = testing::audit(&mut harness);
+    assert_eq!(audit.of(Problem::Unreachable).len(), 1, "{audit:?}");
+}

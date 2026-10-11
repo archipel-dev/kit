@@ -99,6 +99,22 @@ fn is_container(role: Role) -> bool {
     )
 }
 
+/// Roles of a collection that holds the keyboard focus for its rows.
+fn is_collection(role: Role) -> bool {
+    matches!(
+        role,
+        Role::List | Role::ListBox | Role::Tree | Role::Table | Role::Grid | Role::TreeGrid
+    )
+}
+
+/// Roles of the rows (and cells) of a collection.
+fn is_row(role: Role) -> bool {
+    matches!(
+        role,
+        Role::ListItem | Role::ListBoxOption | Role::TreeItem | Role::Row | Role::Cell
+    )
+}
+
 /// Whether `node` supports `action` (focus, click).
 pub(crate) fn supports(node: &Node<'_>, action: Action) -> bool {
     node.accesskit_node().data().supports_action(action)
@@ -162,7 +178,8 @@ fn interactive_nodes<'t>(root: Node<'t>) -> Vec<Node<'t>> {
 ///
 /// egui's scroll bars, which have no accessible role, are skipped.
 /// - [`Problem::Unreachable`]: enabled focusable elements that <kbd>Tab</kbd> never
-///   reaches. The audit presses Tab, so it changes focus.
+///   reaches. The audit presses Tab, so it changes focus. Rows of a collection that Tab
+///   reaches count as reachable: the arrow keys move between them (roving focus).
 ///
 /// Run it at 1× (`testing::harness`); bounds are compared in physical pixels.
 pub fn audit<State>(harness: &mut Harness<'_, State>) -> Audit {
@@ -244,8 +261,28 @@ pub fn audit<State>(harness: &mut Harness<'_, State>) -> Audit {
             reached.insert(focused.accesskit_node().id());
         }
     }
+    // Rows of a collection use roving focus: Tab focuses the collection, the arrow keys
+    // move between its rows. A row inside the bounds of a reached collection is reachable.
+    let collections: Vec<egui::Rect> = harness
+        .root()
+        .children_recursive()
+        .filter(|n| {
+            let a = n.accesskit_node();
+            is_collection(a.role()) && a.has_bounds() && reached.contains(&a.id())
+        })
+        .map(|n| n.rect())
+        .collect();
+    let rows: std::collections::HashMap<_, _> = harness
+        .root()
+        .children_recursive()
+        .filter(|n| is_row(n.accesskit_node().role()))
+        .map(|n| (n.accesskit_node().id(), n.rect().center()))
+        .collect();
     for (id, element) in focusable {
-        if !reached.contains(&id) {
+        let in_collection = rows
+            .get(&id)
+            .is_some_and(|center| collections.iter().any(|c| c.contains(*center)));
+        if !reached.contains(&id) && !in_collection {
             findings.push(Finding {
                 problem: Problem::Unreachable,
                 element,
