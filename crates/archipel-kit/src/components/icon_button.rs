@@ -30,6 +30,7 @@ pub struct IconButton {
     selected: Option<bool>,
     enabled: bool,
     tone: Option<Tone>,
+    small: bool,
 }
 
 impl IconButton {
@@ -41,6 +42,7 @@ impl IconButton {
             selected: None,
             enabled: true,
             tone: None,
+            small: false,
         }
     }
 
@@ -53,6 +55,12 @@ impl IconButton {
     /// Disabled buttons are dimmed and ignore clicks.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// A 20-point button for actions inside rows and tabs, which are 24 points high.
+    pub fn small(mut self, small: bool) -> Self {
+        self.small = small;
         self
     }
 
@@ -72,10 +80,14 @@ impl Widget for IconButton {
         } else {
             Sense::hover()
         };
-        let (rect, response) =
-            ui.allocate_exact_size(vec2(size::ICON_BUTTON, size::ICON_BUTTON), sense);
+        let edge = if self.small {
+            size::ICON_BUTTON_SMALL
+        } else {
+            size::ICON_BUTTON
+        };
+        let (rect, response) = ui.allocate_exact_size(vec2(edge, edge), sense);
         let selected = self.selected.unwrap_or(false);
-        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
+        crate::cursor::on_hover_action(&response);
         response.widget_info(|| match self.selected {
             Some(selected) => {
                 WidgetInfo::selected(WidgetType::Button, self.enabled, selected, &self.label)

@@ -29,6 +29,21 @@ pub fn on_hover(response: &Response, icon: CursorIcon) {
     }
 }
 
+/// Sets the theme's [`action_cursor`](crate::Theme::action_cursor) while `response` is
+/// hovered and enabled: what buttons, checkboxes, toggles and dropdowns call. Disabled
+/// controls keep the arrow.
+pub fn on_hover_action(response: &Response) {
+    if response.hovered() {
+        // Components disable themselves by sensing hover only, so check the sense too.
+        let icon = if response.enabled() && response.sense.senses_click() {
+            crate::Theme::current(&response.ctx).action_cursor
+        } else {
+            CursorIcon::Default
+        };
+        response.ctx.set_cursor_icon(icon);
+    }
+}
+
 /// Runs `add` and, when `icon` is `Some` and the pointer is over the area it used, sets
 /// `icon` afterwards so it wins over every cursor set inside. `None` leaves the children's
 /// cursors alone, so the override can be switched by state.

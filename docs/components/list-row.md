@@ -43,6 +43,41 @@ fn project_tree(ui: &mut egui::Ui, tree: &mut Tree, files: &[&str]) {
 
 For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 
+### Trailing content and row actions
+
+The trailing slot takes a count, a status, an icon or widgets. Actions that would clutter a
+long list appear only on the hovered, focused or selected row with `.trailing_on_hover(true)`.
+Row actions are small icon buttons (`IconButton::small`), which fit the 24-point row.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/list_row_slots.dark.png">
+  <img alt="Rows with a problem count, a modified marker, a remove button and an error icon at the right end" src="img/list_row_slots.light.png" width="360">
+</picture>
+
+```rust
+use archipel_kit::behaviour::{ContextMenu, DragSource};
+use archipel_kit::components::{IconButton, ListRow, MenuItem, Tooltip};
+use archipel_kit::parts::Slot;
+use archipel_kit::{Glyph, egui};
+
+fn module_row(ui: &mut egui::Ui, name: &str, removed: &mut bool) {
+    ListRow::new(name)
+        .icon(Glyph::Folder)
+        .trailing_on_hover(true)
+        .trailing(Slot::ui(|ui| {
+            if ui.add(IconButton::new(Glyph::Close, format!("Remove {name}")).small(true)).clicked() {
+                *removed = true;
+            }
+        }))
+        .with(Tooltip::new(name.to_string()).hint("A Gradle module"))
+        .with(ContextMenu::new(|ui| {
+            ui.add(MenuItem::new("Open Module Settings"));
+        }))
+        .with(DragSource(name.to_string()))
+        .show(ui);
+}
+```
+
 ## API
 
 | Builder | Effect |
@@ -54,6 +89,9 @@ For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 | `.depth(usize)` | Tree indent. |
 | `.expanded(Option<bool>)` | `Some` draws a chevron; `None` keeps leaves aligned. |
 | `.selected(bool)`, `.enabled(bool)` | State. |
+| `.trailing(Slot)` | Content at the right end: `Slot::text`, `Slot::icon`, `Slot::ui(...)`. |
+| `.trailing_on_hover(bool)` | Show the trailing slot only on the hovered, focused or selected row. |
+| `.with(behaviour)` | Tooltip, context menu, drag source or drop target (see [behaviours](../behaviours.md)). |
 
 `response` gives `clicked()`, `double_clicked()` and `context_menu(...)`.
 

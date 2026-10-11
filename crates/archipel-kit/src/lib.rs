@@ -18,12 +18,16 @@
 //! - [`tokens`]: sizes, radii and typography shared by every component.
 //! - [`icons`]: the [`Glyph`]s of the `archipel-icons` kit and file-type [`Icon`]s.
 //! - [`components`]: the widgets.
+//! - [`parts`]: the building blocks of the components, for building your own.
+//! - [`behaviour`]: tooltips, context menus, cursors and drag and drop on any widget, with
+//!   `.with(...)`.
 //! - `testing` (feature `testing`): themed test harnesses and dark + light snapshots, the
 //!   same helpers the kit's own tests use.
 //!
 //! Every component reports its role and label to AccessKit, so screen readers and the
 //! testing harness find it by its visible text.
 
+pub mod behaviour;
 pub mod components;
 pub mod cursor;
 pub mod icons;
@@ -59,6 +63,8 @@ mod docs {
         Theming = "theming.md";
         Testing = "testing.md";
         Cursors = "cursors.md";
+        Behaviours = "behaviours.md";
+        BuildingComponents = "building-components.md";
         Collections = "components/collections.md";
         Tooltip = "components/tooltip.md";
         DialogPage = "components/dialog.md";

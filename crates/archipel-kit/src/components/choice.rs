@@ -121,7 +121,7 @@ impl Widget for Checkbox<'_> {
             (true, false) => CheckState::On,
             (false, false) => CheckState::Off,
         };
-        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
+        crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
             WidgetInfo::selected(
                 WidgetType::Checkbox,
@@ -229,7 +229,7 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
             selected = true;
             response.mark_changed();
         }
-        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
+        crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
             WidgetInfo::selected(WidgetType::RadioButton, self.enabled, selected, &self.label)
         });
@@ -321,7 +321,7 @@ impl Widget for Toggle<'_> {
             response.mark_changed();
         }
         let on = *self.on;
-        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
+        crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
             WidgetInfo::selected(WidgetType::Checkbox, self.enabled, on, &self.label)
         });

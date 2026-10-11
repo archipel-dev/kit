@@ -8,10 +8,12 @@ for everything inside.
 
 | Component | Cursor |
 |---|---|
-| Buttons, icon buttons, checkboxes, radios, toggles, tabs, segments, list rows, menu items, dropdowns | Default arrow, as in desktop IDEs (not the web's hand) |
+| Buttons, icon buttons, checkboxes, radios, toggles, segments, dropdowns, close buttons, sortable column headers | The theme's `action_cursor`: the pointing hand by default |
+| List rows, tree rows, table rows, tabs, menu items | Default arrow |
 | Links | Pointing hand |
 | Text fields | Text beam; default over the clear button |
 | Disabled controls | Default arrow |
+| Anything with `.with(Cursor(icon))` | `icon` |
 
 ## How it works
 
@@ -36,7 +38,7 @@ fn panel(ui: &mut egui::Ui, loading: bool) {
     cursor::override_in(ui, loading.then_some(CursorIcon::Progress), |ui| {
         cursor::fallback_in(ui, CursorIcon::Grab, |ui| {
             ui.add(Link::new("Configure…")); // hand, unless loading
-            ui.add(Button::primary("Run")); // arrow, unless loading
+            ui.add(Button::primary("Run")); // hand, unless loading
             ui.add_space(40.0); // grab, unless loading
         });
     });

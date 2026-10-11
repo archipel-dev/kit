@@ -44,6 +44,10 @@ pub struct Theme {
     pub editor: EditorColors,
     /// How language file icons look (an app setting; see `docs/icons/languages.md`).
     pub language_icons: archipel_icons::LanguageStyle,
+    /// Cursor over controls that perform an action (buttons, checkboxes, toggles,
+    /// dropdowns, close buttons). Default: the pointing hand. Rows, tabs and menu items
+    /// keep the arrow. See `docs/cursors.md`.
+    pub action_cursor: egui::CursorIcon,
 }
 
 /// Background and border of a banner or callout of one severity.
@@ -302,6 +306,7 @@ impl Theme {
                 folder_fill: rgb(0x43454A),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
+            action_cursor: egui::CursorIcon::PointingHand,
             editor: EditorColors {
                 background: rgb(0x191A1C),
                 text: rgb(0xBCBEC4),
@@ -400,6 +405,7 @@ impl Theme {
                 folder_fill: rgb(0xEBECF0),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
+            action_cursor: egui::CursorIcon::PointingHand,
             editor: EditorColors {
                 background: rgb(0xFFFFFF),
                 text: rgb(0x080808),

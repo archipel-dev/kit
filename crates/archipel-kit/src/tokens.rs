@@ -23,6 +23,8 @@ pub mod size {
     pub const HEADER_HEIGHT: f32 = 31.0;
     /// Square icon button edge.
     pub const ICON_BUTTON: f32 = 26.0;
+    /// Square edge of a small icon button: actions inside rows and tabs.
+    pub const ICON_BUTTON_SMALL: f32 = 20.0;
     /// Gap between toolbar items.
     pub const TOOLBAR_GAP: f32 = 4.0;
     /// Height of buttons, text fields and combo boxes.

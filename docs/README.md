@@ -6,6 +6,8 @@
 - [Cursors](cursors.md): which cursor shows where, and how parents override it.
 - [Icon kit](icons/README.md): 113 designed glyphs, [78 language icons](icons/languages.md), [code symbols](icons/symbols.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
 - [Terminal UI](tui/README.md): the same theme, icons and components in the terminal (ratatui).
+- [Behaviours](behaviours.md): tooltips, context menus, cursors and drag and drop on any widget with `.with(...)`.
+- [Building a component](building-components.md): from parts, with slots and behaviours, proven by conformance and the audit.
 - [Contributing a component](contributing.md): the checklist every component meets.
 
 ## Components

@@ -3,8 +3,8 @@
 mod common;
 
 use archipel_kit::components::{
-    Button, Dialog, DialogAction, IconButton, Link, MenuItem, MenuSeparator, TextField, Tooltip,
-    TooltipExt,
+    Button, Dialog, DialogAction, IconButton, Link, ListRow, MenuItem, MenuSeparator, TextField,
+    Tooltip, TooltipExt,
 };
 use archipel_kit::testing::{self, Queryable};
 use archipel_kit::{Glyph, Theme, cursor};
@@ -168,10 +168,41 @@ fn components_set_their_cursor() {
     let mut harness = cursor_harness(|ui| {
         ui.add(Link::new("Configure…"));
         ui.add(Button::primary("Run"));
+        ui.add(Button::secondary("Stop").enabled(false));
+        ListRow::new("main.rs").show(ui);
     });
     harness.get_by_label("Configure…").hover();
     harness.run();
     assert_eq!(*harness.state(), CursorIcon::PointingHand);
+    harness.get_by_label("Run").hover();
+    harness.run();
+    assert_eq!(
+        *harness.state(),
+        CursorIcon::PointingHand,
+        "actions show the hand"
+    );
+    harness.get_by_label("Stop").hover();
+    harness.run();
+    assert_eq!(
+        *harness.state(),
+        CursorIcon::Default,
+        "disabled actions keep the arrow"
+    );
+    harness.get_by_label("main.rs").hover();
+    harness.run();
+    assert_eq!(*harness.state(), CursorIcon::Default, "rows keep the arrow");
+}
+
+#[test]
+fn theme_picks_the_action_cursor() {
+    let theme = Theme {
+        action_cursor: CursorIcon::Default,
+        ..Theme::dark()
+    };
+    let mut harness = testing::harness_state(theme, CursorIcon::Wait, |ui, cursor| {
+        ui.add(Button::primary("Run"));
+        *cursor = cursor::current(ui.ctx());
+    });
     harness.get_by_label("Run").hover();
     harness.run();
     assert_eq!(*harness.state(), CursorIcon::Default);

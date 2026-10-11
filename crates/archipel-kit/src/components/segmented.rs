@@ -98,7 +98,7 @@ impl<T: PartialEq + Clone> Widget for SegmentedControl<'_, T> {
                 selected = true;
                 response.mark_changed();
             }
-            crate::cursor::on_hover(&segment, egui::CursorIcon::Default);
+            crate::cursor::on_hover_action(&segment);
             segment.widget_info(|| {
                 WidgetInfo::selected(WidgetType::RadioButton, self.enabled, selected, label)
             });
@@ -283,7 +283,7 @@ impl<'a> TabBar<'a> {
                     let close_rect =
                         Rect::from_center_size(pos2(x + 11.0, rect.center().y), vec2(18.0, 18.0));
                     let close = ui.interact(close_rect, response.id.with("close"), Sense::click());
-                    crate::cursor::on_hover(&close, egui::CursorIcon::Default);
+                    crate::cursor::on_hover_action(&close);
                     close.widget_info(|| {
                         WidgetInfo::labeled(
                             WidgetType::Button,

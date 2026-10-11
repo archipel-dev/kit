@@ -20,6 +20,24 @@ feel like one suite instead of a pile of widgets.
    light image), a usage example, an API table, behavior, accessibility, and links to the
    source and tests; a row in `docs/README.md`.
 8. **Gallery**: the component on its gallery page, with its states.
+9. **Built from parts**: `State` for colors, `RowContent`/`Surface`/`Popover` where they
+   fit, sizes from `tokens`, cursor via `cursor::on_hover` / `on_hover_action`. No
+   one-off painting for something a part does. See
+   [building a component](building-components.md).
+10. **Slots and behaviours**: content the caller decides (counts, actions, extra widgets)
+    goes in a `Slot`. Components with a `show` method take behaviours with `with` and
+    attach them last. Tooltips, context menus and drag and drop are never built into a
+    component.
+11. **Conformance**: interactive components pass `testing::conformance` in
+    `tests/conformance.rs`, enabled and disabled, with the keys they handle
+    (`.keys(...)`).
+12. **Audit**: the component and every composition shown in its docs pass
+    `testing::audit`, and so does its gallery page. Run the audit with the slots filled:
+    no unnamed controls, no target under 16×16, no partly overlapping targets, nothing
+    <kbd>Tab</kbd> can't reach.
+
+A component that fails conformance or the audit is not done, whatever its snapshot looks
+like: they are the checks a user would otherwise do by hand.
 
 `cargo test --workspace` checks the docs too: every image a page references exists, every
 snapshot is used by a page, every component is documented, and every code block compiles.

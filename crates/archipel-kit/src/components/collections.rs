@@ -256,7 +256,11 @@ impl<'a> VirtualList<'a> {
 
     /// Draws the visible rows; `row(index)` describes row `index` (the list sets its
     /// selection).
-    pub fn show(self, ui: &mut Ui, mut row: impl FnMut(usize) -> ListRow) -> CollectionResponse {
+    pub fn show<'r>(
+        self,
+        ui: &mut Ui,
+        mut row: impl FnMut(usize) -> ListRow<'r>,
+    ) -> CollectionResponse {
         let (response, _) = collection(
             ui,
             Spec {
@@ -739,7 +743,7 @@ fn header(
         let cell = Rect::from_min_max(pos2(x, rect.top()), pos2(x + column.width, rect.bottom()))
             .intersect(rect);
         let title = ui.interact(cell, id.with(("header", index)), Sense::click());
-        crate::cursor::on_hover(&title, CursorIcon::Default);
+        crate::cursor::on_hover_action(&title);
         title.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &column.title));
         if title.clicked() {
             clicked = Some(index);

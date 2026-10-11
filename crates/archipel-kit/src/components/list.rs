@@ -1,8 +1,9 @@
 //! List and tree rows.
 
 use super::common;
+use crate::behaviour::{Behaviour, Behaviours};
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::{RowContent, State, Tone};
+use crate::parts::{RowContent, Slot, State, Tone};
 use crate::theme::Theme;
 use crate::tokens::size;
 use egui::{Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
@@ -22,6 +23,11 @@ pub struct RowResponse {
 ///
 /// Rows are stateless: the caller owns selection and expansion, so the same row works for
 /// a flat list, a lazy tree or a virtualized table.
+///
+/// The [`trailing`](Self::trailing) slot takes a count, a status, or actions such as a
+/// remove button ([`trailing_on_hover`](Self::trailing_on_hover) shows them only while the
+/// row is hovered or selected). Tooltips, context menus and drag and drop are added with
+/// [`with`](Self::with).
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -48,7 +54,7 @@ pub struct RowResponse {
 /// }
 /// # });
 /// ```
-pub struct ListRow {
+pub struct ListRow<'a> {
     label: String,
     secondary: Option<String>,
     icon: Option<Icon>,
@@ -61,9 +67,12 @@ pub struct ListRow {
     enabled: bool,
     focusable: bool,
     inactive: bool,
+    trailing: Option<Slot<'a>>,
+    trailing_on_hover: bool,
+    behaviours: Behaviours<'a>,
 }
 
-impl ListRow {
+impl<'a> ListRow<'a> {
     /// A row showing `label`.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
@@ -79,7 +88,30 @@ impl ListRow {
             enabled: true,
             focusable: true,
             inactive: false,
+            trailing: None,
+            trailing_on_hover: false,
+            behaviours: Behaviours::default(),
         }
+    }
+
+    /// Content at the right end of the row: a count, a status, an icon, or widgets such as
+    /// action buttons.
+    pub fn trailing(mut self, slot: Slot<'a>) -> Self {
+        self.trailing = Some(slot);
+        self
+    }
+
+    /// Shows the trailing slot only while the row is hovered, focused or selected (row
+    /// actions that would clutter a long list).
+    pub fn trailing_on_hover(mut self, on_hover: bool) -> Self {
+        self.trailing_on_hover = on_hover;
+        self
+    }
+
+    /// Adds `behaviour` (a tooltip, context menu, drag source …) to the row's response.
+    pub fn with(mut self, behaviour: impl Behaviour + 'a) -> Self {
+        self.behaviours.push(behaviour);
+        self
     }
 
     /// Dimmed text after the label: a path, a size, a type.
@@ -244,6 +276,22 @@ impl ListRow {
             };
             content.paint(ui, rect, chevron.right() + 2.0, state);
         }
+        if let Some(slot) = self.trailing {
+            let reveal = !self.trailing_on_hover
+                || state.selected
+                || state.focused
+                || ui.rect_contains_pointer(rect);
+            if reveal && ui.is_rect_visible(rect) {
+                let inset = size::ROW_PILL_INSET + 4.0;
+                let width = slot.width(ui);
+                let slot_rect = Rect::from_min_max(
+                    pos2(rect.right() - inset - width, rect.top()),
+                    pos2(rect.right() - inset, rect.bottom()),
+                );
+                slot.show(ui, slot_rect, state);
+            }
+        }
+        let response = self.behaviours.attach(ui, response);
         RowResponse { response, toggled }
     }
 }

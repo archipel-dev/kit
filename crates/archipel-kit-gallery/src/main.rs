@@ -4,6 +4,7 @@
 //! cargo run -p archipel-kit-gallery
 //! ```
 
+use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::{
     Avatar, Banner, Button, Cell, Checkbox, Column, Counter, Dialog, Dropdown, EmptyState,
     IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid,
@@ -11,6 +12,7 @@ use archipel_kit::components::{
     Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
+use archipel_kit::parts::Slot;
 use archipel_kit::{Glyph, Icon, Theme, Tone, cursor, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
@@ -492,6 +494,30 @@ impl Gallery {
                             .secondary("1 KB"),
                     );
                 }
+                ui.add(SectionHeader::new("Slots and behaviours"));
+                ListRow::new("Problems")
+                    .icon(Glyph::Warning)
+                    .trailing(Slot::text("12"))
+                    .enabled(enabled)
+                    .with(Tooltip::new("Problems").hint("12 in 3 files"))
+                    .show(ui);
+                ListRow::new("app")
+                    .icon(Glyph::Folder)
+                    .enabled(enabled)
+                    .trailing_on_hover(true)
+                    .trailing(Slot::ui(|ui| {
+                        ui.add(
+                            IconButton::new(Glyph::Close, "Remove app")
+                                .small(true)
+                                .enabled(enabled),
+                        );
+                    }))
+                    .with(ContextMenu::new(|ui| {
+                        ui.add(MenuItem::new("Open Module Settings"));
+                        ui.add(MenuSeparator);
+                        ui.add(MenuItem::new("Remove"));
+                    }))
+                    .show(ui);
             }
             Page::Feedback => {}
             _ => {}

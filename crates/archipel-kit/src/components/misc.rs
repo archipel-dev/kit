@@ -171,7 +171,7 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
             response.mark_changed();
         }
         let selected = self.selected.to_string();
-        crate::cursor::on_hover(&response, egui::CursorIcon::Default);
+        crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
             let mut info = WidgetInfo::labeled(
                 WidgetType::ComboBox,
