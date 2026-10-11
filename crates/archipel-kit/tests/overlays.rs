@@ -248,3 +248,142 @@ fn fallback_loses_to_children() {
     harness.run();
     assert_eq!(*harness.state(), CursorIcon::Grab);
 }
+
+/// A dialog with a multiline field (focused) and a single-line one.
+fn field_dialog_harness(
+    multiline: bool,
+) -> testing::Harness<'static, (Option<DialogAction>, String)> {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (None, String::new()),
+        move |ui, (action, text)| {
+            let shown = Dialog::new("Note")
+                .content(|ui| {
+                    let edit = if multiline {
+                        egui::TextEdit::multiline(text)
+                    } else {
+                        egui::TextEdit::singleline(text)
+                    };
+                    ui.add(edit.id(egui::Id::new("note")));
+                })
+                .primary("Save")
+                .secondary("Cancel")
+                .show(ui.ctx());
+            if let Some(done) = shown {
+                action.get_or_insert(done);
+            }
+        },
+    );
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run();
+    harness.get_by_role(egui::accesskit::Role::MultilineTextInput).click();
+    harness.run();
+    harness
+}
+
+#[test]
+fn dialog_enter_in_multiline_field_is_a_new_line() {
+    let mut harness = field_dialog_harness(true);
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().0, None);
+    assert_eq!(harness.state().1, "\n");
+}
+
+#[test]
+fn dialog_ctrl_enter_confirms_from_a_multiline_field() {
+    for modifiers in [egui::Modifiers::CTRL, egui::Modifiers::COMMAND] {
+        let mut harness = field_dialog_harness(true);
+        harness.key_combination_modifiers(modifiers, &[egui::Key::Enter]);
+        harness.run();
+        assert_eq!(harness.state().0, Some(DialogAction::Primary));
+    }
+}
+
+#[test]
+fn dialog_enter_in_single_line_field_confirms() {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (None, String::from("x")),
+        |ui, (action, text)| {
+            let shown = Dialog::new("Note")
+                .content(|ui| {
+                    ui.add(egui::TextEdit::singleline(text));
+                })
+                .primary("Save")
+                .show(ui.ctx());
+            if let Some(done) = shown {
+                action.get_or_insert(done);
+            }
+        },
+    );
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run();
+    harness.get_by_role(egui::accesskit::Role::TextInput).click();
+    harness.run();
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().0, Some(DialogAction::Primary));
+}
+
+#[test]
+fn dialog_enter_on_a_focused_button_keeps_working() {
+    let mut harness = field_dialog_harness(true);
+    harness.get_by_label("Cancel").focus();
+    harness.run();
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+    assert_eq!(harness.state().0, Some(DialogAction::Secondary));
+}
+
+fn list_dialog(ui: &mut egui::Ui, lines: usize) {
+    let _ = Dialog::new("Select files")
+        .content(|ui| {
+            for i in 0..lines {
+                ui.label(format!("file-{i}.rs"));
+            }
+        })
+        .primary("Open")
+        .secondary("Cancel")
+        .show(ui.ctx());
+}
+
+#[test]
+fn dialog_is_as_tall_as_its_content() {
+    let height = |lines: usize| {
+        let mut harness = testing::harness(Theme::dark(), move |ui| list_dialog(ui, lines));
+        harness.set_size(egui::vec2(520.0, 600.0));
+        harness.run_steps(3);
+        harness.get_by_label("Open").rect().bottom() - harness.get_by_label("Select files").rect().top()
+    };
+    let (one, three) = (height(1), height(3));
+    assert!(three > one + 20.0, "{one} {three}");
+    assert!(three < 200.0, "a short dialog shrinks to its content: {three}");
+}
+
+#[test]
+fn dialog_scrolls_beyond_its_max_height() {
+    let mut harness = testing::harness(Theme::dark(), |ui| list_dialog(ui, 60));
+    harness.set_size(egui::vec2(520.0, 300.0));
+    harness.run_steps(3);
+    let buttons = harness.get_by_label("Open").rect();
+    let title = harness.get_by_label("Select files").rect();
+    assert!(buttons.bottom() <= 300.0, "buttons stay on screen: {buttons:?}");
+    assert!(title.top() >= 0.0, "title stays on screen: {title:?}");
+}
+
+#[test]
+fn dialog_scroll_snapshot() {
+    testing::snapshot_themes_sized("dialog_scroll", common::IMG, egui::vec2(520.0, 300.0), |ui| {
+        ui.label("Editor content behind the dialog");
+        list_dialog(ui, 60);
+    });
+}
+
+#[test]
+fn dialog_short_content_snapshot() {
+    testing::snapshot_themes_sized("dialog_short", common::IMG, egui::vec2(520.0, 400.0), |ui| {
+        ui.label("Editor content behind the dialog");
+        list_dialog(ui, 2);
+    });
+}
