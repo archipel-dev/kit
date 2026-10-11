@@ -168,3 +168,123 @@ fn stripe_buttons_open_and_close_tool_windows() {
     assert!(!h.state().right_hidden);
     assert!(h.query_by_label("Name: example").is_some());
 }
+
+/// A whole IDE-like window built only from kit components, laid out like Android Studio's
+/// Islands UI: toolbar with project widget and project color, stripes, a project tree and an
+/// editor with tabs.
+fn ide(theme: Theme, gpu: bool) -> Harness<'static, WorkbenchState> {
+    use archipel_kit::components::{Avatar, IconButton, Tab, TabBar, ToolbarButton, WindowChrome};
+    use archipel_kit::parts::Slot;
+    let mut installed = false;
+    let builder = Harness::builder().with_size(egui::vec2(1000.0, 560.0));
+    let builder = if gpu {
+        builder.with_pixels_per_point(2.0).wgpu()
+    } else {
+        builder
+    };
+    let tabs = [
+        Tab::new("lib.rs")
+            .icon(archipel_kit::Icon::for_file("lib.rs"))
+            .closable(true),
+        Tab::new("theme.rs")
+            .icon(archipel_kit::Icon::for_file("theme.rs"))
+            .closable(true),
+        Tab::new("Cargo.toml")
+            .icon(archipel_kit::Icon::for_file("Cargo.toml"))
+            .closable(true),
+    ];
+    let mut h = builder.build_state(
+        move |ctx, state| {
+            if !installed {
+                archipel_kit::install(ctx, theme.clone());
+                installed = true;
+            }
+            let project = egui::Color32::from_rgb(0x4C, 0xA0, 0x74);
+            Workbench::new("ide", state)
+                .project_color(project)
+                .toolbar(WindowChrome::Native, |ui| {
+                    ui.add(IconButton::new(Glyph::Menu, "Main menu").large(true));
+                    let _ = ToolbarButton::new("archipel")
+                        .leading(Slot::ui_width(20.0, |ui| {
+                            ui.add(Avatar::new("archipel").size(20.0));
+                        }))
+                        .dropdown(true)
+                        .show(ui);
+                    let _ = ToolbarButton::new("main")
+                        .icon(Glyph::Branch)
+                        .dropdown(true)
+                        .show(ui);
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add(IconButton::new(Glyph::Settings, "Settings").large(true));
+                        ui.add(IconButton::new(Glyph::Search, "Search everywhere").large(true));
+                        ui.add(IconButton::new(Glyph::Run, "Run").large(true));
+                    });
+                })
+                .left("Project", |ui| {
+                    ListRow::new("archipel")
+                        .icon(Glyph::Folder)
+                        .strong(true)
+                        .expanded(Some(true))
+                        .show(ui);
+                    ListRow::new("src")
+                        .icon(Glyph::Folder)
+                        .depth(1)
+                        .expanded(Some(true))
+                        .show(ui);
+                    ListRow::new("lib.rs")
+                        .icon(archipel_kit::Icon::for_file("lib.rs"))
+                        .depth(2)
+                        .selected(true)
+                        .show(ui);
+                    ListRow::new("theme.rs")
+                        .icon(archipel_kit::Icon::for_file("theme.rs"))
+                        .depth(2)
+                        .show(ui);
+                    ListRow::new("Cargo.toml")
+                        .icon(archipel_kit::Icon::for_file("Cargo.toml"))
+                        .depth(1)
+                        .show(ui);
+                })
+                .icon(WorkbenchRegion::Left, Glyph::Folder)
+                .bottom("Terminal", |ui| {
+                    ui.label("$ cargo test");
+                })
+                .padded(WorkbenchRegion::Bottom, true)
+                .icon(WorkbenchRegion::Bottom, Glyph::Terminal)
+                .center_padded(false)
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.add_space(6.0);
+                        TabBar::new(&tabs, 0).show(ui);
+                    });
+                    ui.horizontal(|ui| {
+                        ui.add_space(archipel_kit::tokens::size::CONTENT_INSET);
+                        ui.label("pub fn install(ctx: &egui::Context, theme: Theme) { … }");
+                    });
+                });
+        },
+        WorkbenchState {
+            top_ratio: 0.72,
+            ..WorkbenchState::default()
+        },
+    );
+    h.run();
+    h
+}
+
+#[test]
+fn ide_window_passes_both_theme_audits_and_snapshot() {
+    for theme in [Theme::dark(), Theme::light()] {
+        let mut h = ide(theme, false);
+        testing::audit(&mut h).assert_clean();
+    }
+    let mut results = SnapshotResults::new();
+    for (name, theme) in [("dark", Theme::dark()), ("light", Theme::light())] {
+        let mut h = ide(theme, true);
+        results.add(h.try_snapshot_options(
+            format!("workbench_ide.{name}"),
+            &SnapshotOptions::new().output_path("../../docs/components/img"),
+        ));
+    }
+    results.unwrap();
+}

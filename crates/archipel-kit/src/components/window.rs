@@ -144,6 +144,7 @@ impl WindowChrome {
 pub struct WindowToolbar {
     id: Id,
     chrome: WindowChrome,
+    project_color: Option<egui::Color32>,
 }
 
 impl WindowToolbar {
@@ -152,7 +153,15 @@ impl WindowToolbar {
         Self {
             id: Id::new(id_salt),
             chrome: WindowChrome::Native,
+            project_color: None,
         }
+    }
+
+    /// Tints the toolbar with a soft glow of the project's color behind the project widget,
+    /// as Android Studio's Islands UI does (see [`crate::parts::project_glow`]).
+    pub fn project_color(mut self, color: egui::Color32) -> Self {
+        self.project_color = Some(color);
+        self
     }
 
     /// Match the mode used when configuring the application's viewport.
@@ -191,11 +200,15 @@ impl WindowToolbar {
                 egui::Frame::new()
                     .fill(colors.frame)
                     .inner_margin(egui::Margin::symmetric(
-                        tokens::size::CONTENT_INSET as i8,
+                        tokens::toolbar::WINDOW_PADDING as i8,
                         0,
                     )),
             )
             .show(ctx, |ui| {
+                if let Some(color) = self.project_color {
+                    let window = ctx.input(|i| i.viewport_rect());
+                    crate::parts::project_glow(ui.painter(), window, color);
+                }
                 let rect = ui.max_rect();
                 // Register beneath children: their click/drag targets take precedence.
                 let drag =
@@ -228,6 +241,7 @@ impl WindowToolbar {
                         .layout(Layout::left_to_right(Align::Center)),
                 );
                 child.set_clip_rect(content_rect.intersect(ui.clip_rect()));
+                child.spacing_mut().item_spacing.x = tokens::toolbar::GAP;
                 let result = content(&mut child);
                 if controls {
                     let control_rect = egui::Rect::from_min_max(

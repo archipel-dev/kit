@@ -40,3 +40,37 @@ width. Hosts should set a sensible minimum window size for their toolbar actions
 
 The snapshots show the portable `Borderless` mode. Native traffic lights belong to the
 operating system and are checked in the running macOS gallery.
+
+## Toolbar controls
+
+Measured on Android Studio's main toolbar (`tokens::toolbar`):
+
+- `ToolbarButton::new(text)` is a flat text widget like Android Studio's project and version
+  control widgets: 30 pt high, radius 6, 10 pt before the text, optional 20 pt `.icon(..)` or
+  `.leading(slot)` (e.g. an `Avatar` as the project tile) 8 pt in, and a chevron with
+  `.dropdown(true)`. Hover and press fill it; `.open(true)` keeps it filled while its menu
+  (a `Popover` anchored to the response) is open.
+- `IconButton::large(true)` is the 30 pt toolbar icon button with a 20 pt icon.
+- The toolbar keeps 6 pt from the window's edges, so the main menu button sits right above
+  the stripe buttons, and puts 10 pt between controls.
+- `.project_color(color)` paints Android Studio's soft glow of the project's color behind the
+  project widget (`parts::project_glow`): the color itself at 26 % in dark themes, a pastel of
+  it in light ones. `Workbench::project_color` continues it over the top of the stripes.
+
+```rust
+# egui::__run_test_ctx(|ctx| {
+use archipel_kit::components::{Avatar, IconButton, ToolbarButton, WindowToolbar};
+use archipel_kit::{Glyph, egui, parts::Slot};
+
+WindowToolbar::new("main-toolbar")
+    .project_color(egui::Color32::from_rgb(0x4C, 0xA0, 0x74))
+    .show(ctx, |ui| {
+        ui.add(IconButton::new(Glyph::Menu, "Main menu").large(true));
+        let _ = ToolbarButton::new("archipel")
+            .leading(Slot::ui_width(20.0, |ui| { ui.add(Avatar::new("archipel").size(20.0)); }))
+            .dropdown(true)
+            .show(ui);
+        let _ = ToolbarButton::new("main").icon(Glyph::Branch).dropdown(true).show(ui);
+    });
+# });
+```

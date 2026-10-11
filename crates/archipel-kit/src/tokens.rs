@@ -173,6 +173,46 @@ pub mod stripe {
     pub const PADDING: f32 = 3.0;
 }
 
+/// The main window toolbar's controls, in points. Measured on Android Studio's Islands UI.
+pub mod toolbar {
+    /// Height of toolbar buttons and the edge of toolbar icon buttons.
+    pub const BUTTON: f32 = 30.0;
+    /// Edge of a toolbar icon.
+    pub const ICON: f32 = 20.0;
+    /// Space before a toolbar button's text.
+    pub const PADDING: f32 = 10.0;
+    /// Space before a toolbar button's leading icon, and after its chevron.
+    pub const ICON_PADDING: f32 = 8.0;
+    /// Space between a leading icon and the text.
+    pub const ICON_GAP: f32 = 6.0;
+    /// Space between the text and the dropdown chevron.
+    pub const CHEVRON_GAP: f32 = 2.0;
+    /// Space between toolbar controls.
+    pub const GAP: f32 = 10.0;
+    /// Space between the window's edges and the toolbar's first and last controls: the
+    /// main menu button sits right above the stripe buttons.
+    pub const WINDOW_PADDING: f32 = 6.0;
+}
+
+/// The project color's glow on the window frame, in points from the window's top-left
+/// corner. Measured on Android Studio's Islands UI.
+pub mod glow {
+    /// Horizontal position of the glow's center (behind the project widget).
+    pub const CENTER_X: f32 = 140.0;
+    /// Vertical position of the glow's center (in the toolbar).
+    pub const CENTER_Y: f32 = 20.0;
+    /// Horizontal radius: it fades out about 550 pt to the right.
+    pub const RADIUS_X: f32 = 520.0;
+    /// Vertical radius: it reaches over the top of the stripes.
+    pub const RADIUS_Y: f32 = 150.0;
+    /// Opacity of the project color at the center (dark themes).
+    pub const ALPHA: f32 = 0.26;
+    /// Opacity of the glow at the center in light themes.
+    pub const LIGHT_ALPHA: f32 = 0.36;
+    /// How far light themes mix the project color toward white.
+    pub const LIGHT_PASTEL: f32 = 0.6;
+}
+
 /// Motion: delays and durations, in seconds. Measured on Android Studio's Islands UI.
 pub mod motion {
     /// How long an island's header actions stay after the pointer leaves the island (and

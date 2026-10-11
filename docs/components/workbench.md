@@ -63,6 +63,16 @@ supplies the outer gutter, toolbar and status area. Floating windows, tool-windo
 stripes, multiple tools per region, and SDK/app migration remain separate follow-ups;
 this component does not silently store unsupported layout modes.
 
+## A whole window
+
+`workbench_ide` is built only from kit components, laid out like Android Studio: a toolbar
+with the main menu, a project widget (`ToolbarButton` + `Avatar`) and the project color's
+glow, stripes, a project tree, an editor island with `TabBar` (`.center_padded(false)` keeps
+the tabs at the island's top) and a terminal.
+
+![IDE window dark](img/workbench_ide.dark.png)
+![IDE window light](img/workbench_ide.light.png)
+
 ![Three islands dark](img/workbench_3.dark.png)
 ![Three islands light](img/workbench_3.light.png)
 ![Four islands dark](img/workbench_4.dark.png)

@@ -5,8 +5,8 @@ mod common;
 
 use archipel_kit::components::{
     Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link, ListRow,
-    MenuItem, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, Tree, TreeRow,
-    TreeTable, VirtualList,
+    MenuItem, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, ToolbarButton, Tree,
+    TreeRow, TreeTable, VirtualList,
 };
 use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
@@ -35,6 +35,26 @@ fn buttons_conform() {
 fn icon_button_conforms() {
     testing::conformance("Reload", |ui, enabled| {
         ui.add(IconButton::new(Glyph::Refresh, "Reload").enabled(enabled))
+    })
+    .run();
+}
+
+#[test]
+fn toolbar_controls_conform() {
+    testing::conformance("Search everywhere", |ui, enabled| {
+        ui.add(
+            IconButton::new(Glyph::Search, "Search everywhere")
+                .large(true)
+                .enabled(enabled),
+        )
+    })
+    .run();
+    testing::conformance("Version Control", |ui, enabled| {
+        ToolbarButton::new("Version Control")
+            .icon(Glyph::Branch)
+            .dropdown(true)
+            .enabled(enabled)
+            .show(ui)
     })
     .run();
 }

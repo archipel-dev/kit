@@ -88,6 +88,9 @@ pub struct Workbench<'a> {
     bottom: Option<Region<'a>>,
     toolbar: Option<(WindowChrome, Content<'a>)>,
     status: Option<Content<'a>>,
+    project_color: Option<egui::Color32>,
+    glow_anchor: Option<egui::Rect>,
+    center_padded: bool,
 }
 
 impl<'a> Workbench<'a> {
@@ -101,6 +104,9 @@ impl<'a> Workbench<'a> {
             bottom: None,
             toolbar: None,
             status: None,
+            project_color: None,
+            glow_anchor: None,
+            center_padded: true,
         }
     }
 
@@ -150,6 +156,20 @@ impl<'a> Workbench<'a> {
         self
     }
 
+    /// Gives the center island the content inset (default `true`). Pass `false` for an
+    /// editor: its tab bar sits at the island's top and its text runs to the edges.
+    pub fn center_padded(mut self, padded: bool) -> Self {
+        self.center_padded = padded;
+        self
+    }
+
+    /// The project's color: a soft glow of it on the frame behind the toolbar's project
+    /// widget and over the top of the stripes, as in Android Studio's Islands UI.
+    pub fn project_color(mut self, color: egui::Color32) -> Self {
+        self.project_color = Some(color);
+        self
+    }
+
     /// Window toolbar; use the same chrome when configuring the host viewport.
     pub fn toolbar(mut self, chrome: WindowChrome, content: impl FnOnce(&mut Ui) + 'a) -> Self {
         self.toolbar = Some((chrome, Box::new(content)));
@@ -165,10 +185,14 @@ impl<'a> Workbench<'a> {
     /// not invoked. The host can restore hidden panes by changing the corresponding flag.
     pub fn show(mut self, ctx: &egui::Context, center: impl FnOnce(&mut Ui)) -> Response {
         if let Some((chrome, content)) = self.toolbar.take() {
-            WindowToolbar::new(self.id.with("toolbar"))
-                .chrome(chrome)
-                .show(ctx, content);
+            let mut toolbar = WindowToolbar::new(self.id.with("toolbar")).chrome(chrome);
+            if let Some(color) = self.project_color {
+                toolbar = toolbar.project_color(color);
+            }
+            toolbar.show(ctx, content);
         }
+        // The glow continues from the toolbar: anchor it to the window, not the islands.
+        self.glow_anchor = Some(ctx.input(|i| i.viewport_rect()));
         if let Some(content) = self.status.take() {
             egui::TopBottomPanel::bottom(self.id.with("status"))
                 .show_separator_line(false)
@@ -196,6 +220,9 @@ impl<'a> Workbench<'a> {
             mut left,
             mut right,
             mut bottom,
+            project_color,
+            glow_anchor,
+            center_padded,
             ..
         } = self;
         let hide = Cell::new(None);
@@ -203,6 +230,9 @@ impl<'a> Workbench<'a> {
         let full = ui.available_rect_before_wrap();
         ui.painter()
             .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
+        if let Some(color) = project_color {
+            crate::parts::project_glow(ui.painter(), glow_anchor.unwrap_or(full), color);
+        }
         // Tool window stripes on the frame, beside the islands.
         let mut rect = full;
         let stripe_width = tokens::stripe::WIDTH - tokens::size::ISLAND_GAP;
@@ -314,7 +344,7 @@ impl<'a> Workbench<'a> {
                                     .enabled(!auto_right)
                                     .show(
                                         ui,
-                                        |ui| center_island(ui, center),
+                                        |ui| center_island(ui, center_padded, center),
                                         |ui| {
                                             if ui.is_visible() {
                                                 region.show(
@@ -331,7 +361,7 @@ impl<'a> Workbench<'a> {
                                 state.right_hidden = right_hidden;
                             }
                         } else {
-                            center_island(ui, center);
+                            center_island(ui, center_padded, center);
                         }
                     };
                     if let Some(region) = left {
@@ -456,14 +486,16 @@ impl<'a> Region<'a> {
     }
 }
 
-fn center_island(ui: &mut Ui, content: impl FnOnce(&mut Ui)) {
+fn center_island(ui: &mut Ui, padded: bool, content: impl FnOnce(&mut Ui)) {
     if !ui.is_visible() {
         return;
     }
-    crate::parts::Surface::Island
-        .frame(ui.ctx())
-        .show(ui, |ui| {
-            ui.set_min_size(ui.available_size());
-            content(ui);
-        });
+    let mut frame = crate::parts::Surface::Island.frame(ui.ctx());
+    if !padded {
+        frame = frame.inner_margin(0);
+    }
+    frame.show(ui, |ui| {
+        ui.set_min_size(ui.available_size());
+        content(ui);
+    });
 }

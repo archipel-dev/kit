@@ -4,7 +4,7 @@ use super::common;
 use crate::icons::{self, Icon};
 use crate::parts::Tone;
 use crate::theme::Theme;
-use crate::tokens::{radius, size};
+use crate::tokens::{radius, size, toolbar};
 use egui::{Color32, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, vec2};
 
 /// A transparent, square button showing one icon; hover and press tint it.
@@ -31,6 +31,7 @@ pub struct IconButton {
     enabled: bool,
     tone: Option<Tone>,
     small: bool,
+    large: bool,
 }
 
 impl IconButton {
@@ -43,6 +44,7 @@ impl IconButton {
             enabled: true,
             tone: None,
             small: false,
+            large: false,
         }
     }
 
@@ -64,6 +66,13 @@ impl IconButton {
         self
     }
 
+    /// A 30-point button with a 20-point icon, for the main window toolbar (as in Android
+    /// Studio).
+    pub fn large(mut self, large: bool) -> Self {
+        self.large = large;
+        self
+    }
+
     /// Meaning of the icon's color (default: the icon gray), e.g. [`Tone::Run`] or
     /// [`Tone::Stop`] for run and stop buttons.
     pub fn tone(mut self, tone: Tone) -> Self {
@@ -80,10 +89,12 @@ impl Widget for IconButton {
         } else {
             Sense::hover()
         };
-        let edge = if self.small {
-            size::ICON_BUTTON_SMALL
+        let (edge, icon_edge) = if self.large {
+            (toolbar::BUTTON, toolbar::ICON)
+        } else if self.small {
+            (size::ICON_BUTTON_SMALL, size::ICON)
         } else {
-            size::ICON_BUTTON
+            (size::ICON_BUTTON, size::ICON)
         };
         let (rect, response) = ui.allocate_exact_size(vec2(edge, edge), sense);
         let selected = self.selected.unwrap_or(false);
@@ -114,7 +125,7 @@ impl Widget for IconButton {
             } else {
                 self.tone.unwrap_or(Tone::Icon).color(&colors)
             };
-            let icon_rect = Rect::from_center_size(rect.center(), vec2(size::ICON, size::ICON));
+            let icon_rect = Rect::from_center_size(rect.center(), vec2(icon_edge, icon_edge));
             icons::paint(painter, icon_rect, self.icon, color);
         }
         response.on_hover_text(self.label)

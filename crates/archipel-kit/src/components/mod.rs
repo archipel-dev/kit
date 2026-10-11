@@ -33,6 +33,7 @@ mod split_pane;
 mod status_bar;
 mod stripe;
 mod text_field;
+mod toolbar;
 mod window;
 mod workbench;
 
@@ -60,5 +61,6 @@ pub use split_pane::{Orientation, Side, SplitPane, SplitResponse};
 pub use status_bar::StatusBarItem;
 pub use stripe::{StripeButton, ToolStripe};
 pub use text_field::{TextField, TextFieldOutput};
+pub use toolbar::ToolbarButton;
 pub use window::{WindowChrome, WindowToolbar};
 pub use workbench::{Workbench, WorkbenchRegion, WorkbenchState};
