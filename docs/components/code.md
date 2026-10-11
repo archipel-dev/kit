@@ -190,8 +190,8 @@ focus ring, placeholder, clear button, leading icon and error message, so a high
 and a plain one sit side by side in a form and look the same. The text never wraps and
 <kbd>Enter</kbd> never inserts a newline: `show` reports `submitted`, and `lost_focus()` is set
 too. Any `Highlighter` works; `TokenKind` has `Resolved`, `Unresolved` and `Secret` for
-variables, drawn in the theme's link, error (with a dotted underline) and warning (on a tinted
-background) tones.
+variables, drawn like in every code view: the variable color, the invalid color (with a dotted
+underline in the field) and the string color on a tint. `TokenKind` is `#[non_exhaustive]`.
 
 `TemplateHighlighter` finds `{{name}}` tokens and asks your closure what each one is. It wraps
 an inner highlighter for the text between them (`.inner(Json)`; plain text by default). A token

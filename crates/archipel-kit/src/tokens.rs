@@ -43,6 +43,12 @@ pub mod size {
     pub const CODE_LINE_HEIGHT: f32 = 20.0;
     /// Padding inside code views and editors, and between gutter and text.
     pub const CODE_PADDING: f32 = 8.0;
+    /// Pitch of the dotted underline of unresolved template variables.
+    pub const DOTTED_PITCH: f32 = 3.0;
+    /// Edge of one dot of the dotted underline.
+    pub const DOTTED_DOT: f32 = 1.0;
+    /// Distance from the bottom of the line to the underline's dots.
+    pub const DOTTED_INSET: f32 = 0.5;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
@@ -58,6 +64,14 @@ pub mod size {
     pub fn indent(depth: usize) -> f32 {
         CONTENT_INSET + depth as f32 * TREE_INDENT
     }
+}
+
+/// Opacity factors, 0 to 1.
+pub mod opacity {
+    /// Multiplier of the colors of disabled code and highlighted text.
+    pub const DISABLED_CODE: f32 = 0.55;
+    /// Multiplier of a color used as a tinted fill behind text of the same color.
+    pub const TINT_FILL: f32 = 0.18;
 }
 
 /// Corner radii, in points.

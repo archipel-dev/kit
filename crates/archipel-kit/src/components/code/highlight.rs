@@ -1,10 +1,13 @@
 //! Token highlighting: the [`Highlighter`] trait and the built-in tokenizers.
 
 use crate::theme::EditorColors;
+use crate::tokens::opacity;
 use egui::Color32;
+use egui::text::{LayoutJob, TextFormat};
 
 /// What a piece of code is, which decides its color (from [`EditorColors`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[non_exhaustive]
 pub enum TokenKind {
     /// Unstyled text.
     #[default]
@@ -39,6 +42,21 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
+    /// The fill drawn behind this kind (transparent for most): secrets sit on a tint of the
+    /// string color.
+    pub fn background(self, colors: &EditorColors) -> Color32 {
+        match self {
+            TokenKind::Secret => colors.string.gamma_multiply(opacity::TINT_FILL),
+            _ => Color32::TRANSPARENT,
+        }
+    }
+
+    /// Whether this kind is drawn with a dotted underline (by
+    /// [`TextField`](crate::components::TextField)): [`Unresolved`](TokenKind::Unresolved).
+    pub fn dotted_underline(self) -> bool {
+        self == TokenKind::Unresolved
+    }
+
     /// The color of this kind in `colors`.
     pub fn color(self, colors: &EditorColors) -> Color32 {
         match self {
@@ -135,6 +153,68 @@ pub trait Highlighter {
             offset += line.len();
         }
     }
+}
+
+/// The format of `kind` for [`styled_job`]: its color and fill, dimmed when `!enabled`.
+pub(crate) fn token_format(
+    kind: TokenKind,
+    font: &egui::FontId,
+    colors: &EditorColors,
+    line_height: Option<f32>,
+    enabled: bool,
+) -> TextFormat {
+    let dim = |c: Color32| {
+        if enabled {
+            c
+        } else {
+            c.gamma_multiply(opacity::DISABLED_CODE)
+        }
+    };
+    TextFormat {
+        font_id: font.clone(),
+        color: dim(kind.color(colors)),
+        background: dim(kind.background(colors)),
+        line_height,
+        ..TextFormat::default()
+    }
+}
+
+/// The layout of `slice`, the text from byte `offset` on of the text `spans` describe:
+/// each span in the format of its kind, the gaps as [`TokenKind::Plain`]. Spans outside the
+/// slice or off char boundaries are skipped. Shared by the view, the editor and the field.
+pub(crate) fn styled_job(
+    slice: &str,
+    offset: usize,
+    spans: &[Span],
+    wrap_width: f32,
+    mut format: impl FnMut(TokenKind) -> TextFormat,
+) -> LayoutJob {
+    let mut job = LayoutJob::default();
+    job.wrap.max_width = wrap_width;
+    let end = offset + slice.len();
+    let mut at = offset;
+    for span in &spans[spans.partition_point(|s| s.end <= offset)..] {
+        if span.start >= end {
+            break;
+        }
+        let (a, b) = (span.start.max(at), span.end.min(end));
+        if a >= b || !slice.is_char_boundary(a - offset) || !slice.is_char_boundary(b - offset) {
+            continue;
+        }
+        if a > at {
+            job.append(
+                &slice[at - offset..a - offset],
+                0.0,
+                format(TokenKind::Plain),
+            );
+        }
+        job.append(&slice[a - offset..b - offset], 0.0, format(span.kind));
+        at = b;
+    }
+    if at < end || slice.is_empty() {
+        job.append(&slice[at - offset..], 0.0, format(TokenKind::Plain));
+    }
+    job
 }
 
 fn push(out: &mut Vec<Span>, start: usize, end: usize, kind: TokenKind) {

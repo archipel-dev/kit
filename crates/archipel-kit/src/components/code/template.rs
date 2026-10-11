@@ -28,9 +28,11 @@ impl TemplateToken {
 /// highlighter.
 ///
 /// The resolver tells each name apart: [`Resolved`](TemplateToken::Resolved) variables use
-/// the link color, [`Unresolved`](TemplateToken::Unresolved) ones the error color with a
-/// dotted underline, [`Secret`](TemplateToken::Secret) ones the warning color on a tinted
-/// background. A variable still being typed (`{{ba`) is drawn as a plain variable. Names are
+/// the variable color, [`Unresolved`](TemplateToken::Unresolved) ones the invalid color (with
+/// a dotted underline in a [`TextField`](crate::components::TextField)),
+/// [`Secret`](TemplateToken::Secret) ones the string color on a tint of it. These come from
+/// [`TokenKind::color`](super::TokenKind::color), so a variable looks the same in a field, a
+/// view and an editor. A variable still being typed (`{{ba`) is drawn as a plain variable. Names are
 /// trimmed: `{{ name }}` resolves `"name"`.
 ///
 /// ```

@@ -1,13 +1,14 @@
 //! Single-line text inputs.
 
-use super::code::{Highlighter, TemplateAt, TokenKind, template_at};
+use super::code::{Highlighter, Span, TemplateAt, TokenKind, template_at};
+use super::code::{styled_job, token_format};
 use super::{IconButton, common};
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::Tone;
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
-use egui::text::{CCursor, CCursorRange, LayoutJob, TextFormat};
+use egui::text::{CCursor, CCursorRange};
 use egui::{Color32, CornerRadius, Rect, Response, Stroke, Ui, Widget, pos2, vec2};
+use std::cell::RefCell;
 use std::sync::Arc;
 
 /// A single-line text input with an optional label, placeholder, leading icon, clear
@@ -65,15 +66,20 @@ pub struct TextFieldOutput {
     /// The caret as a screen rectangle (a thin bar the height of the line): anchor a
     /// popup at its left-bottom. `None` before the field was ever focused.
     pub caret_rect: Option<Rect>,
-    /// The `{{variable}}` the caret is in or just after (see [`template_at`]). It is kept
-    /// while focus is on a suggestion list you clicked, so a click can still complete it:
-    /// open the list only while `response.has_focus()`.
+    /// The `{{variable}}` the caret is in or just after (see [`template_at`]). `None`
+    /// unless the field has focus or the pointer is pressed or released this frame, so a
+    /// click on a suggestion (which moves the focus first) can still complete the token.
+    /// Open the list only while `response.has_focus()`.
     pub template: Option<TemplateAt>,
 }
 
 impl TextFieldOutput {
     /// Replaces the [`template`](Self::template) token in `text` with `{{name}}`, puts the
     /// caret after it and puts the focus back in the field. Returns whether there was a token.
+    ///
+    /// It belongs to the frame of [`show`](TextField::show) that returned this output: the
+    /// token's byte range is only valid for the text as it was then, so call it in that frame
+    /// and not with an output kept from an earlier one.
     pub fn insert_completion(&self, ctx: &egui::Context, text: &mut String, name: &str) -> bool {
         let Some(token) = &self.template else {
             return false;
@@ -238,9 +244,23 @@ impl TextField<'_> {
             let highlighter = self.highlighter.filter(|_| !self.password);
             let enabled = self.enabled;
             let theme = Theme::current(content.ctx());
+            // The spans of the last layout, which the underline reuses within the frame.
+            let spans = RefCell::new(Vec::new());
             let mut layouter =
                 |ui: &Ui, buf: &dyn egui::TextBuffer, _wrap: f32| -> Arc<egui::Galley> {
-                    let job = highlight_job(buf.as_str(), highlighter, &font, &theme, enabled);
+                    let text = buf.as_str();
+                    let mut spans = spans.borrow_mut();
+                    spans.clear();
+                    if let Some(highlighter) = highlighter {
+                        highlighter.highlight_text(text, &mut spans);
+                    }
+                    let job = styled_job(text, 0, &spans, f32::INFINITY, |kind| {
+                        let mut format = token_format(kind, &font, &theme.editor, None, enabled);
+                        if kind == TokenKind::Plain {
+                            format.color = common::enabled_text(enabled, colors.text, &colors);
+                        }
+                        format
+                    });
                     ui.fonts_mut(|fonts| fonts.layout_job(job))
                 };
             if highlighter.is_some() {
@@ -287,14 +307,16 @@ impl TextField<'_> {
             }
 
             let focused = edited.has_focus();
-            if let Some(highlighter) = highlighter {
+            if highlighter.is_some() {
+                // The layouter ran on this text unless egui reused its galley.
+                let spans = spans.into_inner();
                 underline_unresolved(
                     &content.painter().with_clip_rect(edited.rect),
-                    highlighter,
+                    &spans,
                     self.text,
                     &galley,
                     galley_pos,
-                    colors.error,
+                    theme.editor.invalid,
                 );
             }
             let (caret_rect, template) = match cursor {
@@ -309,7 +331,13 @@ impl TextField<'_> {
                         .char_indices()
                         .nth(range.primary.index)
                         .map_or(self.text.len(), |(b, _)| b);
-                    (Some(rect), template_at(self.text, byte))
+                    // Unfocused, a click (on a suggestion) may still be completing it.
+                    let live = focused
+                        || ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released());
+                    (
+                        Some(rect),
+                        live.then(|| template_at(self.text, byte)).flatten(),
+                    )
                 }
                 None => (None, None),
             };
@@ -361,74 +389,20 @@ impl TextField<'_> {
     }
 }
 
-/// The layout of `text` colored by `highlighter`. Template kinds take the link, error and
-/// warning tones; the others the editor's syntax colors.
-fn highlight_job(
-    text: &str,
-    highlighter: Option<&dyn Highlighter>,
-    font: &egui::FontId,
-    theme: &Theme,
-    enabled: bool,
-) -> LayoutJob {
-    let colors = &theme.colors;
-    let dim = |c: Color32| if enabled { c } else { c.gamma_multiply(0.55) };
-    let format = |kind: TokenKind| {
-        let color = match kind {
-            TokenKind::Plain => colors.text,
-            TokenKind::Resolved => Tone::Link.color(colors),
-            TokenKind::Unresolved => Tone::Error.color(colors),
-            TokenKind::Secret => Tone::Warning.color(colors),
-            other => other.color(&theme.editor),
-        };
-        TextFormat {
-            font_id: font.clone(),
-            color: dim(color),
-            background: if kind == TokenKind::Secret {
-                colors.warning.gamma_multiply(0.18)
-            } else {
-                Color32::TRANSPARENT
-            },
-            ..TextFormat::default()
-        }
-    };
-    let mut job = LayoutJob::default();
-    job.wrap.max_width = f32::INFINITY;
-    let mut spans = Vec::new();
-    if let Some(highlighter) = highlighter {
-        highlighter.highlight_text(text, &mut spans);
-    }
-    let mut at = 0;
-    for span in &spans {
-        let (a, b) = (span.start.max(at).min(text.len()), span.end.min(text.len()));
-        if a >= b || !text.is_char_boundary(a) || !text.is_char_boundary(b) {
-            continue;
-        }
-        if a > at {
-            job.append(&text[at..a], 0.0, format(TokenKind::Plain));
-        }
-        job.append(&text[a..b], 0.0, format(span.kind));
-        at = b;
-    }
-    job.append(&text[at..], 0.0, format(TokenKind::Plain));
-    job
-}
-
 /// Draws a dotted line under the unresolved variables.
 fn underline_unresolved(
     painter: &egui::Painter,
-    highlighter: &dyn Highlighter,
+    spans: &[Span],
     text: &str,
     galley: &egui::Galley,
     galley_pos: egui::Pos2,
     color: Color32,
 ) {
-    let mut spans = Vec::new();
-    highlighter.highlight_text(text, &mut spans);
     let x_of = |byte: usize| {
         let chars = text[..byte].chars().count();
         galley.pos_from_cursor(CCursor::new(chars))
     };
-    for span in spans.iter().filter(|s| s.kind == TokenKind::Unresolved) {
+    for span in spans.iter().filter(|s| s.kind.dotted_underline()) {
         if span.end > text.len()
             || !text.is_char_boundary(span.start)
             || !text.is_char_boundary(span.end)
@@ -440,9 +414,13 @@ fn underline_unresolved(
         let mut x = galley_pos.x + a.min.x;
         let end = galley_pos.x + b.min.x;
         while x < end {
-            let dot = Rect::from_min_max(pos2(x, y - 1.5), pos2((x + 1.0).min(end), y - 0.5));
+            let top = y - size::DOTTED_INSET - size::DOTTED_DOT;
+            let dot = Rect::from_min_max(
+                pos2(x, top),
+                pos2((x + size::DOTTED_DOT).min(end), top + size::DOTTED_DOT),
+            );
             painter.rect_filled(dot, 0.0, color);
-            x += 3.0;
+            x += size::DOTTED_PITCH;
         }
     }
 }

@@ -381,3 +381,19 @@ fn highlighted_fields_pass_the_audit() {
     });
     testing::audit(&mut harness).assert_clean();
 }
+
+#[test]
+fn template_is_only_reported_while_focused() {
+    let mut harness = bar_harness("{{us");
+    assert!(harness.state().token.is_none(), "never focused");
+    harness.get_by_label("URL").focus();
+    harness.run();
+    assert!(
+        harness.state().token.is_some(),
+        "caret at the end of the token"
+    );
+    harness.key_press(Key::Tab);
+    harness.run();
+    harness.run();
+    assert!(harness.state().token.is_none(), "focus left");
+}
