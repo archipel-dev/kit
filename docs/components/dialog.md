@@ -14,6 +14,21 @@ and blocked while it is open.
   <img alt="A New Branch dialog with a branch name field, Cancel and Create" src="img/dialog_form.light.png" width="520">
 </picture>
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dialog_short.dark.png">
+  <img alt="A short Select files dialog that is only as tall as its two rows" src="img/dialog_short.light.png" width="520">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dialog_scroll.dark.png">
+  <img alt="A Select files dialog with a long list: the rows scroll, the title and buttons stay" src="img/dialog_scroll.light.png" width="520">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dialog_tertiary.dark.png">
+  <img alt="A Select files dialog with Reset at the left edge and Cancel and Open at the right" src="img/dialog_tertiary.light.png" width="520">
+</picture>
+
 ## Usage
 
 The dialog is stateless. Show it while your `open` flag is set, and clear the flag when it
@@ -66,15 +81,23 @@ fn new_branch(ctx: &egui::Context, state: &mut NewBranch) -> Option<String> {
 | `.content(FnOnce(&mut Ui))` | none | Fields or lists below the message. |
 | `.primary(label)` | none | The rightmost, accent button. |
 | `.secondary(label)` | none | The button left of it. |
+| `.tertiary(label)` | none | A secondary-style button at the left edge (e.g. "Reset"); reports `Tertiary`. |
 | `.danger(bool)` | `false` | Makes the primary button red. |
 | `.primary_enabled(bool)` | `true` | Disables the primary button and <kbd>Enter</kbd>. |
 | `.width(f32)` | 400 | Width in points. |
-| `.show(ctx)` | | Returns `Option<DialogAction>`: `Primary`, `Secondary` or `Dismissed`. |
+| `.max_height(f32)` | 80% of the window | Tallest the dialog grows; beyond it the message and content scroll. |
+| `.show(ctx)` | | Returns `Option<DialogAction>`: `Primary`, `Secondary`, `Tertiary` or `Dismissed`. |
 
 ## Behavior
 
-- <kbd>Enter</kbd> picks the primary button when it is enabled. <kbd>Escape</kbd> and a
-  click outside the dialog dismiss it.
+- <kbd>Enter</kbd> picks the primary button when it is enabled, also from a single-line
+  field. In a multiline field <kbd>Enter</kbd> is a new line: <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
+  (<kbd>Cmd</kbd>+<kbd>Enter</kbd> on macOS) picks the primary button there. A focused
+  button keeps <kbd>Enter</kbd> for itself.
+- <kbd>Escape</kbd> and a click outside the dialog dismiss it. <kbd>Escape</kbd> inside an
+  open [dropdown](dropdown.md) only closes its popup.
+- The dialog is as tall as its content, up to the max height. The title and the buttons
+  stay in view; the message and content scroll.
 - Name buttons by what they do ("Delete", "Create"), not "OK". For destructive actions, use
   `.danger(true)`, a warning icon and a message that says what happens.
 - One dialog at a time: a dialog that needs another decision replaces its content instead
