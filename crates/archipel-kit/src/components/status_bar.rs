@@ -187,7 +187,7 @@ impl Widget for StatusBarItem<'_> {
 /// A path of places, like Android Studio's navigation path at the left of the status bar
 /// (`project › src › main.rs`) or a settings page's location. Each crumb is a flat button
 /// with an optional icon; dimmed chevrons separate them. Text is dimmed at rest and full
-/// strength under the pointer. Returns the index of the crumb clicked this frame.
+/// strength under the pointer. The response says which crumb was clicked.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -196,7 +196,8 @@ impl Widget for StatusBarItem<'_> {
 /// let clicked = Breadcrumbs::new()
 ///     .crumb("archipel", Some(Glyph::Folder.into()))
 ///     .crumb("main.rs", Some(Icon::for_file("main.rs")))
-///     .show(ui);
+///     .show(ui)
+///     .clicked;
 /// # let _ = clicked;
 /// # });
 /// ```
@@ -219,9 +220,10 @@ impl Breadcrumbs {
     }
 
     /// Draws the path in a row, [`size::STATUS_ITEM_HEIGHT`] high.
-    pub fn show(self, ui: &mut Ui) -> Option<usize> {
+    pub fn show(self, ui: &mut Ui) -> BreadcrumbsResponse {
         let colors = Theme::colors(ui.ctx());
         let mut clicked = None;
+        let mut crumbs = Vec::with_capacity(self.crumbs.len());
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = size::BREADCRUMB_GAP;
             let count = self.crumbs.len();
@@ -241,6 +243,7 @@ impl Breadcrumbs {
                     clicked = Some(index);
                 }
                 let state = State::of(&response);
+                let enabled = response.enabled();
                 if ui.is_rect_visible(rect) {
                     let painter = ui.painter();
                     let fill = state.flat_fill(&colors);
@@ -259,13 +262,16 @@ impl Breadcrumbs {
                         icons::paint(painter, icon_rect, icon, state.icon(Tone::Icon, &colors));
                         x += icon_width;
                     }
-                    let color = if state.hovered || state.pressed || state.focused {
+                    let color = if !enabled {
+                        colors.text_disabled
+                    } else if state.hovered || state.pressed || state.focused {
                         colors.text
                     } else {
                         colors.text_secondary
                     };
                     common::text_left(painter, rect, x, galley, color);
                 }
+                crumbs.push(response);
                 if index + 1 < count {
                     let (chevron, _) = ui.allocate_exact_size(
                         vec2(size::ICON, size::STATUS_ITEM_HEIGHT),
@@ -280,6 +286,14 @@ impl Breadcrumbs {
                 }
             }
         });
-        clicked
+        BreadcrumbsResponse { clicked, crumbs }
     }
+}
+
+/// What [`Breadcrumbs::show`] drew.
+pub struct BreadcrumbsResponse {
+    /// The index of the crumb clicked this frame.
+    pub clicked: Option<usize>,
+    /// Each crumb's response, in order.
+    pub crumbs: Vec<Response>,
 }

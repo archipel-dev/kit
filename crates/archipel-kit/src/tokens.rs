@@ -258,6 +258,14 @@ pub mod opacity {
     pub const TINT_FILL: f32 = 0.18;
     /// Opacity of a sparkline's min/max band.
     pub const CHART_BAND: f32 = 0.12;
+    /// Opacity of the black shadow under popups and windows in dark themes.
+    pub const SHADOW_DARK: f32 = 90.0 / 255.0;
+    /// Opacity of the black shadow under popups and windows in light themes.
+    pub const SHADOW_LIGHT: f32 = 40.0 / 255.0;
+    /// Opacity of the black scrim behind a modal dialog in dark themes.
+    pub const SCRIM_DARK: f32 = 120.0 / 255.0;
+    /// Opacity of the black scrim behind a modal dialog in light themes.
+    pub const SCRIM_LIGHT: f32 = 60.0 / 255.0;
 }
 
 /// Corner radii, in points.
@@ -276,6 +284,10 @@ pub mod radius {
     pub const ICON_BUTTON: u8 = 6;
     /// Editor tab pills.
     pub const TAB: u8 = 6;
+    /// Checkboxes (3 pt in Android Studio).
+    pub const CHECKBOX: u8 = 3;
+    /// Histogram bars and sparkline bands.
+    pub const CHART_BAR: u8 = 2;
     /// Row selection pills.
     pub const ROW: u8 = 4;
     /// Fully rounded (pills, counters, toggles).

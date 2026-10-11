@@ -75,7 +75,7 @@ at rest and full strength under the pointer.
 
 `Breadcrumbs` is the navigation path at its left (`project › src › main.rs`): each crumb is a
 flat button (4 pt padding, optional icon, text), dimmed chevrons separate them, and `show`
-returns the index of the crumb clicked. It also serves as a settings page's location.
+reports the crumb clicked and each crumb's response (`BreadcrumbsResponse`). It also serves as a settings page's location.
 
 ```rust
 # egui::__run_test_ui(|ui| {
@@ -84,7 +84,8 @@ use archipel_kit::{Glyph, Icon, components::{Breadcrumbs, StatusBarItem}};
 let clicked = Breadcrumbs::new()
     .crumb("archipel", Some(Glyph::Folder.into()))
     .crumb("main.rs", Some(Icon::for_file("main.rs")))
-    .show(ui);
+    .show(ui)
+    .clicked;
 ui.add(StatusBarItem::new("UTF-8"));
 # let _ = clicked;
 # });

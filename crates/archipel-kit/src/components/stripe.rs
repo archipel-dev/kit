@@ -5,15 +5,17 @@ use crate::icons::{self, Icon};
 use crate::parts::Tone;
 use crate::theme::Theme;
 use crate::tokens::{radius, stripe};
-use egui::{Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
+use egui::{Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2};
 
 /// One button of a [`ToolStripe`]: a tool window's icon, name and shortcut.
 #[derive(Debug, Clone)]
+#[must_use = "add it with `ui.add(button)` or give it to a `ToolStripe`"]
 pub struct StripeButton {
     icon: Icon,
     label: String,
     shortcut: Option<String>,
     open: bool,
+    id_salt: Option<egui::Id>,
 }
 
 impl StripeButton {
@@ -24,7 +26,13 @@ impl StripeButton {
             label: label.into(),
             shortcut: None,
             open: false,
+            id_salt: None,
         }
+    }
+
+    fn id_salt(mut self, id: egui::Id) -> Self {
+        self.id_salt = Some(id);
+        self
     }
 
     /// The shortcut that toggles the tool window, shown in the tooltip (e.g. `"Alt+1"`).
@@ -101,61 +109,81 @@ impl ToolStripe {
         let x = rect.center().x;
         let mut clicked = None;
         let count_top = self.top.len();
-        for (index, button) in self.top.iter().enumerate() {
-            let y = rect.top() + stripe::PADDING + index as f32 * stripe::PITCH;
-            if self
-                .button(ui, button, pos2(x, y + stripe::BUTTON / 2.0))
-                .clicked()
-            {
-                clicked = Some(index);
-            }
-        }
         let bottom = self.bottom.len();
-        for (index, button) in self.bottom.iter().enumerate() {
-            // Bottom-aligned: the last button sits as far from the bottom as the first from
-            // the top.
-            let from_bottom = (bottom - index) as f32 * stripe::PITCH
-                - (stripe::PITCH - stripe::BUTTON)
-                + stripe::PADDING;
-            let y = rect.bottom() - from_bottom;
-            if self
-                .button(ui, button, pos2(x, y + stripe::BUTTON / 2.0))
-                .clicked()
-            {
-                clicked = Some(count_top + index);
+        let placed = self
+            .top
+            .into_iter()
+            .enumerate()
+            .map(|(index, button)| {
+                let y = rect.top() + stripe::PADDING + index as f32 * stripe::PITCH;
+                (index, y, button)
+            })
+            .chain(self.bottom.into_iter().enumerate().map(|(index, button)| {
+                // Bottom-aligned: the last button sits as far from the bottom as the first
+                // from the top.
+                let from_bottom = (bottom - index) as f32 * stripe::PITCH
+                    - (stripe::PITCH - stripe::BUTTON)
+                    + stripe::PADDING;
+                (count_top + index, rect.bottom() - from_bottom, button)
+            }));
+        for (index, y, button) in placed {
+            let place = Rect::from_center_size(
+                pos2(x, y + stripe::BUTTON / 2.0),
+                vec2(stripe::BUTTON, stripe::BUTTON),
+            );
+            if ui.put(place, button.id_salt(self.id.with(index))).clicked() {
+                clicked = Some(index);
             }
         }
         clicked
     }
+}
 
-    fn button(&self, ui: &mut Ui, button: &StripeButton, center: egui::Pos2) -> Response {
+/// A stripe button on its own, [`stripe::BUTTON`] square, for a stripe laid out by the
+/// caller. [`ToolStripe`] places them for you.
+impl Widget for StripeButton {
+    fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
-        let rect = Rect::from_center_size(center, vec2(stripe::BUTTON, stripe::BUTTON));
-        let response = ui.interact(rect, self.id.with(&button.label), Sense::click());
+        let (rect, response) = match self.id_salt {
+            Some(id) => {
+                let rect = ui.available_rect_before_wrap();
+                let rect = Rect::from_min_size(rect.min, vec2(stripe::BUTTON, stripe::BUTTON));
+                (rect, ui.interact(rect, id, Sense::click()))
+            }
+            None => ui.allocate_exact_size(vec2(stripe::BUTTON, stripe::BUTTON), Sense::click()),
+        };
+        let enabled = response.enabled();
         crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
-            WidgetInfo::selected(WidgetType::Button, true, button.open, &button.label)
+            WidgetInfo::selected(WidgetType::Button, enabled, self.open, &self.label)
         });
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
             // Open: filled like a pressed button; otherwise the usual hover and press.
-            let fill = if button.open {
+            let fill = if self.open {
                 colors.pressed
-            } else {
+            } else if enabled {
                 common::flat_fill(&response, &colors)
+            } else {
+                egui::Color32::TRANSPARENT
             };
             painter.rect_filled(rect, radius::ICON_BUTTON, fill);
             if response.has_focus() {
                 common::focus_ring(painter, rect, radius::ICON_BUTTON, &colors);
             }
-            let icon = Rect::from_center_size(center, vec2(stripe::ICON, stripe::ICON));
-            icons::paint(painter, icon, button.icon, Tone::Icon.color(&colors));
+            let icon = Rect::from_center_size(rect.center(), vec2(stripe::ICON, stripe::ICON));
+            let color = if enabled {
+                Tone::Icon.color(&colors)
+            } else {
+                colors.text_disabled
+            };
+            icons::paint(painter, icon, self.icon, color);
         }
         // Stripe buttons name themselves at once, beside the button, as in Android Studio.
-        let mut tooltip = Tooltip::new(button.label.clone())
+        let mut tooltip = Tooltip::new(self.label.clone())
             .align(egui::RectAlign::RIGHT)
             .immediate(true);
-        if let Some(shortcut) = &button.shortcut {
+        if let Some(shortcut) = &self.shortcut {
             tooltip = tooltip.shortcut(shortcut.clone());
         }
         tooltip.show_for(&response);

@@ -44,6 +44,10 @@ feel like one suite instead of a pile of widgets.
     `BREAKING CHANGE:` footer, so release-please bumps the version.
 15. **Proof stays out of the repo**: verification screenshots go in the PR description.
     Only snapshot images a docs page uses live under `docs/`.
+16. **Matches the reference**: the component follows [the design rules](design-rules.md):
+    measured against its Android Studio counterpart in both themes (sizes, colors, states,
+    motion), with the values in tokens and a row in the
+    [component map](component-map.md#measured-behavior). `tests/design_rules.rs` passes.
 
 A component that fails conformance or the audit is not done, whatever its snapshot looks
 like: they are the checks a user would otherwise do by hand.

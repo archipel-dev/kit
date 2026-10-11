@@ -1,0 +1,10 @@
+#!/bin/bash
+# px X Y [X Y ...]: screen colors at points. px row Y X0 X1 / px col X Y0 Y1: color runs along a line.
+export DISPLAY=:99
+f=${SHOTS:-./shots}/_px.png; mkdir -p ${SHOTS:-./shots}
+import -window root $f
+if [ "$1" = row ]; then y=$2; x0=$3; x1=$4
+  convert $f -crop $((x1-x0))x1+$x0+$y +repage txt:- | tail -n +2 | awk -v x0=$x0 '{split($1,a,","); c=$3; if(c!=p){print x0+a[1]": "c; p=c}}'
+elif [ "$1" = col ]; then x=$2; y0=$3; y1=$4
+  convert $f -crop 1x$((y1-y0))+$x+$y0 +repage txt:- | tail -n +2 | awk -v y0=$y0 '{split($1,a,","); split(a[2],b,":"); c=$3; if(c!=p){print y0+b[1]": "c; p=c}}'
+else while [ $# -gt 1 ]; do convert $f -crop 1x1+$1+$2 +repage -format "$1,$2 %[hex:p{0,0}]\n" info:; shift 2; done; fi

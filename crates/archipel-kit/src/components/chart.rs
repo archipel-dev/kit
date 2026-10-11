@@ -564,7 +564,7 @@ impl<'a> Histogram<'a> {
                     Rect::from_min_size(pos2(bar_left, y - bar_height / 2.0), vec2(w, bar_height));
                 painter.rect_filled(
                     bar,
-                    CornerRadius::same(2),
+                    CornerRadius::same(crate::tokens::radius::CHART_BAR),
                     self.bar_color(bucket.count, max, colors),
                 );
             }
@@ -730,7 +730,7 @@ impl Widget for Sparkline<'_> {
                             pos2(plot.left(), a),
                             pos2(plot.right(), b.max(a + 1.0)),
                         ),
-                        CornerRadius::same(2),
+                        CornerRadius::same(crate::tokens::radius::CHART_BAR),
                         color.gamma_multiply(crate::tokens::opacity::CHART_BAND),
                     );
                 }

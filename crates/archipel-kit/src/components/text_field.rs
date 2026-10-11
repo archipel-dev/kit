@@ -460,7 +460,7 @@ impl TextField<'_> {
                         .color(colors.error)
                         .font(typography::body(typography::SMALL + 1.0)),
                 ));
-                edited = edited.on_hover_text(error);
+                super::Tooltip::new(error.clone()).show_for(&edited);
             }
             TextFieldOutput {
                 response: edited,

@@ -386,9 +386,13 @@ impl<'a> Dialog<'a> {
         let focus_before = ctx.memory(|m| m.focused());
         let modal = egui::Modal::new(id)
             .frame(frame)
-            .backdrop_color(egui::Color32::from_black_alpha(
-                if Theme::current(ctx).dark { 120 } else { 60 },
-            ))
+            .backdrop_color(
+                egui::Color32::BLACK.gamma_multiply(if Theme::current(ctx).dark {
+                    crate::tokens::opacity::SCRIM_DARK
+                } else {
+                    crate::tokens::opacity::SCRIM_LIGHT
+                }),
+            )
             .show(ctx, |ui| {
                 ui.set_width(self.width);
                 ui.spacing_mut().item_spacing.y = size::SECTION_SPACING;

@@ -238,7 +238,7 @@ impl<T: PartialEq + Clone> Widget for SegmentedControl<'_, T> {
             }
             common::text(&painter, pos, galley, color);
             if self.icon_only && icon.is_some() {
-                segment.on_hover_text(label);
+                super::Tooltip::new(label).show_for(&segment);
             }
         }
         response

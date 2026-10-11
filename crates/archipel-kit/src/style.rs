@@ -1,7 +1,7 @@
 //! Fonts, spacing and egui visuals.
 
 use crate::theme::Theme;
-use crate::tokens::{popup, radius, scroll, size, typography};
+use crate::tokens::{opacity, popup, radius, scroll, size, typography};
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, Stroke};
 use std::sync::Arc;
 
@@ -137,7 +137,11 @@ pub(crate) fn apply_visuals(ctx: &egui::Context, theme: &Theme) {
             offset: [0, 4],
             blur: 16,
             spread: 0,
-            color: Color32::from_black_alpha(if theme.dark { 90 } else { 40 }),
+            color: Color32::BLACK.gamma_multiply(if theme.dark {
+                opacity::SHADOW_DARK
+            } else {
+                opacity::SHADOW_LIGHT
+            }),
         };
         visuals.popup_shadow = visuals.window_shadow;
         visuals.extreme_bg_color = c.field;

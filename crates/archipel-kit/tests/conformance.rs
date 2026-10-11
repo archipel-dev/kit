@@ -4,9 +4,9 @@
 mod common;
 
 use archipel_kit::components::{
-    Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link, ListRow,
-    MenuItem, Radio, SegmentedControl, Tab, TabBar, Table, TextField, Toggle, ToolbarButton, Tree,
-    TreeRow, TreeTable, VirtualList,
+    Breadcrumbs, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link,
+    ListRow, MenuItem, Radio, SegmentedControl, StatusBarItem, StripeButton, Tab, TabBar, Table,
+    TextField, Toggle, ToolbarButton, Tree, TreeRow, TreeTable, VirtualList,
 };
 use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
@@ -55,6 +55,29 @@ fn toolbar_controls_conform() {
             .dropdown(true)
             .enabled(enabled)
             .show(ui)
+    })
+    .run();
+}
+
+#[test]
+fn status_bar_and_stripe_controls_conform() {
+    testing::conformance("UTF-8", |ui, enabled| {
+        ui.add(StatusBarItem::new("UTF-8").enabled(enabled))
+    })
+    .run();
+    testing::conformance("archipel", |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            Breadcrumbs::new()
+                .crumb("archipel", Some(Glyph::Folder.into()))
+                .show(ui)
+                .crumbs
+                .remove(0)
+        })
+        .inner
+    })
+    .run();
+    testing::conformance("Project", |ui, enabled| {
+        ui.add_enabled(enabled, StripeButton::new(Glyph::Folder, "Project"))
     })
     .run();
 }

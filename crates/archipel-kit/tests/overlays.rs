@@ -548,3 +548,9 @@ fn dialog_first_visible_frame_is_the_final_frame() {
         );
     }
 }
+
+#[test]
+fn dialog_passes_the_audit() {
+    let mut harness = dialog_harness();
+    testing::audit(&mut harness).assert_clean();
+}

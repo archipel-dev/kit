@@ -2,7 +2,7 @@
 
 use super::common;
 use crate::theme::{Colors, Theme};
-use crate::tokens::{size, typography};
+use crate::tokens::{radius, size, typography};
 use egui::{
     Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo,
     WidgetType, pos2, vec2,
@@ -152,7 +152,7 @@ impl Widget for Checkbox<'_> {
         });
         if ui.is_rect_visible(response.rect) {
             let painter = ui.painter();
-            let corner = CornerRadius::same(3);
+            let corner = CornerRadius::same(radius::CHECKBOX);
             let filled = state != CheckState::Off;
             // Measured on Android Studio: no hover change; checked in its own blue.
             let (fill, stroke) = match (filled, self.enabled) {
@@ -175,7 +175,7 @@ impl Widget for Checkbox<'_> {
                 // The border becomes 2 pt in the checkbox blue, one of them outside.
                 painter.rect_stroke(
                     rect.expand(1.0),
-                    CornerRadius::same(4),
+                    CornerRadius::same(radius::CHECKBOX + 1),
                     Stroke::new(size::FOCUS_RING, colors.control_selected),
                     StrokeKind::Inside,
                 );
@@ -356,7 +356,7 @@ impl Widget for Toggle<'_> {
             };
             painter.rect(
                 rect,
-                CornerRadius::same(8),
+                CornerRadius::same(radius::PILL),
                 track,
                 Stroke::new(1.0_f32, outline),
                 StrokeKind::Inside,

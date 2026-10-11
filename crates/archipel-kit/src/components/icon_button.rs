@@ -128,6 +128,7 @@ impl Widget for IconButton {
             let icon_rect = Rect::from_center_size(rect.center(), vec2(icon_edge, icon_edge));
             icons::paint(painter, icon_rect, self.icon, color);
         }
-        response.on_hover_text(self.label)
+        super::Tooltip::new(self.label).show_for(&response);
+        response
     }
 }
