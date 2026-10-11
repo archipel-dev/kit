@@ -57,6 +57,7 @@ mod docs {
         Theming = "theming.md";
         Testing = "testing.md";
         Cursors = "cursors.md";
+        Collections = "components/collections.md";
         Tooltip = "components/tooltip.md";
         DialogPage = "components/dialog.md";
         IconKit = "icons/README.md";

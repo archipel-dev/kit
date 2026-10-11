@@ -58,6 +58,8 @@ pub struct ListRow {
     flat: bool,
     selected: bool,
     enabled: bool,
+    focusable: bool,
+    inactive: bool,
 }
 
 impl ListRow {
@@ -74,6 +76,8 @@ impl ListRow {
             flat: false,
             selected: false,
             enabled: true,
+            focusable: true,
+            inactive: false,
         }
     }
 
@@ -133,11 +137,26 @@ impl ListRow {
         self
     }
 
+    /// Rows inside a list widget are not focusable themselves: the list takes focus and
+    /// moves the selection with the arrow keys.
+    pub(crate) fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
+        self
+    }
+
+    /// A selection in a list without focus: the quieter inactive selection color.
+    pub(crate) fn inactive(mut self, inactive: bool) -> Self {
+        self.inactive = inactive;
+        self
+    }
+
     /// Draws the row across the available width.
     pub fn show(self, ui: &mut Ui) -> RowResponse {
         let colors = Theme::colors(ui.ctx());
-        let sense = if self.enabled {
+        let sense = if self.enabled && self.focusable {
             Sense::click()
+        } else if self.enabled {
+            Sense::CLICK
         } else {
             Sense::hover()
         };
@@ -184,7 +203,9 @@ impl ListRow {
 
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            let fill = if self.selected {
+            let fill = if self.selected && self.inactive {
+                colors.row_hover
+            } else if self.selected {
                 colors.selection
             } else if self.enabled && response.hovered() {
                 colors.row_hover

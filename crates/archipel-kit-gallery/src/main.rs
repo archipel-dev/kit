@@ -5,10 +5,10 @@
 //! ```
 
 use archipel_kit::components::{
-    Avatar, Banner, Button, Checkbox, Counter, Dialog, Dropdown, EmptyState, IconButton, Kbd, Link,
-    ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader,
-    SegmentedControl, Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
-    Tooltip, TooltipExt,
+    Avatar, Banner, Button, Cell, Checkbox, Column, Counter, Dialog, Dropdown, EmptyState,
+    IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid,
+    Radio, SectionHeader, SegmentedControl, Separator, Severity, SortOrder, Spinner, Tab, TabBar,
+    Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
 use archipel_kit::{Glyph, Icon, Theme, cursor, egui, tokens};
@@ -94,6 +94,9 @@ struct Gallery {
     branch: String,
     busy: bool,
     last_action: String,
+    columns: Vec<Column>,
+    row: Option<usize>,
+    sort: Option<(usize, SortOrder)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,6 +135,14 @@ impl Default for Gallery {
             branch: "feature/islands".into(),
             busy: false,
             last_action: String::new(),
+            columns: vec![
+                Column::new("#", 70.0).right(),
+                Column::new("Request", 200.0).mono(),
+                Column::new("Status", 64.0).right(),
+                Column::new("Time", 80.0).right(),
+            ],
+            row: None,
+            sort: None,
         }
     }
 }
@@ -484,6 +495,41 @@ impl Gallery {
                     );
                 }
             }
+            Page::Feedback => {}
+            _ => {}
+        }
+        if self.page == Page::Lists {
+            ui.add(SectionHeader::new("Virtualized table: 100 000 rows"));
+            let colors = Theme::colors(ui.ctx());
+            let len = 100_000;
+            let descending = self
+                .sort
+                .is_some_and(|(_, order)| order == SortOrder::Descending);
+            let out = Table::new("gallery-table", &mut self.columns, len, &mut self.row)
+                .sort(self.sort)
+                .height(220.0)
+                .show(ui, |row, col| {
+                    let n = if descending { len - 1 - row } else { row };
+                    let status = [200, 201, 404, 200, 500, 304][n % 6];
+                    match col {
+                        0 => Cell::new(n.to_string()).muted(),
+                        1 => Cell::new(format!("GET /api/users/{n}")),
+                        2 => Cell::new(status.to_string()).color(match status {
+                            500.. => colors.error,
+                            400.. => colors.warning,
+                            _ => colors.success,
+                        }),
+                        _ => Cell::new(format!("{} ms", 12 + n * 37 % 300)).muted(),
+                    }
+                });
+            if let Some(col) = out.sort_clicked {
+                self.sort = Some(match self.sort {
+                    Some((c, order)) if c == col => (col, order.reversed()),
+                    _ => (col, SortOrder::Ascending),
+                });
+            }
+        }
+        match self.page {
             Page::Feedback => {
                 ui.add(SectionHeader::new("Banners"));
                 let banners = [
@@ -728,6 +774,7 @@ impl Gallery {
                         .show(ui);
                 }
             }
+            _ => {}
         }
     }
 }
