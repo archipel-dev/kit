@@ -79,6 +79,7 @@ mod docs {
         Dropdown = "components/dropdown.md";
         EmptyState = "components/empty-state.md";
         IconButton = "components/icon-button.md";
+        KeyValueTable = "components/key-value-table.md";
         Icons = "components/icons.md";
         ListRow = "components/list-row.md";
         MenuItem = "components/menu-item.md";

@@ -177,6 +177,170 @@ what the previous line left (a block comment still open), for constructs spannin
 wants the whole text, as a syntax tree does. The spans of lines longer than 4 KB are cached,
 so even a one-line 10 MB body tokenizes once.
 
+## Single-line fields and `{{variables}}`
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/template_field.dark.png">
+  <img alt="Single-line fields with resolved, unresolved and secret template variables" src="img/template_field.light.png" width="360">
+</picture>
+
+A URL bar or a header value is a single line, so it is a [`TextField`](text-field.md) with
+`.highlighter(&dyn Highlighter)`, not a one-line `CodeEditor`: it keeps the field's height,
+focus ring, placeholder, clear button, leading icon and error message, so a highlighted input
+and a plain one sit side by side in a form and look the same. The text never wraps and
+<kbd>Enter</kbd> never inserts a newline: `show` reports `submitted`, and `lost_focus()` is set
+too. Any `Highlighter` works; `TokenKind` has `Resolved`, `Unresolved` and `Secret` for
+variables, drawn like in every code view: the variable color, the invalid color (with a dotted
+underline in the field) and the string color on a tint. `TokenKind` is `#[non_exhaustive]`.
+
+`TemplateHighlighter` finds `{{name}}` tokens and asks your closure what each one is. It wraps
+an inner highlighter for the text between them (`.inner(Json)`; plain text by default). A token
+still being typed (`{{ba`) is drawn as a plain variable until it is closed.
+
+```rust
+use archipel_kit::components::TextField;
+use archipel_kit::components::code::{TemplateHighlighter, TemplateToken};
+use archipel_kit::egui;
+
+fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
+    let highlighter = TemplateHighlighter::new(|name: &str| match name {
+        "token" => TemplateToken::Secret,
+        "base_url" | "user_id" => TemplateToken::Resolved,
+        _ => TemplateToken::Unresolved,
+    });
+    let out = TextField::new(url)
+        .label("URL")
+        .placeholder("https://example.com")
+        .monospace(true)
+        .highlighter(&highlighter)
+        .show(ui);
+    out.submitted
+}
+```
+
+### The caret and autocomplete
+
+`TextField::show` returns a `TextFieldOutput`:
+
+| Field | Meaning |
+|---|---|
+| `response` | The text edit's response (`changed()`, `has_focus()`, `lost_focus()`). |
+| `submitted` | The field lost focus because <kbd>Enter</kbd> was pressed. |
+| `caret_rect` | The caret as a screen rectangle; anchor a `parts::Popover` on it. |
+| `template` | `Option<TemplateAt>`: the `{{variable}}` the caret is in or just after. |
+| `insert_completion(ctx, &mut text, name)` | Replaces the token with `{{name}}`, puts the caret after it and focuses the field. |
+
+`TemplateAt` has `range` (byte range of the whole token, including a closing `}}` that is
+already there), `partial` (the name typed before the caret: `us` for `{{us|er}}`), `name` and
+`closed`. The caret counts as "at" a token after its opening `{{` and up to its end; right
+before `{{` or after `}}` it is not. `template_at(text, byte)` is the same detection as a plain
+function. The last caret is remembered per field, so `template` stays valid when a click on a
+suggestion has already moved the focus.
+
+The field does not draw the suggestions: the caller owns the list, so it can come from an
+environment, a request history or a language server. This is the whole wiring with `MenuItem`s
+and the keyboard. The keys are consumed **before** the field, while the list is open, so the
+field does not move its caret on <kbd>Up</kbd>/<kbd>Down</kbd> or submit on <kbd>Enter</kbd>:
+
+```rust
+use archipel_kit::components::code::{TemplateHighlighter, TemplateToken};
+use archipel_kit::components::{MenuItem, TextField};
+use archipel_kit::egui::{self, Key, Modifiers};
+use archipel_kit::parts::Popover;
+
+const VARIABLES: [&str; 3] = ["base_url", "user_id", "user_name"];
+
+/// The state of the bar: yours, the kit keeps none.
+#[derive(Default)]
+struct UrlBar {
+    url: String,
+    open: bool,
+    selected: usize,
+    matches: Vec<&'static str>,
+}
+
+/// Returns `true` when the user pressed Enter with no list open.
+fn url_bar(ui: &mut egui::Ui, bar: &mut UrlBar) -> bool {
+    let highlighter = TemplateHighlighter::new(|name: &str| {
+        if VARIABLES.contains(&name) { TemplateToken::Resolved } else { TemplateToken::Unresolved }
+    });
+
+    // The list was open last frame: it owns the navigation keys.
+    let listing = bar.open && !bar.matches.is_empty();
+    let (mut down, mut up, mut accept) = (false, false, false);
+    if listing {
+        ui.input_mut(|i| {
+            down = i.consume_key(Modifiers::NONE, Key::ArrowDown);
+            up = i.consume_key(Modifiers::NONE, Key::ArrowUp);
+            accept = i.consume_key(Modifiers::NONE, Key::Enter);
+            if i.consume_key(Modifiers::NONE, Key::Escape) {
+                bar.open = false;
+            }
+        });
+    }
+
+    let out = TextField::new(&mut bar.url)
+        .label("URL")
+        .monospace(true)
+        .highlighter(&highlighter)
+        .show(ui);
+
+    // Filter by what was typed of the name; open on every edit.
+    bar.matches = match &out.template {
+        Some(token) => VARIABLES.into_iter().filter(|v| v.starts_with(token.partial.as_str())).collect(),
+        None => Vec::new(),
+    };
+    if out.response.changed() {
+        bar.open = true;
+        bar.selected = 0;
+    }
+    // Tabbing away closes the list; a click is the popover's (outside) or an item's (inside).
+    let clicking = ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released());
+    if bar.matches.is_empty() || out.response.lost_focus() && !clicking {
+        bar.open = false;
+    }
+
+    let last = bar.matches.len().saturating_sub(1);
+    if down { bar.selected = (bar.selected + 1).min(last); }
+    if up { bar.selected = bar.selected.saturating_sub(1); }
+    bar.selected = bar.selected.min(last);
+    if accept && let Some(name) = bar.matches.get(bar.selected) {
+        out.insert_completion(ui.ctx(), &mut bar.url, name);
+        bar.open = false;
+    }
+
+    if let Some(caret) = out.caret_rect {
+        let (matches, selected) = (bar.matches.clone(), bar.selected);
+        let mut picked = None;
+        Popover::new("url-completions", caret).width(220.0).show(ui.ctx(), &mut bar.open, |ui| {
+            for (i, name) in matches.iter().enumerate() {
+                if ui.add(MenuItem::new(*name).highlighted(i == selected)).clicked() {
+                    picked = Some(*name);
+                }
+            }
+        });
+        if let Some(name) = picked {
+            out.insert_completion(ui.ctx(), &mut bar.url, name);
+            bar.open = false;
+        }
+    }
+    out.submitted && !accept
+}
+```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/template_autocomplete.dark.png">
+  <img alt="A URL field with the suggestions for {{us open under the caret" src="img/template_autocomplete.light.png" width="400">
+</picture>
+
+`MenuItem::highlighted(true)` paints the hover fill for the row the keyboard is on.
+<kbd>Escape</kbd> is consumed by the wiring while the list is open (a second press leaves the
+field as usual), and the popover also closes on a click outside it. The suggestion rows are
+operated from the field like a combobox list, not by <kbd>Tab</kbd>. The audit therefore runs on
+the field, and the list is covered by the keyboard and click tests in
+[`tests/template_field.rs`](../../crates/archipel-kit/tests/template_field.rs), which run this
+same wiring.
+
 ## Behavior
 
 - Focus draws the accent outline of text fields. The cursor is the text beam over the text and

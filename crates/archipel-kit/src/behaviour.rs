@@ -222,7 +222,9 @@ impl<P: Any + Send + Sync> Behaviour for DragSource<P> {
         let response = if response.sense.senses_drag() {
             response
         } else {
-            response.interact(Sense::drag())
+            // `Sense::DRAG` alone: `Sense::drag()` would also make the widget a Tab stop,
+            // which rows inside a list (roving focus) must not be.
+            response.interact(Sense::DRAG)
         };
         if response.dragged() {
             response.dnd_set_drag_payload(self.0);

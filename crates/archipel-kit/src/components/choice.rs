@@ -1,7 +1,7 @@
 //! Checkboxes, radio buttons and toggle switches.
 
 use super::common;
-use crate::theme::Theme;
+use crate::theme::{Colors, Theme};
 use crate::tokens::{size, typography};
 use egui::{
     Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo,
@@ -117,6 +117,16 @@ impl<'a> Checkbox<'a> {
     }
 }
 
+/// Color of a tick or dot on an accent fill. Disabled marks must stay visible: in dark the
+/// disabled text color is as dark as the disabled accent, so they use the on-accent color.
+fn mark_color(ui: &Ui, colors: &Colors, enabled: bool) -> Color32 {
+    if enabled || ui.visuals().dark_mode {
+        colors.text_on_accent
+    } else {
+        colors.text_disabled
+    }
+}
+
 impl Widget for Checkbox<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
@@ -165,14 +175,7 @@ impl Widget for Checkbox<'_> {
             if response.has_focus() {
                 common::focus_ring(painter, rect, 3, &colors);
             }
-            let mark = Stroke::new(
-                1.6_f32,
-                if self.enabled {
-                    colors.text_on_accent
-                } else {
-                    colors.text_disabled
-                },
-            );
+            let mark = Stroke::new(1.6_f32, mark_color(ui, &colors, self.enabled));
             let p = |x: f32, y: f32| rect.min + vec2(x, y);
             match state {
                 CheckState::On => {
@@ -253,11 +256,7 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
                     colors.accent_disabled
                 };
                 painter.circle_filled(center, BOX / 2.0, fill);
-                let dot = if self.enabled {
-                    colors.text_on_accent
-                } else {
-                    colors.text_disabled
-                };
+                let dot = mark_color(ui, &colors, self.enabled);
                 painter.circle_filled(center, 3.0, dot);
             } else {
                 let outline = if self.enabled && response.hovered() {

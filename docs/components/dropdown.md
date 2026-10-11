@@ -36,6 +36,12 @@ impl.
 | `.width(f32)` | Width, 160 pt by default. |
 | `.enabled(bool)` | Disabled dropdowns are dimmed and cannot open. |
 
+## Behavior
+
+<kbd>Escape</kbd> closes the popup without picking anything and returns the focus to the
+dropdown button. The key is used up: in a [dialog](dialog.md) the first <kbd>Escape</kbd>
+only closes the popup, the next one dismisses the dialog.
+
 ## Accessibility
 
 Role `ComboBox`, named by `.label` and with the selected value as its value.

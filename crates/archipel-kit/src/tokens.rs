@@ -49,6 +49,12 @@ pub mod size {
     pub const CODE_LINE_HEIGHT: f32 = 20.0;
     /// Padding inside code views and editors, and between gutter and text.
     pub const CODE_PADDING: f32 = 8.0;
+    /// Pitch of the dotted underline of unresolved template variables.
+    pub const DOTTED_PITCH: f32 = 3.0;
+    /// Edge of one dot of the dotted underline.
+    pub const DOTTED_DOT: f32 = 1.0;
+    /// Distance from the bottom of the line to the underline's dots.
+    pub const DOTTED_INSET: f32 = 0.5;
     /// Space between a row's leading slot and its icon.
     pub const ROW_LEADING_GAP: f32 = 4.0;
     /// Space kept between a row's label and its trailing slot.
@@ -57,6 +63,11 @@ pub mod size {
     pub const ROW_MIN_SECONDARY: f32 = 32.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Number of gaps between the four parts of a key/value row: checkbox, fields, delete.
+    pub const KEY_VALUE_ROW_GAPS: f32 = 3.0;
+    /// Share of a key/value table's field width that goes to the key column; the value
+    /// column gets the rest.
+    pub const KEY_COLUMN_SHARE: f32 = 0.4;
     /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
     pub const SPLIT_DIVIDER: f32 = ISLAND_GAP;
     /// Extra pointer reach on each side of a split pane's divider, so it is easy to grab.
@@ -100,6 +111,10 @@ pub mod chart {
 pub mod opacity {
     /// Opacity of a row's [`tint`](crate::components::ListRow::tint) over the island.
     pub const ROW_TINT: f32 = 0.22;
+    /// Multiplier of the colors of disabled code and highlighted text.
+    pub const DISABLED_CODE: f32 = 0.55;
+    /// Multiplier of a color used as a tinted fill behind text of the same color.
+    pub const TINT_FILL: f32 = 0.18;
     /// Opacity of a sparkline's min/max band.
     pub const CHART_BAND: f32 = 0.12;
 }

@@ -114,7 +114,17 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let mut changed = false;
+        let mut escaped = false;
         let inner = ui.add_enabled_ui(self.enabled, |ui| {
+            // Escape closes the popup and is used up, so a surrounding dialog stays open.
+            // `ComboBox::from_id_salt` hashes the salt once more.
+            let button_id = ui.make_persistent_id(egui::Id::new(self.id));
+            if egui::ComboBox::is_open(ui.ctx(), button_id)
+                && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+            {
+                egui::Popup::close_id(ui.ctx(), button_id.with("popup"));
+                escaped = true;
+            }
             ui.spacing_mut().interact_size.y = size::CONTROL_HEIGHT;
             ui.spacing_mut().button_padding = vec2(9.0, 5.0);
             let visuals = &mut ui.style_mut().visuals.widgets;
@@ -167,6 +177,9 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                 })
         });
         let mut response = inner.inner.response;
+        if escaped {
+            response.request_focus();
+        }
         if changed {
             response.mark_changed();
         }
@@ -222,6 +235,7 @@ pub struct MenuItem<'a> {
     shortcut: Option<String>,
     enabled: bool,
     checked: Option<bool>,
+    highlighted: bool,
     submenu: Option<Submenu<'a>>,
 }
 
@@ -237,6 +251,7 @@ impl<'a> MenuItem<'a> {
             shortcut: None,
             enabled: true,
             checked: None,
+            highlighted: false,
             submenu: None,
         }
     }
@@ -263,6 +278,13 @@ impl<'a> MenuItem<'a> {
     /// Disabled items are dimmed and ignore clicks.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Draws the hover fill without the pointer: the row the keyboard is on in a
+    /// suggestion list (see the template autocomplete in the code page).
+    pub fn highlighted(mut self, highlighted: bool) -> Self {
+        self.highlighted = highlighted;
         self
     }
 
@@ -317,7 +339,8 @@ impl Widget for MenuItem<'_> {
             None => WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.label),
         });
         if ui.is_rect_visible(rect) {
-            let state = State::of(&response);
+            let mut state = State::of(&response);
+            state.hovered |= self.highlighted && self.enabled;
             common::row_pill(ui.painter(), rect, state.menu_fill(&colors));
             content.paint(ui, rect, rect.left() + 4.0, state);
             if self.submenu.is_some() {
