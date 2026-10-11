@@ -72,7 +72,7 @@ second component that would paint the same title and toolbar.
 | `Separator` | 1 pt line across the available width, or a vertical one in a horizontal layout. |
 | `PropertyGrid::new(id)` | `.row(key, value)`, `.mono_row(key, value)`, `.show(ui)`. |
 
-Panels sit on the frame color with a 2 pt gap between them (`tokens::size::ISLAND_GAP`); see
+Panels sit on the frame color with a 4 pt gap between them (`tokens::size::ISLAND_GAP`); see
 the [gallery](../../crates/archipel-kit-gallery/src/main.rs) for a full workbench layout.
 
 Source: [`components/layout.rs`](../../crates/archipel-kit/src/components/layout.rs) ·

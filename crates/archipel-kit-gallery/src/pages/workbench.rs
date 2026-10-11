@@ -1,5 +1,5 @@
 use super::*;
-use archipel_kit::components::{Workbench, WorkbenchState};
+use archipel_kit::components::{Workbench, WorkbenchRegion, WorkbenchState};
 
 #[derive(Default)]
 pub(super) struct State {
@@ -20,7 +20,7 @@ pub(super) fn show(ui: &mut egui::Ui, state: &mut State, _enabled: bool) {
         }
     });
     ui.label(
-        "Drag splitters or Tab to one and use arrows / Enter. Headers hide, maximize and restore.",
+        "Hover an island to reveal its actions. Drag the gaps, or Tab to one and use arrows / Enter.",
     );
     ui.allocate_ui(egui::vec2(ui.available_width(), 400.0), |ui| {
         Workbench::new("preview", &mut state.layout)
@@ -30,9 +30,11 @@ pub(super) fn show(ui: &mut egui::Ui, state: &mut State, _enabled: bool) {
             .right("Details", |ui| {
                 ui.label("Format: JSON");
             })
+            .padded(WorkbenchRegion::Right, true)
             .bottom("Messages", |ui| {
                 ui.label("Ready");
             })
+            .padded(WorkbenchRegion::Bottom, true)
             .show_inside(ui, |ui| {
                 ui.add(Button::primary("Run request"));
                 ui.label("Your application content");

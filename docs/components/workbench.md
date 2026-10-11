@@ -5,20 +5,39 @@ All gutters and splitters use the kit tokens. Its optional toolbar uses `WindowT
 the optional status area stays on the themed frame. Applications supply the content.
 
 ```rust
-use archipel_kit::components::{Workbench, WorkbenchState, WindowChrome, StatusBarItem};
+use archipel_kit::components::{
+    StatusBarItem, WindowChrome, Workbench, WorkbenchRegion, WorkbenchState,
+};
 let mut state = WorkbenchState::default();
 # egui::__run_test_ctx(|ctx| {
 Workbench::new("workspace", &mut state)
     .toolbar(WindowChrome::Integrated, |ui| { ui.label("My application"); })
     .left("Browser", |ui| { ui.label("Collections"); })
     .right("Details", |ui| { ui.label("Properties"); })
+    .padded(WorkbenchRegion::Right, true)
     .bottom("Messages", |ui| { ui.label("Ready"); })
+    .padded(WorkbenchRegion::Bottom, true)
     .status(|ui| { ui.add(StatusBarItem::new("UTF-8")); })
     .show(ctx, |ui| { ui.label("Document"); });
 # });
 ```
 
 `WorkbenchRegion` identifies the left, right or bottom maximized tool window.
+
+## Islands behavior
+
+As in the IntelliJ / Android Studio Islands UI:
+
+- **Gaps are the dividers.** The 4 pt frame-colored gap between islands has no line; the
+  pointer shows the resize cursor over it (`SplitPane::line(false)`). Tab still reaches each
+  divider, which then shows the focus ring.
+- **Header actions appear on hover.** A tool window's Maximize/Restore and Hide buttons
+  fade in over 160 ms (`tokens::size::ISLAND_ACTION_FADE`) while the pointer is anywhere over
+  that island, header or body, and fade out when it leaves. Keyboard focus inside the
+  island reveals them as well; hidden, they keep their space, names and Tab order.
+- **Bodies are edge to edge** by default, so trees, lists and consoles bring their own row
+  inset. `.padded(WorkbenchRegion::Right, true)` gives a form or text body the content inset.
+
 
 The caller owns `WorkbenchState`, which supports serde serialization independently of
 egui. Drag or use the splitter arrow keys to resize; Enter collapses or expands its tool

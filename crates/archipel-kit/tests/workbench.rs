@@ -1,7 +1,7 @@
 //! Docked shell: state, visibility, resizing, narrow windows and both themes.
 use archipel_kit::{
-    Theme,
-    components::{Button, Workbench, WorkbenchRegion, WorkbenchState},
+    Glyph, Theme,
+    components::{Button, ListRow, Workbench, WorkbenchRegion, WorkbenchState},
     egui,
     testing::{self, Harness, Queryable, SnapshotOptions, SnapshotResults},
 };
@@ -22,15 +22,19 @@ fn harness(theme: Theme, width: f32, right: bool, gpu: bool) -> Harness<'static,
             }
             let mut shell = Workbench::new("test", state)
                 .left("Browser", |ui| {
-                    ui.add(Button::secondary("Open collection"));
+                    ListRow::new("Collections").icon(Glyph::Folder).show(ui);
+                    ListRow::new("Environments").icon(Glyph::Folder).show(ui);
                 })
                 .bottom("Messages", |ui| {
                     ui.label("Ready");
-                });
+                })
+                .padded(WorkbenchRegion::Bottom, true);
             if right {
-                shell = shell.right("Details", |ui| {
-                    ui.label("Name: example");
-                });
+                shell = shell
+                    .right("Details", |ui| {
+                        ui.label("Name: example");
+                    })
+                    .padded(WorkbenchRegion::Right, true);
             }
             shell.show(ctx, |ui| {
                 ui.add(Button::primary("Run request"));
@@ -57,10 +61,10 @@ fn headers_hide_maximize_and_restore_without_losing_layout() {
     h.get_by_label("Hide Browser").click();
     h.run();
     assert!(h.state().left_hidden);
-    assert!(h.query_by_label("Open collection").is_none());
+    assert!(h.query_by_label("Collections").is_none());
     h.state_mut().left_hidden = false;
     h.run();
-    assert!(h.query_by_label("Open collection").is_some());
+    assert!(h.query_by_label("Collections").is_some());
     assert_eq!(h.state().left_ratio, before);
 }
 
@@ -68,7 +72,7 @@ fn headers_hide_maximize_and_restore_without_losing_layout() {
 fn small_windows_keep_the_center_and_preserve_preferred_state() {
     let mut h = harness(Theme::light(), 280.0, true, false);
     assert!(h.query_by_label("Run request").is_some());
-    assert!(h.query_by_label("Open collection").is_none());
+    assert!(h.query_by_label("Collections").is_none());
     assert!(!h.state().left_hidden && !h.state().right_hidden);
     assert_eq!(h.state().left_ratio, WorkbenchState::default().left_ratio);
     h.state_mut().maximized = Some(WorkbenchRegion::Left);
@@ -122,4 +126,19 @@ fn snapshot() {
         }
     }
     results.unwrap();
+}
+
+#[test]
+fn padded_regions_inset_their_body_and_gaps_have_no_line() {
+    let h = harness(Theme::dark(), 920.0, true, false);
+    let details = h.get_by_label("Name: example").rect();
+    let messages = h.get_by_label("Ready").rect();
+    let rows = h.get_by_label("Collections").rect();
+    // Padded bodies start at the content inset, like the island title above them.
+    let inset = archipel_kit::tokens::size::CONTENT_INSET;
+    let gap = archipel_kit::tokens::size::ISLAND_GAP;
+    assert!(messages.left() >= gap + inset - 0.5, "{messages:?}");
+    // Edge-to-edge regions leave the inset to their rows.
+    assert!(rows.left() <= gap + 0.5, "{rows:?}");
+    assert!(details.left() > rows.right());
 }

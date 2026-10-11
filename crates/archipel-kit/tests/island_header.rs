@@ -76,7 +76,8 @@ fn snapshot() {
     let mut results = SnapshotResults::new();
     for (name, theme) in [("dark", Theme::dark()), ("light", Theme::light())] {
         let mut h = harness(theme, true);
-        let body = h.get_by_label("Body action").rect().center();
+        // AccessKit bounds are physical pixels; the pointer is in points (2× here).
+        let body = h.get_by_label("Body action").rect().center() / 2.0;
         h.hover_at(body);
         h.run();
         results.add(h.try_snapshot_options(

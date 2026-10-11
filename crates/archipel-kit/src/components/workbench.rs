@@ -1,6 +1,7 @@
 //! A shared docked islands layout, independent of application content and policy.
 
-use super::{IconButton, Panel, Side, SplitPane, WindowChrome, WindowToolbar};
+use super::{IconButton, Panel, Side, SplitPane, Tooltip, WindowChrome, WindowToolbar};
+use crate::behaviour::WidgetExt;
 use crate::{Glyph, Theme, egui, tokens};
 use egui::{Id, Response, Ui};
 use std::cell::Cell;
@@ -56,6 +57,7 @@ type Content<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
 struct Region<'a> {
     title: String,
     content: Content<'a>,
+    padded: bool,
 }
 
 /// A reusable window shell: optional toolbar and status bar, a center island, and
@@ -99,28 +101,34 @@ impl<'a> Workbench<'a> {
 
     /// A titled left tool window. Its header provides Hide and Maximize/Restore actions.
     pub fn left(mut self, title: impl Into<String>, content: impl FnOnce(&mut Ui) + 'a) -> Self {
-        self.left = Some(Region {
-            title: title.into(),
-            content: Box::new(content),
-        });
+        self.left = Some(Region::new(title, content));
         self
     }
     /// A titled right tool window.
     pub fn right(mut self, title: impl Into<String>, content: impl FnOnce(&mut Ui) + 'a) -> Self {
-        self.right = Some(Region {
-            title: title.into(),
-            content: Box::new(content),
-        });
+        self.right = Some(Region::new(title, content));
         self
     }
     /// A titled bottom tool window below the main area.
     pub fn bottom(mut self, title: impl Into<String>, content: impl FnOnce(&mut Ui) + 'a) -> Self {
-        self.bottom = Some(Region {
-            title: title.into(),
-            content: Box::new(content),
-        });
+        self.bottom = Some(Region::new(title, content));
         self
     }
+    /// Gives `region`'s body the panel content inset (default: edge to edge, for trees,
+    /// lists and consoles whose rows bring their own inset). Use it for forms and text.
+    /// Call it after adding the region.
+    pub fn padded(mut self, region: WorkbenchRegion, padded: bool) -> Self {
+        let slot = match region {
+            WorkbenchRegion::Left => &mut self.left,
+            WorkbenchRegion::Right => &mut self.right,
+            WorkbenchRegion::Bottom => &mut self.bottom,
+        };
+        if let Some(slot) = slot {
+            slot.padded = padded;
+        }
+        self
+    }
+
     /// Window toolbar; use the same chrome when configuring the host viewport.
     pub fn toolbar(mut self, chrome: WindowChrome, content: impl FnOnce(&mut Ui) + 'a) -> Self {
         self.toolbar = Some((chrome, Box::new(content)));
@@ -220,6 +228,7 @@ impl<'a> Workbench<'a> {
                                     .default_ratio(0.75)
                                     .min_sizes(center_min, min)
                                     .label("Resize right tool window")
+                                    .line(false)
                                     .collapsible(Side::Second, &mut right_hidden)
                                     .enabled(!auto_right)
                                     .show(
@@ -257,6 +266,7 @@ impl<'a> Workbench<'a> {
                                     },
                             )
                             .label("Resize left tool window")
+                            .line(false)
                             .collapsible(Side::First, &mut left_hidden)
                             .enabled(!auto_left)
                             .show(
@@ -286,6 +296,7 @@ impl<'a> Workbench<'a> {
                         .default_ratio(0.7)
                         .min_sizes(center_min, min)
                         .label("Resize bottom tool window")
+                        .line(false)
                         .collapsible(Side::Second, &mut bottom_hidden)
                         .enabled(!auto_bottom)
                         .show(ui, main, |ui| {
@@ -319,7 +330,15 @@ impl<'a> Workbench<'a> {
     }
 }
 
-impl Region<'_> {
+impl<'a> Region<'a> {
+    fn new(title: impl Into<String>, content: impl FnOnce(&mut Ui) + 'a) -> Self {
+        Self {
+            title: title.into(),
+            content: Box::new(content),
+            padded: false,
+        }
+    }
+
     fn show(
         self,
         ui: &mut Ui,
@@ -333,10 +352,16 @@ impl Region<'_> {
             if maximized { "Restore" } else { "Maximize" },
             self.title
         );
+        // As in the IntelliJ Islands UI, the header actions fade in while the pointer is
+        // anywhere over the tool window (or focus is inside it) and fade out when it leaves.
         Panel::new(self.title)
+            .hover_actions(true)
+            .padded(self.padded)
             .on_hide(|| hide.set(Some(region)))
             .actions(|ui| {
-                if ui.add(IconButton::new(Glyph::Fullscreen, label)).clicked() {
+                let button = IconButton::new(Glyph::Fullscreen, label)
+                    .with(Tooltip::new(if maximized { "Restore" } else { "Maximize" }));
+                if ui.add(button).clicked() {
                     maximize.set(Some(region));
                 }
             })
