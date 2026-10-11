@@ -74,6 +74,15 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Close button | Only on the selected and the hovered tab; its room is always kept; small cross; round hover behind it | `tokens::tab` |
 | Spacing | 8 pt, icon, 4 pt, title, 4 pt, close 16 pt, 4 pt; 6 pt between pills | `tokens::tab` |
 
+### Trees and lists
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Row | 24 pt; selection pill inset 12 pt from the island's sides, radius 4 | `ListRow`, `tokens::size::ROW_INSET` |
+| Levels | Expander column (16 pt) starts at the pill's edge and moves 19 pt per level; icon 5 pt after it; text 4 pt after the icon | `TREE_INDENT`, `CHEVRON_GAP` |
+| Selection | Focused `#2A4371` / light `#D0DFFE`; without focus `#33353B` / light `#E9EAEE` | `Colors::selection`, `selection_inactive` |
+| Hover | No fill in trees and lists (popup lists highlight like menus) | `State::row_fill` |
+
 ## Fixed invariants
 
 - Body font: Inter 13 pt. Code: the bundled mono font. Existing icon artwork is fixed.

@@ -1,7 +1,9 @@
 # ListRow
 
 One row of a list or tree: expander chevron, icon, label, secondary text. The whole row is
-the click target; selection and hover draw a rounded pill. Rows are stateless (the caller
+the click target; the selection draws a rounded pill (blue while the list has focus,
+`selection_inactive` gray without). As in Android Studio's trees, rows have no hover fill;
+`flat` rows in popups highlight under the pointer like menu items. Rows are stateless (the caller
 owns selection and expansion), so the same row serves a flat list, a lazily loaded tree or a
 virtualized table.
 
@@ -56,7 +58,7 @@ For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 - `.strong(true)` draws the label semibold: group titles, the running configuration.
 - `.tint(Tone)` tints the background by meaning (`Tone::Warning` for a search hit,
   `Tone::Success` for a running configuration). It is a tone like everywhere in the kit, never
-  a color. The tint stays visible on a selected or hovered row.
+  a color. The tint stays visible on a selected row.
 - `.icon_painter(|painter, rect, color| …)` paints the 16×16 icon yourself, for an icon with a
   badge. `color` is the icon tone in the row's state, so it dims when the row is disabled.
 - A label wider than the room (the row, minus the trailing slot) ends with `…`, and the

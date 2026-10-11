@@ -127,6 +127,8 @@ pub struct Colors {
     pub toggle_off_knob: Color32,
     /// Outline of unchecked checkboxes and radio buttons.
     pub control_border: Color32,
+    /// Selection of a list, tree or table that does not have the keyboard focus.
+    pub selection_inactive: Color32,
     /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
     pub row_hover: Color32,
     /// Fill of non-editable dropdowns.
@@ -326,6 +328,7 @@ impl Theme {
                 toggle_off: rgb(0x191A1C),
                 toggle_off_knob: rgb(0x5F6269),
                 control_border: rgb(0x6F737A),
+                selection_inactive: rgb(0x33353B),
                 row_hover: rgba(0xFFFFFF10),
                 combo: rgb(0x26282C),
                 combo_arrow: rgb(0x9A9DA1),
@@ -458,6 +461,7 @@ impl Theme {
                 toggle_off: rgb(0xF7F8F9),
                 toggle_off_knob: rgb(0xC3C5CB),
                 control_border: rgb(0xA8ADBD),
+                selection_inactive: rgb(0xE9EAEE),
                 row_hover: rgba(0x00000008),
                 combo: rgb(0xFFFFFF),
                 combo_arrow: rgb(0x6E6E6E),

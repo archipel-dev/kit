@@ -5,8 +5,10 @@ use crate::behaviour::{Behaviour, Behaviours};
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{IconPainter, RowContent, Slot, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{opacity, size};
-use egui::{Color32, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
+use crate::tokens::{opacity, popup, radius, size};
+use egui::{
+    Color32, CornerRadius, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2,
+};
 
 /// What happened to a [`ListRow`] this frame.
 pub struct RowResponse {
@@ -260,9 +262,20 @@ impl<'a> ListRow<'a> {
 
         let mut toggled = false;
         let mut elided = false;
+        // Measured on Android Studio: the pill is inset 12 pt (popup lists: as menu items);
+        // the expander column starts at the pill's edge and moves 19 pt per level.
+        let pill = if self.flat {
+            rect.shrink2(vec2(popup::ITEM_INSET, 0.0))
+        } else {
+            rect.shrink2(vec2(size::ROW_INSET, 0.0))
+        };
         let chevron = Rect::from_min_size(
             pos2(
-                rect.left() + size::indent(self.depth) - size::ROW_PILL_INSET,
+                if self.flat {
+                    pill.left() + popup::ITEM_PADDING
+                } else {
+                    rect.left() + size::indent(self.depth)
+                },
                 rect.center().y - size::CHEVRON_COLUMN / 2.0,
             ),
             vec2(
@@ -297,23 +310,27 @@ impl<'a> ListRow<'a> {
             .inactive(self.inactive);
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            let fill = state.row_fill(&colors);
-            common::row_pill(painter, rect, fill);
-            // Over the selection or hover fill, so a tinted row keeps its meaning selected.
+            // A popup list highlights the row under the pointer, like a menu; island lists
+            // and trees have no hover fill.
+            let fill = if self.flat && state.enabled && state.hovered && !state.selected {
+                colors.selection
+            } else {
+                state.row_fill(&colors)
+            };
+            let corner = CornerRadius::same(radius::ROW);
+            if fill != Color32::TRANSPARENT {
+                painter.rect_filled(pill, corner, fill);
+            }
+            // Over the selection fill, so a tinted row keeps its meaning selected.
             if let Some(tone) = self.tint {
-                common::row_pill(
-                    painter,
-                    rect,
+                painter.rect_filled(
+                    pill,
+                    corner,
                     tone.color(&colors).gamma_multiply(opacity::ROW_TINT),
                 );
             }
             if response.has_focus() && !self.selected {
-                common::focus_ring(
-                    painter,
-                    rect.shrink2(vec2(size::ROW_PILL_INSET + 1.0, 1.0)),
-                    4,
-                    &colors,
-                );
+                common::focus_ring(painter, pill.shrink(1.0), radius::ROW, &colors);
             }
             if let Some(expanded) = self.expanded {
                 let icon = if expanded {
@@ -323,7 +340,11 @@ impl<'a> ListRow<'a> {
                 };
                 icons::paint(painter, chevron, icon, colors.text_secondary);
             }
-            let mut x = chevron.right() + 2.0;
+            let mut x = if self.flat {
+                chevron.right()
+            } else {
+                chevron.right() + size::CHEVRON_GAP
+            };
             if let Some(slot) = self.leading {
                 let width = slot.width(ui);
                 let slot_rect =
@@ -346,7 +367,7 @@ impl<'a> ListRow<'a> {
                 reserve_right,
                 ..RowContent::default()
             };
-            elided = content.paint(ui, rect, x, state);
+            elided = content.paint(ui, pill, x, state);
         }
         if let Some(slot) = self.trailing {
             let reveal = !self.trailing_on_hover
@@ -354,7 +375,7 @@ impl<'a> ListRow<'a> {
                 || state.focused
                 || ui.rect_contains_pointer(rect);
             if reveal && ui.is_rect_visible(rect) {
-                let inset = size::ROW_PILL_INSET + 4.0;
+                let inset = rect.right() - pill.right() + 4.0;
                 let width = slot.width(ui);
                 let slot_rect = Rect::from_min_max(
                     pos2(rect.right() - inset - width, rect.top()),

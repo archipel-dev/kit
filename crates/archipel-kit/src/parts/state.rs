@@ -49,13 +49,12 @@ impl State {
         self
     }
 
-    /// Fill of a row in a list, tree or table: selection, quieter inactive selection, or
-    /// hover.
+    /// Fill of a row in a list, tree or table: the selection, or the quieter selection of a
+    /// list without focus. Rows have no hover fill, as in Android Studio's trees and lists.
     pub fn row_fill(&self, colors: &Colors) -> Color32 {
         match (self.selected, self.inactive) {
             (true, false) => colors.selection,
-            (true, true) => colors.row_hover,
-            (false, _) if self.enabled && self.hovered => colors.row_hover,
+            (true, true) => colors.selection_inactive,
             _ => Color32::TRANSPARENT,
         }
     }

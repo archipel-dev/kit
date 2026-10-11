@@ -11,8 +11,13 @@ pub mod size {
     pub const ROW_PILL_INSET: f32 = 4.0;
     /// List and tree row height.
     pub const ROW_HEIGHT: f32 = 24.0;
-    /// Indent per tree level.
-    pub const TREE_INDENT: f32 = 18.0;
+    /// Indent per tree level (19 pt in Android Studio's Islands UI).
+    pub const TREE_INDENT: f32 = 19.0;
+    /// Inset of a list or tree row's selection pill from the island's sides; the expander
+    /// column starts at the pill's edge.
+    pub const ROW_INSET: f32 = 12.0;
+    /// Space between a tree row's expander column and its icon.
+    pub const CHEVRON_GAP: f32 = 5.0;
     /// Width of the expander column; leaf rows reserve it too, so icons align.
     pub const CHEVRON_COLUMN: f32 = 16.0;
     /// Icon edge length.
