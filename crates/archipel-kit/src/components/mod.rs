@@ -44,4 +44,4 @@ pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
 pub use overlay::{Dialog, DialogAction, MenuSeparator, Tooltip, TooltipExt};
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};
-pub use text_field::TextField;
+pub use text_field::{TextField, TextFieldOutput};

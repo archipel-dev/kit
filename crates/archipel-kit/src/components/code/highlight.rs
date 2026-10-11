@@ -29,6 +29,13 @@ pub enum TokenKind {
     Variable,
     /// Invalid or unterminated input.
     Error,
+    /// A `{{variable}}` the caller can resolve (see [`TemplateHighlighter`](super::TemplateHighlighter)).
+    Resolved,
+    /// A `{{variable}}` nothing defines: drawn in the error color with a dotted underline
+    /// by [`TextField`](crate::components::TextField).
+    Unresolved,
+    /// A `{{variable}}` holding a secret, styled apart so it is not mistaken for plain data.
+    Secret,
 }
 
 impl TokenKind {
@@ -45,7 +52,9 @@ impl TokenKind {
             TokenKind::Tag => colors.syntax_tag,
             TokenKind::Attribute => colors.syntax_attribute,
             TokenKind::Variable => colors.syntax_variable,
-            TokenKind::Error => colors.syntax_error,
+            TokenKind::Error | TokenKind::Unresolved => colors.syntax_error,
+            TokenKind::Resolved => colors.syntax_variable,
+            TokenKind::Secret => colors.syntax_string,
         }
     }
 }

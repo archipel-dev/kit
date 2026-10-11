@@ -4,11 +4,13 @@
 mod editor;
 mod find;
 mod highlight;
+mod template;
 mod text;
 mod view;
 
 pub use editor::CodeEditor;
 pub use highlight::{GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml};
+pub use template::{TemplateAt, TemplateHighlighter, TemplateToken, template_at};
 pub use view::{CodeView, CodeViewResponse};
 
 use crate::theme::Theme;
