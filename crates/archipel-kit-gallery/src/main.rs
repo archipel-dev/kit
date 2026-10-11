@@ -217,9 +217,17 @@ impl Documents {
         .name("Documents")
         .height(220.0)
         .show(ui, |row, col| match self.index[row] {
-            (_, None) if col == 1 => Cell::new(format!("{{ {FIELDS} fields }}")).muted(),
+            (_, None) if col == 1 => {
+                Cell::new(format!("{{ {FIELDS} fields }}")).value_kind(ValueKind::Punctuation)
+            }
             (_, None) => Cell::new("Object").muted(),
-            (doc, Some(field)) if col == 1 => Cell::new(self.value(doc, field)).editable(true),
+            (doc, Some(field)) if col == 1 => Cell::new(self.value(doc, field))
+                .value_kind(match field % 3 {
+                    0 => ValueKind::Number,
+                    1 => ValueKind::String,
+                    _ => ValueKind::Boolean,
+                })
+                .editable(true),
             (_, Some(field)) => Cell::new(["Int32", "String", "Boolean"][field % 3]).muted(),
         });
         self.columns = columns;
