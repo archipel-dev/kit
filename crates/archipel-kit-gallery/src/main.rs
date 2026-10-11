@@ -687,6 +687,46 @@ impl Gallery {
                         ui.add(MenuItem::new("Remove"));
                     }))
                     .show(ui);
+                ui.add(SectionHeader::new("Row options"));
+                ListRow::new("Gradle")
+                    .icon(Glyph::Folder)
+                    .expanded(Some(true))
+                    .strong(true)
+                    .enabled(enabled)
+                    .show(ui);
+                ListRow::new("Search hit in main.rs")
+                    .icon(Icon::for_file("main.rs"))
+                    .depth(1)
+                    .tint(Tone::Warning)
+                    .enabled(enabled)
+                    .show(ui);
+                ListRow::new("app (running)")
+                    .icon(Glyph::Run)
+                    .icon_tone(Tone::Run)
+                    .strong(true)
+                    .tint(Tone::Success)
+                    .enabled(enabled)
+                    .show(ui);
+                let mut included = self.checks[0];
+                ListRow::new("theme.rs")
+                    .icon(Icon::for_file("theme.rs"))
+                    .secondary("src/")
+                    .leading(Slot::ui_width(22.0, |ui| {
+                        ui.add(
+                            Checkbox::new(&mut included, "Include theme.rs")
+                                .label_visible(false)
+                                .enabled(enabled),
+                        );
+                    }))
+                    .enabled(enabled)
+                    .show(ui);
+                self.checks[0] = included;
+                ListRow::new("A very long file name that does not fit into this row at all.kt")
+                    .icon(Icon::for_file("a.kt"))
+                    .secondary("with/a/long/path")
+                    .trailing(Slot::text("12"))
+                    .enabled(enabled)
+                    .show(ui);
             }
             Page::Feedback => {}
             _ => {}
