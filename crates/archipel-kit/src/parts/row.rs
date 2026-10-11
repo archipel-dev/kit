@@ -137,7 +137,7 @@ impl<'a> RowContent<'a> {
             let x = x + label_width + size::SECONDARY_GAP;
             let galley = if galley.size().x <= secondary_room {
                 Some(galley)
-            } else if secondary_room >= MIN_SECONDARY {
+            } else if secondary_room >= size::ROW_MIN_SECONDARY {
                 Some(common::galley_elided(
                     ui,
                     text,
@@ -158,6 +158,3 @@ impl<'a> RowContent<'a> {
         elided
     }
 }
-
-/// Least width worth showing of elided secondary text.
-const MIN_SECONDARY: f32 = 32.0;

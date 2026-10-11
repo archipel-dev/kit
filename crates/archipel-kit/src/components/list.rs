@@ -5,7 +5,7 @@ use crate::behaviour::{Behaviour, Behaviours};
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{IconPainter, RowContent, Slot, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::size;
+use crate::tokens::{opacity, size};
 use egui::{Color32, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
 
 /// What happened to a [`ListRow`] this frame.
@@ -159,7 +159,7 @@ impl<'a> ListRow<'a> {
     }
 
     /// Tints the row's background by meaning, e.g. [`Tone::Warning`] for a search hit or
-    /// [`Tone::Success`] for a running configuration. Selection and hover draw over it.
+    /// [`Tone::Success`] for a running configuration. The tint stays visible on a selected or hovered row.
     pub fn tint(mut self, tone: Tone) -> Self {
         self.tint = Some(tone);
         self
@@ -298,10 +298,15 @@ impl<'a> ListRow<'a> {
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
             let fill = state.row_fill(&colors);
-            if let Some(tone) = self.tint {
-                common::row_pill(painter, rect, tone.color(&colors).gamma_multiply(TINT));
-            }
             common::row_pill(painter, rect, fill);
+            // Over the selection or hover fill, so a tinted row keeps its meaning selected.
+            if let Some(tone) = self.tint {
+                common::row_pill(
+                    painter,
+                    rect,
+                    tone.color(&colors).gamma_multiply(opacity::ROW_TINT),
+                );
+            }
             if response.has_focus() && !self.selected {
                 common::focus_ring(
                     painter,
@@ -324,12 +329,12 @@ impl<'a> ListRow<'a> {
                 let slot_rect =
                     Rect::from_min_size(pos2(x, rect.top()), vec2(width, rect.height()));
                 slot.show(ui, slot_rect, state);
-                x += width + LEADING_GAP;
+                x += width + size::ROW_LEADING_GAP;
             }
             let reserve_right = self
                 .trailing
                 .as_ref()
-                .map_or(0.0, |slot| slot.width(ui) + TRAILING_GAP);
+                .map_or(0.0, |slot| slot.width(ui) + size::ROW_TRAILING_GAP);
             let content = RowContent {
                 icon: self.icon,
                 icon_tone: self.icon_tone,
@@ -366,10 +371,3 @@ impl<'a> ListRow<'a> {
         RowResponse { response, toggled }
     }
 }
-
-/// Opacity of a row tint over the island.
-const TINT: f32 = 0.22;
-/// Space between a leading slot and the icon.
-const LEADING_GAP: f32 = 4.0;
-/// Space kept between the label and the trailing slot.
-const TRAILING_GAP: f32 = 12.0;

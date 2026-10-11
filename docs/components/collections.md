@@ -71,6 +71,19 @@ fn grid(ui: &mut egui::Ui, grid: &mut Grid) {
 }
 ```
 
+### Typed values
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/table_value_kinds.dark.png">
+  <img alt="A table with one row per value kind, each value in its editor syntax color" src="img/table_value_kinds.light.png" width="460">
+</picture>
+
+`Cell::value_kind(ValueKind)` colors a cell like the code editor colors the same kind of value
+(`String`, `Number`, `Boolean`, `Null`, `Date`, `Id`, `Binary`, `Key`, `Punctuation`; see
+[theming](../theming.md)): for document and JSON views, in `Table` and `TreeTable`. Like
+`.tone(Tone)` the color stays when the row is selected, and the last of the two calls wins.
+Use a tone for meaning (a 500 in red) and a kind for the type of data.
+
 ## The model
 
 All three work the same way:
@@ -173,7 +186,7 @@ fn results(
 | `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.secondary(str)` |
 | `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.reorderable(bool)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
-| `Cell::new(text)` | `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
+| `Cell::new(text)` | `.value_kind(ValueKind)`, `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
 | `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited`, `column_order` |
 
 ## Behavior

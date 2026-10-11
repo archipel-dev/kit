@@ -56,7 +56,7 @@ For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 - `.strong(true)` draws the label semibold: group titles, the running configuration.
 - `.tint(Tone)` tints the background by meaning (`Tone::Warning` for a search hit,
   `Tone::Success` for a running configuration). It is a tone like everywhere in the kit, never
-  a color. Selection and hover draw over it.
+  a color. The tint stays visible on a selected or hovered row.
 - `.icon_painter(|painter, rect, color| …)` paints the 16×16 icon yourself, for an icon with a
   badge. `color` is the icon tone in the row's state, so it dims when the row is disabled.
 - A label wider than the room (the row, minus the trailing slot) ends with `…`, and the

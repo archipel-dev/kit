@@ -39,13 +39,37 @@ pub mod size {
     pub const DIALOG_PADDING: f32 = 14.0;
     /// Gap between islands (the frame shows between them).
     pub const ISLAND_GAP: f32 = 4.0;
+    /// Line height of code views and editors.
+    pub const CODE_LINE_HEIGHT: f32 = 20.0;
+    /// Padding inside code views and editors, and between gutter and text.
+    pub const CODE_PADDING: f32 = 8.0;
+    /// Space between a row's leading slot and its icon.
+    pub const ROW_LEADING_GAP: f32 = 4.0;
+    /// Space kept between a row's label and its trailing slot.
+    pub const ROW_TRAILING_GAP: f32 = 12.0;
+    /// Least width worth showing of a row's elided secondary text.
+    pub const ROW_MIN_SECONDARY: f32 = 32.0;
     /// Width of keyboard focus rings.
     pub const FOCUS_RING: f32 = 2.0;
+    /// Thickness of a split pane's divider: the gap between its panes, like an island gap.
+    pub const SPLIT_DIVIDER: f32 = ISLAND_GAP;
+    /// Extra pointer reach on each side of a split pane's divider, so it is easy to grab.
+    pub const SPLIT_GRAB: f32 = 2.0;
+    /// Distance an arrow key moves a split pane's divider.
+    pub const SPLIT_KEY_STEP: f32 = 16.0;
+    /// Default minimum size of each side of a split pane.
+    pub const SPLIT_MIN_PANE: f32 = 120.0;
 
     /// Distance from a row's left edge to the first column at `depth`.
     pub fn indent(depth: usize) -> f32 {
         CONTENT_INSET + depth as f32 * TREE_INDENT
     }
+}
+
+/// Opacities, from 0 to 1.
+pub mod opacity {
+    /// Opacity of a row's [`tint`](crate::components::ListRow::tint) over the island.
+    pub const ROW_TINT: f32 = 0.22;
 }
 
 /// Corner radii, in points.

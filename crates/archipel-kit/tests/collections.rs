@@ -7,7 +7,7 @@ use archipel_kit::components::{
 };
 use archipel_kit::icons::Language;
 use archipel_kit::testing::{self, NodeExt, Queryable};
-use archipel_kit::{Glyph, Theme, Tone};
+use archipel_kit::{Glyph, Theme, Tone, ValueKind};
 use egui::Key;
 
 fn label(i: usize) -> String {
@@ -382,15 +382,15 @@ fn document_cell(row: usize, col: usize, address_open: bool, name: &str, city: &
         ["name", "age", "address", "active"].as_slice()
     };
     match (keys[row], col) {
-        ("name", 1) => Cell::new(name).editable(true),
+        ("name", 1) => Cell::new(name).value_kind(ValueKind::String).editable(true),
         ("name", _) => Cell::new("String").muted(),
-        ("age", 1) => Cell::new("36").editable(true),
+        ("age", 1) => Cell::new("36").value_kind(ValueKind::Number).editable(true),
         ("age", _) => Cell::new("Int32").muted(),
-        ("address", 1) => Cell::new("{ 2 fields }").muted(),
+        ("address", 1) => Cell::new("{ 2 fields }").value_kind(ValueKind::Punctuation),
         ("address", _) => Cell::new("Object").muted(),
-        ("city", 1) => Cell::new(city).editable(true),
-        ("zip", 1) => Cell::new("12345"),
-        ("active", 1) => Cell::new("true").tone(Tone::Success),
+        ("city", 1) => Cell::new(city).value_kind(ValueKind::String).editable(true),
+        ("zip", 1) => Cell::new("12345").value_kind(ValueKind::Number),
+        ("active", 1) => Cell::new("true").value_kind(ValueKind::Boolean),
         ("active", _) => Cell::new("Boolean").muted(),
         _ => Cell::new("String").muted(),
     }
@@ -1027,6 +1027,44 @@ fn table_editing_snapshot() {
         ));
     }
     results.unwrap();
+}
+
+// ---- Cell::value_kind ----
+
+/// One row per value kind, the third (a string) selected: the kind colors stay when a row is
+/// selected, like tones do, and `.tone` still works next to `.value_kind`.
+#[test]
+fn table_value_kinds_snapshot() {
+    testing::snapshot_themes("table_value_kinds", common::IMG, |ui| {
+        ui.set_width(380.0);
+        let mut columns = vec![
+            Column::new("Kind", 90.0),
+            Column::new("Value", 200.0).mono(),
+            Column::new("Tone", 60.0),
+        ];
+        let mut selected = Some(0);
+        let samples = [
+            ("String", "\"Ada\"", ValueKind::String),
+            ("Number", "36", ValueKind::Number),
+            ("Boolean", "true", ValueKind::Boolean),
+            ("Null", "null", ValueKind::Null),
+            ("Date", "2026-10-11T09:30:00Z", ValueKind::Date),
+            ("ObjectId", "64f1a2b3c4d5e6f7a8b9c0d1", ValueKind::Id),
+            ("Binary", "BinData(0, 3q2+7w==)", ValueKind::Binary),
+            ("Key", "address", ValueKind::Key),
+            ("Punctuation", "{ 2 fields }", ValueKind::Punctuation),
+        ];
+        let _ = Table::new("kinds", &mut columns, samples.len(), &mut selected)
+            .height(24.0 * 9.0)
+            .show(ui, |row, col| match col {
+                0 => Cell::new(samples[row].0),
+                1 => Cell::new(samples[row].1).value_kind(samples[row].2),
+                // The last of tone and kind wins.
+                _ => Cell::new("tone")
+                    .value_kind(ValueKind::Number)
+                    .tone(Tone::Error),
+            });
+    });
 }
 
 #[test]

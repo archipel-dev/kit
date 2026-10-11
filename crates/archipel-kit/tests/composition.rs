@@ -358,3 +358,31 @@ fn rows_with_leading_slot_pass_conformance_and_the_audit() {
     })
     .run();
 }
+
+#[test]
+fn rows_with_a_leading_checkbox_and_a_drag_source_conform() {
+    testing::conformance("theme.rs", |ui, enabled| {
+        let mut checked = true;
+        ListRow::new("theme.rs")
+            .leading(Slot::ui_width(22.0, |ui| {
+                ui.add(
+                    archipel_kit::components::Checkbox::new(&mut checked, "Include theme.rs")
+                        .label_visible(false),
+                );
+            }))
+            .enabled(enabled)
+            .show(ui)
+            .response
+    })
+    .run();
+    testing::conformance("src", |ui, enabled| {
+        ListRow::new("src")
+            .icon(Glyph::Folder)
+            .expanded(Some(true))
+            .with(DragSource("src".to_string()))
+            .enabled(enabled)
+            .show(ui)
+            .response
+    })
+    .run();
+}
