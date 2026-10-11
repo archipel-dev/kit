@@ -103,6 +103,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Focus | The 1 pt border becomes 2 pt in `#3871E1` (both themes), one of them outside; filled buttons get an outer 2 pt ring with a 1 pt gap | `parts::focus_ring`, `Colors::focus_ring` |
 | Checkbox / radio | 16 pt, radius 3; unchecked `#2B2D30` / white with `#5A5D63` / `#A8ADBD` border; checked `#3574F0`; no hover change; focus: 2 pt border in `#3574F0` | `Colors::control`, `control_selected`, `control_border` |
 | Disabled borders | `#33353B` / light `#DDDFE4` | `Colors::border_disabled` |
+| Combo box list | Below the field, at least as wide, current value highlighted, groups separated by lines, chevron stays down | `Dropdown::separators` |
 | Fields and combo boxes | 28 pt, `#40434A` / `#D1D3D9` border; combo fill `#26282C` / white | `TextField`, `Dropdown` |
 
 ### Tooltips and status bar

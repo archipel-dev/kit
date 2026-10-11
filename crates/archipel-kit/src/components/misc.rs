@@ -72,6 +72,7 @@ pub struct Dropdown<'a, T: PartialEq + Clone + ToString> {
     enabled: bool,
     label: Option<String>,
     leading: Option<OptionLeading<'a, T>>,
+    separators: Vec<usize>,
 }
 
 type OptionLeading<'a, T> = Box<dyn Fn(&T) -> Slot<'a> + 'a>;
@@ -91,7 +92,15 @@ impl<'a, T: PartialEq + Clone + ToString> Dropdown<'a, T> {
             enabled: true,
             label: None,
             leading: None,
+            separators: Vec::new(),
         }
+    }
+
+    /// Lines in the list before the options at these indices, grouping them like Android
+    /// Studio's theme picker (Islands themes, classic themes, "Get More Themes…").
+    pub fn separators(mut self, before: impl IntoIterator<Item = usize>) -> Self {
+        self.separators = before.into_iter().collect();
+        self
     }
 
     /// Accessible name, e.g. "HTTP method" (default: the selected value). Screen readers
@@ -222,13 +231,10 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                 .selected_text(selected_text)
                 .width(self.width)
                 .height(320.0)
-                .icon(|ui, rect, _visuals, open| {
+                .icon(|ui, rect, _visuals, _open| {
                     let colors = Theme::colors(ui.ctx());
-                    let icon = if open {
-                        Glyph::ChevronUp
-                    } else {
-                        Glyph::ChevronDown
-                    };
+                    // The chevron keeps pointing down while open, as in Android Studio.
+                    let icon = Glyph::ChevronDown;
                     let color = if ui.is_enabled() {
                         colors.combo_arrow
                     } else {
@@ -245,6 +251,9 @@ impl<T: PartialEq + Clone + ToString> Widget for Dropdown<'_, T> {
                     ui.set_min_width(self.width);
                     ui.spacing_mut().item_spacing.y = 0.0;
                     for (index, option) in self.options.iter().enumerate() {
+                        if index > 0 && self.separators.contains(&index) {
+                            ui.add(super::MenuSeparator);
+                        }
                         let selected = option == self.selected;
                         // Rows like the rest of the kit: a rounded pill for hover and
                         // selection, inset from the popup edge.

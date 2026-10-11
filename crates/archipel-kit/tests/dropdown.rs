@@ -66,3 +66,26 @@ fn escape_in_a_dropdown_does_not_close_the_dialog() {
     harness.run_steps(3);
     assert_eq!(harness.state().1, Some(DialogAction::Dismissed));
 }
+
+#[test]
+fn separators_group_options_without_shifting_picks() {
+    let mut harness = testing::harness_state(Theme::dark(), "Islands Dark", |ui, theme| {
+        ui.add(
+            Dropdown::new(
+                "theme",
+                theme,
+                ["Islands Dark", "Islands Light", "Darcula", "More…"],
+            )
+            .separators([2, 3])
+            .width(180.0),
+        );
+    });
+    // Make room for the popup below the button.
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 260.0));
+    harness.run();
+    harness.get_by_label("Islands Dark").click();
+    harness.run();
+    harness.get_by_label("Darcula").click();
+    harness.run();
+    assert_eq!(*harness.state(), "Darcula");
+}

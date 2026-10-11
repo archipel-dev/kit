@@ -82,3 +82,9 @@ assert_eq!(*harness.state(), "PUT");
 
 Source: [`components/misc.rs`](../../crates/archipel-kit/src/components/misc.rs) ·
 Tests: [`tests/menus.rs`](../../crates/archipel-kit/tests/menus.rs)
+
+## Groups
+
+`.separators([4, 8])` draws lines before the options at those indices, grouping them like
+Android Studio's theme picker. As there, the chevron keeps pointing down while the list is
+open, and the list has no icon column unless options have a `leading` slot.
