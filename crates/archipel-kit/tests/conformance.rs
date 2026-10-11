@@ -139,6 +139,52 @@ fn tree_table_conforms() {
     .run();
 }
 
+#[test]
+fn reorderable_editable_table_conforms_and_passes_the_audit() {
+    let mut columns = vec![
+        Column::new("Name", 120.0),
+        Column::new("Size", 80.0).right(),
+    ];
+    let mut selected = None;
+    testing::conformance("Files", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            Table::new("files", &mut columns, 5, &mut selected)
+                .name("Files")
+                .reorderable(true)
+                .height(96.0)
+                .show(ui, |r, c| Cell::new(format!("{r}:{c}")).editable(c == 0))
+                .response
+        })
+        .inner
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+
+    let mut columns = vec![
+        Column::new("Name", 120.0),
+        Column::new("Size", 80.0).right(),
+    ];
+    let mut selected = Some(0);
+    let mut harness = testing::harness(Theme::dark(), |ui| {
+        let _ = Table::new("files", &mut columns, 5, &mut selected)
+            .name("Files")
+            .reorderable(true)
+            .height(96.0)
+            .show(ui, |r, c| Cell::new(format!("{r}:{c}")).editable(c == 0));
+    });
+    harness.run();
+    testing::audit(&mut harness).assert_clean();
+    harness.get_by_label("Files").focus();
+    harness.key_press(egui::Key::F2);
+    harness.run();
+    assert!(harness.query_by_label("Edit Name").is_some());
+    let audit = testing::audit(&mut harness);
+    for problem in [Problem::MissingName, Problem::SmallTarget, Problem::Overlap] {
+        assert!(audit.of(problem).is_empty(), "{problem:?}: {audit:?}");
+    }
+}
+
 /// The audit passes at rest, and with the editor open the field is named, big enough and
 /// clear of other targets.
 #[test]
