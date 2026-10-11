@@ -7,11 +7,12 @@
 use archipel_kit::behaviour::ContextMenu;
 use archipel_kit::components::code::{Json, TemplateHighlighter, TemplateToken};
 use archipel_kit::components::{
-    Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
-    Dropdown, EmptyState, IconButton, Kbd, KeyValueEntry, KeyValueTable, Link, ListRow, MenuItem,
-    MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
-    Separator, Severity, Side, SortOrder, Spinner, SplitPane, StatusBarItem, Tab, TabBar, Table,
-    Tag, TextField, Toast, Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
+    Avatar, Banner, Bucket, Button, Cell, ChartColor, Checkbox, CodeEditor, CodeView, Column,
+    Counter, Dialog, Dropdown, EmptyState, Histogram, IconButton, Kbd, KeyValueEntry,
+    KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio,
+    SectionHeader, SegmentedControl, Separator, Severity, Side, SortOrder, Sparkline, Spinner,
+    SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip,
+    TooltipExt, TreeRow, TreeTable,
 };
 use archipel_kit::egui::{Key, Modifiers};
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
@@ -47,6 +48,7 @@ enum Page {
     Lists,
     Feedback,
     Data,
+    Charts,
     Layout,
     Overlays,
     Code,
@@ -54,7 +56,7 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [(Page, &'static str, Glyph); 11] = [
+    const ALL: [(Page, &'static str, Glyph); 12] = [
         (Page::Buttons, "Buttons", Glyph::Run),
         (Page::Inputs, "Text fields", Glyph::Search),
         (Page::Choices, "Choices", Glyph::Success),
@@ -62,6 +64,7 @@ impl Page {
         (Page::Lists, "Lists & trees", Glyph::Project),
         (Page::Feedback, "Feedback", Glyph::Warning),
         (Page::Data, "Badges & data", Glyph::Package),
+        (Page::Charts, "Charts", Glyph::Structure),
         (Page::Layout, "Panels & menus", Glyph::Layers),
         (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
         (Page::Code, "Code", Glyph::Code),
@@ -110,6 +113,8 @@ struct Gallery {
     method: &'static str,
     banners: [bool; 4],
     progress: f32,
+    bucket: Option<usize>,
+    city: Option<usize>,
     icon_filter: String,
     dialog: Option<GalleryDialog>,
     branch: String,
@@ -303,6 +308,8 @@ impl Default for Gallery {
             method: "GET",
             banners: [true; 4],
             progress: 0.4,
+            bucket: None,
+            city: Some(0),
             icon_filter: String::new(),
             dialog: None,
             branch: "feature/islands".into(),
@@ -433,6 +440,77 @@ impl Gallery {
                         });
                 });
             });
+    }
+
+    fn charts(&mut self, ui: &mut egui::Ui) {
+        let price = [
+            Bucket::range(0.0, 20.0, 31),
+            Bucket::range(20.0, 40.0, 148),
+            Bucket::range(40.0, 60.0, 96),
+            Bucket::range(60.0, 80.0, 44),
+            Bucket::range(80.0, 100.0, 12),
+            Bucket::range(100.0, 980.0, 3),
+        ];
+        let cities = [
+            Bucket::new("Berlin", 482),
+            Bucket::new("Hamburg", 301),
+            Bucket::new("Munich", 255),
+            Bucket::new("Köln", 120),
+            Bucket::new("Leipzig", 40),
+        ];
+        let latency = [
+            12.0, 14.5, 11.0, 13.0, 30.0, 18.0, 16.5, 15.0, 14.0, 17.0, 12.5, 13.5,
+        ];
+        ui.add(SectionHeader::new("Histogram: value distribution"));
+        Histogram::new("price", &price).show(ui);
+        ui.add(SectionHeader::new("Selectable, on the sequential ramp"));
+        let out = Histogram::new("price", &price)
+            .selectable(true)
+            .ramp(true)
+            .selected(self.bucket)
+            .show(ui);
+        if out.selected.is_some() {
+            self.bucket = out.selected;
+        }
+        if let Some(index) = out.clicked {
+            self.last_action = format!("Bucket {} activated", price[index].label());
+        }
+        ui.add(SectionHeader::new("Top values (horizontal)"));
+        let out = Histogram::new("city", &cities)
+            .horizontal(true)
+            .selectable(true)
+            .selected(self.city)
+            .show(ui);
+        if out.selected.is_some() {
+            self.city = out.selected;
+        }
+        ui.add(SectionHeader::new("Disabled and empty"));
+        Histogram::new("price", &price)
+            .height(56.0)
+            .enabled(false)
+            .show(ui);
+        Histogram::new("price", &[]).height(40.0).show(ui);
+        ui.add(SectionHeader::new("Sparklines"));
+        ui.horizontal(|ui| {
+            ui.label("p95 latency");
+            ui.add(Sparkline::new("p95 latency", &latency).tooltip(true));
+            ui.add(
+                Sparkline::new("p95 latency", &latency)
+                    .last_marker(true)
+                    .min_max_band(true)
+                    .tooltip(true),
+            );
+            ui.add(
+                Sparkline::new("errors", &latency)
+                    .color(ChartColor::Tone(Tone::Error))
+                    .last_marker(true),
+            );
+            ui.add(Sparkline::new("one value", &[4.0]).last_marker(true));
+            ui.add(Sparkline::new("no data", &[]));
+        });
+        if !self.last_action.is_empty() {
+            ui.label(&self.last_action);
+        }
     }
 
     fn show_dialog(&mut self, ctx: &egui::Context) {
@@ -895,6 +973,7 @@ impl Gallery {
                     .mono_row("Content-Type", "application/json")
                     .show(ui);
             }
+            Page::Charts => self.charts(ui),
             Page::Layout => {
                 ui.add(SectionHeader::new("Menu"));
                 egui::Frame::popup(ui.style()).show(ui, |ui| {

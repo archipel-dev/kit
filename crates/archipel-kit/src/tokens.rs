@@ -78,11 +78,33 @@ pub mod size {
     pub const SPLIT_COLLAPSE: f32 = 40.0;
     /// Default minimum size of each side of a split pane.
     pub const SPLIT_MIN_PANE: f32 = 120.0;
+    /// Default height of a vertical histogram.
+    pub const CHART_HEIGHT: f32 = 120.0;
+    /// Height of a sparkline: it sits inline with text.
+    pub const SPARKLINE_HEIGHT: f32 = 20.0;
+    /// Default width of a sparkline.
+    pub const SPARKLINE_WIDTH: f32 = 96.0;
 
     /// Distance from a row's left edge to the first column at `depth`.
     pub fn indent(depth: usize) -> f32 {
         CONTENT_INSET + depth as f32 * TREE_INDENT
     }
+}
+
+/// Charts (histograms, sparklines), in points.
+pub mod chart {
+    /// Thickness of a horizontal histogram bar.
+    pub const BAR_HEIGHT: f32 = 12.0;
+    /// Inset of a sparkline's plot from its edges, leaving room for markers.
+    pub const SPARKLINE_PAD: f32 = 3.0;
+    /// Radius of sparkline markers (last value, extremes, hover).
+    pub const DOT_RADIUS: f32 = 2.5;
+    /// Extra radius of the island-colored ring around a marker.
+    pub const DOT_RING: f32 = 1.0;
+    /// Stroke width of a sparkline.
+    pub const LINE_WIDTH: f32 = 1.5;
+    /// Stroke width of hairlines: axis baselines.
+    pub const HAIRLINE: f32 = 1.0;
 }
 
 /// Opacities, from 0 to 1.
@@ -93,6 +115,8 @@ pub mod opacity {
     pub const DISABLED_CODE: f32 = 0.55;
     /// Multiplier of a color used as a tinted fill behind text of the same color.
     pub const TINT_FILL: f32 = 0.18;
+    /// Opacity of a sparkline's min/max band.
+    pub const CHART_BAND: f32 = 0.12;
 }
 
 /// Corner radii, in points.
