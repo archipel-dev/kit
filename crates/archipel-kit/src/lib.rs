@@ -41,7 +41,7 @@ pub mod testing;
 
 pub use egui;
 pub use icons::{Glyph, Icon};
-pub use parts::Tone;
+pub use parts::{Tone, ValueKind};
 pub use style::install;
 pub use theme::Theme;
 
