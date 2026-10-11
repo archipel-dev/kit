@@ -31,12 +31,31 @@ use crate::theme::Theme;
 use crate::tokens::radius;
 use egui::{CornerRadius, CursorIcon, Response, Sense, Stroke, StrokeKind, Ui, Widget};
 use std::any::Any;
+use std::cell::Cell;
 
 /// Interaction added to a widget after it has drawn itself: see the [module docs](self).
 pub trait Behaviour {
     /// Adds the behaviour to `response`, the widget's response this frame, and returns it
     /// (possibly with more sense, e.g. dragging).
     fn attach(self, ui: &mut Ui, response: Response) -> Response;
+
+    /// What the widget must sense for this behaviour to work (default: nothing extra).
+    ///
+    /// A component that takes behaviours asks for it ([`Behaviours::sense`]) *before*
+    /// allocating its response and adds it to its own sense, so the widget is registered
+    /// once, in its place in the focus order. A behaviour that needs more sense than the
+    /// widget was allocated with falls back to [`Response::interact`], which registers the
+    /// widget a second time and moves it after widgets drawn in between (the audit then
+    /// reports a broken Tab order on rows with a chevron).
+    fn sense(&self) -> Sense {
+        Sense::HOVER
+    }
+
+    /// Whether this behaviour shows a tooltip, so a component with a tooltip of its own
+    /// (an elided label) leaves it to the caller's.
+    fn is_tooltip(&self) -> bool {
+        false
+    }
 }
 
 impl<F: FnOnce(&mut Ui, Response) -> Response> Behaviour for F {
@@ -49,11 +68,23 @@ impl<F: FnOnce(&mut Ui, Response) -> Response> Behaviour for F {
 pub trait BoxedBehaviour {
     /// [`Behaviour::attach`] on a boxed behaviour.
     fn attach_boxed(self: Box<Self>, ui: &mut Ui, response: Response) -> Response;
+    /// [`Behaviour::sense`] on a boxed behaviour.
+    fn sense(&self) -> Sense;
+    /// [`Behaviour::is_tooltip`] on a boxed behaviour.
+    fn is_tooltip(&self) -> bool;
 }
 
 impl<B: Behaviour> BoxedBehaviour for B {
     fn attach_boxed(self: Box<Self>, ui: &mut Ui, response: Response) -> Response {
         (*self).attach(ui, response)
+    }
+
+    fn sense(&self) -> Sense {
+        Behaviour::sense(self)
+    }
+
+    fn is_tooltip(&self) -> bool {
+        Behaviour::is_tooltip(self)
     }
 }
 
@@ -70,6 +101,17 @@ impl<'a> Behaviours<'a> {
     /// Whether there are none.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// What the behaviours need the widget to sense: the union of [`Behaviour::sense`]. Add
+    /// it to the component's own sense before allocating the response.
+    pub fn sense(&self) -> Sense {
+        self.0.iter().fold(Sense::HOVER, |all, b| all | b.sense())
+    }
+
+    /// Whether one of the behaviours is a tooltip.
+    pub fn has_tooltip(&self) -> bool {
+        self.0.iter().any(|b| b.is_tooltip())
     }
 
     /// Attaches every behaviour to `response`, in the order they were added.
@@ -112,6 +154,10 @@ impl Behaviour for Tooltip {
         self.show_for(&response);
         response
     }
+
+    fn is_tooltip(&self) -> bool {
+        true
+    }
 }
 
 /// A context menu on secondary click (right click, or Ctrl+click on macOS), on the popup
@@ -153,16 +199,28 @@ impl Behaviour for Cursor {
 /// Makes the widget draggable, carrying `payload`. The cursor is the open hand on hover
 /// and the closed hand while dragging; pair it with a [`DropTarget`] for the same payload
 /// type. A plain click still clicks.
+///
+/// Components with a `with` method (rows, tabs) allocate with [`Behaviour::sense`] up front,
+/// so a draggable row keeps its place in the Tab order.
 #[derive(Debug, Clone)]
 pub struct DragSource<P>(pub P);
 
 impl<P: Any + Send + Sync> Behaviour for DragSource<P> {
+    fn sense(&self) -> Sense {
+        Sense::DRAG
+    }
+
     fn attach(self, _ui: &mut Ui, response: Response) -> Response {
         if !response.enabled() {
             return response;
         }
-        // The same widget, now also sensing drags: a click without movement still clicks.
-        let response = response.interact(Sense::drag());
+        // Components that take behaviours allocate with `sense()` up front. A plain widget
+        // wrapped with `.with(...)` did not: register it again as a last resort.
+        let response = if response.sense.senses_drag() {
+            response
+        } else {
+            response.interact(Sense::drag())
+        };
         if response.dragged() {
             response.dnd_set_drag_payload(self.0);
             response.ctx.set_cursor_icon(CursorIcon::Grabbing);
@@ -177,13 +235,28 @@ impl<P: Any + Send + Sync> Behaviour for DragSource<P> {
 /// a payload of that type hovers it, and stores the payload in `dropped` when it is
 /// released over it.
 pub struct DropTarget<'a, P> {
-    dropped: &'a mut Option<P>,
+    dropped: Dropped<'a, P>,
+}
+
+enum Dropped<'a, P> {
+    Mut(&'a mut Option<P>),
+    Shared(&'a Cell<Option<P>>),
 }
 
 impl<'a, P> DropTarget<'a, P> {
     /// A drop target writing a released payload to `dropped`.
     pub fn new(dropped: &'a mut Option<P>) -> Self {
-        Self { dropped }
+        Self {
+            dropped: Dropped::Mut(dropped),
+        }
+    }
+
+    /// A drop target writing to a [`Cell`], for many targets sharing one slot: the rows of a
+    /// tree, drawn by a closure that cannot hand out `&mut` to each of them.
+    pub fn shared(dropped: &'a Cell<Option<P>>) -> Self {
+        Self {
+            dropped: Dropped::Shared(dropped),
+        }
     }
 }
 
@@ -199,7 +272,11 @@ impl<P: Any + Send + Sync + Clone> Behaviour for DropTarget<'_, P> {
             );
         }
         if let Some(payload) = response.dnd_release_payload::<P>() {
-            *self.dropped = Some((*payload).clone());
+            let payload = Some((*payload).clone());
+            match self.dropped {
+                Dropped::Mut(dropped) => *dropped = payload,
+                Dropped::Shared(dropped) => dropped.set(payload),
+            }
         }
         response
     }

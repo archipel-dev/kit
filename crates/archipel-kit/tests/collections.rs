@@ -346,3 +346,117 @@ fn table_columns_resize_by_dragging_the_header_edge() {
     let width = harness.state().columns[0].width;
     assert!((width - 100.0).abs() < 1.0, "width {width}");
 }
+
+#[test]
+fn tree_rows_take_behaviours_and_pass_the_audit() {
+    use archipel_kit::behaviour::{ContextMenu, DragSource, DropTarget};
+    use archipel_kit::components::MenuItem;
+
+    #[derive(Default)]
+    struct State {
+        selected: Option<usize>,
+        renamed: std::cell::RefCell<Vec<usize>>,
+        dropped: Option<usize>,
+    }
+    let mut harness = testing::harness_state(Theme::dark(), State::default(), |ui, state| {
+        let rows = project_rows(true, false);
+        let State {
+            selected,
+            renamed,
+            dropped,
+        } = state;
+        let renamed = &*renamed;
+        let drop_slot = std::cell::Cell::new(None);
+        Tree::new("project", &rows, selected)
+            .height(200.0)
+            .show_with(ui, |index, row| {
+                let row = row
+                    .with(DragSource(index))
+                    .with(ContextMenu::new(move |ui| {
+                        if ui.add(MenuItem::new("Rename…")).clicked() {
+                            renamed.borrow_mut().push(index);
+                        }
+                    }));
+                if rows[index].has_children() {
+                    row.with(DropTarget::shared(&drop_slot))
+                } else {
+                    row
+                }
+            });
+        if let Some(target) = drop_slot.take() {
+            *dropped = Some(target);
+        }
+    });
+    harness.run();
+    // Draggable folders keep the Tab order the audit checks.
+    testing::audit(&mut harness).assert_clean();
+
+    harness.get_by_label("lib.rs").click_secondary();
+    harness.run();
+    harness.get_by_label("Rename…").click();
+    harness.run();
+    assert_eq!(*harness.state().renamed.borrow(), [2]);
+
+    // Dragging a file onto a folder drops it there.
+    let from = harness.get_by_label("Cargo.toml workspace").rect().center();
+    let to = harness.get_by_label("src").rect().center();
+    harness.hover_at(from);
+    harness.run();
+    harness.drag_at(from);
+    harness.run();
+    for step in 1..=8 {
+        harness.hover_at(from + (to - from) * (step as f32 / 8.0));
+        harness.run();
+    }
+    harness.drop_at(to);
+    harness.run();
+    assert_eq!(
+        harness.state().dropped,
+        Some(5),
+        "the dragged row's payload"
+    );
+}
+
+/// A flat list of tree nodes drawn from `ListRow`s: group 0 has two children.
+fn node_harness() -> testing::Harness<'static, (Option<usize>, bool)> {
+    let mut harness =
+        testing::harness_state(Theme::dark(), (None, true), |ui, (selected, open)| {
+            let rows = if *open { 3 } else { 1 };
+            let out = VirtualList::new("nodes", rows, selected)
+                .height(120.0)
+                .show(ui, |i| match i {
+                    0 => ListRow::new("Group").expanded(Some(*open)),
+                    n => ListRow::new(format!("Child {n}")).depth(1),
+                });
+            if out.toggled == Some(0) {
+                *open = !*open;
+            }
+        });
+    harness.run();
+    harness
+}
+
+#[test]
+fn list_arrows_collapse_and_expand_nodes() {
+    let mut harness = node_harness();
+    harness.get_by_label("Group").click();
+    harness.run();
+    harness.key_press(Key::ArrowLeft);
+    harness.run();
+    assert!(!harness.state().1, "← collapses the expanded node");
+    assert!(harness.query_by_label("Child 1").is_none());
+    harness.key_press(Key::ArrowLeft);
+    harness.run();
+    assert!(!harness.state().1, "← on a collapsed node does nothing");
+    harness.key_press(Key::ArrowRight);
+    harness.run();
+    assert!(harness.state().1, "→ expands the collapsed node");
+    // Plain rows ignore the arrows.
+    harness.get_by_label("Child 1").click();
+    harness.run();
+    harness.key_press(Key::ArrowRight);
+    harness.key_press(Key::ArrowLeft);
+    harness.run();
+    assert!(harness.state().1);
+    assert_eq!(harness.state().0, Some(1));
+}

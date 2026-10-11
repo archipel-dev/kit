@@ -205,7 +205,9 @@ fn collection(
 ///
 /// <kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Home</kbd>/<kbd>End</kbd> and
 /// <kbd>PgUp</kbd>/<kbd>PgDn</kbd> move the selection; <kbd>Enter</kbd> or a double-click
-/// activates a row.
+/// activates a row. Rows with an [`expanded`](ListRow::expanded) state (a tree drawn from
+/// `ListRow`s) report <kbd>→</kbd> on a collapsed and <kbd>←</kbd> on an expanded selected
+/// row in [`CollectionResponse::toggled`], like [`Tree`] does.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -261,7 +263,9 @@ impl<'a> VirtualList<'a> {
         ui: &mut Ui,
         mut row: impl FnMut(usize) -> ListRow<'r>,
     ) -> CollectionResponse {
-        let (response, _) = collection(
+        // Whether the selected row is an expanded or collapsed node, from the row itself.
+        let mut selected_node = None;
+        let (mut response, horizontal) = collection(
             ui,
             Spec {
                 id: self.id,
@@ -272,7 +276,11 @@ impl<'a> VirtualList<'a> {
             },
             self.selected,
             |ui, index, selected, focused| {
-                let shown = row(index)
+                let row = row(index);
+                if selected {
+                    selected_node = Some((index, row.is_expanded()));
+                }
+                let shown = row
                     .selected(selected)
                     .inactive(!focused)
                     .focusable(false)
@@ -283,6 +291,11 @@ impl<'a> VirtualList<'a> {
                 }
             },
         );
+        if let (Some(key), Some((index, Some(expanded)))) = (horizontal, selected_node)
+            && ((key == Key::ArrowRight && !expanded) || (key == Key::ArrowLeft && expanded))
+        {
+            response.toggled = Some(index);
+        }
         response
     }
 }
@@ -411,6 +424,40 @@ impl<'a> Tree<'a> {
 
     /// Draws the visible rows and reports clicks, keys and toggles.
     pub fn show(self, ui: &mut Ui) -> CollectionResponse {
+        self.show_with(ui, |_, row| row)
+    }
+
+    /// Like [`show`](Self::show), and `decorate(index, row)` may change each visible row
+    /// before it is drawn: add a context menu or drag source with
+    /// [`ListRow::with`], a tint, a trailing slot, a semibold label …
+    ///
+    /// ```
+    /// # egui::__run_test_ui(|ui| {
+    /// use archipel_kit::behaviour::{ContextMenu, DragSource, DropTarget};
+    /// use archipel_kit::components::{MenuItem, Tree, TreeRow};
+    ///
+    /// let rows = vec![TreeRow::new("src", 0).parent(true), TreeRow::new("main.rs", 1)];
+    /// let mut selected = None;
+    /// let mut dropped: Option<usize> = None;
+    /// Tree::new("files", &rows, &mut selected).show_with(ui, |index, row| {
+    ///     let row = row
+    ///         .with(DragSource(index))
+    ///         .with(ContextMenu::new(|ui| {
+    ///             ui.add(MenuItem::new("Rename…"));
+    ///         }));
+    ///     if rows[index].has_children() {
+    ///         row.with(DropTarget::new(&mut dropped))
+    ///     } else {
+    ///         row
+    ///     }
+    /// });
+    /// # });
+    /// ```
+    pub fn show_with<'r>(
+        self,
+        ui: &mut Ui,
+        mut decorate: impl FnMut(usize, ListRow<'r>) -> ListRow<'r>,
+    ) -> CollectionResponse {
         let rows = self.rows;
         let (mut response, horizontal) = collection(
             ui,
@@ -436,7 +483,7 @@ impl<'a> Tree<'a> {
                 if let Some(secondary) = &tree_row.secondary {
                     row = row.secondary(secondary.as_str());
                 }
-                let shown = row.show(ui);
+                let shown = decorate(index, row).show(ui);
                 DrawnRow {
                     response: shown.response,
                     toggled: shown.toggled,

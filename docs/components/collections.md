@@ -115,7 +115,8 @@ fn results(
 | Item | Builders and fields |
 |---|---|
 | `VirtualList::new(id, len, &mut selected)` | `.height(f32)`, `.show(ui, \|index\| ListRow)` |
-| `Tree::new(id, &rows, &mut selected)` | `.height(f32)`, `.show(ui)` |
+| `VirtualList` as a tree | Rows with `.expanded(Some(..))` report `toggled` on <kbd>→</kbd> (collapsed) and <kbd>←</kbd> (expanded). |
+| `Tree::new(id, &rows, &mut selected)` | `.height(f32)`, `.show(ui)`, `.show_with(ui, \|index, row\| row)` |
 | `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.secondary(str)` |
 | `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
 | `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
@@ -127,7 +128,14 @@ fn results(
 - **Trees.** You flatten your tree into the visible rows and keep the expanded state.
   <kbd>→</kbd> expands a collapsed node, or moves to its first child when it is already
   expanded. <kbd>←</kbd> collapses an expanded node, or moves to its parent. The chevron and
-  a double-click on a parent toggle it too. Each of these reports `toggled`.
+  a double-click on a parent toggle it too. Each of these reports `toggled`. A `VirtualList`
+  of `ListRow`s with an expanded state toggles on <kbd>→</kbd>/<kbd>←</kbd> the same way (it
+  has no parent or child to walk to, as it does not know the tree).
+- **Per-row behaviours.** `Tree::show_with` hands each visible row to your closure before it
+  is drawn: add a context menu, a drag source or a drop target with `.with(...)`, or a tint,
+  a trailing slot, a semibold label. The closure may be called every frame for every
+  visible row, so share state between rows with a `Cell` (`DropTarget::shared`) rather than
+  `&mut`.
 - **Tables.** Clicking a header reports `sort_clicked`. You sort the data and pass the order
   back with `.sort`, which draws the arrow. Drag a header edge to resize a column (minimum
   40 points). Right-aligned columns are for numbers. Cells clip at the column edge.

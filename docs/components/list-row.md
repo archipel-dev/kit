@@ -43,6 +43,42 @@ fn project_tree(ui: &mut egui::Ui, tree: &mut Tree, files: &[&str]) {
 
 For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 
+### Leading content, emphasis, tints and long labels
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/list_row_options.dark.png">
+  <img alt="Rows with a semibold group title, tinted search hit, running and failed rows, a checkbox before the icon, a custom-painted icon, and long labels elided with an ellipsis" src="img/list_row_options.light.png" width="340">
+</picture>
+
+- `.leading(Slot)` puts content before the icon, such as a checkbox for a commit row. Give
+  widgets room with `Slot::ui_width`, and a `Checkbox` the visible label off
+  (`.label_visible(false)`), since the row names it.
+- `.strong(true)` draws the label semibold: group titles, the running configuration.
+- `.tint(Tone)` tints the background by meaning (`Tone::Warning` for a search hit,
+  `Tone::Success` for a running configuration). It is a tone like everywhere in the kit, never
+  a color. Selection and hover draw over it.
+- `.icon_painter(|painter, rect, color| …)` paints the 16×16 icon yourself, for an icon with a
+  badge. `color` is the icon tone in the row's state, so it dims when the row is disabled.
+- A label wider than the room (the row, minus the trailing slot) ends with `…`, and the
+  full label is the row's tooltip. The dimmed secondary text shrinks first. Attach your own
+  `Tooltip` and it replaces the automatic one.
+
+```rust
+use archipel_kit::components::{Checkbox, ListRow};
+use archipel_kit::parts::Slot;
+use archipel_kit::{Icon, Tone, egui};
+
+fn commit_row(ui: &mut egui::Ui, path: &str, included: &mut bool) {
+    ListRow::new(path)
+        .icon(Icon::for_file(path))
+        .leading(Slot::ui_width(22.0, |ui| {
+            ui.add(Checkbox::new(included, format!("Include {path}")).label_visible(false));
+        }))
+        .tint(Tone::Warning)
+        .show(ui);
+}
+```
+
 ### Trailing content and row actions
 
 The trailing slot takes a count, a status, an icon or widgets. Actions that would clutter a
@@ -86,6 +122,10 @@ fn module_row(ui: &mut egui::Ui, name: &str, removed: &mut bool) {
 | `.icon(Icon)`, `.icon_tone(Tone)` | Leading icon. |
 | `.secondary(str)` | Dimmed text after the label (path, size, type). |
 | `.label_tone(Tone)` | E.g. `Tone::Modified` for a changed file. |
+| `.strong(bool)` | Semibold label. |
+| `.tint(Tone)` | Background tint by meaning. |
+| `.icon_painter(Fn(&Painter, Rect, Color32))` | Custom-painted icon in the icon column. |
+| `.leading(Slot)` | Content before the icon, after the chevron (a checkbox). |
 | `.depth(usize)` | Tree indent. |
 | `.expanded(Option<bool>)` | `Some` draws a chevron; `None` keeps leaves aligned. |
 | `.selected(bool)`, `.enabled(bool)` | State. |
@@ -97,6 +137,9 @@ fn module_row(ui: &mut egui::Ui, name: &str, removed: &mut bool) {
 
 ## Behavior
 
+- A label that does not fit is elided with `…` and shown in full as the tooltip.
+- A row with a `DragSource` is registered once, with click and drag sense, so a draggable
+  folder keeps its place in the <kbd>Tab</kbd> order (chevron button after the row).
 - `toggled` is set when the chevron is clicked, the row is double-clicked, or
   <kbd>→</kbd> / <kbd>←</kbd> is pressed on a focused collapsed / expanded node.
 

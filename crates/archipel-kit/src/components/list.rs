@@ -1,12 +1,12 @@
 //! List and tree rows.
 
-use super::common;
+use super::{Tooltip, common};
 use crate::behaviour::{Behaviour, Behaviours};
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::{RowContent, Slot, State, Tone};
+use crate::parts::{IconPainter, RowContent, Slot, State, Tone};
 use crate::theme::Theme;
 use crate::tokens::size;
-use egui::{Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
+use egui::{Color32, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
 
 /// What happened to a [`ListRow`] this frame.
 pub struct RowResponse {
@@ -18,7 +18,11 @@ pub struct RowResponse {
     pub toggled: bool,
 }
 
-/// One row of a list or tree: chevron, icon, label, secondary text and a trailing slot.
+/// A custom icon painter: see [`ListRow::icon_painter`].
+type IconPaint<'a> = Box<dyn Fn(&Painter, Rect, Color32) + 'a>;
+
+/// One row of a list or tree: chevron, leading slot, icon, label, secondary text and a
+/// trailing slot.
 /// The whole row is the click target; selection and hover draw a rounded pill.
 ///
 /// Rows are stateless: the caller owns selection and expansion, so the same row works for
@@ -26,7 +30,9 @@ pub struct RowResponse {
 ///
 /// The [`trailing`](Self::trailing) slot takes a count, a status, or actions such as a
 /// remove button ([`trailing_on_hover`](Self::trailing_on_hover) shows them only while the
-/// row is hovered or selected). Tooltips, context menus and drag and drop are added with
+/// row is hovered or selected); the [`leading`](Self::leading) slot sits before the icon (a
+/// checkbox). A label longer than the room is elided with `…` and shown in full as the
+/// tooltip. Tooltips, context menus and drag and drop are added with
 /// [`with`](Self::with).
 ///
 /// ```
@@ -60,6 +66,10 @@ pub struct ListRow<'a> {
     icon: Option<Icon>,
     icon_tone: Option<Tone>,
     label_tone: Tone,
+    strong: bool,
+    tint: Option<Tone>,
+    icon_painter: Option<IconPaint<'a>>,
+    leading: Option<Slot<'a>>,
     depth: usize,
     expanded: Option<bool>,
     flat: bool,
@@ -81,6 +91,10 @@ impl<'a> ListRow<'a> {
             icon: None,
             icon_tone: None,
             label_tone: Tone::Default,
+            strong: false,
+            tint: None,
+            icon_painter: None,
+            leading: None,
             depth: 0,
             expanded: None,
             flat: false,
@@ -138,6 +152,34 @@ impl<'a> ListRow<'a> {
         self
     }
 
+    /// A semibold label: group titles, the running configuration.
+    pub fn strong(mut self, strong: bool) -> Self {
+        self.strong = strong;
+        self
+    }
+
+    /// Tints the row's background by meaning, e.g. [`Tone::Warning`] for a search hit or
+    /// [`Tone::Success`] for a running configuration. Selection and hover draw over it.
+    pub fn tint(mut self, tone: Tone) -> Self {
+        self.tint = Some(tone);
+        self
+    }
+
+    /// Paints the icon yourself, for icons that are not data in the kit (a file icon with a
+    /// badge): `paint(painter, rect, color)` gets the 16×16 icon rect and the color of the
+    /// icon tone in the row's state (dimmed when disabled). Replaces [`icon`](Self::icon).
+    pub fn icon_painter(mut self, paint: impl Fn(&Painter, Rect, Color32) + 'a) -> Self {
+        self.icon_painter = Some(Box::new(paint));
+        self
+    }
+
+    /// Content before the icon, after the chevron: a checkbox. Give widgets room with
+    /// [`Slot::ui_width`].
+    pub fn leading(mut self, slot: Slot<'a>) -> Self {
+        self.leading = Some(slot);
+        self
+    }
+
     /// Tree depth: indents the row by one level per step.
     pub fn depth(mut self, depth: usize) -> Self {
         self.depth = depth;
@@ -170,6 +212,11 @@ impl<'a> ListRow<'a> {
         self
     }
 
+    /// `Some(expanded)` if this row is a tree node.
+    pub(crate) fn is_expanded(&self) -> Option<bool> {
+        self.expanded
+    }
+
     /// Rows inside a list widget are not focusable themselves: the list takes focus and
     /// moves the selection with the arrow keys.
     pub(crate) fn focusable(mut self, focusable: bool) -> Self {
@@ -186,10 +233,12 @@ impl<'a> ListRow<'a> {
     /// Draws the row across the available width.
     pub fn show(self, ui: &mut Ui) -> RowResponse {
         let colors = Theme::colors(ui.ctx());
+        // Behaviours that need more sense (a drag source) are part of the one registration, so
+        // the row keeps its place in the Tab order.
         let sense = if self.enabled && self.focusable {
-            Sense::click()
+            Sense::click() | self.behaviours.sense()
         } else if self.enabled {
-            Sense::CLICK
+            Sense::CLICK | self.behaviours.sense()
         } else {
             Sense::hover()
         };
@@ -210,6 +259,7 @@ impl<'a> ListRow<'a> {
         });
 
         let mut toggled = false;
+        let mut elided = false;
         let chevron = Rect::from_min_size(
             pos2(
                 rect.left() + size::indent(self.depth) - size::ROW_PILL_INSET,
@@ -248,6 +298,9 @@ impl<'a> ListRow<'a> {
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
             let fill = state.row_fill(&colors);
+            if let Some(tone) = self.tint {
+                common::row_pill(painter, rect, tone.color(&colors).gamma_multiply(TINT));
+            }
             common::row_pill(painter, rect, fill);
             if response.has_focus() && !self.selected {
                 common::focus_ring(
@@ -265,16 +318,30 @@ impl<'a> ListRow<'a> {
                 };
                 icons::paint(painter, chevron, icon, colors.text_secondary);
             }
+            let mut x = chevron.right() + 2.0;
+            if let Some(slot) = self.leading {
+                let width = slot.width(ui);
+                let slot_rect =
+                    Rect::from_min_size(pos2(x, rect.top()), vec2(width, rect.height()));
+                slot.show(ui, slot_rect, state);
+                x += width + LEADING_GAP;
+            }
+            let reserve_right = self
+                .trailing
+                .as_ref()
+                .map_or(0.0, |slot| slot.width(ui) + TRAILING_GAP);
             let content = RowContent {
                 icon: self.icon,
                 icon_tone: self.icon_tone,
-                reserve_icon: false,
+                icon_painter: self.icon_painter.as_deref().map(IconPainter),
                 label: &self.label,
                 label_tone: self.label_tone,
+                strong: self.strong,
                 secondary: self.secondary.as_deref(),
-                trailing: None,
+                reserve_right,
+                ..RowContent::default()
             };
-            content.paint(ui, rect, chevron.right() + 2.0, state);
+            elided = content.paint(ui, rect, x, state);
         }
         if let Some(slot) = self.trailing {
             let reveal = !self.trailing_on_hover
@@ -291,7 +358,18 @@ impl<'a> ListRow<'a> {
                 slot.show(ui, slot_rect, state);
             }
         }
+        // The full label, unless the caller brought a tooltip of their own.
+        if elided && !self.behaviours.has_tooltip() {
+            Tooltip::new(self.label.clone()).show_for(&response);
+        }
         let response = self.behaviours.attach(ui, response);
         RowResponse { response, toggled }
     }
 }
+
+/// Opacity of a row tint over the island.
+const TINT: f32 = 0.22;
+/// Space between a leading slot and the icon.
+const LEADING_GAP: f32 = 4.0;
+/// Space kept between the label and the trailing slot.
+const TRAILING_GAP: f32 = 12.0;
