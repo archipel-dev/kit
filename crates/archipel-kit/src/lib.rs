@@ -85,6 +85,7 @@ mod docs {
         Panel = "components/panel.md";
         Progress = "components/progress.md";
         SegmentedControl = "components/segmented-control.md";
+        StatusBarItem = "components/status-bar-item.md";
         SplitPane = "components/split-pane.md";
         TabBar = "components/tab-bar.md";
         TextField = "components/text-field.md";

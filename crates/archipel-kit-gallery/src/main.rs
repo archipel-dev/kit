@@ -10,11 +10,11 @@ use archipel_kit::components::{
     Avatar, Banner, Bucket, Button, Cell, ChartColor, Checkbox, CodeEditor, CodeView, Column,
     Counter, Dialog, Dropdown, EmptyState, Histogram, IconButton, Kbd, Link, ListRow, MenuItem,
     MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
-    Separator, Severity, SortOrder, Sparkline, Spinner, SplitPane, Tab, TabBar, Table, Tag,
-    TextField, Toast, Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
+    Separator, Severity, SortOrder, Sparkline, Spinner, SplitPane, StatusBarItem, Tab, TabBar,
+    Table, Tag, TextField, Toast, Toggle, Tooltip, TooltipExt, TreeRow, TreeTable,
 };
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
-use archipel_kit::parts::Slot;
+use archipel_kit::parts::{Slot, Surface};
 use archipel_kit::{Glyph, Icon, Theme, Tone, ValueKind, cursor, egui, tokens};
 
 /// Gap between islands, in whole points for `egui::Margin`.
@@ -591,7 +591,11 @@ impl Gallery {
                         .placeholder("my-app")
                         .enabled(enabled),
                 );
-                ui.add(TextField::search(&mut self.query).enabled(enabled));
+                ui.add(
+                    TextField::search(&mut self.query)
+                        .id(egui::Id::new("gallery-search"))
+                        .enabled(enabled),
+                );
                 let error = self
                     .port
                     .parse::<u16>()
@@ -920,6 +924,43 @@ impl Gallery {
                         self.toggles[0] = wrap;
                     }
                     ui.add(MenuItem::new("Run").icon(Glyph::Run).enabled(false));
+                    ui.add(MenuItem::new("New").submenu(|ui| {
+                        ui.add(MenuItem::new("File…").icon(Glyph::File));
+                        ui.add(MenuItem::new("Directory…").icon(Glyph::Folder));
+                    }));
+                });
+                ui.add(SectionHeader::new("Tool window header"));
+                Panel::new("Project")
+                    .actions(|ui| {
+                        ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+                        ui.add(IconButton::new(Glyph::Search, "Find"));
+                    })
+                    .on_hide(|| self.last_action = "Hide Project".into())
+                    .show(ui, |ui| {
+                        ui.add_space(4.0);
+                        ui.label("src/");
+                    });
+                ui.add(SectionHeader::new("Status bar (Surface::Chrome)"));
+                Surface::Chrome.frame(ui.ctx()).show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            StatusBarItem::new("main")
+                                .icon(Glyph::Branch)
+                                .chevron(true)
+                                .enabled(enabled),
+                        );
+                        ui.add(StatusBarItem::new("UTF-8").enabled(enabled));
+                        ui.add(
+                            StatusBarItem::new("2 errors")
+                                .tone(Tone::Error)
+                                .enabled(enabled),
+                        );
+                        ui.add(
+                            StatusBarItem::new("A long item that is cut off")
+                                .max_width(100.0)
+                                .enabled(enabled),
+                        );
+                    });
                 });
                 ui.add(SectionHeader::new("Context menu"));
                 ui.add(Button::secondary("Right-click me"))

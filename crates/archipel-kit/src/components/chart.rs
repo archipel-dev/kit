@@ -549,7 +549,7 @@ impl<'a> Histogram<'a> {
             let y = row.center().y;
             // Truncate long labels to their column.
             let label = if label.size().x > label_width {
-                galley_truncated(ui, bucket.label.as_str(), font.clone(), label_width)
+                common::galley_elided(ui, bucket.label.as_str(), font.clone(), label_width)
             } else {
                 label
             };
@@ -809,19 +809,4 @@ impl Widget for Sparkline<'_> {
         }
         response
     }
-}
-
-/// Lays out `text` on one line in `font`, elided with an ellipsis at `max_width`.
-fn galley_truncated(
-    ui: &Ui,
-    text: &str,
-    font: egui::FontId,
-    max_width: f32,
-) -> std::sync::Arc<egui::Galley> {
-    egui::WidgetText::from(text).into_galley(
-        ui,
-        Some(egui::TextWrapMode::Truncate),
-        max_width,
-        egui::FontSelection::FontId(font),
-    )
 }
