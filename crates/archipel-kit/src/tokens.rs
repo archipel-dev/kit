@@ -3,6 +3,8 @@
 
 /// Spacing and sizes, in points.
 pub mod size {
+    /// Header action fade duration in seconds.
+    pub const ISLAND_ACTION_FADE: f32 = 0.16;
     /// Minimum central work area before docked tool windows are temporarily hidden.
     pub const WORKBENCH_CENTER_MIN: f32 = 200.0;
     /// Left/right inset of panel content.

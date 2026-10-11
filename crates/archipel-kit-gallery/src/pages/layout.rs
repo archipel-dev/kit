@@ -43,6 +43,14 @@ impl State {
         });
         ui.add(SectionHeader::new("Tool window header"));
         Panel::new("Project")
+            .header(180.0, |ui| {
+                ui.label("Project");
+                ui.add(Separator::length(16.0));
+                ui.label("Files");
+            })
+            .padded(true)
+            .header_separator(true)
+            .hover_actions(true)
             .actions(|ui| {
                 ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
                 ui.add(IconButton::new(Glyph::Search, "Find"));

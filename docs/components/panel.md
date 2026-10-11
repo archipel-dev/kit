@@ -77,3 +77,33 @@ the [gallery](../../crates/archipel-kit-gallery/src/main.rs) for a full workbenc
 
 Source: [`components/layout.rs`](../../crates/archipel-kit/src/components/layout.rs) ·
 Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs)
+
+## Composable island headers
+
+`Panel::header(width, content)` replaces the painted title with a bounded left slot.
+`padded(true)` applies the shared content inset; trees can retain edge-to-edge bodies.
+`header_separator(true)` adds an inset hairline below the header. Header actions can
+contain `Separator::length(16.0)` between groups. The line length is in logical points.
+
+`hover_actions(true)` fades actions over 160 ms when the pointer enters/leaves the entire
+island, including its body. Keyboard focus inside the island also reveals them. Space
+stays reserved during the fade; controls retain accessible names and keyboard access.
+Always-visible actions remain the default for compatibility.
+
+```rust
+# egui::__run_test_ui(|ui| {
+use archipel_kit::{Glyph, components::{Panel, IconButton, Separator}};
+Panel::new("Inspector")
+    .header(180.0, |ui| { ui.label("Inspector · JSON"); })
+    .padded(true).header_separator(true).hover_actions(true)
+    .actions(|ui| {
+        ui.add(IconButton::new(Glyph::Refresh, "Reload inspector"));
+        ui.add(Separator::length(16.0));
+        ui.add(IconButton::new(Glyph::Search, "Find in inspector"));
+    })
+    .show(ui, |ui| { ui.label("Properties"); });
+# });
+```
+
+![Composed island dark](img/island_header.dark.png)
+![Composed island light](img/island_header.light.png)

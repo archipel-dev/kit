@@ -18,6 +18,8 @@ Workbench::new("workspace", &mut state)
 # });
 ```
 
+`WorkbenchRegion` identifies the left, right or bottom maximized tool window.
+
 The caller owns `WorkbenchState`, which supports serde serialization independently of
 egui. Drag or use the splitter arrow keys to resize; Enter collapses or expands its tool
 window. Headers expose named Hide and Maximize/Restore buttons. To reopen a hidden pane,
