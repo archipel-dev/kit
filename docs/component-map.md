@@ -83,6 +83,14 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Selection | Focused `#2A4371` / light `#D0DFFE`; without focus `#33353B` / light `#E9EAEE` | `Colors::selection`, `selection_inactive` |
 | Hover | No fill in trees and lists (popup lists highlight like menus) | `State::row_fill` |
 
+### Tool window stripes
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Stripe | 38 pt on the frame beside the islands (islands start at 42 pt); top and bottom groups | `ToolStripe`, `tokens::stripe` |
+| Button | 30 pt, radius 6, 20 pt icon, 40 pt pitch; first button 3 pt below the island's top | `StripeButton` |
+| States | Open: pressed fill (~16 % white); hover: `hover` fill; tooltip beside it with name and shortcut | `ToolStripe::show` |
+
 ## Fixed invariants
 
 - Body font: Inter 13 pt. Code: the bundled mono font. Existing icon artwork is fixed.

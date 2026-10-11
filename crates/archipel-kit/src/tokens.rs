@@ -158,6 +158,21 @@ pub mod tab {
     pub const CLOSE_HOVER_RADIUS: f32 = 9.0;
 }
 
+/// Tool window stripes (the icon bars beside the islands), in points. Measured on Android
+/// Studio's Islands UI.
+pub mod stripe {
+    /// Width of a stripe, between the window edge and the island gap.
+    pub const WIDTH: f32 = 38.0;
+    /// Edge of a stripe button.
+    pub const BUTTON: f32 = 30.0;
+    /// Edge of a stripe button's icon.
+    pub const ICON: f32 = 20.0;
+    /// Distance between the tops of two stripe buttons.
+    pub const PITCH: f32 = 40.0;
+    /// Space above the first button (below the window toolbar).
+    pub const PADDING: f32 = 3.0;
+}
+
 /// Motion: delays and durations, in seconds. Measured on Android Studio's Islands UI.
 pub mod motion {
     /// How long an island's header actions stay after the pointer leaves the island (and

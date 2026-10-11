@@ -26,6 +26,7 @@ pub struct Tooltip {
     label: String,
     shortcut: Option<String>,
     hint: Option<String>,
+    align: Option<egui::RectAlign>,
 }
 
 impl Tooltip {
@@ -35,7 +36,15 @@ impl Tooltip {
             label: label.into(),
             shortcut: None,
             hint: None,
+            align: None,
         }
+    }
+
+    /// Where the tooltip goes relative to its widget (default: below it). Tool window
+    /// stripes put it beside the button, `egui::RectAlign::RIGHT`, as Android Studio does.
+    pub fn align(mut self, align: egui::RectAlign) -> Self {
+        self.align = Some(align);
+        self
     }
 
     /// A shortcut shown after the label, e.g. `"Ctrl+Shift+F"`.
@@ -95,6 +104,9 @@ impl Tooltip {
             egui::Tooltip::for_disabled(response)
         };
         tooltip.popup = tooltip.popup.frame(Self::frame(&response.ctx));
+        if let Some(align) = self.align {
+            tooltip.popup = tooltip.popup.align(align).gap(size::POPUP_PADDING);
+        }
         tooltip.show(|ui| self.content(ui));
     }
 }

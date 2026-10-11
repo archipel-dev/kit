@@ -27,14 +27,17 @@ pub(super) fn show(ui: &mut egui::Ui, state: &mut State, _enabled: bool) {
             .left("Browser", |ui| {
                 ListRow::new("Examples").icon(Glyph::Folder).show(ui);
             })
+            .icon(WorkbenchRegion::Left, Glyph::Folder)
             .right("Details", |ui| {
                 ui.label("Format: JSON");
             })
             .padded(WorkbenchRegion::Right, true)
+            .icon(WorkbenchRegion::Right, Glyph::Structure)
             .bottom("Messages", |ui| {
                 ui.label("Ready");
             })
             .padded(WorkbenchRegion::Bottom, true)
+            .icon(WorkbenchRegion::Bottom, Glyph::Terminal)
             .show_inside(ui, |ui| {
                 ui.add(Button::primary("Run request"));
                 ui.label("Your application content");

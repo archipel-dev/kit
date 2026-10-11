@@ -1,6 +1,10 @@
 //! A shared docked islands layout, independent of application content and policy.
 
-use super::{IconButton, Panel, Side, SplitPane, Tooltip, WindowChrome, WindowToolbar};
+use super::{
+    IconButton, Panel, Side, SplitPane, StripeButton, ToolStripe, Tooltip, WindowChrome,
+    WindowToolbar,
+};
+use crate::Icon;
 use crate::behaviour::WidgetExt;
 use crate::{Glyph, Theme, egui, tokens};
 use egui::{Id, Response, Ui};
@@ -58,6 +62,7 @@ struct Region<'a> {
     title: String,
     content: Content<'a>,
     padded: bool,
+    icon: Option<Icon>,
 }
 
 /// A reusable window shell: optional toolbar and status bar, a center island, and
@@ -129,6 +134,22 @@ impl<'a> Workbench<'a> {
         self
     }
 
+    /// Gives `region` a button with `icon` on a tool window stripe beside the islands, as in
+    /// Android Studio: the left stripe holds the left (top group) and bottom (bottom group)
+    /// tool windows, the right stripe the right one. The button is filled while the tool
+    /// window is open and opens or closes it. Call it after adding the region.
+    pub fn icon(mut self, region: WorkbenchRegion, icon: impl Into<Icon>) -> Self {
+        let slot = match region {
+            WorkbenchRegion::Left => &mut self.left,
+            WorkbenchRegion::Right => &mut self.right,
+            WorkbenchRegion::Bottom => &mut self.bottom,
+        };
+        if let Some(slot) = slot {
+            slot.icon = Some(icon.into());
+        }
+        self
+    }
+
     /// Window toolbar; use the same chrome when configuring the host viewport.
     pub fn toolbar(mut self, chrome: WindowChrome, content: impl FnOnce(&mut Ui) + 'a) -> Self {
         self.toolbar = Some((chrome, Box::new(content)));
@@ -179,12 +200,72 @@ impl<'a> Workbench<'a> {
         } = self;
         let hide = Cell::new(None);
         let maximize = Cell::new(None);
-        let maximized = state.maximized;
-        let rect = ui.available_rect_before_wrap();
+        let full = ui.available_rect_before_wrap();
         ui.painter()
-            .rect_filled(rect, 0, Theme::colors(ui.ctx()).frame);
+            .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
+        // Tool window stripes on the frame, beside the islands.
+        let mut rect = full;
+        let stripe_width = tokens::stripe::WIDTH - tokens::size::ISLAND_GAP;
+        let button = |region: &Option<Region<'_>>, hidden: bool| {
+            region.as_ref().and_then(|r| {
+                r.icon
+                    .map(|icon| StripeButton::new(icon, r.title.clone()).open(!hidden))
+            })
+        };
+        let left_top = button(&left, state.left_hidden);
+        let left_bottom = button(&bottom, state.bottom_hidden);
+        let right_top = button(&right, state.right_hidden);
+        let mut toggled = None;
+        if left_top.is_some() || left_bottom.is_some() {
+            let stripe = egui::Rect::from_min_max(
+                full.min,
+                egui::pos2(full.left() + stripe_width, full.bottom()),
+            );
+            rect.min.x = stripe.right() + tokens::size::ISLAND_GAP;
+            let mut column = ui.new_child(egui::UiBuilder::new().max_rect(stripe));
+            let has_top = left_top.is_some();
+            let mut bar = ToolStripe::new(id.with("left-stripe"));
+            if let Some(b) = left_top {
+                bar = bar.top(b);
+            }
+            if let Some(b) = left_bottom {
+                bar = bar.bottom(b);
+            }
+            toggled = match bar.show(&mut column) {
+                Some(0) if has_top => Some(WorkbenchRegion::Left),
+                Some(_) => Some(WorkbenchRegion::Bottom),
+                None => None,
+            };
+        }
+        if let Some(b) = right_top {
+            let stripe = egui::Rect::from_min_max(
+                egui::pos2(full.right() - stripe_width, full.top()),
+                full.max,
+            );
+            rect.max.x = stripe.left() - tokens::size::ISLAND_GAP;
+            let mut column = ui.new_child(egui::UiBuilder::new().max_rect(stripe));
+            if ToolStripe::new(id.with("right-stripe"))
+                .top(b)
+                .show(&mut column)
+                .is_some()
+            {
+                toggled = Some(WorkbenchRegion::Right);
+            }
+        }
+        if let Some(region) = toggled {
+            let hidden = match region {
+                WorkbenchRegion::Left => &mut state.left_hidden,
+                WorkbenchRegion::Right => &mut state.right_hidden,
+                WorkbenchRegion::Bottom => &mut state.bottom_hidden,
+            };
+            *hidden = !*hidden;
+            if *hidden && state.maximized == Some(region) {
+                state.maximized = None;
+            }
+        }
+        let maximized = state.maximized;
         let response = ui
-            .scope_builder(egui::UiBuilder::new().id_salt(id), |ui| {
+            .scope_builder(egui::UiBuilder::new().id_salt(id).max_rect(rect), |ui| {
                 let maximized_region = match maximized {
                     Some(WorkbenchRegion::Left) if !state.left_hidden => left.take(),
                     Some(WorkbenchRegion::Right) if !state.right_hidden => right.take(),
@@ -336,6 +417,7 @@ impl<'a> Region<'a> {
             title: title.into(),
             content: Box::new(content),
             padded: false,
+            icon: None,
         }
     }
 

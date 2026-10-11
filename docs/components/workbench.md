@@ -8,6 +8,7 @@ the optional status area stays on the themed frame. Applications supply the cont
 use archipel_kit::components::{
     StatusBarItem, WindowChrome, Workbench, WorkbenchRegion, WorkbenchState,
 };
+use archipel_kit::Glyph;
 let mut state = WorkbenchState::default();
 # egui::__run_test_ctx(|ctx| {
 Workbench::new("workspace", &mut state)
@@ -17,6 +18,7 @@ Workbench::new("workspace", &mut state)
     .padded(WorkbenchRegion::Right, true)
     .bottom("Messages", |ui| { ui.label("Ready"); })
     .padded(WorkbenchRegion::Bottom, true)
+    .icon(WorkbenchRegion::Bottom, Glyph::Terminal)
     .status(|ui| { ui.add(StatusBarItem::new("UTF-8")); })
     .show(ctx, |ui| { ui.label("Document"); });
 # });
@@ -35,6 +37,13 @@ As in the IntelliJ / Android Studio Islands UI:
   show at once while the pointer is anywhere over that island, header or body, or focus is
   inside it, and fade out 200 ms after it leaves (timing and narrow-island rules: see
   [Panel](panel.md#composable-island-headers)). Hidden, they keep their names and Tab order.
+- **Tool window stripes.** `.icon(region, glyph)` puts the region's button on a stripe on
+  the frame: the left stripe holds the left tool window (top group) and the bottom one
+  (bottom group), the right stripe the right one. A button is filled while its tool window
+  is open; clicking it opens or closes it, so a hidden tool window always has a way back.
+  Its tooltip (name, shortcut) appears beside it. Stripes are 38 pt wide with 30 pt buttons
+  on a 40 pt pitch and 20 pt icons, so the islands start 42 pt from the window edge, as in
+  Android Studio. `ToolStripe` and `StripeButton` are public for other layouts.
 - **Bodies are edge to edge** by default, so trees, lists and consoles bring their own row
   inset. `.padded(WorkbenchRegion::Right, true)` gives a form or text body the content inset.
 

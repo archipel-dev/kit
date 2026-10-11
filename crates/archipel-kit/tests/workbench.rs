@@ -3,7 +3,7 @@ use archipel_kit::{
     Glyph, Theme,
     components::{Button, ListRow, Workbench, WorkbenchRegion, WorkbenchState},
     egui,
-    testing::{self, Harness, Queryable, SnapshotOptions, SnapshotResults},
+    testing::{self, Harness, Queryable, Role, SnapshotOptions, SnapshotResults},
 };
 
 fn harness(theme: Theme, width: f32, right: bool, gpu: bool) -> Harness<'static, WorkbenchState> {
@@ -28,13 +28,16 @@ fn harness(theme: Theme, width: f32, right: bool, gpu: bool) -> Harness<'static,
                 .bottom("Messages", |ui| {
                     ui.label("Ready");
                 })
-                .padded(WorkbenchRegion::Bottom, true);
+                .padded(WorkbenchRegion::Bottom, true)
+                .icon(WorkbenchRegion::Left, Glyph::Folder)
+                .icon(WorkbenchRegion::Bottom, Glyph::Terminal);
             if right {
                 shell = shell
                     .right("Details", |ui| {
                         ui.label("Name: example");
                     })
-                    .padded(WorkbenchRegion::Right, true);
+                    .padded(WorkbenchRegion::Right, true)
+                    .icon(WorkbenchRegion::Right, Glyph::Structure);
             }
             shell.show(ctx, |ui| {
                 ui.add(Button::primary("Run request"));
@@ -136,9 +139,32 @@ fn padded_regions_inset_their_body_and_gaps_have_no_line() {
     let rows = h.get_by_label("Collections").rect();
     // Padded bodies start at the content inset, like the island title above them.
     let inset = archipel_kit::tokens::size::CONTENT_INSET;
-    let gap = archipel_kit::tokens::size::ISLAND_GAP;
-    assert!(messages.left() >= gap + inset - 0.5, "{messages:?}");
+    // The islands start after the left stripe and the island gap: 42 pt, as in Android Studio.
+    let islands = archipel_kit::tokens::stripe::WIDTH + archipel_kit::tokens::size::ISLAND_GAP;
+    assert!(messages.left() >= islands + inset - 0.5, "{messages:?}");
     // Edge-to-edge regions leave the inset to their rows.
-    assert!(rows.left() <= gap + 0.5, "{rows:?}");
+    assert!(rows.left() <= islands + 0.5, "{rows:?}");
     assert!(details.left() > rows.right());
+}
+
+#[test]
+fn stripe_buttons_open_and_close_tool_windows() {
+    let mut h = harness(Theme::dark(), 920.0, true, false);
+    // As in Android Studio: the left stripe holds the left and bottom tool windows.
+    h.get_by_role_and_label(Role::Button, "Messages").click();
+    h.run();
+    assert!(h.state().bottom_hidden);
+    assert!(h.query_by_label("Ready").is_none());
+    h.get_by_role_and_label(Role::Button, "Messages").click();
+    h.run();
+    assert!(!h.state().bottom_hidden);
+    assert!(h.query_by_label("Ready").is_some());
+    // A hidden tool window comes back from its stripe button, not only from the host.
+    h.get_by_label("Hide Details").click();
+    h.run();
+    assert!(h.state().right_hidden);
+    h.get_by_role_and_label(Role::Button, "Details").click();
+    h.run();
+    assert!(!h.state().right_hidden);
+    assert!(h.query_by_label("Name: example").is_some());
 }
