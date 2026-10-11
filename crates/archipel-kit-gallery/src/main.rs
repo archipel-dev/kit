@@ -9,7 +9,7 @@ use archipel_kit::components::{
     ListRow, MenuItem, Panel, ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl,
     Separator, Severity, Spinner, Tab, TabBar, Tag, TextField, Toast, Toggle,
 };
-use archipel_kit::icons::Category;
+use archipel_kit::icons::{Category, Language};
 use archipel_kit::{Glyph, Icon, Theme, egui, tokens};
 
 fn main() -> eframe::Result {
@@ -563,7 +563,42 @@ impl Gallery {
                             }
                         });
                 }
-                if matches.is_empty() {
+                let query = self.icon_filter.to_lowercase();
+                let languages: Vec<Language> = Language::ALL
+                    .iter()
+                    .copied()
+                    .filter(|l| {
+                        l.name().to_lowercase().contains(&query)
+                            || l.extensions().iter().any(|e| e.contains(&query))
+                    })
+                    .collect();
+                if !languages.is_empty() {
+                    ui.add(SectionHeader::new("Languages"));
+                    egui::Grid::new("languages")
+                        .num_columns(4)
+                        .spacing([24.0, 8.0])
+                        .show(ui, |ui| {
+                            for (index, language) in languages.iter().enumerate() {
+                                ui.horizontal(|ui| {
+                                    archipel_kit::icons::show(ui, *language, 16.0, color);
+                                    ui.label(language.name());
+                                })
+                                .response
+                                .on_hover_text(
+                                    language
+                                        .extensions()
+                                        .iter()
+                                        .map(|e| format!(".{e}"))
+                                        .collect::<Vec<_>>()
+                                        .join(" "),
+                                );
+                                if index % 4 == 3 {
+                                    ui.end_row();
+                                }
+                            }
+                        });
+                }
+                if matches.is_empty() && languages.is_empty() {
                     EmptyState::new("No icons match")
                         .hint("Try a keyword such as \"http\" or \"trash\".")
                         .show(ui);

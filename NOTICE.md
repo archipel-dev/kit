@@ -20,3 +20,10 @@ Copyright (C) JetBrains s.r.o."
 Only color values were taken. No source code, icons, images or other artwork were copied;
 the icons in `icons.rs` are original drawings. IntelliJ and JetBrains are trademarks of
 JetBrains s.r.o.; Archipel is not affiliated with or endorsed by JetBrains.
+
+## Language colors and file associations
+
+`crates/archipel-icons/src/languages.rs` is generated from the `languages.yml` data file of
+**GitHub Linguist** (https://github.com/github-linguist/linguist), Copyright (c) 2017 GitHub,
+Inc., licensed under the MIT License: language names, colors, extensions and file names.
+The language icons are original designs (tiles with letters); no logos are used.

@@ -5,13 +5,14 @@ The kit draws two kinds of icons:
 - **Glyphs** from the [icon kit](../icons/README.md) (`archipel-icons`): about a hundred
   designed outline icons for actions, navigation, files, development, version control,
   status and data. Re-exported as `archipel_kit::Glyph`.
-- **File-type icons** (`archipel_kit::Icon`): letter badges for languages and config files,
-  Java type circles and folders tinted by their role. `Icon::for_file` picks one from a file
-  name.
+- **Language tiles** from the icon kit: [78 languages and formats](../icons/languages.md),
+  each a tile in its Linguist color with a centered label.
+- **File-type icons** (`archipel_kit::Icon`): Java type circles and folders tinted by their
+  role. `Icon::for_file` picks the right icon for a file name.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/file_icons.dark.png">
-  <img alt="File-type icons for Rust, Gradle, Kotlin, JSON, XML, Markdown and more, Java types and colored folders" src="img/file_icons.light.png" width="280">
+  <img alt="File icons for Rust, Gradle, Kotlin, JSON, XML, Markdown and more, Java types and colored folders" src="img/file_icons.light.png" width="280">
 </picture>
 
 ## Usage
@@ -33,8 +34,8 @@ fn file_row(ui: &mut egui::Ui, name: &str) {
 }
 ```
 
-Status glyphs (`Error`, `Warning`, `Info`, `Success`, `Run`, `Stop`) keep their semantic
-theme colors whatever color you pass.
+Status glyphs (`Error`, `Warning`, `Info`, `Success`, `Run`, `Stop`), language tiles and
+file-type icons keep their own colors whatever color you pass.
 
 Source: [`icons.rs`](../../crates/archipel-kit/src/icons.rs) ·
 Tests: [`tests/icons.rs`](../../crates/archipel-kit/tests/icons.rs)

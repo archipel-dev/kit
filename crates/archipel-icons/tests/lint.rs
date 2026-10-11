@@ -8,12 +8,9 @@ use std::collections::HashSet;
 const MIN: f32 = 1.0;
 const MAX: f32 = 15.0;
 
-fn is_half(value: f32) -> bool {
-    (value.fract() - 0.5).abs() < 1e-3
-}
-
-fn is_whole(value: f32) -> bool {
-    value.fract().abs() < 1e-3
+/// On the half-unit grid: whole pixels at 2×, the density icons are designed for.
+fn on_grid(value: f32) -> bool {
+    ((value * 2.0).round() - value * 2.0).abs() < 1e-3
 }
 
 /// Every point a part touches, including half the stroke width around it.
@@ -38,6 +35,7 @@ fn extent(shape: &Shape, pad: f32) -> (f32, f32, f32, f32) {
             points.push(min);
             points.push(max);
         }
+        Shape::Letter { .. } => points.extend(shape.letter_lines().into_iter().flatten()),
     }
     let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
     for (x, y) in points {
@@ -72,6 +70,8 @@ fn glyphs_stay_inside_the_live_area() {
     assert!(errors.is_empty(), "outside 1..15:\n{}", errors.join("\n"));
 }
 
+/// Horizontal and vertical strokes sit on the half-unit grid, so they cover whole pixels at
+/// 2× (and at 1× when they sit on x.5).
 #[test]
 fn straight_strokes_cover_whole_pixels() {
     let mut errors = Vec::new();
@@ -92,7 +92,7 @@ fn straight_strokes_cover_whole_pixels() {
                     .collect(),
                 Shape::Rect { min, max, .. } => {
                     for value in [min.0, min.1, max.0, max.1] {
-                        if !is_half(value) {
+                        if !on_grid(value) {
                             errors.push(format!("{}: rect edge {value}", glyph.name()));
                         }
                     }
@@ -103,10 +103,10 @@ fn straight_strokes_cover_whole_pixels() {
             for (a, b) in segments {
                 let vertical = (a.0 - b.0).abs() < 1e-3 && (a.1 - b.1).abs() > 1.0;
                 let horizontal = (a.1 - b.1).abs() < 1e-3 && (a.0 - b.0).abs() > 1.0;
-                if vertical && !is_half(a.0) {
+                if vertical && !on_grid(a.0) {
                     errors.push(format!("{}: vertical stroke at x = {}", glyph.name(), a.0));
                 }
-                if horizontal && !is_half(a.1) {
+                if horizontal && !on_grid(a.1) {
                     errors.push(format!(
                         "{}: horizontal stroke at y = {}",
                         glyph.name(),
@@ -118,7 +118,7 @@ fn straight_strokes_cover_whole_pixels() {
     }
     assert!(
         errors.is_empty(),
-        "blurry 1-unit strokes (put them on x.5):\n{}",
+        "straight strokes off the half-unit grid (blurry at 2×):\n{}",
         errors.join("\n")
     );
 }
@@ -134,7 +134,7 @@ fn filled_shapes_have_crisp_edges_and_are_convex() {
             match part.shape {
                 Shape::Rect { min, max, .. } => {
                     for value in [min.0, min.1, max.0, max.1] {
-                        if !is_whole(value) {
+                        if !on_grid(value) {
                             errors.push(format!("{}: filled rect edge {value}", glyph.name()));
                         }
                     }
@@ -159,7 +159,7 @@ fn filled_shapes_have_crisp_edges_and_are_convex() {
                     for (a, b) in pts.iter().zip(pts.iter().cycle().skip(1)) {
                         let axis = (a.0 - b.0).abs() < 1e-3 || (a.1 - b.1).abs() < 1e-3;
                         let coordinate = if (a.0 - b.0).abs() < 1e-3 { a.0 } else { a.1 };
-                        if axis && !is_whole(coordinate) {
+                        if axis && !on_grid(coordinate) {
                             errors.push(format!("{}: filled edge at {coordinate}", glyph.name()));
                         }
                     }
@@ -169,6 +169,33 @@ fn filled_shapes_have_crisp_edges_and_are_convex() {
         }
     }
     assert!(errors.is_empty(), "{}", errors.join("\n"));
+}
+
+/// Glyphs are centered in their 16×16 box: the ink's bounding box may be off by at most a
+/// quarter unit (chevrons, whose mass sits in their arms).
+#[test]
+fn glyphs_are_centered() {
+    let mut errors = Vec::new();
+    for glyph in Glyph::ALL {
+        let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+        for part in glyph.parts() {
+            let pad = match part.paint {
+                Paint::Stroke { width, .. } => width / 2.0,
+                Paint::Fill(_) => 0.0,
+            };
+            let (a, b, c, d) = extent(&part.shape, pad);
+            (x0, y0, x1, y1) = (x0.min(a), y0.min(b), x1.max(c), y1.max(d));
+        }
+        let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+        if (cx - 8.0).abs() > 0.25 + 1e-3 || (cy - 8.0).abs() > 0.25 + 1e-3 {
+            errors.push(format!("{}: centered at ({cx:.2}, {cy:.2})", glyph.name()));
+        }
+    }
+    assert!(
+        errors.is_empty(),
+        "off-center glyphs (move them by the offset):\n{}",
+        errors.join("\n")
+    );
 }
 
 #[test]

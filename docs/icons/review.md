@@ -43,5 +43,18 @@ glyphs were added for the HTTP and database tools). Findings and what was done:
 | `debug` | Body slightly heavier than its neighbours | Actual size | Accepted: legs and the center seam need the room; revisit if a lighter bug is needed. |
 | `image` | Sun and mountains crowd at 16 px | Actual size | Accepted for now; candidate for a simpler drawing. |
 
+### 2026-10 · Round 2: centering and language icons (user feedback)
+
+Feedback: "the language icons and add etc. are not centered; every programming language
+should have an icon".
+
+| Item | Finding | Resolution |
+|---|---|---|
+| 45 glyphs (`plus`, `add-box`, arrows, steps, folders, …) | Bounding box 0.5–0.75 units off center. Cause: the rule "center strokes on 7.5 for 1× crispness" put crispness above centering. | Rule changed: glyphs are centered on (8, 8), checked by a new lint (`glyphs_are_centered`, ±0.25); strokes stay on the half-unit grid, crisp at 2×. Every glyph moved by its rounded offset. |
+| File-type badges | Letters were set in Inter at 8–9 px and positioned with hand-tuned offsets; they sat high or low depending on the letters. | Replaced by language tiles with a stroke font drawn on the grid: labels are centered by construction. |
+| Languages | Only ~25 file types had a badge. | 78 languages and formats from GitHub Linguist, each with a tile in its Linguist color and a unique label. |
+| Label contrast | Mid-tone tiles (Java) reached only 4.1:1 with near-black. | Labels are pure black or white: at least 4.58:1 on any tile (checked at 4.5:1). |
+| Dark and very light tiles | Crystal, JSON, Ignore List, Lua, Gradle vanished on dark islands; EditorConfig and INI on white. | Low-contrast tiles get a soft outline that reads on both themes. |
+
 Open follow-ups: an outline/filled pair for toggles (star, pin, bookmark), and a 20 px
 optical size for dense toolbars on high-DPI screens.

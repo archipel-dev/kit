@@ -12,6 +12,28 @@ fn color(value: u32) -> Color32 {
 /// Paints `glyph` into the square centered in `rect`, scaled from its 16×16 grid, with
 /// `ink` as its main color and `tones` for the semantic parts.
 pub fn paint(painter: &Painter, rect: Rect, glyph: Glyph, ink: Color32, tones: &Tones) {
+    paint_parts(painter, rect, glyph.parts(), ink, tones);
+}
+
+/// Paints the icon of `language` into the square centered in `rect`.
+pub fn paint_language(painter: &Painter, rect: Rect, language: crate::Language) {
+    paint_parts(
+        painter,
+        rect,
+        &language.parts(),
+        Color32::WHITE,
+        &Tones::dark(),
+    );
+}
+
+/// Paints `parts` (16×16 grid) into the square centered in `rect`.
+pub fn paint_parts(
+    painter: &Painter,
+    rect: Rect,
+    parts: &[crate::Part],
+    ink: Color32,
+    tones: &Tones,
+) {
     let side = rect.width().min(rect.height());
     let scale = side / 16.0;
     let origin = rect.center() - vec2(8.0 * scale, 8.0 * scale);
@@ -20,7 +42,7 @@ pub fn paint(painter: &Painter, rect: Rect, glyph: Glyph, ink: Color32, tones: &
         crate::Tone::Ink => ink,
         tone => color(tones.get(tone, 0)),
     };
-    for part in glyph.parts() {
+    for part in parts {
         let (fill, stroke) = match part.paint {
             Paint::Stroke { width, tone } => (
                 Color32::TRANSPARENT,
@@ -54,6 +76,11 @@ pub fn paint(painter: &Painter, rect: Rect, glyph: Glyph, ink: Color32, tones: &
             } => {
                 let points = crate::arc_points(center, radius, from, to);
                 painter.add(PathShape::line(points.into_iter().map(p).collect(), stroke));
+            }
+            Shape::Letter { .. } => {
+                for line in part.shape.letter_lines() {
+                    painter.add(PathShape::line(line.into_iter().map(p).collect(), stroke));
+                }
             }
             Shape::Rect { min, max, radius } => {
                 painter.rect(

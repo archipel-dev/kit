@@ -23,10 +23,13 @@ rules are enforced by `crates/archipel-icons/tests/lint.rs`; the rest are judged
 - **1 unit wide** for all ink outlines (checked); 1.5 only for the marks of status glyphs,
   such as the check of `success` or the `!` of `error`.
 - **Round caps and joins**: friendly, and corners stay legible at 16 px.
-- **Pixel snapping** (checked): straight horizontal and vertical 1-unit strokes sit on
-  half units (x.5), so at 1× they fill exactly one pixel row instead of blurring over two.
-  That is why symmetric glyphs with a center stroke (plus, arrows, the step icons) are
-  centered on 7.5, not 8.
+- **Centered** (checked): every glyph's bounding box is centered on (8, 8), within a
+  quarter unit. Symmetric glyphs with a center stroke (plus, arrows, the step icons) put
+  that stroke on 8.
+- **Half-unit grid** (checked): straight horizontal and vertical strokes sit on whole or
+  half units, so they cover whole pixels at 2×, the density the set is designed for. At 1×
+  a stroke on a whole unit (such as a center stroke on 8) is slightly soft; centering wins
+  over 1× crispness.
 - **Corner radius 1.5** for containers (windows, boxes), 1 for small inner boxes.
 - **Arrowheads** are 3.5 units long at 45° and open (two strokes), never filled.
 
@@ -34,9 +37,22 @@ rules are enforced by `crates/archipel-icons/tests/lint.rs`; the rest are judged
 
 - Fills are the exception: play, stop, pause, breakpoint and the status badges.
 - **Crisp edges** (checked): straight horizontal and vertical edges of filled shapes sit on
-  whole units.
+  the half-unit grid.
 - **Convex polygons only** (checked): egui fills convex polygons; anything else is built from
   several shapes.
+
+## Language tiles and the label font
+
+- Tile: rounded rect 1..15, radius 3, filled with the language color.
+- Label: one or two characters of the stroke font in `letters.rs`: capitals, `+ # { } < > @`,
+  each 4×6 units (stroke centers 3×5), two letters with a two-unit gap. One letter is
+  centered on 8; two letters span 3.5..12.5. Cap height runs 5.5..10.5, centered on 8.
+- Label color: black or white, whichever contrasts more with the tile; at least 4.5:1
+  (checked). Pure black and white guarantee that for any tile color.
+- Outline: tiles below 1.6:1 against the dark background or 1.3:1 against the light one
+  get a 1-unit outline mixed halfway towards mid-gray, so they read on both.
+- Labels are unique (checked) and avoid brand marks: the icons identify languages without
+  using their logos.
 
 ## Color
 

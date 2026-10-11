@@ -28,12 +28,17 @@
 //!   (error, warning, ...) and [`Tone::Knockout`] for marks cut out of a filled shape.
 
 mod glyphs;
+mod languages;
+pub mod letters;
 #[cfg(feature = "egui")]
 mod paint;
 mod svg;
 
+pub use languages::{Language, LanguageKind};
+pub use svg::parts_to_svg;
+
 #[cfg(feature = "egui")]
-pub use paint::{paint, show};
+pub use paint::{paint, paint_language, paint_parts, show};
 
 /// A color role. Renderers map tones to concrete colors with [`Tones`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -56,6 +61,8 @@ pub enum Tone {
     Run,
     /// Stop actions and breakpoints (red).
     Stop,
+    /// A fixed color, `0xRRGGBB` (language tiles and their labels).
+    Rgb(u32),
 }
 
 /// Concrete colors for the semantic tones, as `0xRRGGBB` (ink comes from the caller).
@@ -124,6 +131,7 @@ impl Tones {
             Tone::Info => self.info,
             Tone::Run => self.run,
             Tone::Stop => self.stop,
+            Tone::Rgb(value) => value,
         }
     }
 }
@@ -156,6 +164,13 @@ pub enum Shape {
         from: f32,
         /// End angle in degrees.
         to: f32,
+    },
+    /// A character of the [`letters`] font, its 4×6 cell's top-left at `origin`.
+    Letter {
+        /// The character (`A`-`Z`, `+`, `#`, `{`, `}`, `<`, `>`, `@`).
+        letter: char,
+        /// Top-left of the cell.
+        origin: Point,
     },
     /// An axis-aligned rectangle with rounded corners.
     Rect {
@@ -270,6 +285,155 @@ impl Glyph {
                     .any(|keyword| keyword.contains(&query))
         })
     }
+}
+
+impl Shape {
+    /// The polylines a [`Shape::Letter`] expands to, offset to its origin (empty for other
+    /// shapes and for characters the font lacks).
+    pub fn letter_lines(&self) -> Vec<Vec<Point>> {
+        let Shape::Letter { letter, origin } = *self else {
+            return Vec::new();
+        };
+        letters::strokes(letter)
+            .unwrap_or(&[])
+            .iter()
+            .map(|stroke| {
+                stroke
+                    .iter()
+                    .map(|(x, y)| (origin.0 + x, origin.1 + y))
+                    .collect()
+            })
+            .collect()
+    }
+}
+
+/// Parts drawing `text` in the [`letters`] font, centered on `center`, in `tone`.
+pub fn label(text: &str, center: Point, tone: Tone) -> Vec<Part> {
+    let chars: Vec<char> = text.chars().collect();
+    letters::origins(chars.len(), center)
+        .zip(chars)
+        .map(|(origin, letter)| Part {
+            shape: Shape::Letter { letter, origin },
+            paint: Paint::Stroke { width: 1.0, tone },
+        })
+        .collect()
+}
+
+impl Language {
+    /// The language of a file, by exact file name (`Dockerfile`, `Makefile`), then by the
+    /// longest matching extension (`build.gradle.kts` is Gradle Kotlin DSL, not Kotlin).
+    pub fn from_file_name(name: &str) -> Option<Language> {
+        let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+        if let Some(language) = Language::ALL
+            .iter()
+            .copied()
+            .find(|language| language.file_names().contains(&base))
+        {
+            return Some(language);
+        }
+        let lower = base.to_ascii_lowercase();
+        Language::ALL
+            .iter()
+            .flat_map(|language| {
+                language
+                    .extensions()
+                    .iter()
+                    .map(move |ext| (*language, *ext))
+            })
+            .filter(|(_, ext)| {
+                lower
+                    .strip_suffix(ext)
+                    .is_some_and(|rest| rest.len() > 1 && rest.ends_with('.'))
+            })
+            .max_by_key(|(_, ext)| ext.len())
+            .map(|(language, _)| language)
+    }
+
+    /// The icon: a rounded tile in the language color with its label.
+    pub fn parts(self) -> Vec<Part> {
+        let label_color = if self.dark_label() {
+            0x1E1F22
+        } else {
+            0xFFFFFF
+        };
+        let mut parts = vec![Part {
+            shape: Shape::Rect {
+                min: (1.0, 1.0),
+                max: (15.0, 15.0),
+                radius: 3.0,
+            },
+            paint: Paint::Fill(Tone::Rgb(self.color())),
+        }];
+        if let Some(outline) = self.outline() {
+            parts.push(Part {
+                shape: Shape::Rect {
+                    min: (1.5, 1.5),
+                    max: (14.5, 14.5),
+                    radius: 2.5,
+                },
+                paint: Paint::Stroke {
+                    width: 1.0,
+                    tone: Tone::Rgb(outline),
+                },
+            });
+        }
+        parts.extend(label(self.label(), (8.0, 8.0), Tone::Rgb(label_color)));
+        parts
+    }
+
+    /// An outline for tiles that would melt into a dark or a light background: the tile
+    /// color mixed towards mid-gray, so it reads on both.
+    fn outline(self) -> Option<u32> {
+        let color = self.color();
+        let melts = contrast(color, Tones::dark().knockout) < 1.6
+            || contrast(color, Tones::light().knockout) < 1.3;
+        melts.then(|| mix(color, 0x8C8F96, 0.5))
+    }
+
+    /// The icon as an SVG document of `size` pixels.
+    pub fn to_svg(self, size: f32) -> String {
+        parts_to_svg(&self.parts(), size, &Tones::dark())
+    }
+
+    /// Kebab-case slug for file names, e.g. `"c-sharp"`.
+    pub fn slug(self) -> String {
+        let mut slug = String::new();
+        for c in self.name().chars() {
+            match c {
+                '+' => slug.push_str("plus"),
+                '#' => slug.push_str("-sharp"),
+                c if c.is_ascii_alphanumeric() => slug.push(c.to_ascii_lowercase()),
+                _ if !slug.ends_with('-') => slug.push('-'),
+                _ => {}
+            }
+        }
+        slug.trim_matches('-').replace("--", "-")
+    }
+}
+
+/// WCAG 2 contrast ratio of two `0xRRGGBB` colors.
+pub fn contrast(a: u32, b: u32) -> f32 {
+    fn luminance(value: u32) -> f32 {
+        let channel = |shift: u32| {
+            let c = ((value >> shift) & 0xFF) as f32 / 255.0;
+            if c <= 0.03928 {
+                c / 12.92
+            } else {
+                ((c + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0)
+    }
+    let (la, lb) = (luminance(a), luminance(b));
+    (la.max(lb) + 0.05) / (la.min(lb) + 0.05)
+}
+
+fn mix(a: u32, b: u32, t: f32) -> u32 {
+    let channel = |shift: u32| {
+        let (x, y) = (((a >> shift) & 0xFF) as f32, ((b >> shift) & 0xFF) as f32);
+        ((x + (y - x) * t).round() as u32) << shift
+    };
+    channel(16) | channel(8) | channel(0)
 }
 
 /// Points of an arc, `segments` per 90°, for renderers that draw polylines.

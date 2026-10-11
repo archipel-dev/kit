@@ -133,23 +133,23 @@ glyphs! {
         }
         /// Arrow pointing left.
         ArrowLeft "arrow-left" ["back"] {
-            ink(line(&[(13.5, 7.5), (2.5, 7.5)])),
-            ink(line(&[(6.0, 4.0), (2.5, 7.5), (6.0, 11.0)])),
+            ink(line(&[(13.5, 8.0), (2.5, 8.0)])),
+            ink(line(&[(6.0, 4.5), (2.5, 8.0), (6.0, 11.5)])),
         }
         /// Arrow pointing right.
         ArrowRight "arrow-right" ["forward", "next"] {
-            ink(line(&[(2.5, 7.5), (13.5, 7.5)])),
-            ink(line(&[(10.0, 4.0), (13.5, 7.5), (10.0, 11.0)])),
+            ink(line(&[(2.5, 8.0), (13.5, 8.0)])),
+            ink(line(&[(10.0, 4.5), (13.5, 8.0), (10.0, 11.5)])),
         }
         /// Arrow pointing up.
         ArrowUp "arrow-up" ["up"] {
-            ink(line(&[(7.5, 13.5), (7.5, 2.5)])),
-            ink(line(&[(4.0, 6.0), (7.5, 2.5), (11.0, 6.0)])),
+            ink(line(&[(8.0, 13.5), (8.0, 2.5)])),
+            ink(line(&[(4.5, 6.0), (8.0, 2.5), (11.5, 6.0)])),
         }
         /// Arrow pointing down.
         ArrowDown "arrow-down" ["down"] {
-            ink(line(&[(7.5, 2.5), (7.5, 13.5)])),
-            ink(line(&[(4.0, 10.0), (7.5, 13.5), (11.0, 10.0)])),
+            ink(line(&[(8.0, 2.5), (8.0, 13.5)])),
+            ink(line(&[(4.5, 10.0), (8.0, 13.5), (11.5, 10.0)])),
         }
         /// Box with an arrow leaving it: open in a browser or another window.
         ExternalLink "external-link" ["open", "browser", "new window"] {
@@ -159,9 +159,9 @@ glyphs! {
         }
         /// Three lines: main menu.
         Menu "menu" ["hamburger", "main menu"] {
-            ink(line(&[(2.5, 3.5), (13.5, 3.5)])),
-            ink(line(&[(2.5, 7.5), (13.5, 7.5)])),
-            ink(line(&[(2.5, 11.5), (13.5, 11.5)])),
+            ink(line(&[(2.5, 4.0), (13.5, 4.0)])),
+            ink(line(&[(2.5, 8.0), (13.5, 8.0)])),
+            ink(line(&[(2.5, 12.0), (13.5, 12.0)])),
         }
         /// Three dots: overflow menu.
         More "more" ["overflow", "ellipsis", "options"] {
@@ -177,9 +177,9 @@ glyphs! {
         }
         /// House: home, welcome screen.
         Home "home" ["welcome", "start"] {
-            ink(line(&[(1.5, 7.5), (7.5, 1.5), (13.5, 7.5)])),
-            ink(line(&[(3.5, 5.5), (3.5, 13.5), (11.5, 13.5), (11.5, 5.5)])),
-            ink(line(&[(6.5, 13.5), (6.5, 9.5), (8.5, 9.5), (8.5, 13.5)])),
+            ink(line(&[(2.0, 8.0), (8.0, 2.0), (14.0, 8.0)])),
+            ink(line(&[(4.0, 6.0), (4.0, 14.0), (12.0, 14.0), (12.0, 6.0)])),
+            ink(line(&[(7.0, 14.0), (7.0, 10.0), (9.0, 10.0), (9.0, 14.0)])),
         }
         /// Two chevrons down: expand all.
         ExpandAll "expand-all" ["unfold", "tree"] {
@@ -200,7 +200,7 @@ glyphs! {
         }
         /// A horizontal bar: minimize, hide a panel.
         Minimize "minimize" ["hide", "collapse panel"] {
-            ink(line(&[(3.5, 8.5), (12.5, 8.5)])),
+            ink(line(&[(3.5, 8.0), (12.5, 8.0)])),
         }
         /// An ×: close.
         Close "close" ["dismiss", "remove", "x"] {
@@ -237,18 +237,18 @@ glyphs! {
     Actions {
         /// Plus: add, new.
         Plus "plus" ["add", "new", "create"] {
-            ink(line(&[(7.5, 2.5), (7.5, 12.5)])),
-            ink(line(&[(2.5, 7.5), (12.5, 7.5)])),
+            ink(line(&[(8.0, 3.0), (8.0, 13.0)])),
+            ink(line(&[(3.0, 8.0), (13.0, 8.0)])),
         }
         /// Minus: remove.
         Minus "minus" ["remove", "subtract"] {
-            ink(line(&[(2.5, 7.5), (12.5, 7.5)])),
+            ink(line(&[(3.0, 8.0), (13.0, 8.0)])),
         }
         /// Plus in a box: add an item to a list.
         AddBox "add-box" ["add", "new", "plus"] {
-            ink(rect(1.5, 1.5, 13.5, 13.5, 1.5)),
-            ink(line(&[(7.5, 4.5), (7.5, 10.5)])),
-            ink(line(&[(4.5, 7.5), (10.5, 7.5)])),
+            ink(rect(2.0, 2.0, 14.0, 14.0, 1.5)),
+            ink(line(&[(8.0, 5.0), (8.0, 11.0)])),
+            ink(line(&[(5.0, 8.0), (11.0, 8.0)])),
         }
         /// Pencil: edit, rename.
         Edit "edit" ["pencil", "rename", "write"] {
@@ -295,8 +295,8 @@ glyphs! {
         }
         /// Circular arrow: refresh, reload, sync.
         Refresh "refresh" ["reload", "sync", "update"] {
-            ink(arc(8.0, 8.0, 5.5, 20.0, 320.0)),
-            ink(line(&[(12.5, 1.5), (12.5, 4.5), (9.5, 4.5)])),
+            ink(arc(8.0, 8.5, 5.5, 20.0, 320.0)),
+            ink(line(&[(12.5, 2.0), (12.5, 5.0), (9.5, 5.0)])),
         }
         /// Magnifier: search.
         Search "search" ["find", "magnifier", "lookup"] {
@@ -305,21 +305,21 @@ glyphs! {
         }
         /// Magnifier over lines: find in files.
         FindInFiles "find-in-files" ["search everywhere", "grep"] {
-            ink(line(&[(2.5, 3.5), (12.5, 3.5)])),
-            ink(line(&[(2.5, 6.5), (6.5, 6.5)])),
-            ink(line(&[(2.5, 9.5), (5.5, 9.5)])),
-            ink(circle(10.0, 10.0, 2.75)),
-            ink(line(&[(12.0, 12.0), (14.0, 14.0)])),
+            ink(line(&[(2.5, 2.5), (12.5, 2.5)])),
+            ink(line(&[(2.5, 5.5), (6.5, 5.5)])),
+            ink(line(&[(2.5, 8.5), (5.5, 8.5)])),
+            ink(circle(10.0, 9.0, 2.75)),
+            ink(line(&[(12.0, 11.0), (14.0, 13.0)])),
         }
         /// Funnel: filter.
         Filter "filter" ["funnel", "narrow"] {
-            ink(poly(&[(2.5, 3.5), (13.5, 3.5), (9.5, 8.5), (9.5, 13.5), (6.5, 11.5), (6.5, 8.5)])),
+            ink(poly(&[(2.5, 3.0), (13.5, 3.0), (9.5, 8.0), (9.5, 13.0), (6.5, 11.0), (6.5, 8.0)])),
         }
         /// Bars of decreasing length: sort.
         Sort "sort" ["order", "arrange"] {
-            ink(line(&[(2.5, 3.5), (13.5, 3.5)])),
-            ink(line(&[(2.5, 7.5), (10.5, 7.5)])),
-            ink(line(&[(2.5, 11.5), (7.5, 11.5)])),
+            ink(line(&[(2.5, 4.0), (13.5, 4.0)])),
+            ink(line(&[(2.5, 8.0), (10.5, 8.0)])),
+            ink(line(&[(2.5, 12.0), (7.5, 12.0)])),
         }
         /// Gear: settings, preferences, task.
         Settings "settings" ["gear", "preferences", "options", "configure"] {
@@ -328,8 +328,8 @@ glyphs! {
         }
         /// Thumbtack: pin.
         Pin "pin" ["thumbtack", "keep", "stick"] {
-            ink(poly(&[(5.0, 2.5), (10.0, 2.5), (9.0, 6.5), (11.0, 9.5), (4.0, 9.5), (6.0, 6.5)])),
-            ink(line(&[(7.5, 9.5), (7.5, 14.0)])),
+            ink(poly(&[(5.5, 2.5), (10.5, 2.5), (9.5, 6.5), (11.5, 9.5), (4.5, 9.5), (6.5, 6.5)])),
+            ink(line(&[(8.0, 9.5), (8.0, 14.0)])),
         }
         /// Star: favorite, bookmark.
         Star "star" ["favorite", "bookmark", "rate"] {
@@ -368,15 +368,15 @@ glyphs! {
         }
         /// Arrow into a tray: download, import.
         Download "download" ["import", "save to disk"] {
-            ink(line(&[(7.5, 2.5), (7.5, 10.0)])),
-            ink(line(&[(4.0, 6.5), (7.5, 10.0), (11.0, 6.5)])),
-            ink(line(&[(2.5, 10.5), (2.5, 13.5), (12.5, 13.5), (12.5, 10.5)])),
+            ink(line(&[(8.0, 2.5), (8.0, 10.0)])),
+            ink(line(&[(4.5, 6.5), (8.0, 10.0), (11.5, 6.5)])),
+            ink(line(&[(3.0, 10.5), (3.0, 13.5), (13.0, 13.5), (13.0, 10.5)])),
         }
         /// Arrow out of a tray: upload, export, push.
         Upload "upload" ["export", "push", "publish"] {
-            ink(line(&[(7.5, 10.0), (7.5, 2.5)])),
-            ink(line(&[(4.0, 6.0), (7.5, 2.5), (11.0, 6.0)])),
-            ink(line(&[(2.5, 10.5), (2.5, 13.5), (12.5, 13.5), (12.5, 10.5)])),
+            ink(line(&[(8.0, 10.0), (8.0, 2.5)])),
+            ink(line(&[(4.5, 6.0), (8.0, 2.5), (11.5, 6.0)])),
+            ink(line(&[(3.0, 10.5), (3.0, 13.5), (13.0, 13.5), (13.0, 10.5)])),
         }
         /// Two chain links: link, URL.
         Link "link" ["url", "chain", "hyperlink"] {
@@ -413,30 +413,30 @@ glyphs! {
         }
         /// Page with a plus: new file.
         NewFile "new-file" ["create file", "add file"] {
-            ink(line(&[(11.5, 6.5), (11.5, 4.5), (8.5, 1.5), (2.5, 1.5), (2.5, 13.5), (6.5, 13.5)])),
-            ink(line(&[(8.5, 1.5), (8.5, 4.5), (11.5, 4.5)])),
-            ink(line(&[(11.5, 8.5), (11.5, 14.5)])),
-            ink(line(&[(8.5, 11.5), (14.5, 11.5)])),
+            ink(line(&[(11.0, 6.5), (11.0, 4.5), (8.0, 1.5), (2.0, 1.5), (2.0, 13.5), (6.0, 13.5)])),
+            ink(line(&[(8.0, 1.5), (8.0, 4.5), (11.0, 4.5)])),
+            ink(line(&[(11.0, 8.5), (11.0, 14.5)])),
+            ink(line(&[(8.0, 11.5), (14.0, 11.5)])),
         }
         /// Closed folder.
         Folder "folder" ["directory"] {
-            ink(poly(&[(1.5, 3.5), (6.0, 3.5), (7.5, 5.5), (14.5, 5.5), (14.5, 13.5), (1.5, 13.5)])),
+            ink(poly(&[(1.5, 3.0), (6.0, 3.0), (7.5, 5.0), (14.5, 5.0), (14.5, 13.0), (1.5, 13.0)])),
         }
         /// Open folder.
         FolderOpen "folder-open" ["directory", "open project"] {
-            ink(line(&[(1.5, 13.5), (1.5, 3.5), (6.0, 3.5), (7.5, 5.5), (12.5, 5.5), (12.5, 7.5)])),
-            ink(poly(&[(1.5, 13.5), (3.5, 7.5), (14.5, 7.5), (12.5, 13.5)])),
+            ink(line(&[(1.5, 13.0), (1.5, 3.0), (6.0, 3.0), (7.5, 5.0), (12.5, 5.0), (12.5, 7.0)])),
+            ink(poly(&[(1.5, 13.0), (3.5, 7.0), (14.5, 7.0), (12.5, 13.0)])),
         }
         /// Folder with a plus: new folder.
         NewFolder "new-folder" ["create directory"] {
-            ink(line(&[(8.5, 13.5), (1.5, 13.5), (1.5, 3.5), (6.0, 3.5), (7.5, 5.5), (14.5, 5.5), (14.5, 8.5)])),
-            ink(line(&[(11.5, 9.0), (11.5, 14.0)])),
-            ink(line(&[(9.0, 11.5), (14.0, 11.5)])),
+            ink(line(&[(8.5, 12.5), (1.5, 12.5), (1.5, 2.5), (6.0, 2.5), (7.5, 4.5), (14.5, 4.5), (14.5, 7.5)])),
+            ink(line(&[(11.5, 8.0), (11.5, 13.0)])),
+            ink(line(&[(9.0, 10.5), (14.0, 10.5)])),
         }
         /// Folder with a bar: project root.
         Project "project" ["workspace", "root"] {
-            ink(poly(&[(1.5, 3.5), (6.0, 3.5), (7.5, 5.5), (14.5, 5.5), (14.5, 13.5), (1.5, 13.5)])),
-            ink(line(&[(1.5, 8.5), (14.5, 8.5)])),
+            ink(poly(&[(1.5, 3.0), (6.0, 3.0), (7.5, 5.0), (14.5, 5.0), (14.5, 13.0), (1.5, 13.0)])),
+            ink(line(&[(1.5, 8.0), (14.5, 8.0)])),
         }
         /// Picture: image file.
         Image "image" ["picture", "photo", "png"] {
@@ -455,19 +455,19 @@ glyphs! {
     Development {
         /// Play triangle: run.
         Run "run" ["play", "start", "execute"] {
-            fill(poly(&[(4.0, 2.5), (13.0, 8.0), (4.0, 13.5)]), Tone::Run),
+            fill(poly(&[(3.5, 2.5), (12.5, 8.0), (3.5, 13.5)]), Tone::Run),
         }
         /// Bug: debug.
         Debug "debug" ["bug", "debugger"] {
-            ink(arc(7.5, 5.5, 2.0, 180.0, 360.0)),
-            ink(rect(4.5, 5.5, 10.5, 13.5, 3.0)),
-            ink(line(&[(7.5, 8.5), (7.5, 13.5)])),
-            ink(line(&[(4.5, 7.5), (2.0, 6.0)])),
-            ink(line(&[(4.5, 10.5), (2.0, 10.5)])),
-            ink(line(&[(4.5, 12.5), (2.0, 14.0)])),
-            ink(line(&[(10.5, 7.5), (13.0, 6.0)])),
-            ink(line(&[(10.5, 10.5), (13.0, 10.5)])),
-            ink(line(&[(10.5, 12.5), (13.0, 14.0)])),
+            ink(arc(8.0, 4.5, 2.0, 180.0, 360.0)),
+            ink(rect(5.0, 4.5, 11.0, 12.5, 3.0)),
+            ink(line(&[(8.0, 7.5), (8.0, 12.5)])),
+            ink(line(&[(5.0, 6.5), (2.5, 5.0)])),
+            ink(line(&[(5.0, 9.5), (2.5, 9.5)])),
+            ink(line(&[(5.0, 11.5), (2.5, 13.0)])),
+            ink(line(&[(11.0, 6.5), (13.5, 5.0)])),
+            ink(line(&[(11.0, 9.5), (13.5, 9.5)])),
+            ink(line(&[(11.0, 11.5), (13.5, 13.0)])),
         }
         /// Square: stop.
         Stop "stop" ["terminate", "halt"] {
@@ -480,27 +480,27 @@ glyphs! {
         }
         /// Circular arrow around a play triangle: rerun.
         Rerun "rerun" ["restart", "run again"] {
-            ink(arc(8.0, 8.0, 5.5, 20.0, 320.0)),
-            ink(line(&[(12.5, 1.5), (12.5, 4.5), (9.5, 4.5)])),
-            fill(poly(&[(6.0, 5.5), (10.5, 8.0), (6.0, 10.5)]), Tone::Run),
+            ink(arc(8.0, 8.5, 5.5, 20.0, 320.0)),
+            ink(line(&[(12.5, 2.0), (12.5, 5.0), (9.5, 5.0)])),
+            fill(poly(&[(6.0, 6.0), (10.5, 8.5), (6.0, 11.0)]), Tone::Run),
         }
         /// Arc over a dot: step over.
         StepOver "step-over" ["debugger", "next line"] {
-            ink(arc(7.5, 8.0, 4.5, 180.0, 360.0)),
-            ink(line(&[(9.5, 6.0), (12.0, 8.5), (14.5, 6.0)])),
-            dot(7.5, 12.5, 1.5),
+            ink(arc(6.5, 7.5, 4.5, 180.0, 360.0)),
+            ink(line(&[(8.5, 5.5), (11.0, 8.0), (13.5, 5.5)])),
+            dot(6.5, 12.0, 1.5),
         }
         /// Arrow down to a dot: step into.
         StepInto "step-into" ["debugger", "enter"] {
-            ink(line(&[(7.5, 1.5), (7.5, 8.5)])),
-            ink(line(&[(4.5, 5.5), (7.5, 8.5), (10.5, 5.5)])),
-            dot(7.5, 12.5, 1.5),
+            ink(line(&[(8.0, 2.0), (8.0, 9.0)])),
+            ink(line(&[(5.0, 6.0), (8.0, 9.0), (11.0, 6.0)])),
+            dot(8.0, 13.0, 1.5),
         }
         /// Arrow up from a dot: step out.
         StepOut "step-out" ["debugger", "return"] {
-            ink(line(&[(7.5, 9.0), (7.5, 1.5)])),
-            ink(line(&[(4.5, 4.5), (7.5, 1.5), (10.5, 4.5)])),
-            dot(7.5, 12.5, 1.5),
+            ink(line(&[(8.0, 9.5), (8.0, 2.0)])),
+            ink(line(&[(5.0, 5.0), (8.0, 2.0), (11.0, 5.0)])),
+            dot(8.0, 13.0, 1.5),
         }
         /// Red dot: breakpoint.
         Breakpoint "breakpoint" ["debugger", "stop point"] {
@@ -508,8 +508,8 @@ glyphs! {
         }
         /// Hammer: build, compile.
         Build "build" ["hammer", "compile", "make"] {
-            ink(poly(&[(6.5, 4.5), (9.5, 1.5), (14.5, 6.5), (11.5, 9.5)])),
-            ink(line(&[(8.5, 7.5), (2.5, 13.5)])),
+            ink(poly(&[(6.0, 5.0), (9.0, 2.0), (14.0, 7.0), (11.0, 10.0)])),
+            ink(line(&[(8.0, 8.0), (2.0, 14.0)])),
         }
         /// Prompt in a window: terminal.
         Terminal "terminal" ["console", "shell", "command line"] {
@@ -525,15 +525,15 @@ glyphs! {
         }
         /// Flask: tests.
         Test "test" ["flask", "experiment", "unit test"] {
-            ink(line(&[(5.5, 1.5), (10.5, 1.5)])),
-            ink(line(&[(6.5, 1.5), (6.5, 6.0), (2.5, 13.5), (13.5, 13.5), (9.5, 6.0), (9.5, 1.5)])),
-            ink(line(&[(4.1, 10.5), (11.9, 10.5)])),
+            ink(line(&[(5.5, 2.0), (10.5, 2.0)])),
+            ink(line(&[(6.5, 2.0), (6.5, 6.5), (2.5, 14.0), (13.5, 14.0), (9.5, 6.5), (9.5, 2.0)])),
+            ink(line(&[(4.1, 11.0), (11.9, 11.0)])),
         }
         /// Cube: package, module, dependency.
         Package "package" ["module", "dependency", "cube", "crate", "model"] {
-            ink(poly(&[(7.5, 1.5), (13.5, 4.5), (13.5, 11.5), (7.5, 14.5), (1.5, 11.5), (1.5, 4.5)])),
-            ink(line(&[(1.5, 4.5), (7.5, 7.5), (13.5, 4.5)])),
-            ink(line(&[(7.5, 7.5), (7.5, 14.5)])),
+            ink(poly(&[(8.0, 1.5), (14.0, 4.5), (14.0, 11.5), (8.0, 14.5), (2.0, 11.5), (2.0, 4.5)])),
+            ink(line(&[(2.0, 4.5), (8.0, 7.5), (14.0, 4.5)])),
+            ink(line(&[(8.0, 7.5), (8.0, 14.5)])),
         }
         /// Nested list: structure, outline.
         Structure "structure" ["outline", "hierarchy", "tree"] {
@@ -544,9 +544,9 @@ glyphs! {
         }
         /// Circle with an exclamation mark: problems.
         Problems "problems" ["issues", "diagnostics", "errors"] {
-            ink(circle(7.5, 7.5, 6.0)),
-            ink(line(&[(7.5, 4.5), (7.5, 8.5)])),
-            dot(7.5, 10.75, 0.9),
+            ink(circle(8.0, 8.0, 6.0)),
+            ink(line(&[(8.0, 5.0), (8.0, 9.0)])),
+            dot(8.0, 11.25, 0.9),
         }
         /// Stacked layers: variants, environments.
         Layers "layers" ["variants", "environments", "stack"] {
@@ -563,18 +563,18 @@ glyphs! {
         }
         /// Arrow down to a bar: scroll to end.
         ScrollEnd "scroll-end" ["bottom", "follow output"] {
-            ink(line(&[(7.5, 2.5), (7.5, 10.5)])),
-            ink(line(&[(4.0, 7.0), (7.5, 10.5), (11.0, 7.0)])),
-            ink(line(&[(2.5, 13.5), (12.5, 13.5)])),
+            ink(line(&[(8.0, 2.5), (8.0, 10.5)])),
+            ink(line(&[(4.5, 7.0), (8.0, 10.5), (11.5, 7.0)])),
+            ink(line(&[(3.0, 13.5), (13.0, 13.5)])),
         }
         /// Wrapping line: soft wrap.
         SoftWrap "soft-wrap" ["word wrap", "wrap lines"] {
-            ink(line(&[(2.5, 3.5), (13.5, 3.5)])),
-            ink(line(&[(2.5, 7.5), (11.0, 7.5)])),
-            ink(arc(11.0, 10.0, 2.5, 270.0, 450.0)),
-            ink(line(&[(11.0, 12.5), (8.5, 12.5)])),
-            ink(line(&[(10.0, 11.0), (8.5, 12.5), (10.0, 14.0)])),
-            ink(line(&[(2.5, 12.5), (5.5, 12.5)])),
+            ink(line(&[(2.5, 2.5), (13.5, 2.5)])),
+            ink(line(&[(2.5, 6.5), (11.0, 6.5)])),
+            ink(arc(11.0, 9.0, 2.5, 270.0, 450.0)),
+            ink(line(&[(11.0, 11.5), (8.5, 11.5)])),
+            ink(line(&[(10.0, 10.0), (8.5, 11.5), (10.0, 13.0)])),
+            ink(line(&[(2.5, 11.5), (5.5, 11.5)])),
         }
         /// Phone outline: device, emulator.
         Device "device" ["phone", "mobile", "emulator"] {
@@ -607,9 +607,9 @@ glyphs! {
         }
         /// Dot on a line: commit.
         Commit "commit" ["git", "revision", "checkin"] {
-            ink(circle(7.5, 7.5, 2.5)),
-            ink(line(&[(1.5, 7.5), (5.0, 7.5)])),
-            ink(line(&[(10.0, 7.5), (13.5, 7.5)])),
+            ink(circle(8.0, 8.0, 2.5)),
+            ink(line(&[(2.0, 8.0), (5.5, 8.0)])),
+            ink(line(&[(10.5, 8.0), (14.0, 8.0)])),
         }
         /// Two lines joining: merge.
         Merge "merge" ["git", "join"] {
@@ -638,9 +638,9 @@ glyphs! {
         }
         /// Clock with a back arrow: history, recent.
         History "history" ["recent", "log", "time"] {
-            ink(arc(7.5, 8.0, 5.5, 180.0, 450.0)),
-            ink(line(&[(1.5, 5.75), (2.0, 8.25), (4.25, 7.0)])),
-            ink(line(&[(7.5, 5.0), (7.5, 8.5), (10.0, 10.0)])),
+            ink(arc(8.5, 8.0, 5.5, 180.0, 450.0)),
+            ink(line(&[(2.5, 5.75), (3.0, 8.25), (5.25, 7.0)])),
+            ink(line(&[(8.5, 5.0), (8.5, 8.5), (11.0, 10.0)])),
         }
         /// Tag: release, version.
         Tag "tag" ["release", "version", "label"] {
@@ -691,16 +691,16 @@ glyphs! {
         }
         /// Bell: notifications.
         Bell "bell" ["notifications", "alerts", "event log"] {
-            ink(arc(8.0, 6.5, 3.5, 180.0, 360.0)),
-            ink(line(&[(4.5, 6.5), (4.5, 11.5)])),
-            ink(line(&[(11.5, 6.5), (11.5, 11.5)])),
-            ink(line(&[(2.5, 11.5), (13.5, 11.5)])),
-            ink(arc(8.0, 12.5, 1.5, 0.0, 180.0)),
+            ink(arc(8.0, 6.0, 3.5, 180.0, 360.0)),
+            ink(line(&[(4.5, 6.0), (4.5, 11.0)])),
+            ink(line(&[(11.5, 6.0), (11.5, 11.0)])),
+            ink(line(&[(2.5, 11.0), (13.5, 11.0)])),
+            ink(arc(8.0, 12.0, 1.5, 0.0, 180.0)),
         }
         /// Clock: time, duration, pending.
         Clock "clock" ["time", "duration", "pending", "timer"] {
-            ink(circle(7.5, 8.0, 6.0)),
-            ink(line(&[(7.5, 4.5), (7.5, 8.5), (10.5, 10.5)])),
+            ink(circle(8.0, 8.0, 6.0)),
+            ink(line(&[(8.0, 4.5), (8.0, 8.5), (11.0, 10.5)])),
         }
     }
 
@@ -738,10 +738,10 @@ glyphs! {
         }
         /// Key: credentials, primary key.
         Key "key" ["credentials", "secret", "primary key", "api key"] {
-            ink(circle(5.0, 11.0, 3.25)),
-            ink(line(&[(7.3, 8.7), (13.5, 2.5)])),
-            ink(line(&[(11.5, 4.5), (13.0, 6.0)])),
-            ink(line(&[(9.5, 6.5), (10.75, 7.75)])),
+            ink(circle(5.5, 10.5, 3.25)),
+            ink(line(&[(7.8, 8.2), (14.0, 2.0)])),
+            ink(line(&[(12.0, 4.0), (13.5, 5.5)])),
+            ink(line(&[(10.0, 6.0), (11.25, 7.25)])),
         }
         /// Two stacked units: server, host.
         Server "server" ["host", "machine", "backend"] {
@@ -752,28 +752,28 @@ glyphs! {
         }
         /// Cloud: remote, hosted.
         Cloud "cloud" ["remote", "hosted", "online"] {
-            ink(arc(5.0, 10.5, 3.0, 90.0, 270.0)),
-            ink(arc(8.5, 8.0, 4.25, 188.0, 369.0)),
-            ink(arc(11.5, 11.0, 2.5, 270.0, 450.0)),
-            ink(line(&[(5.0, 13.5), (11.5, 13.5)])),
+            ink(arc(5.0, 10.0, 3.0, 90.0, 270.0)),
+            ink(arc(8.5, 7.5, 4.25, 188.0, 369.0)),
+            ink(arc(11.5, 10.5, 2.5, 270.0, 450.0)),
+            ink(line(&[(5.0, 13.0), (11.5, 13.0)])),
         }
         /// Globe: HTTP, web, network.
         Globe "globe" ["http", "web", "internet", "network", "url"] {
-            ink(circle(7.5, 7.5, 6.0)),
+            ink(circle(8.0, 8.0, 6.0)),
             ink(poly(&[
-                (10.25, 7.5), (10.16, 9.05), (9.88, 10.5), (9.44, 11.74), (8.88, 12.7), (8.21, 13.3),
-                (7.5, 13.5), (6.79, 13.3), (6.13, 12.7), (5.56, 11.74), (5.12, 10.5), (4.84, 9.05),
-                (4.75, 7.5), (4.84, 5.95), (5.12, 4.5), (5.56, 3.26), (6.12, 2.3), (6.79, 1.7),
-                (7.5, 1.5), (8.21, 1.7), (8.88, 2.3), (9.44, 3.26), (9.88, 4.5), (10.16, 5.95),
+                (10.75, 8.0), (10.66, 9.55), (10.38, 11.0), (9.94, 12.24), (9.38, 13.2), (8.71, 13.8),
+                (8.0, 14.0), (7.29, 13.8), (6.63, 13.2), (6.06, 12.24), (5.62, 11.0), (5.34, 9.55),
+                (5.25, 8.0), (5.34, 6.45), (5.62, 5.0), (6.06, 3.76), (6.62, 2.8), (7.29, 2.2),
+                (8.0, 2.0), (8.71, 2.2), (9.38, 2.8), (9.94, 3.76), (10.38, 5.0), (10.66, 6.45),
             ])),
-            ink(line(&[(1.5, 7.5), (13.5, 7.5)])),
+            ink(line(&[(2.0, 8.0), (14.0, 8.0)])),
         }
         /// Plug: connection, data source.
         Plug "plug" ["connect", "connection", "data source"] {
-            ink(line(&[(5.5, 1.5), (5.5, 4.5)])),
-            ink(line(&[(9.5, 1.5), (9.5, 4.5)])),
-            ink(poly(&[(3.5, 4.5), (11.5, 4.5), (11.5, 7.0), (9.5, 10.5), (5.5, 10.5), (3.5, 7.0)])),
-            ink(line(&[(7.5, 10.5), (7.5, 14.5)])),
+            ink(line(&[(6.0, 1.5), (6.0, 4.5)])),
+            ink(line(&[(10.0, 1.5), (10.0, 4.5)])),
+            ink(poly(&[(4.0, 4.5), (12.0, 4.5), (12.0, 7.0), (10.0, 10.5), (6.0, 10.5), (4.0, 7.0)])),
+            ink(line(&[(8.0, 10.5), (8.0, 14.5)])),
         }
         /// Shield: security, authentication.
         Shield "shield" ["security", "auth", "authentication", "protected"] {
@@ -781,8 +781,8 @@ glyphs! {
         }
         /// Person: user, account.
         User "user" ["account", "person", "profile"] {
-            ink(circle(8.0, 5.0, 2.75)),
-            ink(arc(8.0, 14.5, 5.5, 180.0, 360.0)),
+            ink(circle(8.0, 4.5, 2.75)),
+            ink(arc(8.0, 14.0, 5.5, 180.0, 360.0)),
         }
         /// Lightning bolt: event, trigger, index.
         Lightning "lightning" ["event", "trigger", "fast", "index"] {
@@ -797,27 +797,27 @@ glyphs! {
         }
         /// Speech bubble: comment.
         Comment "comment" ["message", "chat", "review comment"] {
-            ink(line(&[(4.5, 11.5), (3.0, 11.5)])),
-            ink(arc(3.0, 10.0, 1.5, 90.0, 180.0)),
-            ink(line(&[(1.5, 10.0), (1.5, 4.0)])),
-            ink(arc(3.0, 4.0, 1.5, 180.0, 270.0)),
-            ink(line(&[(3.0, 2.5), (13.0, 2.5)])),
-            ink(arc(13.0, 4.0, 1.5, 270.0, 360.0)),
-            ink(line(&[(14.5, 4.0), (14.5, 10.0)])),
-            ink(arc(13.0, 10.0, 1.5, 0.0, 90.0)),
-            ink(line(&[(13.0, 11.5), (7.5, 11.5), (4.5, 14.5), (4.5, 11.5)])),
+            ink(line(&[(4.5, 11.0), (3.0, 11.0)])),
+            ink(arc(3.0, 9.5, 1.5, 90.0, 180.0)),
+            ink(line(&[(1.5, 9.5), (1.5, 3.5)])),
+            ink(arc(3.0, 3.5, 1.5, 180.0, 270.0)),
+            ink(line(&[(3.0, 2.0), (13.0, 2.0)])),
+            ink(arc(13.0, 3.5, 1.5, 270.0, 360.0)),
+            ink(line(&[(14.5, 3.5), (14.5, 9.5)])),
+            ink(arc(13.0, 9.5, 1.5, 0.0, 90.0)),
+            ink(line(&[(13.0, 11.0), (7.5, 11.0), (4.5, 14.0), (4.5, 11.0)])),
         }
         /// Sun: light theme.
         Sun "sun" ["light theme", "day", "brightness"] {
-            ink(circle(7.5, 7.5, 2.75)),
-            ink(line(&[(12.1, 7.5), (13.5, 7.5)])),
-            ink(line(&[(1.5, 7.5), (2.9, 7.5)])),
-            ink(line(&[(7.5, 12.1), (7.5, 13.5)])),
-            ink(line(&[(7.5, 1.5), (7.5, 2.9)])),
-            ink(line(&[(10.75, 10.75), (12.1, 12.1)])),
-            ink(line(&[(4.25, 4.25), (2.9, 2.9)])),
-            ink(line(&[(4.25, 10.75), (2.9, 12.1)])),
-            ink(line(&[(10.75, 4.25), (12.1, 2.9)])),
+            ink(circle(8.0, 8.0, 2.75)),
+            ink(line(&[(12.6, 8.0), (14.0, 8.0)])),
+            ink(line(&[(2.0, 8.0), (3.4, 8.0)])),
+            ink(line(&[(8.0, 12.6), (8.0, 14.0)])),
+            ink(line(&[(8.0, 2.0), (8.0, 3.4)])),
+            ink(line(&[(11.25, 11.25), (12.6, 12.6)])),
+            ink(line(&[(4.75, 4.75), (3.4, 3.4)])),
+            ink(line(&[(4.75, 11.25), (3.4, 12.6)])),
+            ink(line(&[(11.25, 4.75), (12.6, 3.4)])),
         }
         /// Crescent: dark theme.
         Moon "moon" ["dark theme", "night"] {

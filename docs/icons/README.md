@@ -1,7 +1,8 @@
 # Archipel Icons
 
 A designed icon set for developer tools: 113 outline glyphs on a 16×16 grid, in eight
-categories, from chevrons to databases. Icons are **data**, not pictures. The same
+categories, from chevrons to databases, and 78 language icons, one for every common
+programming language and file format. Icons are **data**, not pictures. The same
 definitions render crisply in egui at any size and export as SVG for websites, docs and
 design tools.
 
@@ -13,6 +14,7 @@ design tools.
 *Every glyph at 16 px, 1×: the size it is used at.*
 
 - [Catalog](catalog.md): every glyph by category, with names and keywords.
+- [Language icons](languages.md): 78 languages and file formats, with their extensions.
 - [Design rules](design.md): the grid, strokes and shapes every glyph follows.
 - [Review](review.md): how glyphs are reviewed, and the review log.
 - [`svg/`](svg/): one SVG per glyph (`currentColor`).
@@ -49,6 +51,25 @@ assert!(svg.contains("currentColor"));
 [dependencies]
 archipel-icons = { git = "https://github.com/archipel-dev/kit", features = ["egui"] }
 ```
+
+## Language icons
+
+Every language gets the same kind of icon: a rounded tile in its GitHub Linguist color with
+a one- or two-letter label (`RS`, `PY`, `C#`, `{}`). The labels are drawn in the kit's own
+stroke font, so they are centered exactly and stay crisp, and the label is white or black,
+whichever contrasts more with the tile (at least 4.5:1). Tiles too dark for dark themes or
+too light for light themes get a soft outline.
+
+```rust
+use archipel_icons::Language;
+
+assert_eq!(Language::from_file_name("build.gradle.kts"), Some(Language::GradleKotlin));
+assert_eq!(Language::from_file_name("Dockerfile"), Some(Language::Dockerfile));
+assert_eq!(Language::Rust.label(), "RS");
+```
+
+In Archipel Kit, `Icon::for_file(name)` returns the language tile (or a Java type circle,
+image, archive or text page).
 
 ## Tones
 

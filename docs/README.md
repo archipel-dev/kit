@@ -3,7 +3,7 @@
 - [Getting started](getting-started.md): add the crate, install the theme, build a panel.
 - [Theming](theming.md): colors, tokens, dark and light, custom themes.
 - [Testing](testing.md): behavior, accessibility and snapshot tests for your own UI.
-- [Icon kit](icons/README.md): 113 designed glyphs, their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
+- [Icon kit](icons/README.md): 113 designed glyphs, [78 language icons](icons/languages.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
 - [Contributing a component](contributing.md): the checklist every component meets.
 
 ## Components
