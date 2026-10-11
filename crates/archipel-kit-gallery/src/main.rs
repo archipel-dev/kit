@@ -9,7 +9,7 @@ use archipel_kit::components::code::Json;
 use archipel_kit::components::{
     Avatar, Banner, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Counter, Dialog,
     Dropdown, EmptyState, IconButton, Kbd, Link, ListRow, MenuItem, MenuSeparator, Panel,
-    ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity,
+    ProgressBar, PropertyGrid, Radio, SectionHeader, SegmentedControl, Separator, Severity, Side,
     SortOrder, Spinner, SplitPane, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip,
     TooltipExt, TreeRow, TreeTable,
 };
@@ -119,6 +119,7 @@ struct Gallery {
     sort: Option<(usize, SortOrder)>,
     code: String,
     splits: [f32; 3],
+    sidebar_collapsed: bool,
     /// The data column shown at each position of the table.
     column_order: Vec<usize>,
     /// Edited request texts of the table, by row.
@@ -305,6 +306,7 @@ impl Default for Gallery {
             sort: None,
             code: CODE_SAMPLE.into(),
             splits: [0.25, 0.5, 0.5],
+            sidebar_collapsed: false,
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
             documents: Documents::new(),
@@ -850,7 +852,27 @@ impl Gallery {
                         ui.add(MenuItem::new("Delete").shortcut("Delete"));
                     });
                 ui.add(SectionHeader::new("Split pane"));
-                ui.label("Drag the dividers, double-click to reset, or Tab to one and use the arrow keys.");
+                ui.label(
+                    "Drag the dividers, double-click to reset, or Tab to one and use the arrow keys. \
+                     Drag the sidebar divider far to the left to collapse it, drag it back out to \
+                     expand, or press Enter on it.",
+                );
+                let collapsed = self.sidebar_collapsed;
+                let toggle = ui.add(
+                    IconButton::new(
+                        Glyph::SidebarLeft,
+                        if collapsed {
+                            "Show sidebar"
+                        } else {
+                            "Hide sidebar"
+                        },
+                    )
+                    .selected(!collapsed)
+                    .enabled(self.enabled),
+                );
+                if toggle.clicked() {
+                    self.sidebar_collapsed = !collapsed;
+                }
                 let size = egui::vec2(ui.available_width(), 260.0);
                 let enabled = self.enabled;
                 let [sidebar, request, response] = &mut self.splits;
@@ -859,6 +881,7 @@ impl Gallery {
                         .default_ratio(0.25)
                         .min_size(100.0)
                         .label("Resize sidebar")
+                        .collapsible(Side::First, &mut self.sidebar_collapsed)
                         .enabled(enabled)
                         .with(Tooltip::new("Resize sidebar").hint("Double-click to reset"))
                         .show(

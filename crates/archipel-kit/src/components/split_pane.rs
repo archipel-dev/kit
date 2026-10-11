@@ -21,6 +21,15 @@ pub enum Orientation {
     Vertical,
 }
 
+/// One side of a [`SplitPane`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    /// The left pane (side by side) or the top pane (stacked).
+    First,
+    /// The right pane (side by side) or the bottom pane (stacked).
+    Second,
+}
+
 /// Two panes separated by a divider the user drags (or moves with the arrow keys) to
 /// resize them. It fills the space it is given; nest one in a pane for three or more.
 ///
@@ -29,6 +38,10 @@ pub enum Orientation {
 /// when the user moves the divider, so persisting it is the caller's job. Each pane keeps
 /// at least its minimum size; when the window shrinks the layout is clamped but `ratio` is
 /// left alone, so the split springs back when the window grows again.
+///
+/// One side can be made [collapsible](SplitPane::collapsible): the caller owns a `bool`
+/// that says whether it is collapsed to nothing, and the divider stays as a thin edge to
+/// drag it back out. The `ratio` is not touched while collapsed, so expanding restores it.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -56,7 +69,14 @@ pub struct SplitPane<'a> {
     min_second: f32,
     label: String,
     enabled: bool,
+    collapse: Option<Collapse<'a>>,
     behaviours: Behaviours<'a>,
+}
+
+/// A collapsible side and the caller's collapsed flag.
+struct Collapse<'a> {
+    side: Side,
+    collapsed: &'a mut bool,
 }
 
 /// What [`SplitPane::show`] drew: what the panes returned and the divider's response.
@@ -65,8 +85,8 @@ pub struct SplitResponse<A, B> {
     pub first: A,
     /// What the second pane's closure returned.
     pub second: B,
-    /// The divider. `changed()` when the user moved it this frame, `dragged()` while the
-    /// pointer drags it, `double_clicked()` when it was reset.
+    /// The divider. `changed()` when the user moved it or collapsed or expanded a pane this
+    /// frame, `dragged()` while the pointer drags it, `double_clicked()` when it was reset.
     pub divider: Response,
 }
 
@@ -83,6 +103,7 @@ impl<'a> SplitPane<'a> {
             min_second: size::SPLIT_MIN_PANE,
             label: "Resize panes".into(),
             enabled: true,
+            collapse: None,
             behaviours: Behaviours::default(),
         }
     }
@@ -122,6 +143,20 @@ impl<'a> SplitPane<'a> {
         self
     }
 
+    /// Lets `side` collapse to nothing. `collapsed` is the caller's state: set it to collapse
+    /// or expand from code (a toolbar button, a command); the user changes it by dragging the
+    /// divider further than [`size::SPLIT_COLLAPSE`] past that pane's minimum size, or with
+    /// <kbd>Enter</kbd> or <kbd>Space</kbd> on the focused divider. Collapsed, the pane's
+    /// closure still runs (hidden, so keep it cheap) and the divider stays at the edge;
+    /// dragging it out, double-clicking it or pressing the arrow key toward the content
+    /// expands the pane. The ratio is never written while collapsed, so expanding with
+    /// code, <kbd>Enter</kbd> or a double click restores it; dragging out follows the pointer.
+    /// One side per split: calling this again replaces the earlier one.
+    pub fn collapsible(mut self, side: Side, collapsed: &'a mut bool) -> Self {
+        self.collapse = Some(Collapse { side, collapsed });
+        self
+    }
+
     /// A locked split (`false`) has a divider that ignores the pointer and the keyboard.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
@@ -137,7 +172,7 @@ impl<'a> SplitPane<'a> {
     /// Draws the panes into `first` (left or top) and `second` (right or bottom) and the
     /// divider between them. Each closure gets a `Ui` that is exactly its pane.
     pub fn show<A, B>(
-        self,
+        mut self,
         ui: &mut Ui,
         first: impl FnOnce(&mut Ui) -> A,
         second: impl FnOnce(&mut Ui) -> B,
@@ -159,9 +194,15 @@ impl<'a> SplitPane<'a> {
             (self.min_first, self.min_second),
             whole,
         );
-        let first_size = layout
-            .first_size(*self.ratio)
-            .round_to_pixels(ui.pixels_per_point());
+        let side = self.collapse.as_ref().map(|c| c.side);
+        let was_collapsed = self.collapse.as_ref().is_some_and(|c| *c.collapsed);
+        // The first pane's size with the pane collapsed or not.
+        let resting = |collapsed: bool, ratio: f32| match side {
+            Some(Side::First) if collapsed => 0.0,
+            Some(Side::Second) if collapsed => layout.avail,
+            _ => layout.first_size(ratio),
+        };
+        let first_size = resting(was_collapsed, *self.ratio).round_to_pixels(ui.pixels_per_point());
         let (_, bar, _) = layout.rects(first_size);
 
         // The divider takes part in Tab order before the panes, so an outer divider comes
@@ -197,6 +238,7 @@ impl<'a> SplitPane<'a> {
 
         let along = |p: egui::Pos2| if horizontal { p.x } else { p.y };
         let mut target = None;
+        let mut collapse_to = None;
         if self.enabled {
             let center = along(bar.center());
             if response.drag_started()
@@ -215,10 +257,32 @@ impl<'a> SplitPane<'a> {
                 } else {
                     whole.top()
                 };
-                target = Some(along(pointer) - grabbed - size::SPLIT_DIVIDER / 2.0 - start);
+                let wanted = along(pointer) - grabbed - size::SPLIT_DIVIDER / 2.0 - start;
+                target = Some(wanted);
+                if let Some(side) = side {
+                    // How big the collapsible pane would be if it followed the pointer,
+                    // against its minimum: collapse past the threshold, expand again only
+                    // once it is close to its minimum (so it doesn't flicker in between).
+                    let (pane, min) = match side {
+                        Side::First => (wanted, self.min_first),
+                        Side::Second => (layout.avail - wanted, self.min_second),
+                    };
+                    if !was_collapsed && pane < min - size::SPLIT_COLLAPSE {
+                        collapse_to = Some(true);
+                    } else if was_collapsed && pane >= min - size::SPLIT_COLLAPSE / 2.0 {
+                        collapse_to = Some(false);
+                    }
+                    if collapse_to.unwrap_or(was_collapsed) {
+                        target = None;
+                    }
+                }
             }
             if response.double_clicked() {
-                target = Some(layout.default_size());
+                if was_collapsed {
+                    collapse_to = Some(false);
+                } else {
+                    target = Some(layout.default_size());
+                }
             }
             if response.has_focus() {
                 let (back, forward) = if horizontal {
@@ -239,7 +303,19 @@ impl<'a> SplitPane<'a> {
                 });
                 let press = |key| ui.input_mut(|i| i.count_and_consume_key(Modifiers::NONE, key));
                 let steps = press(forward) as f32 - press(back) as f32;
-                if steps != 0.0 {
+                let toggle = side.is_some() && press(Key::Enter) + press(Key::Space) > 0;
+                if toggle {
+                    collapse_to = Some(!was_collapsed);
+                } else if was_collapsed {
+                    // Only the arrow toward the content does anything: it expands.
+                    let toward = match side {
+                        Some(Side::Second) => steps < 0.0,
+                        _ => steps > 0.0,
+                    };
+                    if toward {
+                        collapse_to = Some(false);
+                    }
+                } else if steps != 0.0 {
                     target = Some(first_size + steps * size::SPLIT_KEY_STEP);
                 } else if press(Key::Home) > 0 {
                     target = Some(f32::NEG_INFINITY);
@@ -248,7 +324,19 @@ impl<'a> SplitPane<'a> {
                 }
             }
         }
-        let mut shown_size = first_size;
+        let collapsed = collapse_to.unwrap_or(was_collapsed);
+        if collapsed != was_collapsed
+            && let Some(collapse) = self.collapse.as_mut()
+        {
+            *collapse.collapsed = collapsed;
+            response.mark_changed();
+            ui.ctx().request_repaint();
+        }
+        let mut shown_size = if collapsed == was_collapsed {
+            first_size
+        } else {
+            resting(collapsed, *self.ratio)
+        };
         if let Some(wanted) = target {
             let size = layout.clamp(wanted);
             let new_ratio = layout.ratio_of(size);
@@ -260,26 +348,63 @@ impl<'a> SplitPane<'a> {
             shown_size = size;
         }
         let (first_rect, bar, second_rect) = layout.rects(shown_size);
-        let mut pane = |rect: Rect, name: &str, add: &mut dyn FnMut(&mut Ui)| {
-            let mut child = ui.new_child(
-                UiBuilder::new()
-                    .id_salt((self.id, name))
-                    .max_rect(rect)
-                    .layout(egui::Layout::top_down(Align::Min)),
-            );
-            child.set_clip_rect(rect.intersect(ui.clip_rect()));
+        let mut pane = |rect: Rect, name: &str, hidden: bool, add: &mut dyn FnMut(&mut Ui)| {
+            let mut builder = UiBuilder::new()
+                .id_salt((self.id, name))
+                .max_rect(rect)
+                .layout(egui::Layout::top_down(Align::Min));
+            if hidden {
+                builder = builder.invisible();
+            }
+            let mut child = ui.new_child(builder);
+            child.set_clip_rect(if hidden {
+                Rect::from_min_size(rect.min, vec2(0.0, 0.0))
+            } else {
+                rect.intersect(ui.clip_rect())
+            });
             add(&mut child);
+        };
+        // A collapsed pane is laid out hidden at its minimum size, so what it holds doesn't
+        // reflow into a sliver.
+        let hidden = |this: Side, rect: Rect, min: f32| {
+            let hidden = collapsed && side == Some(this);
+            let width = |len: f32| len.min(min.max(1.0));
+            let rect = match (hidden, horizontal, this) {
+                (false, ..) => rect,
+                (true, true, Side::First) => {
+                    Rect::from_min_size(whole.min, vec2(width(whole.width()), whole.height()))
+                }
+                (true, true, Side::Second) => Rect::from_min_max(
+                    pos2(whole.right() - width(whole.width()), whole.top()),
+                    whole.max,
+                ),
+                (true, false, Side::First) => {
+                    Rect::from_min_size(whole.min, vec2(whole.width(), width(whole.height())))
+                }
+                (true, false, Side::Second) => Rect::from_min_max(
+                    pos2(whole.left(), whole.bottom() - width(whole.height())),
+                    whole.max,
+                ),
+            };
+            (hidden, rect)
         };
         let (mut first_out, mut second_out) = (None, None);
         let (mut first, mut second) = (Some(first), Some(second));
-        pane(first_rect, "first", &mut |ui| {
+        let (hide_first, first_rect) = hidden(Side::First, first_rect, self.min_first);
+        let (hide_second, second_rect) = hidden(Side::Second, second_rect, self.min_second);
+        pane(first_rect, "first", hide_first, &mut |ui| {
             first_out = first.take().map(|f| f(ui));
         });
-        pane(second_rect, "second", &mut |ui| {
+        pane(second_rect, "second", hide_second, &mut |ui| {
             second_out = second.take().map(|f| f(ui));
         });
 
-        let (min_ratio, max_ratio) = layout.ratio_range();
+        let (mut min_ratio, mut max_ratio) = layout.ratio_range();
+        match side {
+            Some(Side::First) => min_ratio = 0.0,
+            Some(Side::Second) => max_ratio = 1.0,
+            None => {}
+        }
         let shown_ratio = layout.ratio_of(shown_size);
         response.widget_info(|| {
             WidgetInfo::slider(self.enabled, f64::from(shown_ratio * 100.0), &self.label)
@@ -293,6 +418,9 @@ impl<'a> SplitPane<'a> {
             });
             node.set_min_numeric_value(f64::from(min_ratio * 100.0));
             node.set_max_numeric_value(f64::from(max_ratio * 100.0));
+            if side.is_some() {
+                node.set_expanded(!collapsed);
+            }
             node.set_numeric_value_step(f64::from(layout.ratio_of(size::SPLIT_KEY_STEP) * 100.0));
         });
 
@@ -302,6 +430,9 @@ impl<'a> SplitPane<'a> {
             let (thickness, color) = if active {
                 (2.0, colors.accent)
             } else if self.enabled && response.hovered() {
+                (2.0, colors.control_border)
+            } else if collapsed {
+                // A collapsed pane's edge must stay easy to see.
                 (2.0, colors.control_border)
             } else {
                 (1.0, colors.separator)

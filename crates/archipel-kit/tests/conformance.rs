@@ -374,3 +374,24 @@ fn split_pane_divider_conforms() {
     })
     .run();
 }
+
+#[test]
+fn collapsible_split_pane_divider_conforms_open_and_collapsed() {
+    use archipel_kit::components::{Side, SplitPane};
+    for collapsed in [false, true] {
+        let mut ratio = 0.5;
+        testing::conformance("Resize sidebar", move |ui, enabled| {
+            let mut collapsed = collapsed;
+            ui.allocate_ui(egui::vec2(320.0, 120.0), |ui| {
+                SplitPane::horizontal("conformance", &mut ratio)
+                    .label("Resize sidebar")
+                    .enabled(enabled)
+                    .collapsible(Side::First, &mut collapsed)
+                    .show(ui, |ui| ui.label("Sidebar"), |ui| ui.label("Request"))
+                    .divider
+            })
+            .inner
+        })
+        .run();
+    }
+}
