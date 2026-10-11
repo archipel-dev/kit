@@ -41,7 +41,7 @@ pub mod testing;
 
 pub use egui;
 pub use icons::{Glyph, Icon};
-pub use parts::Tone;
+pub use parts::{Tone, ValueKind};
 pub use style::install;
 pub use theme::Theme;
 
@@ -66,6 +66,7 @@ mod docs {
         Behaviours = "behaviours.md";
         BuildingComponents = "building-components.md";
         Collections = "components/collections.md";
+        TreeTable = "components/tree-table.md";
         Tooltip = "components/tooltip.md";
         DialogPage = "components/dialog.md";
         IconKit = "icons/README.md";
