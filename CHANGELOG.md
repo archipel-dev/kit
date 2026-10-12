@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/archipel-dev/kit/compare/v0.3.1...v0.3.2) (2026-10-12)
+
+
+### Bug Fixes
+
+* preserve typed drops and clip table header targets ([#43](https://github.com/archipel-dev/kit/issues/43)) ([d48b2a0](https://github.com/archipel-dev/kit/commit/d48b2a02f9ec0b318a1545333af2d0376e56ff03))
+
 ## [0.3.1](https://github.com/archipel-dev/kit/compare/v0.3.0...v0.3.1) (2026-10-12)
 
 
