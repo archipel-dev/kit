@@ -55,6 +55,7 @@ fn appearance(ui: &mut egui::Ui, readers: &mut bool, custom: &mut bool, zoom: &m
 | `form.radios(label, \|ui\| …)` | A label and radio buttons in one row, 16 pt apart. |
 | `form.group(title, \|form\| …)` | A titled group, rows indented. The first group of a page has no space above. |
 | `form.collapsible(title, &mut open, \|form\| …)` | A group the user shows and hides ("Advanced"): a chevron before the title; the rows only while `open`. |
+| `form.comment(text)` | An explanation under the labelled row above, in the 12 pt comment gray, starting under its fields, 3 pt below them. |
 | `form.indent(\|form\| …)` | Rows that depend on the row above. |
 | `form.space()` | Extra space between loosely related rows. |
 | `form.ui()` | The `Ui`, for content that is not a row. |

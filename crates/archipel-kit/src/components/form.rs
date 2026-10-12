@@ -132,6 +132,44 @@ impl FormUi<'_> {
         inner
     }
 
+    /// An explanation under the labelled [row](Self::row) above, in the smaller gray comment
+    /// text, starting where the row's fields start and wrapping at the form's width; as the
+    /// comments under Android Studio's settings fields. Checkboxes and radios carry their own
+    /// ([`Checkbox::comment`](super::Checkbox::comment)).
+    pub fn comment(&mut self, text: &str) {
+        let indent = self.labels.width + size::FORM_LABEL_GAP;
+        let wrap = (self.ui.available_width() - indent).max(size::ICON);
+        let mut job = egui::text::LayoutJob::default();
+        job.append(
+            text,
+            0.0,
+            egui::TextFormat {
+                font_id: typography::body(typography::COMMENT),
+                line_height: Some(size::COMMENT_LINE_HEIGHT),
+                color: egui::Color32::PLACEHOLDER,
+                ..Default::default()
+            },
+        );
+        job.wrap.max_width = wrap;
+        let galley = self.ui.painter().layout_job(job);
+        let lines = galley.rows.len().max(1) as f32;
+        let colors = Theme::colors(self.ui.ctx());
+        // Close under the field, as a checkbox comment is under its label: undo the row's
+        // inset and the gap between rows.
+        self.ui
+            .add_space(size::COMMENT_GAP - size::FORM_FIELD_INSET - size::FORM_ROW_GAP);
+        self.ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            ui.add_space(indent);
+            let (rect, response) = ui.allocate_exact_size(
+                vec2(galley.size().x, lines * size::COMMENT_LINE_HEIGHT),
+                Sense::hover(),
+            );
+            response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, text));
+            common::text(ui.painter(), rect.min, galley, colors.text_placeholder);
+        });
+    }
+
     /// A row with a label followed by radio buttons (`Open project in (•) New window
     /// ( ) Current window`), [`FORM_CONTROL_GAP`](size::FORM_CONTROL_GAP) apart.
     pub fn radios<R>(&mut self, label: &str, add: impl FnOnce(&mut Ui) -> R) -> R {

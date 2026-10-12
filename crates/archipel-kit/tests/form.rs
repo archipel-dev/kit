@@ -127,6 +127,7 @@ fn advanced(ui: &mut egui::Ui, open: &mut bool) {
             form.row("Timeout:", |ui| {
                 ui.add(TextField::new(&mut timeout).name("Timeout").width(60.0))
             });
+            form.comment("Seconds before a query is cancelled");
             form.add(Checkbox::new(&mut retry, "Retry reads"));
         });
     });
@@ -191,4 +192,20 @@ fn labelled_rows_start_their_fields_in_one_column() {
     harness.run();
     let again = harness.get_by_label("Name").rect();
     assert_eq!(name, again, "stable after the first frame");
+}
+
+#[test]
+fn a_comment_starts_under_the_fields_of_its_row() {
+    let harness = testing::harness_state(Theme::dark(), true, advanced);
+    let field = harness.get_by_label("Timeout").rect();
+    let comment = harness
+        .get_by_label("Seconds before a query is cancelled")
+        .rect();
+    assert!(comment.top() >= field.bottom(), "below the field");
+    // The field's text sits a padding inside its box; the comment starts at the box.
+    let padding = tokens::size::CODE_PADDING;
+    assert!(
+        (comment.left() + padding - field.left()).abs() <= padding,
+        "under the field column: {comment:?} {field:?}"
+    );
 }
