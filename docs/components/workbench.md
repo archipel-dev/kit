@@ -97,6 +97,12 @@ supplies the outer gutter, toolbar and status area. Floating windows, tool-windo
 stripes, multiple tools per region, and SDK/app migration remain separate follow-ups;
 this component does not silently store unsupported layout modes.
 
+The frame behind the islands is one surface, as in Android Studio: the toolbar, the
+stripes and the status bar sit on it, and the project glow runs across all of them. A
+plugin view embedded with `show_inside` in a host window that already drew that frame
+passes `.frame_background(false)`; otherwise it paints its own frame over the host's and
+the glow stops at a hard edge around the embedded islands.
+
 ## A whole window
 
 `workbench_ide` is built only from kit components, laid out like Android Studio: a toolbar

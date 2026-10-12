@@ -455,3 +455,41 @@ fn tool_tabs_select_and_remember_the_content() {
     assert_eq!(h.state().tool_tab(WorkbenchRegion::Right), 1);
     assert!(h.query_by_label("Raw body").is_some());
 }
+
+/// Whether a run of `show_inside` paints a rectangle in the frame color over the whole area.
+fn paints_frame(frame_background: bool) -> bool {
+    let ctx = egui::Context::default();
+    archipel_kit::install(&ctx, Theme::dark());
+    let mut state = WorkbenchState::default();
+    let mut area = egui::Rect::NOTHING;
+    let output = ctx.run(egui::RawInput::default(), |ctx| {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            area = ui.available_rect_before_wrap();
+            Workbench::new("embedded", &mut state)
+                .left("Browser", |ui| {
+                    ui.label("Collections");
+                })
+                .frame_background(frame_background)
+                .show_inside(ui, |ui| {
+                    ui.label("Center");
+                });
+        });
+    });
+    let frame = Theme::colors(&ctx).frame;
+    output.shapes.iter().any(|clipped| match &clipped.shape {
+        egui::Shape::Rect(rect) => rect.fill == frame && rect.rect == area,
+        _ => false,
+    })
+}
+
+#[test]
+fn an_embedded_workbench_can_leave_the_host_frame_and_its_glow_visible() {
+    assert!(
+        paints_frame(true),
+        "by default the workbench paints its frame"
+    );
+    assert!(
+        !paints_frame(false),
+        "with frame_background(false) the host's frame and glow stay one surface"
+    );
+}
