@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/archipel-dev/kit/compare/v0.2.1...v0.2.2) (2026-10-12)
+
+
+### Features
+
+* **workbench:** let an embedded workbench keep the host's frame ([#37](https://github.com/archipel-dev/kit/issues/37)) ([e110403](https://github.com/archipel-dev/kit/commit/e110403c2013568ffc128185823467f22f3902c7))
+
 ## [0.2.1](https://github.com/archipel-dev/kit/compare/v0.2.0...v0.2.1) (2026-10-12)
 
 
