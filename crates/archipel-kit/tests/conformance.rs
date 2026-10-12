@@ -5,8 +5,9 @@ mod common;
 
 use archipel_kit::components::{
     Breadcrumbs, Button, Cell, Checkbox, CodeEditor, CodeView, Column, Dropdown, IconButton, Link,
-    ListRow, MenuItem, Radio, SegmentedControl, StatusBarItem, StripeButton, Tab, TabBar, Table,
-    TextField, Toggle, ToolbarButton, Tree, TreeRow, TreeTable, VirtualList,
+    ListRow, MenuItem, NumberField, Radio, SectionHeader, SegmentedControl, StatusBarItem,
+    StripeButton, Tab, TabBar, Table, TextField, Toggle, ToolbarButton, Tree, TreeRow, TreeTable,
+    VirtualList,
 };
 use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
@@ -114,6 +115,18 @@ fn link_and_menu_item_conform() {
 }
 
 #[test]
+fn collapsible_section_header_conforms() {
+    let mut open = false;
+    testing::conformance("Advanced", move |ui, enabled| {
+        ui.add_enabled(
+            enabled,
+            SectionHeader::new("Advanced").collapsible(&mut open),
+        )
+    })
+    .run();
+}
+
+#[test]
 fn list_row_conforms() {
     testing::conformance("main.rs", |ui, enabled| {
         ui.add_enabled_ui(enabled, |ui| {
@@ -132,6 +145,22 @@ fn text_field_conforms() {
         ui.add(
             TextField::new(&mut text)
                 .label("Project name")
+                .enabled(enabled),
+        )
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+#[test]
+fn number_field_conforms() {
+    let mut limit = 50_u32;
+    testing::conformance("Limit", move |ui, enabled| {
+        ui.add(
+            NumberField::new(&mut limit)
+                .name("Limit")
+                .range(1..=500)
                 .enabled(enabled),
         )
     })

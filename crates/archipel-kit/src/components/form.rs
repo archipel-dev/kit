@@ -127,6 +127,19 @@ impl FormUi<'_> {
         self.indent(add)
     }
 
+    /// A group the user shows and hides ("Advanced"): a [collapsible](SectionHeader::collapsible)
+    /// header, then, while `*open`, the rows `add` adds, indented under it. Returns what `add`
+    /// returned, `None` while closed.
+    pub fn collapsible<R>(
+        &mut self,
+        title: &str,
+        open: &mut bool,
+        add: impl FnOnce(&mut FormUi<'_>) -> R,
+    ) -> Option<R> {
+        self.ui.add(SectionHeader::new(title).collapsible(open));
+        open.then(|| self.indent(add))
+    }
+
     /// Rows that belong to the row above (they only apply when it is checked), indented
     /// under it.
     pub fn indent<R>(&mut self, add: impl FnOnce(&mut FormUi<'_>) -> R) -> R {

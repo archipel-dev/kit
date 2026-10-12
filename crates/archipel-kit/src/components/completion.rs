@@ -79,6 +79,43 @@ impl<F: Fn(&str, usize) -> Option<Completions>> Completer for F {
     }
 }
 
+/// The completer of a combo box ([`TextField::suggestions`](super::TextField::suggestions)):
+/// the suggestions containing what was typed (ignoring case), replacing the whole text.
+/// Asked for (the chevron, <kbd>Ctrl</kbd>+<kbd>Space</kbd>) on an empty field or one
+/// holding a suggestion, it offers them all.
+pub(crate) struct Suggestions<'a>(pub(crate) &'a [String]);
+
+impl Suggestions<'_> {
+    fn matching(&self, text: &str, all: bool) -> Option<Completions> {
+        let needle = text.trim().to_lowercase();
+        let items: Vec<Completion> = self
+            .0
+            .iter()
+            .filter(|s| all || s.to_lowercase().contains(&needle))
+            .map(|s| Completion::new(s.as_str(), s.as_str()))
+            .collect();
+        Some(Completions {
+            start: 0,
+            end: text.chars().count(),
+            items,
+        })
+    }
+}
+
+impl Completer for Suggestions<'_> {
+    fn complete(&self, text: &str, _caret: usize) -> Option<Completions> {
+        if text.trim().is_empty() || self.0.iter().any(|s| s == text) {
+            return None;
+        }
+        self.matching(text, false)
+    }
+
+    fn complete_on_request(&self, text: &str, _caret: usize) -> Option<Completions> {
+        let all = text.trim().is_empty() || self.0.iter().any(|s| s == text);
+        self.matching(text, all)
+    }
+}
+
 /// Where the list is, between frames.
 #[derive(Debug, Clone, Copy, Default)]
 struct State {
@@ -111,6 +148,8 @@ pub(crate) struct List {
     key: Id,
     state: State,
     keys: Keys,
+    /// The field the list hangs below, as wide as it (a combo box); else it follows the caret.
+    below: Option<Rect>,
 }
 
 impl List {
@@ -135,7 +174,36 @@ impl List {
                 }
             });
         }
-        (Self { key, state, keys }, keys)
+        (
+            Self {
+                key,
+                state,
+                keys,
+                below: None,
+            },
+            keys,
+        )
+    }
+
+    /// Opens the list with everything on offer, as <kbd>Ctrl</kbd>+<kbd>Space</kbd> does: a
+    /// combo box's chevron.
+    pub(crate) fn open(&mut self) {
+        self.keys.explicit = true;
+    }
+
+    /// Whether the list was open at the start of the frame.
+    pub(crate) fn is_open(&self) -> bool {
+        self.state.open
+    }
+
+    /// Closes the list: a second click on a combo box's chevron.
+    pub(crate) fn close(&mut self) {
+        self.state.open = false;
+    }
+
+    /// Hangs the list below `field`, as wide as it, instead of under the caret.
+    pub(crate) fn below(&mut self, field: Rect) {
+        self.below = Some(field);
     }
 
     /// Updates, draws and applies the list after the input was drawn. `edited` is the
@@ -152,7 +220,7 @@ impl List {
         let keys = self.keys;
         let caret_rect = caret.map(|c| c.1);
         let caret = caret.map(|c| c.0);
-        let focused = edited.has_focus() || keys.escaped;
+        let focused = edited.has_focus() || keys.escaped || keys.explicit;
         if keys.escaped {
             // egui drops the focus on Escape before any widget runs; this Escape only
             // closed the list, so the input keeps it (a second Escape leaves).
@@ -194,12 +262,15 @@ impl List {
                 chosen = found.items.get(self.state.selected).cloned();
             }
             if self.state.open
-                && let Some(anchor) = caret_rect
+                && let Some(anchor) = self.below.or(caret_rect)
             {
                 let mut open = true;
                 let selected = self.state.selected;
+                let width = self
+                    .below
+                    .map_or(size::COMPLETION_WIDTH, |field| field.width());
                 let picked = crate::parts::Popover::new(self.key.with("list"), anchor)
-                    .width(size::COMPLETION_WIDTH)
+                    .width(width)
                     .show(ui.ctx(), &mut open, |ui| {
                         let mut picked = None;
                         for (i, item) in found.items.iter().enumerate() {

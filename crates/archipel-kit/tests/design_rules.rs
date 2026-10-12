@@ -204,6 +204,7 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
         "composition with one button, audited in tests/feedback.rs",
     ),
     ("FieldLabel", "display only: names the field after it"),
+    ("Integer", "trait: the types a NumberField edits"),
     (
         "Form",
         "layout of other components, measured in tests/form.rs",
@@ -225,7 +226,6 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("ProgressBar", "display only"),
     ("PropertyGrid", "display only"),
     ("RowResponse", "response"),
-    ("SectionHeader", "display only"),
     ("Separator", "display only"),
     ("Severity", "enum"),
     ("SortOrder", "enum"),

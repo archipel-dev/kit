@@ -117,3 +117,54 @@ fn comment_describes_the_checkbox_and_does_not_toggle_it() {
     harness.run();
     assert!(*harness.state());
 }
+
+fn advanced(ui: &mut egui::Ui, open: &mut bool) {
+    ui.set_width(360.0);
+    let mut timeout = String::from("30");
+    let mut retry = true;
+    Form::new().show(ui, |form| {
+        form.collapsible("Advanced", open, |form| {
+            form.row("Timeout:", |ui| {
+                ui.add(TextField::new(&mut timeout).name("Timeout").width(60.0))
+            });
+            form.add(Checkbox::new(&mut retry, "Retry reads"));
+        });
+    });
+}
+
+#[test]
+fn a_collapsible_group_shows_its_rows_only_while_open() {
+    let mut harness = testing::harness_state(Theme::dark(), false, advanced);
+    let header = harness.get_by_label("Advanced");
+    assert_eq!(header.accesskit_node().data().is_expanded(), Some(false));
+    assert!(harness.query_by_label("Timeout").is_none());
+    harness.get_by_label("Advanced").click();
+    harness.run();
+    assert!(*harness.state());
+    assert_eq!(
+        harness
+            .get_by_label("Advanced")
+            .accesskit_node()
+            .data()
+            .is_expanded(),
+        Some(true)
+    );
+    assert!(harness.query_by_label("Timeout").is_some());
+    // The keyboard toggles it too.
+    harness.get_by_label("Advanced").focus();
+    harness.key_press(egui::Key::Space);
+    harness.run();
+    assert!(!*harness.state());
+}
+
+#[test]
+fn collapsible_snapshot() {
+    testing::snapshot_themes("form_collapsible", common::IMG, |ui| {
+        let mut open = true;
+        advanced(ui, &mut open);
+        let mut closed = false;
+        Form::new().show(ui, |form| {
+            form.collapsible("Proxy", &mut closed, |_| {});
+        });
+    });
+}

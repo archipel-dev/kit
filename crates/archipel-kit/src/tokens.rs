@@ -51,6 +51,9 @@ pub mod size {
     pub const COMPLETION_WIDTH: f32 = 280.0;
     /// Distance from a field's right edge to the center of its clear button.
     pub const CLEAR_BUTTON_INSET: f32 = 15.0;
+    /// Distance from a combo box's right edge to the center of its chevron (where
+    /// [`Dropdown`](crate::components::Dropdown) draws it too).
+    pub const COMBO_CHEVRON_INSET: f32 = 16.0;
     /// Size the close glyph is drawn at in a clear button, so its cross is 8 pt.
     pub const CLEAR_GLYPH: f32 = 13.0;
     /// Gap between toolbar items.
@@ -83,6 +86,9 @@ pub mod size {
     pub const FORM_GROUP_SPACING: f32 = 20.0;
     /// Settings forms: indent of a group's rows under its title.
     pub const FORM_GROUP_INDENT: f32 = 24.0;
+    /// Default width of a [`NumberField`](crate::components::NumberField): room for six
+    /// digits, as Android Studio's integer fields.
+    pub const NUMBER_FIELD_WIDTH: f32 = 64.0;
     /// Gap between a group title and its line.
     pub const GROUP_LINE_GAP: f32 = 6.0;
     /// Gap between a checkbox or radio and its label.

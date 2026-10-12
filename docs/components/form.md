@@ -54,6 +54,7 @@ fn appearance(ui: &mut egui::Ui, readers: &mut bool, custom: &mut bool, zoom: &m
 | `form.fields(\|ui\| …)` | A row of fields without a leading label. Set independent fields apart with `ui.add_space(tokens::size::FORM_CONTROL_SPACE)`; label them with `FieldLabel`. |
 | `form.radios(label, \|ui\| …)` | A label and radio buttons in one row, 16 pt apart. |
 | `form.group(title, \|form\| …)` | A titled group, rows indented. The first group of a page has no space above. |
+| `form.collapsible(title, &mut open, \|form\| …)` | A group the user shows and hides ("Advanced"): a chevron before the title; the rows only while `open`. |
 | `form.indent(\|form\| …)` | Rows that depend on the row above. |
 | `form.space()` | Extra space between loosely related rows. |
 | `form.ui()` | The `Ui`, for content that is not a row. |
@@ -73,11 +74,20 @@ Light:
 - Labels end 6 pt before their field; radio buttons in a row are 16 pt apart; a checkbox's
   label starts 8 pt after the box.
 - Comments are not click targets: clicking one does not toggle the checkbox.
+- A collapsible group's title follows a chevron (right while closed, down while open); a
+  click on the chevron or title, <kbd>Enter</kbd> or <kbd>Space</kbd> toggle it. The caller
+  owns the `open` flag, so the app decides whether it persists.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/form_collapsible.dark.png">
+  <img alt="An open Advanced group with a timeout field and a checkbox, and a closed Proxy group" src="img/form_collapsible.light.png" width="360">
+</picture>
 - A disabled dropdown has no fill, a faint border and dimmed text.
 
 ## Accessibility
 
-Rows keep their controls' roles. Group titles and field labels are labels; a comment below a
+Rows keep their controls' roles. Group titles and field labels are labels; a collapsible
+group's title is a collapsing header that reports whether it is expanded; a comment below a
 checkbox or radio is its description.
 
 Source: [`components/form.rs`](../../crates/archipel-kit/src/components/form.rs) ·

@@ -60,6 +60,7 @@ pub struct TextField<'t> {
     id: Option<Id>,
     highlighter: Option<&'t dyn Highlighter>,
     completer: Option<&'t dyn Completer>,
+    suggestions: Option<&'t [String]>,
 }
 
 /// What [`TextField::show`] reports besides the usual [`Response`].
@@ -123,6 +124,7 @@ impl<'t> TextField<'t> {
             id: None,
             highlighter: None,
             completer: None,
+            suggestions: None,
         }
     }
 
@@ -132,6 +134,17 @@ impl<'t> TextField<'t> {
     /// every edit that has suggestions and closes when the field loses focus.
     pub fn completer(mut self, completer: &'t dyn Completer) -> Self {
         self.completer = Some(completer);
+        self
+    }
+
+    /// Makes the field an editable combo box: free text, plus a chevron that lists
+    /// `suggestions` below the field (a field name, a recent value). Typing filters the list
+    /// (ignoring case); picking one replaces the text. The chevron,
+    /// <kbd>Alt</kbd>+<kbd>Down</kbd> or <kbd>Ctrl</kbd>+<kbd>Space</kbd> open the full list.
+    /// Use a [`Dropdown`](super::Dropdown) when only the listed values are valid. Replaces
+    /// a [`completer`](Self::completer) and the clear button.
+    pub fn suggestions(mut self, suggestions: &'t [String]) -> Self {
+        self.suggestions = Some(suggestions);
         self
     }
 
@@ -263,11 +276,28 @@ impl TextField<'_> {
             // Painted after the content, once focus is known, but drawn beneath it.
             let background = ui.painter().add(egui::Shape::Noop);
             // An open completion list owns the navigation keys, before the edit sees them.
-            let field_focused = self.completer.is_some()
+            let suggestions = self
+                .suggestions
+                .filter(|_| !multiline)
+                .map(super::completion::Suggestions);
+            let completer: Option<&dyn Completer> = match &suggestions {
+                Some(suggestions) => Some(suggestions),
+                None => self.completer,
+            };
+            let field_focused = completer.is_some()
                 && self.id.is_some_and(|id| ui.memory(|m| m.has_focus(id)))
                     | ui.data(|d| d.get_temp::<bool>(frame_response.id.with("archipel-focused")))
                         .unwrap_or(false);
-            let (list, keys) = super::completion::List::begin(ui, frame_response.id, field_focused);
+            let (mut list, keys) =
+                super::completion::List::begin(ui, frame_response.id, field_focused);
+            if suggestions.is_some() {
+                list.below(rect);
+                if field_focused
+                    && ui.input_mut(|i| i.consume_key(egui::Modifiers::ALT, egui::Key::ArrowDown))
+                {
+                    list.open();
+                }
+            }
             let mut content = ui.new_child(
                 egui::UiBuilder::new()
                     .max_rect(rect.shrink2(vec2(
@@ -280,11 +310,15 @@ impl TextField<'_> {
             if let Some(icon) = self.leading {
                 icons::show(&mut content, icon, size::ICON, colors.text_placeholder);
             }
-            let show_clear = self.clearable && !self.text.is_empty() && self.enabled;
-            // The clear button sits at a fixed distance from the field's right edge; the
-            // text stops a gap before it.
+            let show_clear =
+                self.clearable && !self.text.is_empty() && self.enabled && suggestions.is_none();
+            // The clear button or chevron sits at a fixed distance from the field's right
+            // edge; the text stops a gap before it.
             let clear_width = if show_clear {
                 size::CLEAR_BUTTON_INSET + size::CLEAR_BUTTON / 2.0 - size::CODE_PADDING
+                    + size::ICON_TEXT_GAP
+            } else if suggestions.is_some() {
+                size::COMBO_CHEVRON_INSET + size::ICON / 2.0 - size::CODE_PADDING
                     + size::ICON_TEXT_GAP
             } else {
                 0.0
@@ -395,6 +429,14 @@ impl TextField<'_> {
                 edited.mark_changed();
                 edited.request_focus();
             }
+            if suggestions.is_some() && chevron(&content, rect, edited.id, self.enabled).clicked() {
+                if list.is_open() {
+                    list.close();
+                } else {
+                    list.open();
+                }
+                edited.request_focus();
+            }
 
             let focused = edited.has_focus();
             if highlighter.is_some() {
@@ -433,15 +475,14 @@ impl TextField<'_> {
                 }
                 None => (None, None),
             };
-            if let Some(completer) = self.completer {
+            if let Some(completer) = completer {
                 ui.data_mut(|d| d.insert_temp(frame_response.id.with("archipel-focused"), focused));
-                list.end(
-                    ui,
-                    completer,
-                    self.text,
-                    &mut edited,
-                    cursor.map(|range| range.primary.index).zip(caret_rect),
-                );
+                // A combo box lists below the field whether or not it ever had a caret.
+                let caret = match cursor.map(|range| range.primary.index).zip(caret_rect) {
+                    None if suggestions.is_some() => Some((self.text.chars().count(), rect)),
+                    caret => caret,
+                };
+                list.end(ui, completer, self.text, &mut edited, caret);
             }
             let submitted = !multiline
                 && !keys.accepted()
@@ -547,6 +588,36 @@ fn underline_unresolved(
 /// The clear button of a field: a gray cross that gets a round background under the
 /// pointer, at a fixed distance from the field's right edge (measured on Android Studio's
 /// search fields).
+/// The chevron of a combo box ([`TextField::suggestions`]), where a
+/// [`Dropdown`](super::Dropdown) has its own.
+fn chevron(ui: &Ui, field: Rect, field_id: Id, enabled: bool) -> Response {
+    let rect = Rect::from_center_size(
+        pos2(field.right() - size::COMBO_CHEVRON_INSET, field.center().y),
+        vec2(size::ICON, field.height()),
+    );
+    let sense = if enabled {
+        egui::Sense::click()
+    } else {
+        egui::Sense::hover()
+    };
+    let response = ui.interact(rect, field_id.with("chevron"), sense);
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, "Show suggestions")
+    });
+    let colors = Theme::colors(ui.ctx());
+    icons::paint(
+        ui.painter(),
+        Rect::from_center_size(rect.center(), vec2(size::ICON, size::ICON)),
+        Glyph::ChevronDown,
+        if enabled {
+            colors.combo_arrow
+        } else {
+            colors.text_disabled
+        },
+    );
+    response
+}
+
 fn clear_button(ui: &Ui, field: Rect, field_id: Id) -> Response {
     let rect = Rect::from_center_size(
         pos2(field.right() - size::CLEAR_BUTTON_INSET, field.center().y),

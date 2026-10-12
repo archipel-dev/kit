@@ -28,6 +28,7 @@ mod key_value;
 mod layout;
 mod list;
 mod misc;
+mod number_field;
 mod overlay;
 mod progress;
 mod segmented;
@@ -58,6 +59,7 @@ pub use key_value::{
 pub use layout::{Panel, SectionHeader, Separator};
 pub use list::{ListRow, RowResponse};
 pub use misc::{Dropdown, EmptyState, Link, MenuItem, PropertyGrid};
+pub use number_field::{Integer, NumberField};
 pub use overlay::{Dialog, DialogAction, MenuHeader, MenuSeparator, Tooltip, TooltipExt};
 pub use progress::{ProgressBar, Spinner};
 pub use segmented::{SegmentedControl, Tab, TabBar, TabBarResponse};

@@ -489,30 +489,50 @@ fn actions_opacity(ctx: &egui::Context, id: egui::Id, revealed: bool) -> f32 {
 }
 
 /// A section title with a hairline, separating groups inside a panel or
-/// a settings page.
+/// a settings page. [`collapsible`](Self::collapsible) adds a chevron that shows and hides
+/// the group (Android Studio's "Advanced settings").
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
 /// use archipel_kit::components::SectionHeader;
 ///
 /// ui.add(SectionHeader::new("Code style"));
+///
+/// let mut advanced = false;
+/// if ui.add(SectionHeader::new("Advanced").collapsible(&mut advanced)).changed() {
+///     // `advanced` was toggled.
+/// }
 /// # });
 /// ```
 #[must_use = "add it with `ui.add(header)`"]
-pub struct SectionHeader {
+pub struct SectionHeader<'a> {
     title: String,
+    open: Option<&'a mut bool>,
 }
 
-impl SectionHeader {
+impl SectionHeader<'static> {
     /// A header titled `title`.
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
+            open: None,
         }
     }
 }
 
-impl Widget for SectionHeader {
+impl<'a> SectionHeader<'a> {
+    /// Makes the header show and hide its group: a chevron before the title, pointing
+    /// down while `*open`. A click, <kbd>Enter</kbd> or <kbd>Space</kbd> toggle it; the
+    /// response is `changed()` then. Show the group's rows only while `*open`.
+    pub fn collapsible(self, open: &'a mut bool) -> SectionHeader<'a> {
+        SectionHeader {
+            title: self.title,
+            open: Some(open),
+        }
+    }
+}
+
+impl Widget for SectionHeader<'_> {
     fn ui(self, ui: &mut Ui) -> egui::Response {
         let colors = Theme::colors(ui.ctx());
         let galley = common::galley(ui, self.title.as_str(), typography::body(typography::BODY));
@@ -521,20 +541,72 @@ impl Widget for SectionHeader {
         let first = ui.min_rect().height() <= 0.0;
         let above = if first { 0.0 } else { size::FORM_GROUP_SPACING };
         ui.add_space(above);
-        let (rect, response) =
-            ui.allocate_exact_size(vec2(ui.available_width(), size::ROW_HEIGHT), Sense::hover());
-        response
-            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.title));
-        let text_right = rect.left() + galley.size().x;
+        let collapsible = self.open.is_some();
+        let sense = if collapsible {
+            Sense::click()
+        } else {
+            Sense::hover()
+        };
+        let (rect, mut response) =
+            ui.allocate_exact_size(vec2(ui.available_width(), size::ROW_HEIGHT), sense);
+        let chevron_width = if collapsible {
+            size::ICON + size::ICON_TEXT_GAP
+        } else {
+            0.0
+        };
+        let enabled = ui.is_enabled();
+        let mut open = self.open;
+        if let Some(open) = open.as_deref_mut()
+            && response.clicked()
+        {
+            *open = !*open;
+            response.mark_changed();
+        }
+        let expanded = open.as_deref().copied();
+        response.widget_info(|| match expanded {
+            Some(_) => {
+                egui::WidgetInfo::labeled(egui::WidgetType::CollapsingHeader, enabled, &self.title)
+            }
+            None => egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.title),
+        });
+        if let Some(expanded) = expanded {
+            ui.ctx()
+                .accesskit_node_builder(response.id, |node| node.set_expanded(expanded));
+        }
+        let text_left = rect.left() + chevron_width;
+        let text_right = text_left + galley.size().x;
         let top = rect.center().y - galley.size().y / 2.0;
         // Measured: the line runs 4 pt above the title's baseline, to the right edge.
         let y = (top + common::baseline(&galley) - 4.0).round() + 0.5;
-        common::text(
-            ui.painter(),
-            egui::pos2(rect.left(), top),
-            galley,
-            colors.text,
-        );
+        let text_color = common::enabled_text(enabled, colors.text, &colors);
+        if let Some(expanded) = expanded {
+            let glyph = if expanded {
+                Glyph::ChevronDown
+            } else {
+                Glyph::ChevronRight
+            };
+            crate::icons::paint(
+                ui.painter(),
+                egui::Rect::from_center_size(
+                    egui::pos2(rect.left() + size::ICON / 2.0, rect.center().y),
+                    vec2(size::ICON, size::ICON),
+                ),
+                glyph,
+                text_color,
+            );
+            if response.has_focus() {
+                // Around the chevron and title, not the line.
+                let target = egui::Rect::from_min_max(
+                    rect.left_top(),
+                    egui::pos2(
+                        (text_right + size::ICON_TEXT_GAP).min(rect.right()),
+                        rect.bottom(),
+                    ),
+                );
+                common::focus_ring(ui.painter(), target, radius::CONTROL, &colors);
+            }
+        }
+        common::text(ui.painter(), egui::pos2(text_left, top), galley, text_color);
         let start = text_right + size::GROUP_LINE_GAP;
         if start < rect.right() {
             ui.painter().hline(

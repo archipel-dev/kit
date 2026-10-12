@@ -68,7 +68,7 @@ second component that would paint the same title and toolbar.
 | Component | API |
 |---|---|
 | `Panel::new(title)` | `.actions(|ui| …)` toolbar on the right of the title (right to left), `.on_hide(\|\| …)` hide button, `.show(ui, |ui| body)`. |
-| `SectionHeader::new(title)` | Group title with a line to the right edge, 20 pt above it (none at the top of a `Ui`). In settings pages use [`Form::group`](form.md). |
+| `SectionHeader::new(title)` | Group title with a line to the right edge, 20 pt above it (none at the top of a `Ui`). In settings pages use [`Form::group`](form.md). `.collapsible(&mut bool)` adds a chevron that shows and hides the group ([`FormUi::collapsible`](form.md)). |
 | `Separator` | 1 pt line across the available width, or a vertical one in a horizontal layout. |
 | `PropertyGrid::new(id)` | `.row(key, value)`, `.mono_row(key, value)`, `.show(ui)`. |
 
