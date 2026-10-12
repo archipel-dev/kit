@@ -35,7 +35,9 @@ impl WindowChrome {
         #[cfg(target_os = "macos")]
         {
             use objc2::MainThreadMarker;
-            use objc2_app_kit::{NSApplication, NSColor, NSWindowButton};
+            use objc2_app_kit::{
+                NSApplication, NSColor, NSWindowButton, NSWindowCollectionBehavior,
+            };
             use objc2_foundation::NSPoint;
             let zoom = ctx.zoom_factor();
             if !zoom.is_finite() || zoom <= 0.0 {
@@ -63,6 +65,16 @@ impl WindowChrome {
                 f64::from(a) / 255.0,
             );
             window.setBackgroundColor(Some(&background));
+            // The green button zooms the window instead of moving it into a full-screen
+            // space: there, macOS hides the traffic lights and slides in its own empty
+            // title bar over the toolbar. Zoomed, the toolbar and its controls stay as they
+            // are, as in Android Studio's maximized window.
+            let behavior = window.collectionBehavior();
+            let zooms = (behavior | NSWindowCollectionBehavior::FullScreenNone)
+                & !NSWindowCollectionBehavior::FullScreenPrimary;
+            if behavior != zooms {
+                window.setCollectionBehavior(zooms);
+            }
             let target = f64::from(tokens::size::WINDOW_TOOLBAR_HEIGHT * zoom) / 2.0;
             for kind in [
                 NSWindowButton::CloseButton,
