@@ -74,7 +74,10 @@ impl Gallery {
                             .font(tokens::typography::semibold(ui.ctx(), 14.0))
                             .color(colors.text_strong),
                     );
-                    ui.add(Tag::new(concat!("v", env!("CARGO_PKG_VERSION"))));
+                    // Not in tests: the snapshots would change with every release.
+                    if !cfg!(test) {
+                        ui.add(Tag::new(concat!("v", env!("CARGO_PKG_VERSION"))));
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let mut dark = self.dark;
                         if ui.add(Toggle::new(&mut dark, "Dark")).changed() {
