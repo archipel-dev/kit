@@ -168,3 +168,27 @@ fn collapsible_snapshot() {
         });
     });
 }
+
+#[test]
+fn labelled_rows_start_their_fields_in_one_column() {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (String::from("Local"), String::from("mongodb://localhost")),
+        |ui, (name, uri)| {
+            ui.set_width(420.0);
+            Form::new().show(ui, |form| {
+                form.row("Name:", |ui| ui.add(TextField::new(name).name("Name")));
+                form.row("Connection string:", |ui| {
+                    ui.add(TextField::new(uri).name("Connection string"))
+                });
+            });
+        },
+    );
+    // The first frame already shows the column: the form lays out again when it moves.
+    let name = harness.get_by_label("Name").rect();
+    let uri = harness.get_by_label("Connection string").rect();
+    assert!((name.left() - uri.left()).abs() < 0.5, "{name:?} {uri:?}");
+    harness.run();
+    let again = harness.get_by_label("Name").rect();
+    assert_eq!(name, again, "stable after the first frame");
+}

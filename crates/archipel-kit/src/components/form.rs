@@ -5,6 +5,7 @@ use super::{SectionHeader, common};
 use crate::theme::Theme;
 use crate::tokens::{size, typography};
 use egui::{Align, Layout, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, vec2};
+use std::cell::Cell;
 
 /// A settings page: rows of controls, optionally in titled groups.
 ///
@@ -44,19 +45,46 @@ impl Form {
         Self {}
     }
 
-    /// Lays out the rows `add` adds, top to bottom.
+    /// Lays out the rows `add` adds, top to bottom. The fields of labelled
+    /// [rows](FormUi::row) start in one column, after the widest label, as in Android
+    /// Studio's dialogs.
     pub fn show<R>(self, ui: &mut Ui, add: impl FnOnce(&mut FormUi<'_>) -> R) -> R {
-        ui.vertical(|ui| {
-            ui.spacing_mut().item_spacing.y = size::FORM_ROW_GAP;
-            add(&mut FormUi { ui })
-        })
-        .inner
+        let key = ui.next_auto_id().with("archipel-form-labels");
+        let labels = Labels {
+            width: ui.data(|d| d.get_temp::<f32>(key)).unwrap_or(0.0),
+            widest: Cell::new(0.0),
+        };
+        let inner = ui
+            .vertical(|ui| {
+                ui.spacing_mut().item_spacing.y = size::FORM_ROW_GAP;
+                add(&mut FormUi {
+                    ui,
+                    labels: &labels,
+                })
+            })
+            .inner;
+        // The column follows the labels of this frame; when it moved, lay the frame out
+        // again so no frame shows ragged fields.
+        let widest = labels.widest.get();
+        if (widest - labels.width).abs() > 0.5 {
+            ui.data_mut(|d| d.insert_temp(key, widest));
+            ui.ctx().request_discard("form label column changed");
+        }
+        inner
     }
+}
+
+/// The label column of a [`Form`]: its width as of the last frame, and the widest label
+/// seen this frame.
+struct Labels {
+    width: f32,
+    widest: Cell<f32>,
 }
 
 /// The rows of a [`Form`].
 pub struct FormUi<'u> {
     ui: &'u mut Ui,
+    labels: &'u Labels,
 }
 
 impl FormUi<'_> {
@@ -70,9 +98,15 @@ impl FormUi<'_> {
     /// fields an accessible name of their own ([`TextField::name`](super::TextField::name)).
     /// Label further fields with [`FieldLabel`] and set independent ones apart with
     /// `ui.add_space(size::FORM_CONTROL_SPACE)`.
+    ///
+    /// The fields of all labelled rows of a form start in one column, after its widest
+    /// label (rows indented in a [group](Self::group) by the group's indent more).
     pub fn row<R>(&mut self, label: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
+        let labels = self.labels;
         self.fields(|ui| {
-            ui.add(FieldLabel::new(label));
+            let width = ui.add(FieldLabel::new(label)).rect.width();
+            labels.widest.set(labels.widest.get().max(width));
+            ui.add_space((labels.width - width).max(0.0));
             add(ui)
         })
     }
@@ -146,7 +180,13 @@ impl FormUi<'_> {
         self.ui
             .horizontal_top(|ui| {
                 ui.add_space(size::FORM_GROUP_INDENT);
-                ui.vertical(|ui| add(&mut FormUi { ui })).inner
+                ui.vertical(|ui| {
+                    add(&mut FormUi {
+                        ui,
+                        labels: self.labels,
+                    })
+                })
+                .inner
             })
             .inner
     }

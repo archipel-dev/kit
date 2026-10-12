@@ -71,6 +71,8 @@ Light:
 - Fields (28 pt) sit 9 pt from a checkbox's box above or below and from each other.
 - A group title is regular text in the text color; its line (1 pt, `group_separator`) starts
   6 pt after the title, 4 pt above its baseline, and runs to the right edge.
+- The fields of a form's labelled rows (`form.row`) start in one column, after the widest
+  label, as in Android Studio's dialogs; rows indented in a group start a group indent later.
 - Labels end 6 pt before their field; radio buttons in a row are 16 pt apart; a checkbox's
   label starts 8 pt after the box.
 - Comments are not click targets: clicking one does not toggle the checkbox.

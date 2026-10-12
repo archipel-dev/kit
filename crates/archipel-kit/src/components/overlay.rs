@@ -436,7 +436,7 @@ impl<'a> Dialog<'a> {
                     ui.visuals_mut().widgets.inactive.bg_fill = colors.text_placeholder;
                     ui.visuals_mut().widgets.hovered.bg_fill = colors.text_secondary;
                     ui.visuals_mut().widgets.active.bg_fill = colors.text_secondary;
-                    crate::parts::scroll_vertical()
+                    let body = crate::parts::scroll_vertical()
                         .id_salt("archipel-dialog-body")
                         .max_height(body_max)
                         .auto_shrink([false, true])
@@ -456,6 +456,16 @@ impl<'a> Dialog<'a> {
                                 content(ui);
                             }
                         });
+                    // The modal sizes itself from the last frame: when the body grew or
+                    // shrank (a page switched, a banner appeared), draw once more so the
+                    // dialog fits without waiting for the next input.
+                    let key = id.with("body-height");
+                    let height = body.content_size.y;
+                    let before = ui.data(|d| d.get_temp::<f32>(key));
+                    if before.is_some_and(|h| (h - height).abs() > 0.5) {
+                        ui.ctx().request_repaint();
+                    }
+                    ui.data_mut(|d| d.insert_temp(key, height));
                 });
                 if !has_buttons {
                     return;
