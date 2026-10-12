@@ -173,7 +173,11 @@ impl ValueKind {
 
     /// The color of this kind in `theme`.
     pub fn color(self, theme: &Theme) -> Color32 {
-        let editor = &theme.editor;
+        self.editor_color(&theme.editor)
+    }
+
+    /// The color of this kind among the editor colors `editor`.
+    pub fn editor_color(self, editor: &crate::theme::EditorColors) -> Color32 {
         match self {
             ValueKind::String => editor.string,
             ValueKind::Number => editor.number,

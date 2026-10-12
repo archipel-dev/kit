@@ -133,14 +133,17 @@ behind a "too large to edit" notice.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/code_highlighting.dark.png">
-  <img alt="The built-in highlighters: JSON, XML, GraphQL, JavaScript and plain text" src="img/code_highlighting.light.png" width="360">
+  <img alt="The built-in highlighters: JSON, Extended JSON with an ObjectId and an ISODate, XML, GraphQL, JavaScript and plain text" src="img/code_highlighting.light.png" width="360">
 </picture>
 
 A `Highlighter` maps a line to styled `Span`s by `TokenKind` (keyword, string, number, comment,
-punctuation, property, tag, attribute, variable, error). Colors come from the theme's
-`EditorColors` (`keyword`, `string`, … in dark and light), never from the
-highlighter. Built in: `Json`, `Xml` (also HTML), `GraphQl`, `JavaScript` and `PlainText`, all
-small hand-written tokenizers without dependencies. Plug in your own, for example the IDE's
+punctuation, property, tag, attribute, variable, error, and `Value(ValueKind)` for typed data
+values). Colors come from the theme's `EditorColors` (`keyword`, `string`, … in dark and
+light), never from the highlighter. Built in: `Json`, `ExtendedJson` (MongoDB's shell form:
+unquoted keys, `ObjectId("…")`, `ISODate("…")`, `NumberLong(…)` colored as the id, date or
+number they make, the same `ValueKind` colors tables and trees use), `Xml` (also HTML),
+`GraphQl`, `JavaScript` and `PlainText`, all small hand-written tokenizers without
+dependencies. Plug in your own, for example the IDE's
 tree-sitter:
 
 ```rust

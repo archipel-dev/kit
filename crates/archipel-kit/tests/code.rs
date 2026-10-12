@@ -3,8 +3,11 @@
 
 mod common;
 
-use archipel_kit::components::code::{GraphQl, JavaScript, Json, PlainText, Xml};
+use archipel_kit::components::code::{
+    ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
+};
 use archipel_kit::components::{CodeEditor, CodeView};
+use archipel_kit::parts::ValueKind;
 use archipel_kit::testing::{self, NodeExt, NodeT, Queryable, Role};
 use archipel_kit::{Theme, egui};
 use egui::{Event, Key, Modifiers, OutputCommand};
@@ -89,8 +92,13 @@ fn view_find_snapshot() {
 #[test]
 fn highlighting_snapshot() {
     testing::snapshot_themes("code_highlighting", common::IMG, |ui| {
-        let samples: [(&str, &dyn archipel_kit::components::code::Highlighter, &str); 5] = [
+        let samples: [(&str, &dyn Highlighter, &str); 6] = [
             ("JSON", &Json, "{ \"ok\": true, \"n\": [1, -2.5e3, null] }"),
+            (
+                "Extended JSON",
+                &ExtendedJson,
+                "{ _id: ObjectId(\"65f0\"), at: ISODate(\"2026\") }",
+            ),
             (
                 "XML",
                 &Xml,
@@ -121,6 +129,72 @@ fn highlighting_snapshot() {
                 .show(ui);
         }
     });
+}
+
+fn kinds(highlighter: &dyn Highlighter, line: &str) -> Vec<(String, TokenKind)> {
+    let mut spans: Vec<Span> = Vec::new();
+    highlighter.highlight_line(line, &mut 0, &mut spans);
+    spans
+        .into_iter()
+        .filter(|s| s.kind != TokenKind::Punctuation)
+        .map(|s| (line[s.start..s.end].to_owned(), s.kind))
+        .collect()
+}
+
+#[test]
+fn extended_json_colors_constructors_as_their_values() {
+    let line = r#"{ _id: ObjectId("65f0"), "at": new Date('2026-10-12'), n: NumberLong("7"), x: -1.5e3, b: BinData(0, "AA=="), s: 'it\'s', ok: false, z: null } // last"#;
+    assert_eq!(
+        kinds(&ExtendedJson, line),
+        [
+            ("_id", TokenKind::Property),
+            ("ObjectId(\"65f0\")", TokenKind::Value(ValueKind::Id)),
+            ("\"at\"", TokenKind::Property),
+            ("new Date('2026-10-12')", TokenKind::Value(ValueKind::Date)),
+            ("n", TokenKind::Property),
+            ("NumberLong(\"7\")", TokenKind::Value(ValueKind::Number)),
+            ("x", TokenKind::Property),
+            ("-1.5e3", TokenKind::Number),
+            ("b", TokenKind::Property),
+            ("BinData(0, \"AA==\")", TokenKind::Value(ValueKind::Binary)),
+            ("s", TokenKind::Property),
+            ("'it\\'s'", TokenKind::String),
+            ("ok", TokenKind::Property),
+            ("false", TokenKind::Value(ValueKind::Boolean)),
+            ("z", TokenKind::Property),
+            ("null", TokenKind::Value(ValueKind::Null)),
+            ("// last", TokenKind::Comment),
+        ]
+        .map(|(text, kind)| (text.to_owned(), kind))
+    );
+}
+
+#[test]
+fn extended_json_survives_broken_input() {
+    for line in [
+        "ObjectId(\"65f",
+        "{ a: 'open",
+        "new",
+        "new Foo(1)",
+        "é: ünïcode",
+        "-",
+        "{{{",
+    ] {
+        let mut spans = Vec::new();
+        ExtendedJson.highlight_line(line, &mut 0, &mut spans);
+        for span in &spans {
+            assert!(
+                span.start < span.end && span.end <= line.len(),
+                "{line}: {span:?}"
+            );
+            assert!(line.is_char_boundary(span.start) && line.is_char_boundary(span.end));
+        }
+    }
+    assert_eq!(
+        kinds(&ExtendedJson, "ObjectId(\"65f"),
+        [("\"65f".to_owned(), TokenKind::String)],
+        "an unclosed call is no value; its argument is still a string"
+    );
 }
 
 #[test]

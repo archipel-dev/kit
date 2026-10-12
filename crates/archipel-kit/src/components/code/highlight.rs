@@ -1,5 +1,6 @@
 //! Token highlighting: the [`Highlighter`] trait and the built-in tokenizers.
 
+use crate::parts::ValueKind;
 use crate::theme::EditorColors;
 use crate::tokens::opacity;
 use egui::Color32;
@@ -39,6 +40,9 @@ pub enum TokenKind {
     Unresolved,
     /// A `{{variable}}` holding a secret, styled apart so it is not mistaken for plain data.
     Secret,
+    /// A typed data value (`ObjectId("…")`, `ISODate("…")`), colored as the same
+    /// [`ValueKind`] in tables and trees.
+    Value(ValueKind),
 }
 
 impl TokenKind {
@@ -73,6 +77,7 @@ impl TokenKind {
             TokenKind::Error | TokenKind::Unresolved => colors.invalid,
             TokenKind::Resolved => colors.variable,
             TokenKind::Secret => colors.string,
+            TokenKind::Value(kind) => kind.editor_color(colors),
         }
     }
 }
@@ -409,6 +414,189 @@ const JS_KEYWORDS: &[&str] = &[
     "with",
     "yield",
 ];
+
+/// MongoDB Extended JSON as the shell prints and accepts it: JSON with unquoted keys,
+/// single-quoted strings and constructors. `ObjectId("…")`, `ISODate("…")`,
+/// `NumberLong(…)`, `BinData(…)` and the like are colored as their [`ValueKind`] (an id, a
+/// date, a number, binary), so a document reads the same in an editor and in a table; keys
+/// are properties, `true`/`false` booleans, `null` null. `//` starts a comment.
+///
+/// ```
+/// use archipel_kit::components::code::{ExtendedJson, Highlighter, Span, TokenKind};
+/// use archipel_kit::parts::ValueKind;
+///
+/// let mut spans = Vec::new();
+/// ExtendedJson.highlight_line(r#"{ _id: ObjectId("65f0") }"#, &mut 0, &mut spans);
+/// assert!(spans.contains(&Span { start: 2, end: 5, kind: TokenKind::Property }));
+/// assert!(spans.contains(&Span { start: 7, end: 23, kind: TokenKind::Value(ValueKind::Id) }));
+/// ```
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ExtendedJson;
+
+/// The value a shell constructor makes.
+fn constructor_kind(name: &str) -> Option<ValueKind> {
+    Some(match name {
+        "ObjectId" | "UUID" | "DBRef" => ValueKind::Id,
+        "ISODate" | "Date" | "Timestamp" => ValueKind::Date,
+        "NumberLong" | "NumberInt" | "NumberDecimal" | "Decimal128" | "Long" | "Int32"
+        | "Double" => ValueKind::Number,
+        "BinData" | "HexData" | "MD5" => ValueKind::Binary,
+        "MinKey" | "MaxKey" | "RegExp" | "BSONRegExp" => ValueKind::Boolean,
+        _ => return None,
+    })
+}
+
+impl ExtendedJson {
+    /// The end of the string starting at `start` (a quote), past the closing quote.
+    fn string_end(bytes: &[u8], start: usize) -> usize {
+        let quote = bytes[start];
+        let mut i = start + 1;
+        while i < bytes.len() {
+            match bytes[i] {
+                b'\\' => i += 2,
+                b if b == quote => return i + 1,
+                _ => i += 1,
+            }
+        }
+        bytes.len()
+    }
+
+    /// The end of the call whose `(` is at `open`, past the matching `)`; `None` when the
+    /// line ends first.
+    fn call_end(bytes: &[u8], open: usize) -> Option<usize> {
+        let mut depth = 0;
+        let mut i = open;
+        while i < bytes.len() {
+            match bytes[i] {
+                b'"' | b'\'' => {
+                    i = Self::string_end(bytes, i);
+                    continue;
+                }
+                b'(' => depth += 1,
+                b')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(i + 1);
+                    }
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+        None
+    }
+
+    /// Whether a `:` follows `at`, after spaces: the token before it is a key.
+    fn before_colon(bytes: &[u8], at: usize) -> bool {
+        bytes[at..]
+            .iter()
+            .find(|b| !b.is_ascii_whitespace())
+            .is_some_and(|b| *b == b':')
+    }
+}
+
+impl Highlighter for ExtendedJson {
+    fn highlight_line(&self, line: &str, _state: &mut u32, out: &mut Vec<Span>) {
+        let bytes = line.as_bytes();
+        let mut i = 0;
+        let mut push = |start: usize, end: usize, kind: TokenKind| {
+            out.push(Span { start, end, kind });
+        };
+        while i < bytes.len() {
+            let b = bytes[i];
+            let start = i;
+            match b {
+                b if b.is_ascii_whitespace() => i += 1,
+                b'/' if bytes.get(i + 1) == Some(&b'/') => {
+                    push(start, bytes.len(), TokenKind::Comment);
+                    i = bytes.len();
+                }
+                b'"' | b'\'' => {
+                    i = Self::string_end(bytes, i);
+                    let kind = if Self::before_colon(bytes, i) {
+                        TokenKind::Property
+                    } else {
+                        TokenKind::String
+                    };
+                    push(start, i, kind);
+                }
+                b'-' | b'0'..=b'9'
+                    if b != b'-' || bytes.get(i + 1).is_some_and(u8::is_ascii_digit) =>
+                {
+                    i += 1;
+                    while i < bytes.len()
+                        && (bytes[i].is_ascii_alphanumeric()
+                            || bytes[i] == b'.'
+                            || (matches!(bytes[i], b'+' | b'-')
+                                && matches!(bytes[i - 1], b'e' | b'E')))
+                    {
+                        i += 1;
+                    }
+                    push(start, i, TokenKind::Number);
+                }
+                b if b.is_ascii_alphabetic() || b == b'_' || b == b'$' => {
+                    let word_end = |from: usize| {
+                        let mut j = from;
+                        while j < bytes.len()
+                            && (bytes[j].is_ascii_alphanumeric() || matches!(bytes[j], b'_' | b'$'))
+                        {
+                            j += 1;
+                        }
+                        j
+                    };
+                    i = word_end(i);
+                    let mut word = &line[start..i];
+                    // `new Date(…)`: the constructor after `new`.
+                    let mut name_end = i;
+                    if word == "new" {
+                        let next = bytes[i..]
+                            .iter()
+                            .position(|b| !b.is_ascii_whitespace())
+                            .map(|p| i + p);
+                        if let Some(next) = next
+                            && constructor_kind(&line[next..word_end(next)]).is_some()
+                        {
+                            name_end = word_end(next);
+                            word = &line[next..name_end];
+                        }
+                    }
+                    let open = bytes[name_end..]
+                        .iter()
+                        .position(|b| !b.is_ascii_whitespace())
+                        .map(|p| name_end + p)
+                        .filter(|&p| bytes[p] == b'(');
+                    if let (Some(kind), Some(open)) = (constructor_kind(word), open)
+                        && let Some(end) = Self::call_end(bytes, open)
+                    {
+                        push(start, end, TokenKind::Value(kind));
+                        i = end;
+                    } else if Self::before_colon(bytes, i) {
+                        push(start, i, TokenKind::Property);
+                    } else {
+                        match word {
+                            "true" | "false" => {
+                                push(start, i, TokenKind::Value(ValueKind::Boolean))
+                            }
+                            "null" | "undefined" => {
+                                push(start, i, TokenKind::Value(ValueKind::Null))
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                b'{' | b'}' | b'[' | b']' | b',' | b':' | b'(' | b')' => {
+                    i += 1;
+                    push(start, i, TokenKind::Punctuation);
+                }
+                _ => i += line[i..].chars().next().map_or(1, char::len_utf8),
+            }
+        }
+    }
+
+    fn stateless(&self) -> bool {
+        true
+    }
+}
 
 const JS_BLOCK_COMMENT: u32 = 1;
 const JS_TEMPLATE: u32 = 2;
