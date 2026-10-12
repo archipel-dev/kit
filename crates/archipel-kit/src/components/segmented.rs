@@ -312,12 +312,25 @@ pub struct TabBarResponse {
 pub struct TabBar<'a> {
     tabs: &'a [Tab],
     selected: usize,
+    separator: bool,
 }
 
 impl<'a> TabBar<'a> {
     /// `tabs` with the one at `selected` active.
     pub fn new(tabs: &'a [Tab], selected: usize) -> Self {
-        Self { tabs, selected }
+        Self {
+            tabs,
+            selected,
+            separator: true,
+        }
+    }
+
+    /// The 1 pt line below the bar, edge to edge in the frame color, that separates an
+    /// island's header from its content (on by default, like the tool window headers of a
+    /// [`super::Workbench`]). Turn it off where the tabs are not an island's header.
+    pub fn separator(mut self, enabled: bool) -> Self {
+        self.separator = enabled;
+        self
     }
 
     /// Draws the tabs in a row, [`size::HEADER_HEIGHT`] high: put it at the top of an
@@ -325,7 +338,8 @@ impl<'a> TabBar<'a> {
     pub fn show(self, ui: &mut Ui) -> TabBarResponse {
         let colors = Theme::colors(ui.ctx());
         let mut out = TabBarResponse::default();
-        ui.horizontal(|ui| {
+        let width = ui.max_rect().x_range();
+        let bar = ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = tab::GAP;
             for (index, item) in self.tabs.iter().enumerate() {
                 let selected = index == self.selected;
@@ -441,6 +455,13 @@ impl<'a> TabBar<'a> {
                 }
             }
         });
+        if self.separator {
+            ui.painter().hline(
+                width,
+                bar.response.rect.bottom() + 0.5,
+                Stroke::new(1.0_f32, colors.frame),
+            );
+        }
         out
     }
 }

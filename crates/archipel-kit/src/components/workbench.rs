@@ -705,7 +705,9 @@ impl<'a> Region<'a> {
         let mut selected = signals.tabs[region_index(region)];
         let before = selected;
         let tabs = self.tabs.unwrap_or_default();
-        let mut panel = Panel::new(self.title);
+        // Every island header is separated from its content by a hairline (the suite's
+        // choice; Android Studio draws it only under content tabs).
+        let mut panel = Panel::new(self.title).header_separator(true);
         if !tabs.is_empty() {
             panel = panel.tabs(&tabs, &mut selected);
         }
