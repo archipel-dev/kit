@@ -23,7 +23,11 @@ chrome mode when rendering its toolbar. In the host's update callback, also call
 `WindowChrome::Integrated.align_native_controls("My application", ctx)`.
 This centers the actual macOS traffic lights in the full toolbar height, including after
 native resize relayout, and applies the theme's frame color to the native backing window.
-The title must
+It also makes the green button zoom the
+window (fill the screen) instead of moving it into a macOS full-screen space: in a
+full-screen space macOS hides the traffic lights and slides its own empty title bar over
+the toolbar when the pointer reaches the top edge. Zoomed, the toolbar and the traffic
+lights stay where they are. The title must
 uniquely identify a window in your process. The helper returns false if the window or UI
 thread is unavailable; it uses safe AppKit bindings and does not create replacement icons.
 `Native` is the default and retains the normal

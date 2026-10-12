@@ -31,3 +31,14 @@ jobs:
             docs/**/*.diff.png
             docs/**/*.new.png
           if-no-files-found: ignore
+
+  # The window integration has macOS-only code (AppKit); the Linux job never compiles it.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy -p archipel-kit --all-targets -- -D warnings
