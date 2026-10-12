@@ -71,7 +71,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 
 | Situation | Android Studio | Kit |
 |---|---|---|
-| Island header (tool window title bar, editor tab bar) | 40 pt high; tool windows with content tabs have a 1 pt line below in the frame color, edge to edge | `tokens::size::HEADER_HEIGHT`, `Panel::header_separator` |
+| Island header (tool window title bar, editor tab bar) | 40 pt high; Android Studio draws a 1 pt line below in the frame color, edge to edge, only under tool windows with content tabs. The suite draws it under every island header (Workbench tool windows, `TabBar`) | `tokens::size::HEADER_HEIGHT`, `Panel::header_separator`, `TabBar::separator` |
 | Header actions | 22 pt icon buttons, radius 4, 4 pt apart, the last 10 pt from the island's edge; group lines 20 pt in the separator color | `IconButton`, `Separator::group`, `HEADER_ACTIONS_INSET` |
 | View switcher ("Project ▾") | Title + chevron, no hover fill; click opens the views right below the header, content-wide, current one highlighted, no icon column | `Panel::views` |
 | Content tabs (Problems: File, Project Errors) | 22 pt after the title, 10 pt padding and gap; selected: blue while active, gray outline otherwise | `Panel::tabs` |
