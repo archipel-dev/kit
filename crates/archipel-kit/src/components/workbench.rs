@@ -138,6 +138,7 @@ pub struct Workbench<'a> {
     project_color: Option<egui::Color32>,
     glow_anchor: Option<egui::Rect>,
     center_padded: bool,
+    frame_background: bool,
 }
 
 impl<'a> Workbench<'a> {
@@ -154,6 +155,7 @@ impl<'a> Workbench<'a> {
             project_color: None,
             glow_anchor: None,
             center_padded: true,
+            frame_background: true,
         }
     }
 
@@ -207,6 +209,15 @@ impl<'a> Workbench<'a> {
     /// editor: its tab bar sits at the island's top and its text runs to the edges.
     pub fn center_padded(mut self, padded: bool) -> Self {
         self.center_padded = padded;
+        self
+    }
+
+    /// Paint the window frame behind the islands and stripes (default `true`). A plugin
+    /// view embedded with [`show_inside`](Self::show_inside) in a host that already drew
+    /// the frame (and its project glow) passes `false`, so the frame stays one surface and
+    /// the glow is not cut off at the embedded workbench's edge.
+    pub fn frame_background(mut self, paint: bool) -> Self {
+        self.frame_background = paint;
         self
     }
 
@@ -377,6 +388,7 @@ impl<'a> Workbench<'a> {
             project_color: self.project_color,
             glow_anchor: self.glow_anchor,
             center_padded: self.center_padded,
+            frame_background: self.frame_background,
         }
     }
 
@@ -440,6 +452,7 @@ impl<'a> Workbench<'a> {
             project_color,
             glow_anchor,
             center_padded,
+            frame_background,
             ..
         } = self;
         let signals = Signals {
@@ -449,8 +462,10 @@ impl<'a> Workbench<'a> {
             tabs: state.tool_tabs,
         };
         let full = ui.available_rect_before_wrap();
-        ui.painter()
-            .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
+        if frame_background {
+            ui.painter()
+                .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
+        }
         if let Some(color) = project_color {
             crate::parts::project_glow(ui.painter(), glow_anchor.unwrap_or(full), color);
         }
