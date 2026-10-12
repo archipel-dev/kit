@@ -86,6 +86,10 @@ pub mod size {
     pub const FORM_GROUP_SPACING: f32 = 20.0;
     /// Settings forms: indent of a group's rows under its title.
     pub const FORM_GROUP_INDENT: f32 = 24.0;
+    /// Padding inside a [`DropZone`](crate::components::DropZone).
+    pub const DROP_ZONE_PADDING: f32 = 8.0;
+    /// Smallest height of a [`DropZone`](crate::components::DropZone): room for its hint.
+    pub const DROP_ZONE_MIN_HEIGHT: f32 = 40.0;
     /// Default width of a [`NumberField`](crate::components::NumberField): room for six
     /// digits, as Android Studio's integer fields.
     pub const NUMBER_FIELD_WIDTH: f32 = 64.0;
@@ -343,6 +347,12 @@ pub mod opacity {
     pub const SCRIM_DARK: f32 = 120.0 / 255.0;
     /// Opacity of the black scrim behind a modal dialog in light themes.
     pub const SCRIM_LIGHT: f32 = 60.0 / 255.0;
+    /// Opacity of a [`DragSource`](crate::components::DragSource)'s content left in place
+    /// while it is dragged.
+    pub const DRAG_SOURCE: f32 = 0.4;
+    /// Opacity of the copy of a [`DragSource`](crate::components::DragSource)'s content that
+    /// follows the pointer.
+    pub const DRAG_GHOST: f32 = 0.85;
 }
 
 /// Corner radii, in points.

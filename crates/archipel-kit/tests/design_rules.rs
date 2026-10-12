@@ -201,6 +201,15 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ),
     ("DialogAction", "enum"),
     (
+        "DragSource",
+        "pointer gesture around content that keeps its own conformance; the keyboard way is the app's (docs); tested in tests/drag.rs",
+    ),
+    (
+        "DropZone",
+        "pointer drop target around content, no focus or keys of its own; tested in tests/drag.rs",
+    ),
+    ("DropZoneResponse", "response"),
+    (
         "EmptyState",
         "composition with one button, audited in tests/feedback.rs",
     ),

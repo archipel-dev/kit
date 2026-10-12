@@ -108,6 +108,7 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Combo box list | Below the field, at least as wide, current value highlighted, groups separated by lines, chevron stays down | `Dropdown::separators` |
 | Fields and combo boxes | 28 pt, `#40434A` / `#D1D3D9` border; combo fill `#26282C` / white | `TextField`, `Dropdown` |
 | Integer field | A 28 pt text field, six digits wide; out-of-range input gets the field's error outline and message, the value keeps its last valid number | `NumberField` |
+| Drag and drop | The dragged item leaves a dimmed original and follows the pointer as a translucent card; targets that take it are outlined in the focus color, the one under the pointer gets the 2 pt focus ring | `DragSource`, `DropZone` |
 | Editable combo box | A text field with the combo box's chevron (centered 16 pt from the right edge, as on the non-editable one); the list hangs below the field, as wide as it | `TextField::suggestions` |
 | Checkbox label | Starts 8 pt after the box (radio the same); radios in a row 16 pt apart | `size::CHECK_LABEL_GAP`, `FORM_CONTROL_GAP` |
 | Disabled combo box | No fill, `border_disabled` border, dimmed text (not a faded copy) | `Dropdown::enabled(false)` |
