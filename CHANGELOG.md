@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/archipel-dev/kit/compare/v0.3.0...v0.3.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **window:** the macOS green button zooms instead of entering full screen ([#41](https://github.com/archipel-dev/kit/issues/41)) ([3a45b61](https://github.com/archipel-dev/kit/commit/3a45b610c48bfd092eda285a18e0613e2bc13d84))
+
 ## [0.3.0](https://github.com/archipel-dev/kit/compare/v0.2.2...v0.3.0) (2026-10-12)
 
 
