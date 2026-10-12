@@ -121,6 +121,11 @@ pub struct Colors {
     pub tab_selected_border: Color32,
     /// Title of an editor tab that is not selected (the selected one uses [`Colors::text`]).
     pub tab_text: Color32,
+    /// Thumb of the editor tab strip's thin scroll bar (shown while the pointer is over
+    /// the strip).
+    pub tab_scroll_thumb: Color32,
+    /// The same thumb under the pointer or while it is dragged.
+    pub tab_scroll_thumb_hover: Color32,
     /// Fill of a switched-on toggle.
     pub toggle_on: Color32,
     /// Track of a switched-off toggle.
@@ -339,6 +344,8 @@ impl Theme {
                 tab_selected: rgb(0x233558),
                 tab_selected_border: rgb(0x2E4D89),
                 tab_text: rgb(0xAFB1B6),
+                tab_scroll_thumb: rgb(0x434344),
+                tab_scroll_thumb_hover: rgb(0x535455),
                 toggle_on: rgb(0x338555),
                 toggle_off: rgb(0x191A1C),
                 toggle_off_knob: rgb(0x5F6269),
@@ -479,6 +486,8 @@ impl Theme {
                 tab_selected: rgb(0xE3EBFE),
                 tab_selected_border: rgb(0xA7C5FF),
                 tab_text: rgb(0x515151),
+                tab_scroll_thumb: rgb(0xABABAB),
+                tab_scroll_thumb_hover: rgb(0x7F7F7F),
                 toggle_on: rgb(0x4E9D6C),
                 toggle_off: rgb(0xF7F8F9),
                 toggle_off_knob: rgb(0xC3C5CB),

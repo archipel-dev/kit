@@ -267,10 +267,7 @@ fn ide(theme: Theme, gpu: bool) -> Harness<'static, WorkbenchState> {
                     });
                 })
                 .show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.add_space(6.0);
-                        TabBar::new(&tabs, 0).show(ui);
-                    });
+                    TabBar::new(&tabs, 0).show(ui);
                     ui.horizontal(|ui| {
                         ui.add_space(archipel_kit::tokens::size::CONTENT_INSET);
                         ui.label("pub fn install(ctx: &egui::Context, theme: Theme) { … }");

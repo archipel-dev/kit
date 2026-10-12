@@ -79,6 +79,12 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Other tabs | No fill; title `#AFB1B6` / light `#515151`; on hover a `hover` pill and full-strength title | `Colors::tab_text` |
 | Close button | Only on the selected and the hovered tab; its room is always kept; small cross; round hover behind it | `tokens::tab` |
 | Spacing | 8 pt, icon, 4 pt, title, 4 pt, close 16 pt, 4 pt; 6 pt between pills | `tokens::tab` |
+| Strip inset | The first pill starts 6 pt from the island's left edge, centered in the 40 pt header; when the tabs scroll, the inset scrolls away and tabs are cut at the island's edge | `tab::STRIP_INSET` |
+| Overflow | Tabs that don't fit scroll sideways: the wheel (vertical too), Shift+wheel and trackpad swipes scroll the strip; tabs are cut at the ends of the scrolling area and fade out over ~10 pt there (Android Studio also fades a fully shown last tab at the end; the kit fades only where tabs are cut off) | `TabBar`, `tab::EDGE_FADE` |
+| Strip scroll bar | Only while the pointer is over an overflowing strip, or scrolling: a 2 pt thumb 1 pt below the island's top edge, track across the island inside its rounded corners (~5 pt), length viewport/content; `#434344` / light `#ABABAB` on the island. Under the pointer and while dragged 4 pt and `#535455` / `#7F7F7F`; draggable. Appears within ~2 frames; stays ~0.2 s after the pointer leaves, then fades in ~0.1 s | `tab::SCROLL_*`, `Colors::tab_scroll_thumb`, `motion::TAB_SCROLL_*` |
+| Strip buttons | At the right end, 22 pt hover pills, 4 pt apart, the last 4 pt from the island's right edge: "Show hidden tabs" (chevron down, only while tabs don't fit) and "More actions" (⋮, always). The scrolling area ends 9 pt before the first | `tab::BUTTON_GAP`, `BUTTONS_INSET`, `STRIP_BUTTONS_GAP`, `TabBar::more_menu` |
+| Hidden tabs list | Opens right below the header at the chevron (moved left to stay on screen), lists only the tabs out of view with their icons, first row highlighted; a pick selects the tab and scrolls it into view (Android Studio rows are 26 pt with a close cross; the kit uses its 24 pt menu rows) | `TabBar` with `Popover`, `MenuItem` |
+| More actions menu | A menu below ⋮ (Recent Files, Close All Tabs, … in Android Studio) | `TabBar::more_menu` |
 
 ### Trees and lists
 

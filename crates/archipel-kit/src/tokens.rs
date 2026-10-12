@@ -251,6 +251,27 @@ pub mod tab {
     pub const CONTENT_GAP: f32 = 10.0;
     /// Radius of the round hover behind the close button.
     pub const CLOSE_HOVER_RADIUS: f32 = 9.0;
+    /// Space between the island's left edge and the first tab's pill, at rest. It scrolls
+    /// away with the tabs when they overflow.
+    pub const STRIP_INSET: f32 = 6.0;
+    /// Space between the end of the tabs' scrolling area and the first button after it
+    /// ("Show hidden tabs" or "More actions").
+    pub const STRIP_BUTTONS_GAP: f32 = 9.0;
+    /// Space between the strip's buttons.
+    pub const BUTTON_GAP: f32 = 4.0;
+    /// Space between the strip's last button and the island's right edge.
+    pub const BUTTONS_INSET: f32 = 4.0;
+    /// Width of the fade where tabs are cut off at an edge of the scrolling area.
+    pub const EDGE_FADE: f32 = 10.0;
+    /// Thickness of the strip's scroll bar thumb at its top edge.
+    pub const SCROLL_THUMB: f32 = 2.0;
+    /// Thickness of the thumb under the pointer or while it is dragged.
+    pub const SCROLL_THUMB_HOVER: f32 = 4.0;
+    /// Space between the thumb and the strip's top edge.
+    pub const SCROLL_MARGIN: f32 = 1.0;
+    /// Space between the thumb's track and the island's sides (it stays inside the
+    /// island's rounded corners).
+    pub const SCROLL_INSET: f32 = 5.0;
 }
 
 /// Tool window stripes (the icon bars beside the islands), in points. Measured on Android
@@ -327,6 +348,11 @@ pub mod motion {
     pub const ISLAND_ACTIONS_HIDE_DELAY: f32 = 0.2;
     /// The fade-out of an island's header actions once the hide delay has passed.
     pub const ISLAND_ACTIONS_FADE_OUT: f32 = 0.07;
+    /// How long the editor tab strip's scroll bar stays after the pointer leaves the strip
+    /// (or after the last wheel step). It appears at once.
+    pub const TAB_SCROLL_HIDE_DELAY: f32 = 0.2;
+    /// The fade-out of the tab strip's scroll bar once the hide delay has passed.
+    pub const TAB_SCROLL_FADE_OUT: f32 = 0.1;
 }
 
 /// Opacities, from 0 to 1.
