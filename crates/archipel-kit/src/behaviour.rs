@@ -271,7 +271,12 @@ impl<'a, P> DropTarget<'a, P> {
 
 impl<P: Any + Send + Sync + Clone> Behaviour for DropTarget<'_, P> {
     fn attach(self, ui: &mut Ui, response: Response) -> Response {
-        if response.dnd_hover_payload::<P>().is_some() {
+        // egui's release helper takes the payload before downcasting it. Calling it for
+        // another type would consume a drag intended for a later/nested target.
+        if !response.enabled() || response.dnd_hover_payload::<P>().is_none() {
+            return response;
+        }
+        if response.contains_pointer() {
             let colors = Theme::colors(ui.ctx());
             ui.painter().rect_stroke(
                 response.rect,

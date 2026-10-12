@@ -116,6 +116,36 @@ fn a_click_still_reaches_the_row() {
 }
 
 #[test]
+fn an_unrelated_drop_target_does_not_consume_a_field_payload() {
+    use archipel_kit::behaviour::{Behaviour, DropTarget};
+    use archipel_kit::components::Button;
+    let mut h = testing::harness_state(Theme::dark(), None::<Field>, |ui, dropped| {
+        ListRow::new("Field source")
+            .with(DragSource(Field("price")))
+            .show(ui);
+        let response = ui.add(Button::secondary("Mixed target"));
+        let mut unrelated: Option<Other> = None;
+        let response = DropTarget::new(&mut unrelated).attach(ui, response);
+        DropTarget::new(dropped).attach(ui, response);
+        assert!(unrelated.is_none());
+    });
+    h.run();
+    let from = h.get_by_label("Field source").rect().center();
+    let to = h.get_by_label("Mixed target").rect().center();
+    h.hover_at(from);
+    h.run();
+    h.drag_at(from);
+    h.run();
+    for step in 1..=8 {
+        h.hover_at(from + (to - from) * (step as f32 / 8.0));
+        h.run();
+    }
+    h.drop_at(to);
+    h.run();
+    assert_eq!(*h.state(), Some(Field("price")));
+}
+
+#[test]
 fn snapshot_while_dragging() {
     testing::snapshot_themes_after(
         "drag_and_drop",

@@ -318,6 +318,26 @@ fn table_header_click_reports_sort() {
 }
 
 #[test]
+fn clipped_columns_do_not_register_headers_or_resize_handles() {
+    let mut h = testing::harness_state(Theme::dark(), None::<usize>, |ui, selected| {
+        ui.set_width(180.0);
+        let mut columns = [
+            Column::new("Visible", 240.0),
+            Column::new("Offscreen", 100.0),
+        ];
+        Table::new("narrow", &mut columns, 1, selected).show(ui, |_, _| Cell::new("value"));
+    });
+    h.run();
+    assert!(h.query_by_label("Offscreen").is_none());
+    assert!(h.query_by_label("Resize Offscreen").is_none());
+    assert!(
+        h.query_by_label("Resize Visible").is_none(),
+        "its real edge is offscreen"
+    );
+    assert!(h.get_by_label("Visible").rect().width() <= 180.0);
+}
+
+#[test]
 fn table_rows_are_virtualized_and_selectable() {
     let mut harness = table_harness();
     let row = "GET, /api/users/1, 201, 49 ms";
