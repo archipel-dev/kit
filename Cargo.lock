@@ -223,7 +223,7 @@ dependencies = [
 
 [[package]]
 name = "archipel-icons"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "archipel-icons",
  "egui",
@@ -233,7 +233,7 @@ dependencies = [
 
 [[package]]
 name = "archipel-kit"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "archipel-icons",
  "archipel-kit",
@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "archipel-kit-gallery"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "archipel-kit",
  "eframe",
@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "archipel-kit-tui"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "archipel-icons",
  "archipel-kit",
