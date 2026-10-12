@@ -3,7 +3,7 @@
 use super::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
-use crate::tokens::{radius, size, typography};
+use crate::tokens::{radius, size, tab, typography};
 use egui::{
     Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo,
     WidgetType, pos2, vec2,
@@ -238,7 +238,7 @@ impl<T: PartialEq + Clone> Widget for SegmentedControl<'_, T> {
             }
             common::text(&painter, pos, galley, color);
             if self.icon_only && icon.is_some() {
-                segment.on_hover_text(label);
+                super::Tooltip::new(label).show_for(&segment);
             }
         }
         response
@@ -293,7 +293,8 @@ pub struct TabBarResponse {
     pub closed: Option<usize>,
 }
 
-/// Editor-style tabs: the selected tab is tinted and underlined.
+/// Editor tabs as in Android Studio's Islands UI: the selected tab is a tinted pill with a
+/// border; others show a hover pill and their close button on hover.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -319,99 +320,119 @@ impl<'a> TabBar<'a> {
         Self { tabs, selected }
     }
 
-    /// Draws the tabs in a row.
+    /// Draws the tabs in a row, [`size::HEADER_HEIGHT`] high: put it at the top of an
+    /// island, where Android Studio has its editor tabs.
     pub fn show(self, ui: &mut Ui) -> TabBarResponse {
         let colors = Theme::colors(ui.ctx());
         let mut out = TabBarResponse::default();
         ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = 0.0;
-            for (index, tab) in self.tabs.iter().enumerate() {
+            ui.spacing_mut().item_spacing.x = tab::GAP;
+            for (index, item) in self.tabs.iter().enumerate() {
                 let selected = index == self.selected;
                 let galley =
-                    common::galley(ui, tab.label.as_str(), typography::body(typography::BODY));
-                let icon_w = if tab.icon.is_some() {
+                    common::galley(ui, item.label.as_str(), typography::body(typography::BODY));
+                let icon_w = if item.icon.is_some() {
                     size::ICON + size::ICON_TEXT_GAP
                 } else {
                     0.0
                 };
-                let dot_w = if tab.modified { 10.0 } else { 0.0 };
-                let close_w = if tab.closable { 20.0 } else { 0.0 };
-                let width = 12.0 + icon_w + galley.size().x + dot_w + close_w + 12.0;
+                let dot_w = if item.modified { 10.0 } else { 0.0 };
+                // The close button's room is kept on every closable tab, so showing it on
+                // hover does not move the tabs (as in Android Studio).
+                let end_w = if item.closable {
+                    tab::CLOSE_GAP + tab::CLOSE + tab::PADDING_RIGHT
+                } else {
+                    tab::PADDING_LEFT
+                };
+                let width = tab::PADDING_LEFT + icon_w + galley.size().x + dot_w + end_w;
                 let (rect, response) =
                     ui.allocate_exact_size(vec2(width, size::HEADER_HEIGHT), Sense::click());
+                let pill = Rect::from_center_size(rect.center(), vec2(width, tab::HEIGHT));
                 crate::cursor::on_hover(&response, egui::CursorIcon::Default);
                 response.widget_info(|| {
-                    WidgetInfo::selected(WidgetType::SelectableLabel, true, selected, &tab.label)
+                    WidgetInfo::selected(WidgetType::SelectableLabel, true, selected, &item.label)
                 });
                 if response.clicked() && !selected {
                     out.selected = Some(index);
                 }
-                if response.middle_clicked() && tab.closable {
+                if response.middle_clicked() && item.closable {
                     out.closed = Some(index);
                 }
                 let painter = ui.painter().clone();
+                let corner = CornerRadius::same(radius::TAB);
                 if selected {
-                    painter.rect_filled(rect, CornerRadius::ZERO, colors.tab_selected);
-                    let underline = Rect::from_min_max(
-                        pos2(rect.left() + 2.0, rect.bottom() - 3.0),
-                        pos2(rect.right() - 2.0, rect.bottom()),
-                    );
-                    painter.rect_filled(
-                        underline,
-                        CornerRadius::same(radius::UNDERLINE),
-                        colors.tab_selected_border,
+                    // The selected tab: a tinted pill with a 1 pt border.
+                    painter.rect_filled(pill, corner, colors.tab_selected);
+                    painter.rect_stroke(
+                        pill,
+                        corner,
+                        Stroke::new(1.0_f32, colors.tab_selected_border),
+                        egui::StrokeKind::Inside,
                     );
                 } else if response.hovered() {
-                    painter.rect_filled(rect, CornerRadius::ZERO, colors.hover);
+                    painter.rect_filled(pill, corner, colors.hover);
                 }
-                let mut x = rect.left() + 12.0;
-                if let Some(icon) = tab.icon {
-                    let icon_rect =
-                        Rect::from_min_size(pos2(x, rect.center().y - 8.0), vec2(16.0, 16.0));
+                if response.has_focus() {
+                    crate::parts::focus_ring(&painter, pill, radius::TAB, &colors);
+                }
+                let mut x = pill.left() + tab::PADDING_LEFT;
+                if let Some(icon) = item.icon {
+                    let icon_rect = Rect::from_min_size(
+                        pos2(x, pill.center().y - size::ICON / 2.0),
+                        vec2(size::ICON, size::ICON),
+                    );
                     icons::paint(&painter, icon_rect, icon, colors.icon);
                     x += icon_w;
                 }
-                // Unselected tabs are dimmed (75 %), so the current file stands out.
-                let text_color = if selected {
-                    colors.text_strong
+                // Hover brings an unselected title up to full strength, as in Android Studio.
+                let text_color = if selected || response.hovered() {
+                    colors.text
                 } else {
-                    colors.text.gamma_multiply(0.75)
+                    colors.tab_text
                 };
                 let text_width = galley.size().x;
-                common::text_left(&painter, rect, x, galley, text_color);
+                common::text_left(&painter, pill, x, galley, text_color);
                 x += text_width;
-                if tab.modified {
+                if item.modified {
                     painter.circle_filled(
-                        pos2(x + 6.0, rect.center().y),
+                        pos2(x + 6.0, pill.center().y),
                         3.0,
                         colors.text_secondary,
                     );
-                    x += dot_w;
                 }
-                if tab.closable && (selected || response.hovered()) {
-                    let close_rect =
-                        Rect::from_center_size(pos2(x + 11.0, rect.center().y), vec2(18.0, 18.0));
+                if item.closable && (selected || response.hovered()) {
+                    let center = pos2(
+                        pill.right() - tab::PADDING_RIGHT - tab::CLOSE / 2.0,
+                        pill.center().y,
+                    );
+                    let close_rect = Rect::from_center_size(
+                        center,
+                        vec2(2.0 * tab::CLOSE_HOVER_RADIUS, 2.0 * tab::CLOSE_HOVER_RADIUS),
+                    );
                     let close = ui.interact(close_rect, response.id.with("close"), Sense::click());
                     crate::cursor::on_hover_action(&close);
                     close.widget_info(|| {
                         WidgetInfo::labeled(
                             WidgetType::Button,
                             true,
-                            format!("Close {}", tab.label),
+                            format!("Close {}", item.label),
                         )
                     });
+                    // A round hover behind the cross, lighter than the tab's.
                     if close.hovered() {
-                        painter.rect_filled(
-                            close_rect,
-                            CornerRadius::same(radius::CONTROL),
-                            colors.hover,
-                        );
+                        painter.circle_filled(center, tab::CLOSE_HOVER_RADIUS, colors.hover);
                     }
+                    let glyph =
+                        Rect::from_center_size(center, vec2(tab::CLOSE_GLYPH, tab::CLOSE_GLYPH));
                     icons::paint(
                         &painter,
-                        close_rect.shrink(3.0),
+                        glyph,
                         Glyph::Close,
-                        colors.text_secondary,
+                        if close.hovered() {
+                            colors.text_secondary
+                        } else {
+                            colors.text_placeholder
+                        },
                     );
                     if close.clicked() {
                         out.closed = Some(index);

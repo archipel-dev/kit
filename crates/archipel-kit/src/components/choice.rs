@@ -2,27 +2,47 @@
 
 use super::common;
 use crate::theme::{Colors, Theme};
-use crate::tokens::{size, typography};
+use crate::tokens::{radius, size, typography};
 use egui::{
-    Color32, CornerRadius, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo,
-    WidgetType, pos2, vec2,
+    Color32, CornerRadius, Galley, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget,
+    WidgetInfo, WidgetType, pos2, vec2,
 };
+use std::sync::Arc;
 
 const BOX: f32 = 16.0;
 
-/// Allocates a control of `control_width` followed by `label`, returning the whole row's
-/// response and the control's rect.
+/// Comments that explain a checkbox or radio, as on Android Studio's Settings pages: one
+/// next to the label (`Requires restart`) and one below it, wrapped, aligned with the label.
+#[derive(Default)]
+struct Comments {
+    inline: Option<String>,
+    below: Option<String>,
+}
+
+/// The laid-out label of a control row.
+struct RowText {
+    label: Option<Arc<Galley>>,
+    inline: Option<Arc<Galley>>,
+}
+
+/// Allocates a control of `control` size followed by its label and inline comment,
+/// returning the whole row's response and the control's rect.
 fn control_row(
     ui: &mut Ui,
     control: egui::Vec2,
     label: &str,
+    inline: Option<&str>,
     enabled: bool,
-) -> (Response, Rect, Option<std::sync::Arc<egui::Galley>>) {
-    let galley =
+) -> (Response, Rect, RowText) {
+    let label =
         (!label.is_empty()).then(|| common::galley(ui, label, typography::body(typography::BODY)));
-    let text_width = galley
+    let inline = inline.map(|text| common::galley(ui, text, typography::body(typography::COMMENT)));
+    let text_width = label
         .as_ref()
-        .map_or(0.0, |g| size::ICON_TEXT_GAP + g.size().x);
+        .map_or(0.0, |g| size::CHECK_LABEL_GAP + g.size().x)
+        + inline
+            .as_ref()
+            .map_or(0.0, |g| size::INLINE_COMMENT_GAP + g.size().x);
     let height = size::ROW_HEIGHT.max(control.y);
     let sense = if enabled {
         Sense::click()
@@ -34,26 +54,93 @@ fn control_row(
         pos2(rect.left(), rect.center().y - control.y / 2.0),
         control,
     );
-    (response, control_rect, galley)
+    (response, control_rect, RowText { label, inline })
 }
 
-fn paint_label(
-    ui: &Ui,
-    response: &Response,
-    control: Rect,
-    galley: Option<std::sync::Arc<egui::Galley>>,
-    enabled: bool,
-) {
-    if let Some(galley) = galley {
-        let colors = Theme::colors(ui.ctx());
-        common::text_left(
+fn paint_label(ui: &Ui, response: &Response, control: Rect, text: RowText, enabled: bool) {
+    let colors = Theme::colors(ui.ctx());
+    let mut x = control.right() + size::CHECK_LABEL_GAP;
+    let mut label_baseline = None;
+    if let Some(galley) = text.label {
+        let y = response.rect.center().y - galley.size().y / 2.0;
+        label_baseline = Some(y + common::baseline(&galley));
+        x += galley.size().x + size::INLINE_COMMENT_GAP;
+        common::text(
             ui.painter(),
-            response.rect,
-            control.right() + size::ICON_TEXT_GAP,
+            pos2(control.right() + size::CHECK_LABEL_GAP, y),
             galley,
             common::enabled_text(enabled, colors.text, &colors),
         );
     }
+    if let Some(galley) = text.inline {
+        // On the label's baseline, in the smaller comment text.
+        let y = label_baseline.map_or_else(
+            || response.rect.center().y - galley.size().y / 2.0,
+            |base| base - common::baseline(&galley),
+        );
+        common::text(
+            ui.painter(),
+            pos2(x, y),
+            galley,
+            common::enabled_text(enabled, colors.text_placeholder, &colors),
+        );
+    }
+}
+
+/// Makes a comment below a control its accessible description.
+fn describe(ui: &Ui, response: &Response, description: Option<&str>) {
+    if let Some(description) = description {
+        ui.ctx()
+            .accesskit_node_builder(response.id, |node| node.set_description(description));
+    }
+}
+
+/// Adds a control row and, if there is one, its comment below, aligned with the label.
+fn with_comment(
+    ui: &mut Ui,
+    comment: Option<&str>,
+    enabled: bool,
+    row: impl FnOnce(&mut Ui) -> Response,
+) -> Response {
+    let Some(comment) = comment else {
+        return row(ui);
+    };
+    ui.vertical(|ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        let response = row(ui);
+        let indent = BOX + size::CHECK_LABEL_GAP;
+        let wrap = (ui.available_width() - indent).max(size::ICON);
+        let mut job = egui::text::LayoutJob::default();
+        job.append(
+            comment,
+            0.0,
+            egui::TextFormat {
+                font_id: typography::body(typography::COMMENT),
+                line_height: Some(size::COMMENT_LINE_HEIGHT),
+                color: Color32::PLACEHOLDER,
+                ..Default::default()
+            },
+        );
+        job.wrap.max_width = wrap;
+        let galley = ui.painter().layout_job(job);
+        let lines = galley.rows.len().max(1) as f32;
+        let (rect, _) = ui.allocate_exact_size(
+            vec2(
+                indent + galley.size().x,
+                size::COMMENT_SPACE + lines * size::COMMENT_LINE_HEIGHT,
+            ),
+            Sense::hover(),
+        );
+        let colors = Theme::colors(ui.ctx());
+        common::text(
+            ui.painter(),
+            pos2(rect.left() + indent, rect.top() + size::COMMENT_GAP),
+            galley,
+            common::enabled_text(enabled, colors.text_placeholder, &colors),
+        );
+        response
+    })
+    .inner
 }
 
 /// Checked, unchecked or mixed (some children checked).
@@ -81,6 +168,7 @@ pub struct Checkbox<'a> {
     enabled: bool,
     mixed: bool,
     label_visible: bool,
+    comments: Comments,
 }
 
 impl<'a> Checkbox<'a> {
@@ -92,7 +180,21 @@ impl<'a> Checkbox<'a> {
             enabled: true,
             mixed: false,
             label_visible: true,
+            comments: Comments::default(),
         }
+    }
+
+    /// A short note after the label, in smaller gray text: `Requires restart`.
+    pub fn inline_comment(mut self, comment: impl Into<String>) -> Self {
+        self.comments.inline = Some(comment.into());
+        self
+    }
+
+    /// An explanation below the checkbox, in smaller gray text aligned with the label and
+    /// wrapped to the available width. It is also the checkbox's accessible description.
+    pub fn comment(mut self, comment: impl Into<String>) -> Self {
+        self.comments.below = Some(comment.into());
+        self
     }
 
     /// Whether the label is drawn next to the box (default). Without it the label is only
@@ -128,10 +230,27 @@ fn mark_color(ui: &Ui, colors: &Colors, enabled: bool) -> Color32 {
 }
 
 impl Widget for Checkbox<'_> {
-    fn ui(self, ui: &mut Ui) -> Response {
+    fn ui(mut self, ui: &mut Ui) -> Response {
+        let below = self.comments.below.take();
+        let enabled = self.enabled;
+        with_comment(ui, below.as_deref(), enabled, |ui| {
+            self.row(ui, below.as_deref())
+        })
+    }
+}
+
+impl Checkbox<'_> {
+    fn row(self, ui: &mut Ui, description: Option<&str>) -> Response {
         let colors = Theme::colors(ui.ctx());
         let shown = if self.label_visible { &self.label } else { "" };
-        let (mut response, rect, galley) = control_row(ui, vec2(BOX, BOX), shown, self.enabled);
+        let inline = self
+            .comments
+            .inline
+            .as_deref()
+            .filter(|_| self.label_visible);
+        let (mut response, rect, galley) =
+            control_row(ui, vec2(BOX, BOX), shown, inline, self.enabled);
+        describe(ui, &response, description);
         if response.clicked() {
             *self.checked = self.mixed || !*self.checked;
             response.mark_changed();
@@ -152,28 +271,33 @@ impl Widget for Checkbox<'_> {
         });
         if ui.is_rect_visible(response.rect) {
             let painter = ui.painter();
-            let corner = CornerRadius::same(3);
+            let corner = CornerRadius::same(radius::CHECKBOX);
             let filled = state != CheckState::Off;
+            // Measured on Android Studio: no hover change; checked in its own blue.
             let (fill, stroke) = match (filled, self.enabled) {
-                (true, true) => (colors.accent, Stroke::NONE),
+                (true, true) => (colors.control_selected, Stroke::NONE),
                 (true, false) => (colors.accent_disabled, Stroke::NONE),
                 (false, enabled) => (
-                    colors.field,
+                    colors.control,
                     Stroke::new(
                         1.0_f32,
-                        if enabled && response.hovered() {
-                            colors.text_secondary
-                        } else if enabled {
+                        if enabled {
                             colors.control_border
                         } else {
-                            colors.border
+                            colors.border_disabled
                         },
                     ),
                 ),
             };
             painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
             if response.has_focus() {
-                common::focus_ring(painter, rect, 3, &colors);
+                // The border becomes 2 pt in the checkbox blue, one of them outside.
+                painter.rect_stroke(
+                    rect.expand(1.0),
+                    CornerRadius::same(radius::CHECKBOX + 1),
+                    Stroke::new(size::FOCUS_RING, colors.control_selected),
+                    StrokeKind::Inside,
+                );
             }
             let mark = Stroke::new(1.6_f32, mark_color(ui, &colors, self.enabled));
             let p = |x: f32, y: f32| rect.min + vec2(x, y);
@@ -211,6 +335,7 @@ pub struct Radio<'a, T: PartialEq> {
     value: T,
     label: String,
     enabled: bool,
+    comments: Comments,
 }
 
 impl<'a, T: PartialEq> Radio<'a, T> {
@@ -221,7 +346,21 @@ impl<'a, T: PartialEq> Radio<'a, T> {
             value,
             label: label.into(),
             enabled: true,
+            comments: Comments::default(),
         }
+    }
+
+    /// A short note after the label, in smaller gray text.
+    pub fn inline_comment(mut self, comment: impl Into<String>) -> Self {
+        self.comments.inline = Some(comment.into());
+        self
+    }
+
+    /// An explanation below the option, in smaller gray text aligned with the label and
+    /// wrapped to the available width. It is also the option's accessible description.
+    pub fn comment(mut self, comment: impl Into<String>) -> Self {
+        self.comments.below = Some(comment.into());
+        self
     }
 
     /// Disabled options are dimmed and ignore clicks.
@@ -232,10 +371,26 @@ impl<'a, T: PartialEq> Radio<'a, T> {
 }
 
 impl<T: PartialEq> Widget for Radio<'_, T> {
-    fn ui(self, ui: &mut Ui) -> Response {
+    fn ui(mut self, ui: &mut Ui) -> Response {
+        let below = self.comments.below.take();
+        let enabled = self.enabled;
+        with_comment(ui, below.as_deref(), enabled, |ui| {
+            self.row(ui, below.as_deref())
+        })
+    }
+}
+
+impl<T: PartialEq> Radio<'_, T> {
+    fn row(self, ui: &mut Ui, description: Option<&str>) -> Response {
         let colors = Theme::colors(ui.ctx());
-        let (mut response, rect, galley) =
-            control_row(ui, vec2(BOX, BOX), &self.label, self.enabled);
+        let (mut response, rect, galley) = control_row(
+            ui,
+            vec2(BOX, BOX),
+            &self.label,
+            self.comments.inline.as_deref(),
+            self.enabled,
+        );
+        describe(ui, &response, description);
         let mut selected = *self.current == self.value;
         if response.clicked() && !selected {
             *self.current = self.value;
@@ -251,7 +406,7 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
             let center = rect.center();
             if selected {
                 let fill = if self.enabled {
-                    colors.accent
+                    colors.control_selected
                 } else {
                     colors.accent_disabled
                 };
@@ -259,25 +414,24 @@ impl<T: PartialEq> Widget for Radio<'_, T> {
                 let dot = mark_color(ui, &colors, self.enabled);
                 painter.circle_filled(center, 3.0, dot);
             } else {
-                let outline = if self.enabled && response.hovered() {
-                    colors.text_secondary
-                } else if self.enabled {
+                let outline = if self.enabled {
                     colors.control_border
                 } else {
-                    colors.border
+                    colors.border_disabled
                 };
                 painter.circle(
                     center,
                     BOX / 2.0 - 0.5,
-                    colors.field,
+                    colors.control,
                     Stroke::new(1.0_f32, outline),
                 );
             }
             if response.has_focus() {
+                // Like the checkbox: a 2 pt border in the checkbox blue, one of them outside.
                 painter.circle_stroke(
                     center,
-                    BOX / 2.0 + 1.0 + size::FOCUS_RING / 2.0,
-                    Stroke::new(size::FOCUS_RING, colors.focus_ring),
+                    BOX / 2.0,
+                    Stroke::new(size::FOCUS_RING, colors.control_selected),
                 );
             }
             paint_label(ui, &response, rect, galley, self.enabled);
@@ -324,7 +478,7 @@ impl Widget for Toggle<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         const TRACK: egui::Vec2 = vec2(28.0, 16.0);
         let colors = Theme::colors(ui.ctx());
-        let (mut response, rect, galley) = control_row(ui, TRACK, &self.label, self.enabled);
+        let (mut response, rect, galley) = control_row(ui, TRACK, &self.label, None, self.enabled);
         if response.clicked() {
             *self.on = !*self.on;
             response.mark_changed();
@@ -352,7 +506,7 @@ impl Widget for Toggle<'_> {
             };
             painter.rect(
                 rect,
-                CornerRadius::same(8),
+                CornerRadius::same(radius::PILL),
                 track,
                 Stroke::new(1.0_f32, outline),
                 StrokeKind::Inside,

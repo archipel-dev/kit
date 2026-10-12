@@ -1,7 +1,7 @@
 //! The surfaces things are drawn on.
 
 use crate::theme::Theme;
-use crate::tokens::{radius, size};
+use crate::tokens::{popup, radius, size};
 use egui::{CornerRadius, Margin, Stroke};
 
 /// A themed surface. Every container in the kit is one of these, so a new component that
@@ -37,12 +37,16 @@ impl Surface {
                 .fill(colors.popup)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
                 .corner_radius(radius::POPUP)
-                .inner_margin(Margin::symmetric(0, 4)),
+                .inner_margin(Margin::symmetric(0, popup::PADDING as i8)),
             Surface::Tooltip => egui::Frame::popup(&style)
                 .fill(colors.tooltip)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
                 .corner_radius(CornerRadius::same(radius::CONTROL))
-                .inner_margin(Margin::symmetric(8, 5)),
+                // Android Studio's tooltips: 16 pt at the sides, 36 pt high for one line.
+                .inner_margin(Margin::symmetric(
+                    size::TOOLTIP_PADDING_X as i8,
+                    size::TOOLTIP_PADDING_Y as i8,
+                )),
             Surface::Dialog => egui::Frame::popup(&style)
                 .fill(colors.popup)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))

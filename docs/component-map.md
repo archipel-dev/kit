@@ -36,6 +36,100 @@ Charts, HTTP key/value editors, avatars and some tag compositions have no direct
 in the inspected Android Studio surfaces. They inherit the same surface, padding, type,
 focus, disabled and popup rules, rather than pretending an exact reference was observed.
 
+## Measured behavior
+
+### Islands
+
+Observed in Android Studio Rabbit 1 (2026.2.1, Islands Dark, 100% scale) by driving it with
+pointer and keyboard and recording the screen at 60 fps. The kit reproduces each point.
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Tool window header actions at rest | Hidden; only the title (`Project ▾`) shows. | `Panel::hover_actions(true)` |
+| Pointer anywhere over the island, or the tool window active (focus inside) | Actions show at once, no fade-in. | Same; focus inside the island counts as active. |
+| Pointer leaves, focus elsewhere | Actions stay ~200 ms, then fade out in ~60-70 ms. | `tokens::motion::ISLAND_ACTIONS_HIDE_DELAY`, `ISLAND_ACTIONS_FADE_OUT` |
+| Hidden actions | Take no space; the title can use the whole header. | Same. |
+| Narrow island, actions shown | The title disappears whole (no ellipsis). Actions stay right-anchored and are clipped at the island's left edge until only Hide remains. | Same. |
+| Island minimum width | About 38 pt; tree labels are clipped hard at the edge. | `SplitPane` minimum sizes |
+| Gap between islands | No line; the resize cursor is the only feedback. | `SplitPane::line(false)` |
+
+### Popups and menus
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Popup surface | `#26282C`, 1 pt border `#33353B`, 8 pt padding top and bottom | `Surface::Popup`, `tokens::popup::PADDING` |
+| Items | 24 pt, touching; pill inset 8 pt, radius 4, `#2A4371`; icon 8 pt inside the pill; text 4 pt after the icon; shortcut ends 8 pt before the pill's end | `MenuItem`, `tokens::popup` |
+| Separator | 9 pt row, 1 pt line in the border color, inset like pills | `MenuSeparator` |
+| Group title | "Open Projects": semibold 13 pt, `#73767C`, aligned with icons, 24 pt row, not selectable | `MenuHeader` |
+| Clear button in fields | Gray 8 pt cross (`#676B71` / `#B0B4C3`) centered 15 pt from the right edge; under the pointer a 16 pt round background (`#353637` / `#EBEBED`) and a darker cross | `TextField::clearable`, `Colors::clear_*`, `size::CLEAR_*` |
+| Settings search | Filters the tree as you type and dims everything on the page that doesn't match; the match gets an orange outline | Not in the kit yet: app behavior |
+| Two-line item | 20 pt icon, label, path below in `#73767C`, 48 pt | `MenuItem::description` |
+| Icon column | Reserved only when an item of the menu has an icon or a check | `MenuItem` |
+| Pointer and keys | One highlight, shared; the first pointer move after opening is ignored; it stays on the last item when the pointer leaves; arrows continue from it and skip headers and separators | `MenuItem` |
+
+### Editor tabs and headers
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Island header (tool window title bar, editor tab bar) | 40 pt high; tool windows with content tabs have a 1 pt line below in the frame color, edge to edge | `tokens::size::HEADER_HEIGHT`, `Panel::header_separator` |
+| Header actions | 22 pt icon buttons, radius 4, 4 pt apart, the last 10 pt from the island's edge; group lines 20 pt in the separator color | `IconButton`, `Separator::group`, `HEADER_ACTIONS_INSET` |
+| View switcher ("Project ▾") | Title + chevron, no hover fill; click opens the views right below the header, content-wide, current one highlighted, no icon column | `Panel::views` |
+| Content tabs (Problems: File, Project Errors) | 22 pt after the title, 10 pt padding and gap; selected: blue while active, gray outline otherwise | `Panel::tabs` |
+| Selected tab | 28 pt pill, radius 6, fill `#233558` / light `#E3EBFE`, 1 pt border `#2E4D89` / `#A7C5FF`, text at full strength | `TabBar` |
+| Other tabs | No fill; title `#AFB1B6` / light `#515151`; on hover a `hover` pill and full-strength title | `Colors::tab_text` |
+| Close button | Only on the selected and the hovered tab; its room is always kept; small cross; round hover behind it | `tokens::tab` |
+| Spacing | 8 pt, icon, 4 pt, title, 4 pt, close 16 pt, 4 pt; 6 pt between pills | `tokens::tab` |
+
+### Trees and lists
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Row | 24 pt; selection pill inset 12 pt from the island's sides, radius 4 | `ListRow`, `tokens::size::ROW_INSET` |
+| Levels | Expander column (16 pt) starts at the pill's edge and moves 19 pt per level; icon 5 pt after it; text 4 pt after the icon | `TREE_INDENT`, `CHEVRON_GAP` |
+| Selection | Focused `#2A4371` / light `#D0DFFE`; without focus `#33353B` / light `#E9EAEE` | `Colors::selection`, `selection_inactive` |
+| Hover | No fill in trees and lists (popup lists highlight like menus) | `State::row_fill` |
+
+### Tool window stripes
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Stripe | 38 pt on the frame beside the islands (islands start at 42 pt); top and bottom groups | `ToolStripe`, `tokens::stripe` |
+| Button | 30 pt, radius 6, 20 pt icon, 40 pt pitch; first button 3 pt below the island's top | `StripeButton` |
+| States | Open: pressed fill (~16 % white); active (focus in the tool window): accent fill, white icon; hover: `hover` fill; tooltip beside it at once | `StripeButton::open`, `active` |
+
+### Form controls (Settings dialog)
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Buttons | 28 pt, at least 72 pt wide, radius 4, 12 pt apart; **no hover or press change** | `Button` |
+| Focus | The 1 pt border becomes 2 pt in `#3871E1` (both themes), one of them outside; filled buttons get an outer 2 pt ring with a 1 pt gap | `parts::focus_ring`, `Colors::focus_ring` |
+| Checkbox / radio | 16 pt, radius 3; unchecked `#2B2D30` / white with `#5A5D63` / `#A8ADBD` border; checked `#3574F0`; no hover change; focus: 2 pt border in `#3574F0` | `Colors::control`, `control_selected`, `control_border` |
+| Disabled borders | `#33353B` / light `#DDDFE4` | `Colors::border_disabled` |
+| Combo box list | Below the field, at least as wide, current value highlighted, groups separated by lines, chevron stays down | `Dropdown::separators` |
+| Fields and combo boxes | 28 pt, `#40434A` / `#D1D3D9` border; combo fill `#26282C` / white | `TextField`, `Dropdown` |
+| Integer field | A 28 pt text field, six digits wide; out-of-range input gets the field's error outline and message, the value keeps its last valid number | `NumberField` |
+| Drag and drop | The dragged item leaves a dimmed original and follows the pointer as a translucent card; targets that take it are outlined in the focus color, the one under the pointer gets the 2 pt focus ring | `behaviour::DragSource` on `ListRow`, `DropZone`, `DropTarget` |
+| Editable combo box | A text field with the combo box's chevron (centered 16 pt from the right edge, as on the non-editable one); the list hangs below the field, as wide as it | `TextField::suggestions` |
+| Checkbox label | Starts 8 pt after the box (radio the same); radios in a row 16 pt apart | `size::CHECK_LABEL_GAP`, `FORM_CONTROL_GAP` |
+| Disabled combo box | No fill, `border_disabled` border, dimmed text (not a faded copy) | `Dropdown::enabled(false)` |
+| Settings rows | Checkbox rows 29 pt apart; fields 9 pt from a box or field above and below; label 6 pt before its field | `Form`, `size::FORM_*` |
+| Comments | 12 pt in `#73767C` (both themes), 16 pt lines, aligned with the label; first line's cap 6 pt below the row; a comment adds 7 pt + 16 per line. Inline comment 12 pt after the label, same baseline | `Checkbox::comment`, `inline_comment`, `size::COMMENT_*` |
+| Group title | Regular weight, text color; 1 pt line `#33353B` / `#E9EAEE` from 6 pt after the title, 4 pt above its baseline, to the right edge; 20 pt extra above, none for the first group; rows indented 24 pt | `Form::group`, `SectionHeader`, `Colors::group_separator` |
+| Collapsible group title | The group title after a 16 pt chevron (right closed, down open) and a 4 pt gap, in the text color; the title and chevron toggle it | `FormUi::collapsible`, `SectionHeader::collapsible` |
+
+### Tooltips and status bar
+
+| Situation | Android Studio | Kit |
+|---|---|---|
+| Tooltip look | `#33353B`, 36 pt for one line, 16 pt at the sides, text `#D1D3D9`, shortcut in `text_secondary` 9 pt after it | `Surface::Tooltip`, `tokens::size::TOOLTIP_*` |
+| Tooltip delay | About 0.5 s on toolbar buttons; stripe buttons name themselves at once, beside the button | egui's 0.5 s; `Tooltip::immediate`, `Tooltip::align` |
+| Tooltip linger | Help tooltips stay about 0.5 s after the pointer leaves, so links in them can be reached | Not reproduced: kit tooltips have no links |
+| Status bar | 30 pt on the frame, 8 pt from the left; items 21 pt hover pills, text `text_secondary`, full strength on hover | `Workbench::status`, `StatusBarItem` |
+| Scroll bars | A 7 pt thumb, 2 pt from the edge, visible at rest (`#3C3D3E` on a dark island), brighter under the pointer (`#565657`); a faint track appears on hover | `tokens::scroll` (no track) |
+| Editor banner | 39 pt, inset 6 pt in the editor island under the tabs; 16 pt before the icon, 10 pt to the text; actions are links 22 pt apart, underlined on hover; 20 pt at the end; info `#233558` / `#2E4D89` | `Banner`, `tokens::size::BANNER_*` |
+| Notifications | 370 pt card, 12 pt padding, icon on the title line, semibold title, body in the text color, links below; dismiss button in the corner on hover | `Toast`, `tokens::size::NOTIFICATION_*` |
+| Navigation path | Crumbs with icons, 4 pt padding, dimmed chevrons between | `Breadcrumbs` |
+
 ## Fixed invariants
 
 - Body font: Inter 13 pt. Code: the bundled mono font. Existing icon artwork is fixed.
@@ -60,11 +154,11 @@ focus, disabled and popup rules, rather than pretending an exact reference was o
 
 | Work | Tracking | Proof / next acceptance |
 |---|---|---|
-| Picker, field, tree and segment corrections | [#13](https://github.com/archipel-dev/kit/issues/13), [#14](https://github.com/archipel-dev/kit/issues/14), [#15](https://github.com/archipel-dev/kit/issues/15), [#16](https://github.com/archipel-dev/kit/issues/16) | Behavior/a11y regressions and both-theme snapshots; gallery demonstrations. |
-| Histogram/Sparkline | [PR #12](https://github.com/archipel-dev/kit/pull/12) | Fix count totals and caller-tooltip detection before merging; CI required. |
+| Picker, field, tree and segment corrections | [#13](https://github.com/archipel-dev/kit/issues/13), [#14](https://github.com/archipel-dev/kit/issues/14), [#15](https://github.com/archipel-dev/kit/issues/15), [#16](https://github.com/archipel-dev/kit/issues/16) | Merged in PR #27 with behavior/a11y regressions, both-theme snapshots and gallery demonstrations. |
+| Histogram/Sparkline | [PR #12](https://github.com/archipel-dev/kit/pull/12) | Merged in PR #12 after count-total and caller-tooltip fixes; CI passed. |
 | Streaming, rich cells and numbers | [#20](https://github.com/archipel-dev/kit/issues/20) | Follow-tail releases on user scroll; jump-to-latest; slot cells preserve virtualization; bounded numeric stepping and invalid state. |
-| Shared island shell | [#24](https://github.com/archipel-dev/kit/issues/24) | Common toolbar/title integration and docked island layout; caller-owned state; snapshots, conformance, small-window geometry. SDK/app migrations require follow-up in their own repositories. |
-| Independent gallery pages | [#25](https://github.com/archipel-dev/kit/issues/25) | Each page owns its state and rendering; snapshots unchanged by extraction. |
+| Shared island shell | [#24](https://github.com/archipel-dev/kit/issues/24) | WindowChrome/WindowToolbar and docked Workbench implemented with caller-owned serializable state, keyboard splitters, hide/maximize/restore, both-theme snapshots and small-window audits. Native macOS traffic lights centered in the full toolbar band and tested live. Tool-window stripes, multiple tools/floating modes and SDK/app migrations remain follow-ups. |
+| Independent gallery pages | [#25](https://github.com/archipel-dev/kit/issues/25) | Each page owns its state and rendering; extraction preserved snapshots. The new Workbench entry intentionally extends the gallery navigation. |
 
 Completion requires the contribution checklist, fmt/clippy/workspace tests, inspecting
 changed docs snapshots, and native interaction against the actual gallery. Snapshots are

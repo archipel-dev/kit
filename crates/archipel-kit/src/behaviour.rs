@@ -182,7 +182,11 @@ impl Behaviour for ContextMenu<'_> {
             // Clicks inside stay open so a submenu item can open its menu; a `MenuItem` closes
             // the menu itself when it is clicked (other widgets: call `ui.close()`).
             .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-            .show(|ui| (self.add)(ui));
+            .show(|ui| {
+                // Menu items touch: 24 pt apart, as in Android Studio.
+                ui.spacing_mut().item_spacing.y = 0.0;
+                (self.add)(ui)
+            });
         response
     }
 }

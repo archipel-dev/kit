@@ -14,11 +14,13 @@
 //! | [`nav`] | Arrow, Home/End and PgUp/PgDn movement through items. |
 //! | [`scroll_vertical`] | Scroll areas that behave like desktop ones. |
 //! | [`focus_ring`], [`row_pill`] | The focus ring and the rounded row highlight. |
+//! | [`project_glow`] | The project color's glow on the window frame. |
 //!
 //! Interaction that is not part of a component's look (tooltips, context menus, drag and
 //! drop) is added with [`behaviour`](crate::behaviour). See `docs/building-components.md`
 //! for a walk-through.
 
+mod glow;
 pub mod nav;
 mod popover;
 mod row;
@@ -27,6 +29,7 @@ mod state;
 mod surface;
 mod tone;
 
+pub use glow::project_glow;
 pub use popover::Popover;
 pub use row::{IconPainter, RowContent};
 pub use slot::Slot;

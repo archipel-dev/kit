@@ -71,6 +71,7 @@ Rows must implement `Default`: new rows are created with it, then enabled and fi
 | Builder | Effect |
 |---|---|
 | `KeyValueTable::new(id_salt, &mut Vec<T>)` | `T: KeyValueRow + Default`. Tells tables on one screen apart. |
+| `KeyValueTable::with_fields(id_salt, &mut Vec<T>, enabled, key, value)` | Any `T: Default`, reached through three accessors (`\|r\| &mut r.name`): for model types from a crate without egui, which can't implement the kit trait. |
 | `.key_placeholder(str)` | Hint of empty key cells (default "Key"). |
 | `.value_placeholder(str)` | Hint of empty value cells (default "Value"). |
 | `.read_only(bool)` | No trailing row, no delete buttons; checkboxes and cells are inert (and look disabled). |

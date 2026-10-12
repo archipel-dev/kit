@@ -216,7 +216,12 @@ fn tree_chevron_click_toggles() {
     // The chevron sits left of the icon, one indent level in.
     harness.get_by_label("tests").hover();
     harness.run();
-    let chevron = egui::pos2(tests.left() + 24.0, tests.center().y);
+    let chevron = egui::pos2(
+        tests.left()
+            + archipel_kit::tokens::size::indent(1)
+            + archipel_kit::tokens::size::CHEVRON_COLUMN / 2.0,
+        tests.center().y,
+    );
     harness.event(egui::Event::PointerButton {
         pos: chevron,
         button: egui::PointerButton::Primary,

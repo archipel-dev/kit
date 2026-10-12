@@ -64,11 +64,33 @@ pub fn harness_state<'a, State>(
     build(theme, state, app, 1.0)
 }
 
+/// Like [`harness_state`], in a window of `size` from the first frame on, instead of one
+/// fitted to the content. Use it for screens and dialogs: a window resized after the first
+/// frame lays them out twice, and clicks can land on where things were.
+pub fn harness_state_sized<'a, State>(
+    theme: Theme,
+    size: egui::Vec2,
+    state: State,
+    app: impl FnMut(&mut egui::Ui, &mut State) + 'a,
+) -> Harness<'a, State> {
+    build_with(theme, state, app, 1.0, Some(size))
+}
+
 fn build<'a, State>(
+    theme: Theme,
+    state: State,
+    app: impl FnMut(&mut egui::Ui, &mut State) + 'a,
+    pixels_per_point: f32,
+) -> Harness<'a, State> {
+    build_with(theme, state, app, pixels_per_point, None)
+}
+
+fn build_with<'a, State>(
     theme: Theme,
     state: State,
     mut app: impl FnMut(&mut egui::Ui, &mut State) + 'a,
     pixels_per_point: f32,
+    size: Option<egui::Vec2>,
 ) -> Harness<'a, State> {
     let egui_theme = if theme.dark {
         egui::Theme::Dark
@@ -76,7 +98,11 @@ fn build<'a, State>(
         egui::Theme::Light
     };
     let mut pending = Some(theme);
-    let mut harness = builder()
+    let mut builder = builder();
+    if let Some(size) = size {
+        builder = builder.with_size(size);
+    }
+    let mut harness = builder
         .with_theme(egui_theme)
         .with_pixels_per_point(pixels_per_point)
         .build_ui_state(
@@ -94,7 +120,9 @@ fn build<'a, State>(
         );
     // Animated widgets (spinners) never settle, so wait with a step limit.
     harness.run_ok();
-    harness.fit_contents();
+    if size.is_none() {
+        harness.fit_contents();
+    }
     harness
 }
 

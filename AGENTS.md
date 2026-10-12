@@ -7,6 +7,16 @@ Raabit, plugins). Quality bar: it should feel like one polished suite.
 
 - Every component meets the checklist in `docs/contributing.md`: themed, all states, keyboard,
   accessible name and state, behavior + snapshot tests, a docs page, a gallery entry.
+- Components look and behave like their Android Studio Islands counterparts, measured, not
+  guessed: follow `docs/design-rules.md`, measure new ones with `tools/reference/` and record
+  the values in `docs/component-map.md`. `tests/design_rules.rs` fails on color and radius
+  literals, stock egui controls and tooltips, literal animation timings, and interactive
+  components without a conformance test.
+- Components look and behave like their Android Studio Islands counterparts, measured, not
+  guessed: follow `docs/design-rules.md`, measure new ones with `tools/reference/` and record
+  the values in `docs/component-map.md`. `tests/design_rules.rs` fails on color and radius
+  literals, stock egui controls and tooltips, literal animation timings, and interactive
+  components without a conformance test.
 - Colors only from `Theme::colors(ctx)`, sizes only from `tokens`. No global mutable state:
   the theme lives in the `egui::Context`.
 - Components are stateless: they borrow caller state or report what happened. No filesystem,

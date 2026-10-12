@@ -9,6 +9,7 @@
 - [Behaviours](behaviours.md): tooltips, context menus, cursors and drag and drop on any widget with `.with(...)`.
 - [Building a component](building-components.md): from parts, with slots and behaviours, proven by conformance and the audit.
 - [Contributing a component](contributing.md): the checklist every component meets.
+- [Design rules](design-rules.md): the Islands look and feel every component follows, and how to measure a new one against Android Studio ([tools](../tools/reference/README.md)).
 - [Desktop component map](component-map.md): reusable families, Android Studio reference
   behavior, interaction invariants and verification.
 
@@ -34,10 +35,13 @@
 | [EmptyState](components/empty-state.md) | <img src="components/img/empty_state.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Histogram, Sparkline](components/chart.md) | <img src="components/img/chart.dark.png" width="160"> | Value distributions, top-N counts, inline trends. |
+| [Form, FieldLabel](components/form.md) | <img src="components/img/form.dark.png" width="160"> | Settings pages: rows, comments, groups. |
 | [Panel, SectionHeader, PropertyGrid](components/panel.md) | <img src="components/img/panel.dark.png" width="160"> | Workbench layout and details. |
 | [StatusBarItem](components/status-bar-item.md) | <img src="components/img/status_bar_item.dark.png" width="160"> | Status bar and toolbar widgets. |
 | [SplitPane](components/split-pane.md) | <img src="components/img/split_pane.dark.png" width="140"> | Resizable panes, side by side or stacked. |
-| [MenuItem, MenuSeparator, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
+| [WindowToolbar](components/window.md) | <img src="components/img/window_toolbar.dark.png" width="160"> | Integrated native title area and application actions. |
+| [Workbench](components/workbench.md) | <img src="components/img/workbench_4.dark.png" width="160"> | Shared docked island shell with caller-owned layout. |
+| [MenuItem, MenuSeparator, MenuHeader, Link](components/menu-item.md) | <img src="components/img/menu_item.dark.png" width="140"> | Menus and inline actions. |
 | [Tooltip](components/tooltip.md) | <img src="components/img/tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
 | [Dialog](components/dialog.md) | <img src="components/img/dialog.dark.png" width="160"> | Decisions and short forms. |
 | [Icons](components/icons.md) | <img src="icons/img/actual-size.dark.png" width="160"> | Glyphs and file-type icons. |

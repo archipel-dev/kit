@@ -1,6 +1,6 @@
 //! Messages: inline banners and toast notifications.
 
-use super::{Button, IconButton};
+use super::IconButton;
 use crate::icons::{self, Glyph};
 use crate::theme::{Colors, Theme, Tint};
 use crate::tokens::{radius, size, typography};
@@ -106,15 +106,26 @@ impl Banner {
         let colors = Theme::colors(ui.ctx());
         let tint = self.severity.tint(&colors);
         let mut out = MessageResponse::default();
+        let line = ui.text_style_height(&egui::TextStyle::Body).max(size::ICON);
+        let vertical = ((size::BANNER_HEIGHT - 2.0 - line) / 2.0).max(0.0) as i8;
         egui::Frame::new()
             .fill(tint.background)
             .stroke(Stroke::new(1.0_f32, tint.border))
             .corner_radius(CornerRadius::same(radius::BANNER))
-            .inner_margin(egui::Margin::symmetric(10, 6))
+            // Measured on Android Studio's editor notifications: 40 pt high, 16 pt before
+            // the icon, 10 pt to the text, links 22 pt apart, 16 pt at the end.
+            .inner_margin(egui::Margin {
+                left: size::BANNER_PADDING as i8,
+                right: size::BANNER_PADDING_END as i8,
+                top: vertical,
+                bottom: vertical,
+            })
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
+                // One text line high: links and the icon do not stretch the row.
+                ui.spacing_mut().interact_size.y = line;
                 ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 8.0;
+                    ui.spacing_mut().item_spacing.x = size::BANNER_ICON_GAP;
                     icons::show(
                         ui,
                         self.severity.icon(),
@@ -122,20 +133,22 @@ impl Banner {
                         self.severity.icon_color(&colors),
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.spacing_mut().item_spacing.x = size::BANNER_ACTION_GAP;
                         if self.dismissible
-                            && ui.add(IconButton::new(Glyph::Close, "Dismiss")).clicked()
+                            && ui
+                                .add(IconButton::new(Glyph::Close, "Dismiss").small(true))
+                                .clicked()
                         {
                             out.dismissed = true;
                         }
+                        // Actions are links, as in Android Studio's editor notifications.
                         for (index, label) in self.actions.iter().enumerate().rev() {
-                            if ui
-                                .add(Button::secondary(label.as_str()).small(true).min_width(0.0))
-                                .clicked()
-                            {
+                            if ui.add(super::Link::new(label.as_str())).clicked() {
                                 out.action = Some(index);
                             }
                         }
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.spacing_mut().item_spacing.x = size::BANNER_ICON_GAP;
                             ui.add(
                                 egui::Label::new(
                                     egui::RichText::new(&self.text).color(colors.text),
@@ -197,19 +210,21 @@ impl Toast {
     pub fn show(self, ui: &mut Ui) -> MessageResponse {
         let colors = Theme::colors(ui.ctx());
         let mut out = MessageResponse::default();
-        egui::Frame::new()
+        let padding = size::NOTIFICATION_PADDING;
+        let frame = egui::Frame::new()
             .fill(colors.notification)
             .stroke(Stroke::new(1.0_f32, colors.popup_border))
             .corner_radius(CornerRadius::same(radius::POPUP))
-            .inner_margin(egui::Margin::same(12))
+            .inner_margin(egui::Margin::same(padding as i8))
             .shadow(ui.visuals().popup_shadow)
             .show(ui, |ui| {
-                ui.set_width(296.0);
+                ui.set_width(size::NOTIFICATION_WIDTH - 2.0 * padding);
                 ui.horizontal_top(|ui| {
                     ui.spacing_mut().item_spacing.x = 8.0;
-                    // Center the icon on the title line, which is as tall as the close button.
+                    // The icon sits on the title line.
+                    let line = ui.text_style_height(&egui::TextStyle::Body);
                     ui.allocate_ui_with_layout(
-                        vec2(size::ICON, size::ICON_BUTTON),
+                        vec2(size::ICON, line),
                         egui::Layout::centered_and_justified(egui::Direction::TopDown),
                         |ui| {
                             icons::show(
@@ -222,31 +237,24 @@ impl Toast {
                     );
                     ui.vertical(|ui| {
                         ui.spacing_mut().item_spacing.y = 4.0;
-                        ui.horizontal(|ui| {
-                            ui.add(
-                                egui::Label::new(
-                                    egui::RichText::new(&self.title)
-                                        .font(typography::semibold(ui.ctx(), typography::BODY))
-                                        .color(colors.text_strong),
-                                )
-                                .wrap(),
-                            );
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                                ui.spacing_mut().interact_size = vec2(20.0, 20.0);
-                                if ui.add(IconButton::new(Glyph::Close, "Dismiss")).clicked() {
-                                    out.dismissed = true;
-                                }
-                            });
-                        });
+                        // Leave room for the dismiss button over the title's end.
+                        ui.set_max_width(ui.available_width() - size::ICON_BUTTON_SMALL);
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new(&self.title)
+                                    .font(typography::semibold(ui.ctx(), typography::BODY))
+                                    .color(colors.text_strong),
+                            )
+                            .wrap(),
+                        );
                         if let Some(body) = &self.body {
                             ui.add(
-                                egui::Label::new(
-                                    egui::RichText::new(body).color(colors.text_secondary),
-                                )
-                                .wrap(),
+                                egui::Label::new(egui::RichText::new(body).color(colors.text))
+                                    .wrap(),
                             );
                         }
                         if !self.actions.is_empty() {
+                            ui.add_space(4.0);
                             ui.horizontal(|ui| {
                                 ui.spacing_mut().item_spacing.x = 12.0;
                                 for (index, label) in self.actions.iter().enumerate() {
@@ -259,6 +267,29 @@ impl Toast {
                     });
                 });
             });
+        // As in Android Studio's notifications, the dismiss button shows in the top-right
+        // corner while the pointer is over the card (or the button has focus); it keeps its
+        // name and Tab stop while hidden.
+        let card = frame.response.rect;
+        let corner = egui::Rect::from_min_size(
+            egui::pos2(
+                card.right() - padding / 2.0 - size::ICON_BUTTON_SMALL,
+                card.top() + padding / 2.0,
+            ),
+            vec2(size::ICON_BUTTON_SMALL, size::ICON_BUTTON_SMALL),
+        );
+        let mut close = ui.new_child(egui::UiBuilder::new().max_rect(corner));
+        let close_id = close.next_auto_id();
+        let focused = ui.memory(|m| m.has_focus(close_id));
+        if !(ui.rect_contains_pointer(card) || focused) {
+            close.multiply_opacity(0.0);
+        }
+        if close
+            .add(IconButton::new(Glyph::Close, "Dismiss").small(true))
+            .clicked()
+        {
+            out.dismissed = true;
+        }
         out
     }
 

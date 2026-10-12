@@ -145,3 +145,24 @@ fn empty_state_action_clicks() {
     harness.run();
     assert!(*harness.state());
 }
+
+#[test]
+fn messages_and_empty_states_pass_the_audit() {
+    for theme in [Theme::dark(), Theme::light()] {
+        let mut harness = testing::harness(theme, |ui| {
+            let _ = Banner::new(Severity::Warning, "Project JDK is not defined")
+                .action("Configure")
+                .dismissible(true)
+                .show(ui);
+            let _ = Toast::new(Severity::Success, "Build finished")
+                .body("3 modules compiled")
+                .action("Open log")
+                .show(ui);
+            let _ = EmptyState::new("No requests yet")
+                .hint("Send one to see it here")
+                .action("New request")
+                .show(ui);
+        });
+        testing::audit(&mut harness).assert_clean();
+    }
+}

@@ -1,7 +1,7 @@
 //! A popup attached to a widget.
 
 use super::Surface;
-use crate::tokens::size;
+use crate::tokens::{popup, size};
 use egui::{Id, Key, Rect};
 
 /// A popup attached below a widget (above it when there is no room), on the popup
@@ -85,7 +85,7 @@ impl Popover {
             } else {
                 self.anchor.right()
             };
-            let y = (self.anchor.top() - size::POPUP_PADDING)
+            let y = (self.anchor.top() - popup::PADDING)
                 .min((screen.bottom() - last_height).max(screen.top()));
             egui::pos2(x, y)
         } else if below.y + last_height > screen.bottom() && self.anchor.top() > last_height {
@@ -99,6 +99,8 @@ impl Popover {
             .show(ctx, |ui| {
                 Surface::Popup.frame(ctx).show(ui, |ui| {
                     ui.set_width(width);
+                    // Popover content is rows (menus, completions): they touch, as in menus.
+                    ui.spacing_mut().item_spacing.y = 0.0;
                     add(ui)
                 })
             });

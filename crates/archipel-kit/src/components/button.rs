@@ -159,30 +159,24 @@ impl Widget for Button {
         let pressed = response.is_pointer_button_down_on();
         let hovered = response.hovered() && self.enabled;
         let (fill, stroke, text) = match (self.variant, self.enabled) {
-            (ButtonVariant::Primary, true) => (
-                shade(colors.accent, hovered, pressed),
-                Stroke::NONE,
-                colors.text_on_accent,
-            ),
-            (ButtonVariant::Danger, true) => (
-                shade(colors.stop, hovered, pressed),
-                Stroke::NONE,
-                colors.text_on_accent,
-            ),
+            // Android Studio's buttons do not react to hover or press: only focus shows.
+            (ButtonVariant::Primary, true) => (colors.accent, Stroke::NONE, colors.text_on_accent),
+            (ButtonVariant::Danger, true) => (colors.stop, Stroke::NONE, colors.text_on_accent),
             (ButtonVariant::Primary | ButtonVariant::Danger, false) => (
                 colors.accent_disabled,
                 Stroke::NONE,
                 colors.text_on_accent_disabled,
             ),
             (ButtonVariant::Secondary, enabled) => (
-                if pressed {
-                    colors.pressed
-                } else if hovered {
-                    colors.hover
-                } else {
-                    Color32::TRANSPARENT
-                },
-                Stroke::new(1.0_f32, colors.border),
+                Color32::TRANSPARENT,
+                Stroke::new(
+                    1.0_f32,
+                    if enabled {
+                        colors.border
+                    } else {
+                        colors.border_disabled
+                    },
+                ),
                 if enabled {
                     colors.text
                 } else {
@@ -207,14 +201,22 @@ impl Widget for Button {
         };
         let corner = CornerRadius::same(radius::CONTROL);
         let painter = ui.painter();
-        painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
-        if response.has_focus() {
+        let focused = response.has_focus();
+        let filled = matches!(self.variant, ButtonVariant::Primary | ButtonVariant::Danger);
+        if focused && filled {
+            // A filled button keeps a 1 pt gap inside its focus ring, as in Android Studio.
+            painter.rect(rect.shrink(1.0), corner, fill, stroke, StrokeKind::Inside);
             painter.rect_stroke(
-                rect.expand(1.0),
-                CornerRadius::same(radius::CONTROL + 1),
+                rect.expand(2.0),
+                CornerRadius::same(radius::CONTROL + 2),
                 Stroke::new(size::FOCUS_RING, colors.focus_ring),
-                StrokeKind::Outside,
+                StrokeKind::Inside,
             );
+        } else {
+            painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
+            if focused {
+                crate::parts::focus_ring(painter, rect, radius::CONTROL, &colors);
+            }
         }
         let content = vec2(icon_width + galley.size().x, galley.size().y);
         let mut x = rect.center().x - content.x / 2.0;
@@ -230,16 +232,5 @@ impl Widget for Button {
             text,
         );
         response
-    }
-}
-
-/// Lightens a filled button on hover and darkens it while pressed.
-fn shade(color: Color32, hovered: bool, pressed: bool) -> Color32 {
-    if pressed {
-        color.lerp_to_gamma(Color32::BLACK, 0.12)
-    } else if hovered {
-        color.lerp_to_gamma(Color32::WHITE, 0.1)
-    } else {
-        color
     }
 }

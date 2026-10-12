@@ -8,8 +8,10 @@ mod template;
 mod text;
 mod view;
 
-pub use editor::CodeEditor;
-pub use highlight::{GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml};
+pub use editor::{CodeEditor, CodeEditorOutput};
+pub use highlight::{
+    ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
+};
 pub(crate) use highlight::{styled_job, token_format};
 pub use template::{TemplateAt, TemplateHighlighter, TemplateToken, template_at};
 pub use view::{CodeView, CodeViewResponse};

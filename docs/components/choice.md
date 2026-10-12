@@ -47,15 +47,16 @@ fn inspections(ui: &mut egui::Ui, children: &mut [bool; 3]) {
 
 | Component | Builders |
 |---|---|
-| `Checkbox::new(&mut bool, label)` | `.mixed(bool)`, `.enabled(bool)`, `.label_visible(bool)` (off: the label is only the accessible name, e.g. in a row's leading slot) |
-| `Radio::new(&mut T, value, label)` | `.enabled(bool)`; selected when `*current == value` |
+| `Checkbox::new(&mut bool, label)` | `.mixed(bool)`, `.enabled(bool)`, `.comment(text)`, `.inline_comment(text)` ([Form](form.md)), `.label_visible(bool)` (off: the label is only the accessible name, e.g. in a row's leading slot) |
+| `Radio::new(&mut T, value, label)` | `.enabled(bool)`, `.comment(text)`, `.inline_comment(text)`; selected when `*current == value` |
 | `Toggle::new(&mut bool, label)` | `.enabled(bool)` |
 
 All return a `Response` whose `changed()` is true on the frame the value changed.
 
 ## Behavior
 
-- The whole row (control and label) is the click target.
+- The whole row (control, label and inline comment) is the click target; a comment below is not.
+- The label starts 8 pt after the box (measured on Android Studio).
 - <kbd>Space</kbd> toggles a focused control.
 - Toggles animate the knob.
 

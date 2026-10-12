@@ -5,8 +5,10 @@ use crate::behaviour::{Behaviour, Behaviours};
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{IconPainter, RowContent, Slot, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{opacity, size};
-use egui::{Color32, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
+use crate::tokens::{opacity, popup, radius, size};
+use egui::{
+    Color32, CornerRadius, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2,
+};
 
 /// What happened to a [`ListRow`] this frame.
 pub struct RowResponse {
@@ -230,6 +232,57 @@ impl<'a> ListRow<'a> {
         self
     }
 
+    /// The copy of the row that follows the pointer while it is dragged: its icon and label
+    /// on a popup card, as wide as the row.
+    fn drag_image(&self, ui: &mut Ui, rect: Rect) {
+        let ctx = &ui.ctx().clone();
+        let (Some(pointer), Some(press)) =
+            ctx.input(|i| (i.pointer.latest_pos(), i.pointer.press_origin()))
+        else {
+            return;
+        };
+        // Laid out over the row and then only its paint moved to the pointer, as egui does:
+        // its hit areas stay on the row, so the targets under the pointer still see it.
+        let id = ui.id().with("drag-image");
+        let layer = egui::LayerId::new(egui::Order::Tooltip, id);
+        // A Ui of its own, not a child: a child would take an auto id from the row's Ui and
+        // shift the ids of everything after it (the drop targets) while the drag lasts.
+        let mut card = Ui::new(
+            ctx.clone(),
+            id,
+            egui::UiBuilder::new().layer_id(layer).max_rect(rect),
+        );
+        card.set_opacity(opacity::DRAG_IMAGE);
+        crate::parts::Surface::Popup
+            .frame(ctx)
+            .inner_margin(0)
+            .show(&mut card, |ui| {
+                let (row, _) = ui.allocate_exact_size(rect.size(), Sense::hover());
+                let content = RowContent {
+                    icon: self.icon,
+                    icon_tone: self.icon_tone,
+                    icon_painter: self.icon_painter.as_deref().map(IconPainter),
+                    label: &self.label,
+                    label_tone: self.label_tone,
+                    strong: self.strong,
+                    secondary: self.secondary.as_deref(),
+                    ..RowContent::default()
+                };
+                let pill = row.shrink2(vec2(size::ROW_INSET, 0.0));
+                // Enabled, unselected: the plain row.
+                let state = State {
+                    enabled: true,
+                    ..State::default()
+                };
+                content.paint(ui, pill, pill.left() + popup::ITEM_PADDING, state);
+            });
+        // Held where it was grabbed.
+        ctx.transform_layer_shapes(
+            layer,
+            egui::emath::TSTransform::from_translation(pointer - press),
+        );
+    }
+
     /// Draws the row across the available width.
     pub fn show(self, ui: &mut Ui) -> RowResponse {
         let colors = Theme::colors(ui.ctx());
@@ -260,9 +313,20 @@ impl<'a> ListRow<'a> {
 
         let mut toggled = false;
         let mut elided = false;
+        // Measured on Android Studio: the pill is inset 12 pt (popup lists: as menu items);
+        // the expander column starts at the pill's edge and moves 19 pt per level.
+        let pill = if self.flat {
+            rect.shrink2(vec2(popup::ITEM_INSET, 0.0))
+        } else {
+            rect.shrink2(vec2(size::ROW_INSET, 0.0))
+        };
         let chevron = Rect::from_min_size(
             pos2(
-                rect.left() + size::indent(self.depth) - size::ROW_PILL_INSET,
+                if self.flat {
+                    pill.left() + popup::ITEM_PADDING
+                } else {
+                    rect.left() + size::indent(self.depth)
+                },
                 rect.center().y - size::CHEVRON_COLUMN / 2.0,
             ),
             vec2(
@@ -295,25 +359,40 @@ impl<'a> ListRow<'a> {
         let state = State::of(&response)
             .selected(self.selected)
             .inactive(self.inactive);
+        // Dragged by a drag behaviour: the row stays in place, dimmed, and a card with its
+        // icon and label follows the pointer, held where it was grabbed.
+        let dragged = self.behaviours.sense().senses_drag()
+            && response.dragged()
+            && egui::DragAndDrop::has_any_payload(ui.ctx());
+        let opacity = ui.opacity();
+        if dragged {
+            // The card first, at full strength; then the row in place, dimmed.
+            self.drag_image(ui, rect);
+            ui.multiply_opacity(opacity::DRAG_SOURCE);
+        }
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            let fill = state.row_fill(&colors);
-            common::row_pill(painter, rect, fill);
-            // Over the selection or hover fill, so a tinted row keeps its meaning selected.
+            // A popup list highlights the row under the pointer, like a menu; island lists
+            // and trees have no hover fill.
+            let fill = if self.flat && state.enabled && state.hovered && !state.selected {
+                colors.selection
+            } else {
+                state.row_fill(&colors)
+            };
+            let corner = CornerRadius::same(radius::ROW);
+            if fill != Color32::TRANSPARENT {
+                painter.rect_filled(pill, corner, fill);
+            }
+            // Over the selection fill, so a tinted row keeps its meaning selected.
             if let Some(tone) = self.tint {
-                common::row_pill(
-                    painter,
-                    rect,
+                painter.rect_filled(
+                    pill,
+                    corner,
                     tone.color(&colors).gamma_multiply(opacity::ROW_TINT),
                 );
             }
             if response.has_focus() && !self.selected {
-                common::focus_ring(
-                    painter,
-                    rect.shrink2(vec2(size::ROW_PILL_INSET + 1.0, 1.0)),
-                    4,
-                    &colors,
-                );
+                common::focus_ring(painter, pill.shrink(1.0), radius::ROW, &colors);
             }
             if let Some(expanded) = self.expanded {
                 let icon = if expanded {
@@ -323,7 +402,11 @@ impl<'a> ListRow<'a> {
                 };
                 icons::paint(painter, chevron, icon, colors.text_secondary);
             }
-            let mut x = chevron.right() + 2.0;
+            let mut x = if self.flat {
+                chevron.right()
+            } else {
+                chevron.right() + size::CHEVRON_GAP
+            };
             if let Some(slot) = self.leading {
                 let width = slot.width(ui);
                 let slot_rect =
@@ -346,7 +429,7 @@ impl<'a> ListRow<'a> {
                 reserve_right,
                 ..RowContent::default()
             };
-            elided = content.paint(ui, rect, x, state);
+            elided = content.paint(ui, pill, x, state);
         }
         if let Some(slot) = self.trailing {
             let reveal = !self.trailing_on_hover
@@ -354,7 +437,7 @@ impl<'a> ListRow<'a> {
                 || state.focused
                 || ui.rect_contains_pointer(rect);
             if reveal && ui.is_rect_visible(rect) {
-                let inset = size::ROW_PILL_INSET + 4.0;
+                let inset = rect.right() - pill.right() + 4.0;
                 let width = slot.width(ui);
                 let slot_rect = Rect::from_min_max(
                     pos2(rect.right() - inset - width, rect.top()),
@@ -363,6 +446,7 @@ impl<'a> ListRow<'a> {
                 slot.show(ui, slot_rect, state);
             }
         }
+        ui.set_opacity(opacity);
         // The full label, unless the caller brought a tooltip of their own.
         if elided && !self.behaviours.has_tooltip() {
             Tooltip::new(self.label.clone()).show_for(&response);

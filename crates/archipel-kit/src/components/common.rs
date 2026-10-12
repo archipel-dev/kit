@@ -14,6 +14,13 @@ pub(crate) fn galley(ui: &Ui, text: impl Into<WidgetText>, font: FontId) -> Arc<
     )
 }
 
+/// Distance from the top of `galley` to the baseline of its first line.
+pub(crate) fn baseline(galley: &Galley) -> f32 {
+    galley.rows.first().map_or(galley.size().y, |row| {
+        row.pos.y + row.glyphs.first().map_or(row.size.y, |glyph| glyph.pos.y)
+    })
+}
+
 /// Lays out `text` on one line in `font`, cut at `max_width` with `…`.
 pub(crate) fn galley_elided(ui: &Ui, text: &str, font: FontId, max_width: f32) -> Arc<Galley> {
     let mut job =

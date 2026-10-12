@@ -1,11 +1,12 @@
-# MenuItem, MenuSeparator, Link
+# MenuItem, MenuSeparator, MenuHeader, Link
 
 A **menu item** has an icon column, a label and a right-aligned shortcut, for menu bars and
-context menus. A **menu separator** is a thin line between groups of items. A **link** is inline text that performs an action.
+context menus. A **menu separator** is a thin line between groups of items, and a **menu
+header** titles a group ("Open Projects"). A **link** is inline text that performs an action.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/menu_item.dark.png">
-  <img alt="A menu with Copy, Find in Files, a separator, a checked Soft-Wrap item and a disabled Run item" src="img/menu_item.light.png" width="294">
+  <img alt="A menu with Copy, Find in Files, a separator, a checked Soft-Wrap item, a disabled Run item, and an Open Projects group with a two-line archipel item" src="img/menu_item.light.png" width="294">
 </picture>
 
 <picture>
@@ -40,9 +41,25 @@ fn file_row(ui: &mut egui::Ui, wrap: &mut bool) {
 
 | Component | Builders |
 |---|---|
-| `MenuItem::new(label)` | `.icon(Icon)`, `.shortcut(str)`, `.checked(bool)`, `.enabled(bool)`, `.submenu(\|ui\| …)` |
+| `MenuItem::new(label)` | `.icon(Icon)`, `.shortcut(str)`, `.checked(bool)`, `.enabled(bool)`, `.description(str)` (a dimmed second line, larger icon), `.highlighted(bool)`, `.submenu(\|ui\| …)` |
 | `MenuSeparator` | A line between groups; add it with `ui.add(MenuSeparator)`. |
+| `MenuHeader::new(title)` | A dimmed semibold group title aligned with the icons; not focusable. |
 | `Link::new(text)` | Underlined on hover, pointer cursor. |
+
+## Geometry and behavior
+
+Measured on Android Studio's popups (Islands UI) and reproduced pixel for pixel
+(`tokens::popup`):
+
+- 8 pt padding above the first and below the last item; items 24 pt high, touching.
+  The menu widgets set the row spacing themselves, so any popup gets it.
+- The highlight pill is inset 8 pt from the popup's sides, radius 4; the icon column starts
+  8 pt inside it, text 4 pt after the icon; shortcuts end 8 pt before the pill's end.
+- Separators are a 9 pt row with a 1 pt line in the popup's border color, inset like pills.
+- **One highlight per menu**, shared by pointer and keyboard: hovering moves it (and the
+  focus, so arrow keys continue from there); it **stays on the last item** when the pointer
+  leaves; and the **first pointer move after the menu opens is ignored**, so a menu that
+  opens under the pointer does not highlight what happens to be there.
 
 ## Submenus
 

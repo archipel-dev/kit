@@ -93,6 +93,7 @@ fn with_sidebar(ui: &mut egui::Ui, ratio: &mut f32, collapsed: &mut bool) {
 | `.collapsible(Side, &mut bool)` | The side that can collapse and the caller's collapsed flag. One side per split. |
 | `.label(text)` | The divider's accessible name (default "Resize panes"). |
 | `.enabled(bool)` | A locked split ignores pointer and keyboard. |
+| `.line(bool)` | Whether the divider draws a line (default `true`). Islands pass `false`: the frame-colored gap is the divider, and only the resize cursor, a collapsed edge and the focus ring show. |
 | `.with(behaviour)` | A [behaviour](../behaviours.md) on the divider, such as a tooltip. |
 | `.show(ui, first, second)` | Draws both panes; each closure gets a `Ui` that is exactly its pane. |
 

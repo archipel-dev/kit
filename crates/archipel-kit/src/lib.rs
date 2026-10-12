@@ -88,6 +88,8 @@ mod docs {
         SegmentedControl = "components/segmented-control.md";
         StatusBarItem = "components/status-bar-item.md";
         SplitPane = "components/split-pane.md";
+        WindowToolbar = "components/window.md";
+        Workbench = "components/workbench.md";
         TabBar = "components/tab-bar.md";
         TextField = "components/text-field.md";
         Toast = "components/toast.md";

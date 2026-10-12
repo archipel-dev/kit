@@ -71,6 +71,7 @@ pub struct SplitPane<'a> {
     min_second: f32,
     label: String,
     enabled: bool,
+    line: bool,
     collapse: Option<Collapse<'a>>,
     behaviours: Behaviours<'a>,
 }
@@ -105,6 +106,7 @@ impl<'a> SplitPane<'a> {
             min_second: size::SPLIT_MIN_PANE,
             label: "Resize panes".into(),
             enabled: true,
+            line: true,
             collapse: None,
             behaviours: Behaviours::default(),
         }
@@ -165,6 +167,14 @@ impl<'a> SplitPane<'a> {
     /// A locked split (`false`) has a divider that ignores the pointer and the keyboard.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Whether the divider draws a line (default `true`). Between islands the gap itself is
+    /// the divider, as in the IntelliJ Islands UI: pass `false` and it stays the frame color,
+    /// showing only the resize cursor. A collapsed edge and the focus ring still show.
+    pub fn line(mut self, line: bool) -> Self {
+        self.line = line;
         self
     }
 
@@ -461,6 +471,12 @@ impl<'a> SplitPane<'a> {
                 (2.0, colors.control_border)
             } else {
                 (1.0, colors.separator)
+            };
+            // Without a line, only a collapsed edge is drawn: the gap is the divider.
+            let color = if self.line || collapsed {
+                color
+            } else {
+                egui::Color32::TRANSPARENT
             };
             let line = if horizontal {
                 Rect::from_center_size(bar.center(), vec2(thickness, bar.height()))

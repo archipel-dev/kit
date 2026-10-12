@@ -13,6 +13,15 @@ each popup option; each option keeps its text as its accessible name.
   <img alt="Environment dropdowns with leading icons, enabled and disabled" src="img/dropdown_leading.light.png" width="360">
 </picture>
 
+Use `.tone(|value| Tone)` to color options by meaning, e.g. HTTP methods with
+`Tone::method`: the selected value and each option are drawn in that color and keep their
+text as their name.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/dropdown_tone.dark.png">
+  <img alt="A method dropdown showing POST in the method color" src="img/dropdown_tone.light.png" width="160">
+</picture>
+
 Picks one value from a list, in a popup. Use it for more than five options or when space is
 tight; for fewer, prefer a [segmented control](segmented-control.md) or
 [radio buttons](choice.md).
@@ -82,3 +91,9 @@ assert_eq!(*harness.state(), "PUT");
 
 Source: [`components/misc.rs`](../../crates/archipel-kit/src/components/misc.rs) ·
 Tests: [`tests/menus.rs`](../../crates/archipel-kit/tests/menus.rs)
+
+## Groups
+
+`.separators([4, 8])` draws lines before the options at those indices, grouping them like
+Android Studio's theme picker. As there, the chevron keeps pointing down while the list is
+open, and the list has no icon column unless options have a `leading` slot.

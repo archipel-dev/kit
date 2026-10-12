@@ -150,21 +150,68 @@ type ValueCellFn<'a> = Box<dyn FnMut(&mut Ui, ValueCell<'_>) -> Response + 'a>;
 /// # });
 /// ```
 #[must_use = "show it with `.show(ui)`"]
-pub struct KeyValueTable<'a, T: KeyValueRow + Default> {
+pub struct KeyValueTable<'a, T: Default> {
     id_salt: egui::Id,
     rows: &'a mut Vec<T>,
+    fields: Fields<T>,
     key_placeholder: String,
     value_placeholder: String,
     read_only: bool,
     value_cell: Option<ValueCellFn<'a>>,
 }
 
+/// How the table reaches the parts of a row: enable flag, key and value.
+struct Fields<T> {
+    enabled: fn(&mut T) -> &mut bool,
+    key: fn(&mut T) -> &mut String,
+    value: fn(&mut T) -> &mut String,
+}
+
+impl<T> Clone for Fields<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Copy for Fields<T> {}
+
 impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
     /// A table editing `rows`. `id_salt` tells tables on one screen apart.
     pub fn new(id_salt: impl std::hash::Hash, rows: &'a mut Vec<T>) -> Self {
+        Self::with_fields(id_salt, rows, T::enabled_mut, T::key_mut, T::value_mut)
+    }
+}
+
+impl<'a, T: Default> KeyValueTable<'a, T> {
+    /// A table editing `rows` of a type that can't implement [`KeyValueRow`] (a model type
+    /// from a crate without egui): `enabled`, `key` and `value` reach the parts of a row.
+    ///
+    /// ```
+    /// # egui::__run_test_ui(|ui| {
+    /// use archipel_kit::components::KeyValueTable;
+    ///
+    /// #[derive(Default)]
+    /// struct Header { name: String, value: String, enabled: bool }
+    /// let mut headers = vec![Header { name: "Accept".into(), value: "*/*".into(), enabled: true }];
+    /// KeyValueTable::with_fields("headers", &mut headers, |h| &mut h.enabled, |h| &mut h.name, |h| &mut h.value)
+    ///     .key_placeholder("Add header")
+    ///     .show(ui);
+    /// # });
+    /// ```
+    pub fn with_fields(
+        id_salt: impl std::hash::Hash,
+        rows: &'a mut Vec<T>,
+        enabled: fn(&mut T) -> &mut bool,
+        key: fn(&mut T) -> &mut String,
+        value: fn(&mut T) -> &mut String,
+    ) -> Self {
         Self {
             id_salt: egui::Id::new(id_salt),
             rows,
+            fields: Fields {
+                enabled,
+                key,
+                value,
+            },
             key_placeholder: "Key".to_owned(),
             value_placeholder: "Value".to_owned(),
             read_only: false,
@@ -234,6 +281,11 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
         changes: &mut Vec<Change>,
     ) -> Option<usize> {
         let read_only = self.read_only;
+        let Fields {
+            enabled: enabled_of,
+            key: key_of,
+            value: value_of,
+        } = self.fields;
         let (key_name, value_name, check_name, remove_name) = if trailing {
             (
                 "Key, new row".to_owned(),
@@ -281,7 +333,7 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
                     if trailing {
                         ui.allocate_space(egui::vec2(size::ICON, size::CONTROL_HEIGHT));
                     } else {
-                        let enabled = *row.enabled_mut();
+                        let enabled = *enabled_of(row);
                         let mut on = enabled;
                         let response = cell(ui, row_id.with("enabled"), |ui| {
                             ui.add(Checkbox::new(&mut on, "").enabled(!read_only))
@@ -290,13 +342,13 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
                             WidgetInfo::selected(WidgetType::Checkbox, !read_only, on, &check_name)
                         });
                         if on != enabled {
-                            *row.enabled_mut() = on;
+                            *enabled_of(row) = on;
                             changes.push(Change::Toggled(index));
                         }
                     }
 
                     // Disabled rows dim their cells; they stay editable.
-                    let dim = !trailing && !*row.enabled_mut();
+                    let dim = !trailing && !*enabled_of(row);
                     cell(ui, row_id.with("cells"), |ui| {
                         if dim {
                             let alpha = ui.visuals().disabled_alpha();
@@ -304,7 +356,7 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
                         }
                         let key = cell(ui, row_id.with("key"), |ui| {
                             let field = ui.add(
-                                TextField::new(row.key_mut())
+                                TextField::new(key_of(row))
                                     .placeholder(key_placeholder.as_str())
                                     .width(key_width)
                                     .enabled(!read_only),
@@ -313,14 +365,14 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
                                 &field,
                                 &key_name,
                                 key_placeholder,
-                                row.key_mut(),
+                                key_of(row),
                                 !read_only,
                             );
                             field
                         });
                         let value = cell(ui, row_id.with("value"), |ui| {
                             let slot = ValueCell {
-                                text: row.value_mut(),
+                                text: value_of(row),
                                 width: value_width,
                                 placeholder: value_placeholder,
                                 name: &value_name,
@@ -337,7 +389,7 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
                         }
                         if trailing {
                             // Only text makes a row: the empty scratch row stays virtual.
-                            let filled = !row.key_mut().is_empty() || !row.value_mut().is_empty();
+                            let filled = !key_of(row).is_empty() || !value_of(row).is_empty();
                             typed = (key.changed() || value.changed()) && filled;
                         } else {
                             if key.changed() {
@@ -370,7 +422,7 @@ impl<'a, T: KeyValueRow + Default> KeyValueTable<'a, T> {
         if typed {
             // The scratch row is a real row from now on, under the same ids, so focus and
             // cursor stay in the cell being typed into.
-            *scratch.enabled_mut() = true;
+            *enabled_of(&mut scratch) = true;
             self.rows.push(scratch);
             changes.push(Change::Added(index));
             ui.ctx().request_repaint();

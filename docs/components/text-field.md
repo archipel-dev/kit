@@ -1,4 +1,4 @@
-# TextField
+# TextField, NumberField
 
 A single-line or multi-line text input with an optional label, placeholder, leading icon, clear button and
 validation message. `TextField::search` is the preset for filter and search boxes.
@@ -38,6 +38,8 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 | `.monospace(bool)` | Code font, for paths, URLs and ids. |
 | `.enabled(bool)` | Disabled inputs are dimmed and read-only. |
 | `.highlighter(&dyn Highlighter)` | Colors the text (URLs, `{{variables}}`); see [single-line fields](code.md#single-line-fields-and-variables). |
+| `.completer(&dyn Completer)` | A completion list under the caret, operated by the kit; see [autocomplete](code.md#autocomplete). |
+| `.suggestions(&[String])` | An editable combo box: free text plus a chevron listing the suggestions; see [combo box](#combo-box). |
 | `.width(f32)` | Total width (default: the available width). |
 
 Returns the text edit's `Response`: `changed()` after each edit, `lost_focus()` when the user
@@ -56,11 +58,67 @@ leaves the field. `.show(ui)` returns a `TextFieldOutput` instead: the response,
   <img alt="Multi-line request body and a disabled host list" src="img/text_field_multiline.light.png" width="360">
 </picture>
 
+### Combo box
+
+`.suggestions(&values)` turns the field into an editable combo box, as Android Studio uses for
+a field name, a recent value or a path: the user may type anything, and a chevron at the
+right lists the suggestions below the field, as wide as it.
+
+- Typing lists the suggestions containing the text, ignoring case; <kbd>Up</kbd>/<kbd>Down</kbd>
+  move, <kbd>Enter</kbd>, <kbd>Tab</kbd> or a click replace the whole text, <kbd>Esc</kbd>
+  closes the list and keeps the focus.
+- The chevron, <kbd>Alt</kbd>+<kbd>Down</kbd> or <kbd>Ctrl</kbd>+<kbd>Space</kbd> list all
+  suggestions on an empty field or one holding a suggestion; a second click on the chevron
+  closes the list.
+- Text that is no suggestion stays: validate it with `.error(..)` if it must be one, or use a
+  [`Dropdown`](dropdown.md) when only the listed values are valid.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/text_field_suggestions.dark.png">
+  <img alt="A field name combo box: e typed, the fields containing e listed below the field" src="img/text_field_suggestions.light.png" width="240">
+</picture>
+
+## NumberField
+
+An integer input (page size, timeout, port), as Android Studio's integer fields: a text
+field whose number is written to the value as soon as it is valid and in range. Anything
+else shows the error below the field and leaves the value alone; leaving the field shows the
+value again. <kbd>Up</kbd>/<kbd>Down</kbd> step it, clamped to the range. `changed()`
+reports a new value, not every keystroke. It edits any `Integer`: `i32`, `i64`, `u16`,
+`u32`, `u64`, `usize`.
+
+```rust
+use archipel_kit::components::{FieldLabel, Form, NumberField};
+
+fn query_options(ui: &mut archipel_kit::egui::Ui, limit: &mut u64) {
+    Form::new().show(ui, |form| {
+        form.fields(|ui| {
+            ui.add(FieldLabel::new("Limit:"));
+            ui.add(NumberField::new(limit).name("Limit").range(1..=10_000).step(10));
+        });
+    });
+}
+```
+
+| Builder | Effect |
+|---|---|
+| `NumberField::new(&mut T)` | Edits the integer in place; every value of `T` is valid. |
+| `.range(min..=max)` | The accepted values; the error names them. |
+| `.step(n)` | What <kbd>Up</kbd>/<kbd>Down</kbd> add or subtract (default 1). |
+| `.name(str)` | Accessible name; put a `FieldLabel` or form row label before the field. |
+| `.width(f32)` | Default `NUMBER_FIELD_WIDTH` (64 pt, six digits). |
+| `.enabled(bool)`, `.id(Id)` | As on `TextField`. |
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/number_field.dark.png">
+  <img alt="A page size field holding 50 and a timeout field holding 900 with the error Enter a number from 1 to 600" src="img/number_field.light.png" width="320">
+</picture>
+
 ## Accessibility
 
 Role `TextInput`, `MultilineTextInput` (or `PasswordInput`), named explicitly with `.name`,
 otherwise by the visible label or placeholder. The error message is
-also the input's tooltip.
+also the input's tooltip. A combo box's chevron is a button named "Show suggestions".
 
 ## Testing
 

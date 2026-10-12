@@ -4,7 +4,7 @@ use super::{Button, common};
 use crate::icons::{self, Glyph};
 use crate::parts::Surface;
 use crate::theme::Theme;
-use crate::tokens::{size, typography};
+use crate::tokens::{popup, size, typography};
 use egui::{Align, Key, Layout, Response, Sense, Stroke, Ui, Widget, vec2};
 
 /// A tooltip: a label, an optional shortcut after it, and an optional hint below, on the
@@ -26,6 +26,8 @@ pub struct Tooltip {
     label: String,
     shortcut: Option<String>,
     hint: Option<String>,
+    align: Option<egui::RectAlign>,
+    immediate: bool,
 }
 
 impl Tooltip {
@@ -35,7 +37,24 @@ impl Tooltip {
             label: label.into(),
             shortcut: None,
             hint: None,
+            align: None,
+            immediate: false,
         }
+    }
+
+    /// Shows the tooltip as soon as the widget is hovered, without the usual delay (about
+    /// half a second, as in Android Studio). Android Studio's tool window stripe buttons
+    /// name themselves at once.
+    pub fn immediate(mut self, immediate: bool) -> Self {
+        self.immediate = immediate;
+        self
+    }
+
+    /// Where the tooltip goes relative to its widget (default: below it). Tool window
+    /// stripes put it beside the button, `egui::RectAlign::RIGHT`, as Android Studio does.
+    pub fn align(mut self, align: egui::RectAlign) -> Self {
+        self.align = Some(align);
+        self
     }
 
     /// A shortcut shown after the label, e.g. `"Ctrl+Shift+F"`.
@@ -60,14 +79,16 @@ impl Tooltip {
     pub fn content(&self, ui: &mut Ui) {
         let colors = Theme::colors(ui.ctx());
         let font = typography::body(typography::BODY);
-        ui.spacing_mut().item_spacing = vec2(size::SECONDARY_GAP, 3.0);
+        ui.spacing_mut().item_spacing = vec2(size::TOOLTIP_SHORTCUT_GAP, 3.0);
+        // One text line high, not a row of controls.
+        ui.spacing_mut().interact_size.y = ui.text_style_height(&egui::TextStyle::Body);
         ui.horizontal(|ui| {
             let label = common::galley(ui, self.label.as_str(), font.clone());
             let (rect, response) = ui.allocate_exact_size(label.size(), Sense::hover());
             response.widget_info(|| {
                 egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.label)
             });
-            common::text(ui.painter(), rect.min, label, colors.text_strong);
+            common::text(ui.painter(), rect.min, label, colors.text);
             if let Some(shortcut) = &self.shortcut {
                 let shortcut = common::galley(ui, shortcut.as_str(), font.clone());
                 let (rect, _) = ui.allocate_exact_size(shortcut.size(), Sense::hover());
@@ -89,12 +110,20 @@ impl Tooltip {
 
     /// Shows the tooltip for `response` when it is hovered long enough.
     pub fn show_for(&self, response: &Response) {
-        let mut tooltip = if response.enabled() {
+        let mut tooltip = if self.immediate {
+            let mut tooltip = egui::Tooltip::for_widget(response);
+            let dragging = response.ctx.dragged_id().is_some();
+            tooltip.popup = tooltip.popup.open(response.hovered() && !dragging);
+            tooltip
+        } else if response.enabled() {
             egui::Tooltip::for_enabled(response)
         } else {
             egui::Tooltip::for_disabled(response)
         };
         tooltip.popup = tooltip.popup.frame(Self::frame(&response.ctx));
+        if let Some(align) = self.align {
+            tooltip.popup = tooltip.popup.align(align).gap(size::POPUP_PADDING);
+        }
         tooltip.show(|ui| self.content(ui));
     }
 }
@@ -138,12 +167,67 @@ impl Widget for MenuSeparator {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let width = ui.available_width().max(1.0);
-        let (rect, response) = ui.allocate_exact_size(vec2(width, 9.0), Sense::hover());
-        let inset = size::ROW_PILL_INSET + 4.0;
+        super::misc::menu_rows(ui);
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(width, popup::SEPARATOR_HEIGHT), Sense::hover());
+        // As in Android Studio: inset like the item pills, in the popup's border color.
         ui.painter().hline(
-            (rect.left() + inset)..=(rect.right() - inset),
-            rect.center().y,
-            Stroke::new(1.0_f32, colors.separator),
+            (rect.left() + popup::ITEM_INSET)..=(rect.right() - popup::ITEM_INSET),
+            rect.top() + (popup::SEPARATOR_HEIGHT / 2.0).floor() + 0.5,
+            Stroke::new(1.0_f32, colors.popup_border),
+        );
+        response
+    }
+}
+
+/// A section title inside a menu or popup, like "Open Projects" in Android Studio's project
+/// picker: dimmed semibold text aligned with the items' icons. It is not focusable.
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::components::{MenuHeader, MenuItem, MenuSeparator};
+///
+/// ui.add(MenuItem::new("Open…"));
+/// ui.add(MenuSeparator);
+/// ui.add(MenuHeader::new("Open Projects"));
+/// ui.add(MenuItem::new("archipel").description("~/code/archipel"));
+/// # });
+/// ```
+#[must_use = "add it with `ui.add(header)`"]
+pub struct MenuHeader {
+    title: String,
+}
+
+impl MenuHeader {
+    /// A header reading `title`.
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+        }
+    }
+}
+
+impl Widget for MenuHeader {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let colors = Theme::colors(ui.ctx());
+        let galley = common::galley(
+            ui,
+            self.title.as_str(),
+            typography::semibold(ui.ctx(), typography::BODY),
+        );
+        let x = popup::ITEM_INSET + popup::ITEM_PADDING;
+        let width = ui.available_width().max(galley.size().x + 2.0 * x);
+        super::misc::menu_rows(ui);
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(width, popup::HEADER_HEIGHT), Sense::hover());
+        response
+            .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &self.title));
+        common::text_left(
+            ui.painter(),
+            rect,
+            rect.left() + x,
+            galley,
+            colors.text_placeholder,
         );
         response
     }
@@ -304,9 +388,13 @@ impl<'a> Dialog<'a> {
         let focus_before = ctx.memory(|m| m.focused());
         let modal = egui::Modal::new(id)
             .frame(frame)
-            .backdrop_color(egui::Color32::from_black_alpha(
-                if Theme::current(ctx).dark { 120 } else { 60 },
-            ))
+            .backdrop_color(
+                egui::Color32::BLACK.gamma_multiply(if Theme::current(ctx).dark {
+                    crate::tokens::opacity::SCRIM_DARK
+                } else {
+                    crate::tokens::opacity::SCRIM_LIGHT
+                }),
+            )
             .show(ctx, |ui| {
                 ui.set_width(self.width);
                 ui.spacing_mut().item_spacing.y = size::SECTION_SPACING;
@@ -331,10 +419,15 @@ impl<'a> Dialog<'a> {
                 // What doesn't scroll: the frame, the title as drawn (measured), the button
                 // row, and the four gaps between the title, body, space and buttons.
                 let title_height = ui.min_rect().height();
-                let chrome = frame_height
-                    + title_height
-                    + size::CONTROL_HEIGHT
-                    + 4.0 * size::SECTION_SPACING;
+                // A dialog without buttons (its body has its own) has no button row.
+                let has_buttons =
+                    self.primary.is_some() || self.secondary.is_some() || self.tertiary.is_some();
+                let button_row = if has_buttons {
+                    size::CONTROL_HEIGHT + 2.0 * size::SECTION_SPACING
+                } else {
+                    0.0
+                };
+                let chrome = frame_height + title_height + button_row + 2.0 * size::SECTION_SPACING;
                 let body_max = (max_height - chrome).max(size::ROW_HEIGHT);
                 // A solid scroll bar: it shows that there is more without hovering.
                 ui.scope(|ui| {
@@ -343,7 +436,7 @@ impl<'a> Dialog<'a> {
                     ui.visuals_mut().widgets.inactive.bg_fill = colors.text_placeholder;
                     ui.visuals_mut().widgets.hovered.bg_fill = colors.text_secondary;
                     ui.visuals_mut().widgets.active.bg_fill = colors.text_secondary;
-                    crate::parts::scroll_vertical()
+                    let body = crate::parts::scroll_vertical()
                         .id_salt("archipel-dialog-body")
                         .max_height(body_max)
                         .auto_shrink([false, true])
@@ -363,7 +456,20 @@ impl<'a> Dialog<'a> {
                                 content(ui);
                             }
                         });
+                    // The modal sizes itself from the last frame: when the body grew or
+                    // shrank (a page switched, a banner appeared), draw once more so the
+                    // dialog fits without waiting for the next input.
+                    let key = id.with("body-height");
+                    let height = body.content_size.y;
+                    let before = ui.data(|d| d.get_temp::<f32>(key));
+                    if before.is_some_and(|h| (h - height).abs() > 0.5) {
+                        ui.ctx().request_repaint();
+                    }
+                    ui.data_mut(|d| d.insert_temp(key, height));
                 });
+                if !has_buttons {
+                    return;
+                }
                 ui.add_space(size::SECTION_SPACING);
                 // A fixed-height row: `with_layout` would take all the height left over.
                 // Drawn left to right so Tab follows reading order: tertiary, secondary,

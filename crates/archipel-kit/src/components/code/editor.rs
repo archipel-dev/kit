@@ -66,6 +66,7 @@ pub struct CodeEditor<'a> {
     height: Option<f32>,
     id: Option<Id>,
     config: Config,
+    completer: Option<&'a dyn super::super::Completer>,
 }
 
 /// How typing behaves.
@@ -91,6 +92,7 @@ impl<'a> CodeEditor<'a> {
             enabled: true,
             height: None,
             id: None,
+            completer: None,
             config: Config {
                 tab_width: 4,
                 use_tabs: false,
@@ -99,6 +101,15 @@ impl<'a> CodeEditor<'a> {
                 tab_indents: true,
             },
         }
+    }
+
+    /// Offers completions while typing, in a list under the caret (fields of a GraphQL
+    /// schema, keywords). <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it explicitly; while it is
+    /// open <kbd>Up</kbd>/<kbd>Down</kbd> move, <kbd>Enter</kbd> or <kbd>Tab</kbd> insert
+    /// and <kbd>Esc</kbd> closes. See [`TextField::completer`](super::super::TextField::completer).
+    pub fn completer(mut self, completer: &'a dyn super::super::Completer) -> Self {
+        self.completer = Some(completer);
+        self
     }
 
     /// The accessible name of the editor ("Request body").
@@ -196,8 +207,48 @@ struct Found {
     matches: Arc<Vec<(Range<usize>, Range<usize>)>>,
 }
 
+/// What [`CodeEditor::show`] reports besides the usual [`Response`].
+#[non_exhaustive]
+pub struct CodeEditorOutput {
+    /// The editor's response: `changed()` after every edit.
+    pub response: Response,
+    /// The selected text as a byte range of the text, `None` when nothing is selected (only a
+    /// caret, or the editor was never focused). A query editor runs just the selection.
+    pub selection: Option<Range<usize>>,
+}
+
+impl CodeEditor<'_> {
+    /// Adds the editor and reports the selection besides the response.
+    pub fn show(self, ui: &mut Ui) -> CodeEditorOutput {
+        let (response, text) = self.run(ui);
+        let selection = egui::text_edit::TextEditState::load(ui.ctx(), response.id)
+            .and_then(|state| state.cursor.char_range())
+            .map(|range| {
+                let [a, b] = range.sorted_cursors();
+                let byte = |chars: usize| {
+                    text.char_indices()
+                        .nth(chars)
+                        .map_or(text.len(), |(byte, _)| byte)
+                };
+                byte(a.index)..byte(b.index)
+            })
+            .filter(|range| !range.is_empty());
+        CodeEditorOutput {
+            response,
+            selection,
+        }
+    }
+}
+
 impl Widget for CodeEditor<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
+        self.run(ui).0
+    }
+}
+
+impl<'a> CodeEditor<'a> {
+    /// Draws the editor; returns its response and the text, as edited.
+    fn run(self, ui: &mut Ui) -> (Response, &'a mut String) {
         let ctx = ui.ctx().clone();
         let id = self.id.unwrap_or_else(|| ui.next_auto_id());
         ui.skip_ahead_auto_ids(1);
@@ -219,7 +270,9 @@ impl Widget for CodeEditor<'_> {
                 300.0
             }
         });
-        let (outer, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
+        // A layout that has run out of room must not make egui allocate a negative size.
+        let size = vec2(ui.available_width(), height).max(egui::Vec2::ZERO);
+        let (outer, _) = ui.allocate_exact_size(size, Sense::hover());
         paint_background(ui, outer);
         let inner = outer.shrink(1.0);
         let lines = self.text.bytes().filter(|&b| b == b'\n').count() + 1;
@@ -231,6 +284,9 @@ impl Widget for CodeEditor<'_> {
         let focused = enabled && ctx.memory(|m| m.has_focus(id));
         let mut find = FindState::load(&ctx, id);
         find.keys(ui, focused);
+        // An open completion list takes its keys first: Enter inserts, it does not indent.
+        let (list, _) =
+            super::super::completion::List::begin(ui, id, focused && self.completer.is_some());
         let mut edited = false;
         if focused {
             edited = edit_keys(ui, id, self.text, config);
@@ -298,6 +354,7 @@ impl Widget for CodeEditor<'_> {
         let rows_in_view = (area.height() / line_height).ceil() as usize;
         let jump = std::mem::take(&mut find.jump);
         let mut response = None;
+        let mut caret = None;
         desktop(egui::ScrollArea::new([!wrap, true]))
             .id_salt(id.with("scroll"))
             .auto_shrink(false)
@@ -418,11 +475,22 @@ impl Widget for CodeEditor<'_> {
                         line += 1;
                     }
                 }
+                caret = output.cursor_range.map(|range| {
+                    let r = galley.pos_from_cursor(range.primary);
+                    let rect = Rect::from_min_max(
+                        pos2(r.min.x, r.min.y) + origin.to_vec2(),
+                        pos2(r.min.x + 1.0, r.max.y) + origin.to_vec2(),
+                    );
+                    (range.primary.index, rect)
+                });
                 response = Some(output.response);
             });
         let mut response = response.expect("scroll area ran its content");
         if edited {
             response.mark_changed();
+        }
+        if let Some(completer) = self.completer {
+            list.end(ui, completer, self.text, &mut response, caret);
         }
 
         // Gutter outside the scroll area, so sideways scrolling leaves it in place.
@@ -475,7 +543,7 @@ impl Widget for CodeEditor<'_> {
             WidgetInfo::text_edit(enabled, String::new(), String::new(), label.clone())
         });
         ctx.accesskit_node_builder(response.id, |node| node.set_label(label.clone()));
-        response
+        (response, self.text)
     }
 }
 

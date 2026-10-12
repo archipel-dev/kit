@@ -49,13 +49,12 @@ impl State {
         self
     }
 
-    /// Fill of a row in a list, tree or table: selection, quieter inactive selection, or
-    /// hover.
+    /// Fill of a row in a list, tree or table: the selection, or the quieter selection of a
+    /// list without focus. Rows have no hover fill, as in Android Studio's trees and lists.
     pub fn row_fill(&self, colors: &Colors) -> Color32 {
         match (self.selected, self.inactive) {
             (true, false) => colors.selection,
-            (true, true) => colors.row_hover,
-            (false, _) if self.enabled && self.hovered => colors.row_hover,
+            (true, true) => colors.selection_inactive,
             _ => Color32::TRANSPARENT,
         }
     }
@@ -106,11 +105,13 @@ impl State {
 
 /// The keyboard focus ring around `rect`.
 pub fn focus_ring(painter: &Painter, rect: Rect, corner: u8, colors: &Colors) {
+    // As in Android Studio: the control's 1 pt border becomes 2 pt in the focus color, one
+    // of them outside the control.
     painter.rect_stroke(
         rect.expand(1.0),
         CornerRadius::same(corner.saturating_add(1)),
         Stroke::new(size::FOCUS_RING, colors.focus_ring),
-        StrokeKind::Outside,
+        StrokeKind::Inside,
     );
 }
 

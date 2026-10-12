@@ -44,6 +44,7 @@ fn body_panel(ui: &mut egui::Ui, request: &mut String, response: &str) {
 | `.wrap(bool)` | Soft wrap at the view's width instead of sideways scrolling. |
 | `.folding(bool)` | Fold arrows for `{…}` and `[…]` regions spanning several lines. |
 | `.scroll_to_line(Option<usize>)` | Centers a line (0-based), on the frame it is passed. |
+| `.stick_to_bottom(bool)` | Follows the end while the text grows (a console, a log); scrolling up stays there until the user scrolls back down. |
 | `.revision(u64)` | Bump when the text changes in place without changing its length. |
 | `.height(f32)` | Height (default: the available height, or 300 when unbounded). |
 | `.id(Id)` | Explicit id for several views in one place. |
@@ -109,7 +110,22 @@ it needs. Folding looks at brackets and `"` strings, so it suits JSON and JSON-l
 | `.tab_indents(bool)` | <kbd>Tab</kbd> indents (default); off, it moves focus (for forms). |
 | `.auto_indent(bool)` | <kbd>Enter</kbd> keeps the line's indentation (default on). |
 | `.bracket_pairing(bool)` | Inserts closing brackets and quotes (default on). |
+| `.completer(&dyn Completer)` | A completion list under the caret, as in [single-line fields](#autocomplete); <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it. `Completion::caret(n)` puts the caret inside the insertion (`user(id: \|)`). |
 | `.height(f32)`, `.id(Id)` | As in the view. |
+
+`ui.add(editor)` returns the response; `.show(ui)` returns a `CodeEditorOutput`: the
+`response` and the `selection`, the selected text as a byte range (`None` for a bare caret),
+so a query console can run just what is selected:
+
+```rust
+use archipel_kit::components::CodeEditor;
+
+fn console(ui: &mut archipel_kit::egui::Ui, script: &mut String) -> Option<String> {
+    let out = CodeEditor::new(script).label("Script").show(ui);
+    let run = ui.input(|i| i.modifiers.command && i.key_pressed(archipel_kit::egui::Key::Enter));
+    run.then(|| out.selection.map_or(script.clone(), |range| script[range].to_owned()))
+}
+```
 
 - <kbd>Tab</kbd> inserts spaces up to the next tab stop; over several selected lines it indents
   them, <kbd>Shift</kbd>+<kbd>Tab</kbd> unindents. <kbd>Ctrl</kbd>+<kbd>]</kbd> and
@@ -132,14 +148,17 @@ behind a "too large to edit" notice.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/code_highlighting.dark.png">
-  <img alt="The built-in highlighters: JSON, XML, GraphQL, JavaScript and plain text" src="img/code_highlighting.light.png" width="360">
+  <img alt="The built-in highlighters: JSON, Extended JSON with an ObjectId and an ISODate, XML, GraphQL, JavaScript and plain text" src="img/code_highlighting.light.png" width="360">
 </picture>
 
 A `Highlighter` maps a line to styled `Span`s by `TokenKind` (keyword, string, number, comment,
-punctuation, property, tag, attribute, variable, error). Colors come from the theme's
-`EditorColors` (`keyword`, `string`, … in dark and light), never from the
-highlighter. Built in: `Json`, `Xml` (also HTML), `GraphQl`, `JavaScript` and `PlainText`, all
-small hand-written tokenizers without dependencies. Plug in your own, for example the IDE's
+punctuation, property, tag, attribute, variable, error, and `Value(ValueKind)` for typed data
+values). Colors come from the theme's `EditorColors` (`keyword`, `string`, … in dark and
+light), never from the highlighter. Built in: `Json`, `ExtendedJson` (MongoDB's shell form:
+unquoted keys, `ObjectId("…")`, `ISODate("…")`, `NumberLong(…)` colored as the id, date or
+number they make, the same `ValueKind` colors tables and trees use), `Xml` (also HTML),
+`GraphQl`, `JavaScript` and `PlainText`, all small hand-written tokenizers without
+dependencies. Plug in your own, for example the IDE's
 tree-sitter:
 
 ```rust
@@ -218,7 +237,53 @@ fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
 }
 ```
 
-### The caret and autocomplete
+### Autocomplete
+
+`.completer(&dyn Completer)` (the `Completer` trait) gives a field a completion list, drawn and operated by the kit.
+The completer is any `Fn(&str, usize) -> Option<Completions>`: given the text and the caret
+(a char index) it returns where the replaced part starts and the suggestions, or `None` when
+nothing completes there. The kit opens the list under the caret on every edit with
+suggestions, moves in it with <kbd>Up</kbd>/<kbd>Down</kbd>, inserts with <kbd>Enter</kbd>,
+<kbd>Tab</kbd> or a click (caret after the insertion, focus kept), and closes it on
+<kbd>Esc</kbd> (the field keeps the focus) or when the field loses focus. <kbd>Enter</kbd> with
+no list open still submits.
+
+```rust
+use archipel_kit::components::{Completion, Completions, TextField};
+use archipel_kit::egui;
+
+/// `{{` before the caret: offer the environment's variables.
+fn variables(text: &str, caret: usize) -> Option<Completions> {
+    let before: String = text.chars().take(caret).collect();
+    let open = before.rfind("{{")?;
+    let typed = &before[open + 2..];
+    (!typed.contains("}}")).then(|| Completions {
+        start: before[..open].chars().count(),
+        end: caret,
+        items: ["base_url", "token"]
+            .into_iter()
+            .filter(|v| v.starts_with(typed))
+            .map(|v| Completion::new(v, format!("{{{{{v}}}}}")).detail("Local"))
+            .collect(),
+    })
+}
+
+fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
+    TextField::new(url).name("URL").monospace(true).completer(&variables).show(ui).submitted
+}
+```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/text_field_completion.dark.png">
+  <img alt="A URL field with the variables starting with us listed under the caret" src="img/text_field_completion.light.png" width="400">
+</picture>
+
+Each suggestion is one row: the label, and its `detail` dimmed at the right end. Tests:
+[`tests/completion.rs`](../../crates/archipel-kit/tests/completion.rs).
+
+### The caret and your own list
+
+To draw a different list, the field reports the caret instead:
 
 `TextField::show` returns a `TextFieldOutput`:
 

@@ -113,10 +113,14 @@ pub struct Colors {
     pub border: Color32,
     /// Toolbar and menu separators.
     pub separator: Color32,
+    /// Line after a group title in settings forms ([`SectionHeader`](crate::components::SectionHeader)).
+    pub group_separator: Color32,
     /// Selected editor tab fill.
     pub tab_selected: Color32,
     /// Selected editor tab underline.
     pub tab_selected_border: Color32,
+    /// Title of an editor tab that is not selected (the selected one uses [`Colors::text`]).
+    pub tab_text: Color32,
     /// Fill of a switched-on toggle.
     pub toggle_on: Color32,
     /// Track of a switched-off toggle.
@@ -125,12 +129,26 @@ pub struct Colors {
     pub toggle_off_knob: Color32,
     /// Outline of unchecked checkboxes and radio buttons.
     pub control_border: Color32,
+    /// Border of a disabled button, field or checkbox.
+    pub border_disabled: Color32,
+    /// Fill of an unchecked checkbox or radio button.
+    pub control: Color32,
+    /// Fill of a checked checkbox or radio button, and their focus border.
+    pub control_selected: Color32,
+    /// Selection of a list, tree or table that does not have the keyboard focus.
+    pub selection_inactive: Color32,
     /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
     pub row_hover: Color32,
     /// Fill of non-editable dropdowns.
     pub combo: Color32,
     /// Dropdown arrow.
     pub combo_arrow: Color32,
+    /// The cross of a field's clear button.
+    pub clear_icon: Color32,
+    /// The cross of a field's clear button under the pointer.
+    pub clear_icon_hover: Color32,
+    /// The round background of a field's clear button under the pointer.
+    pub clear_hover: Color32,
     /// Fill of the selected segment of a segmented control.
     pub segment_selected: Color32,
     /// Outline of the selected segment.
@@ -314,18 +332,27 @@ impl Theme {
                 accent: rgb(0x3871E1),
                 accent_disabled: rgb(0x4E5157),
                 text_on_accent_disabled: rgb(0xB0B3BA),
-                focus_ring: rgb(0x3D6185),
+                focus_ring: rgb(0x3871E1),
                 border: rgb(0x40434A),
                 separator: rgba(0xFFFFFF21),
+                group_separator: rgb(0x33353B),
                 tab_selected: rgb(0x233558),
                 tab_selected_border: rgb(0x2E4D89),
+                tab_text: rgb(0xAFB1B6),
                 toggle_on: rgb(0x338555),
                 toggle_off: rgb(0x191A1C),
                 toggle_off_knob: rgb(0x5F6269),
-                control_border: rgb(0x6F737A),
+                control_border: rgb(0x5A5D63),
+                control: rgb(0x2B2D30),
+                border_disabled: rgb(0x33353B),
+                control_selected: rgb(0x3574F0),
+                selection_inactive: rgb(0x33353B),
                 row_hover: rgba(0xFFFFFF10),
                 combo: rgb(0x26282C),
                 combo_arrow: rgb(0x9A9DA1),
+                clear_icon: rgb(0x676B71),
+                clear_icon_hover: rgb(0x7F8389),
+                clear_hover: rgb(0x353637),
                 segment_selected: rgb(0x26282C),
                 segment_selected_border: rgb(0x5F6269),
                 progress_track: rgb(0x40434A),
@@ -445,18 +472,27 @@ impl Theme {
                 accent: rgb(0x3871E1),
                 accent_disabled: rgb(0xDDDFE4),
                 text_on_accent_disabled: rgb(0x60636A),
-                focus_ring: rgb(0x97C3F3),
+                focus_ring: rgb(0x3871E1),
                 border: rgb(0xD1D3D9),
                 separator: rgba(0x00000020),
+                group_separator: rgb(0xE9EAEE),
                 tab_selected: rgb(0xE3EBFE),
                 tab_selected_border: rgb(0xA7C5FF),
+                tab_text: rgb(0x515151),
                 toggle_on: rgb(0x4E9D6C),
                 toggle_off: rgb(0xF7F8F9),
                 toggle_off_knob: rgb(0xC3C5CB),
                 control_border: rgb(0xA8ADBD),
+                control: rgb(0xFFFFFF),
+                border_disabled: rgb(0xDDDFE4),
+                control_selected: rgb(0x3574F0),
+                selection_inactive: rgb(0xE9EAEE),
                 row_hover: rgba(0x00000008),
                 combo: rgb(0xFFFFFF),
                 combo_arrow: rgb(0x6E6E6E),
+                clear_icon: rgb(0xB0B4C3),
+                clear_icon_hover: rgb(0x8A8E9C),
+                clear_hover: rgb(0xEBEBED),
                 segment_selected: rgb(0xFFFFFF),
                 segment_selected_border: rgb(0xB5B7BD),
                 progress_track: rgb(0xDDDFE4),

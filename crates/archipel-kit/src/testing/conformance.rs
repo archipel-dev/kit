@@ -96,8 +96,7 @@ impl Conformance<'_> {
             }
         });
         audit(&mut harness).assert_clean();
-        let node = harness
-            .query_by_label(&label)
+        let node = control_query(&harness, &label)
             .unwrap_or_else(|| panic!("[{name}] no element labelled {label:?}"));
         assert!(
             !node.is_disabled(),
@@ -106,7 +105,7 @@ impl Conformance<'_> {
 
         if self.click {
             let before = *harness.state();
-            harness.get_by_label(&label).click();
+            control(&harness, &label).click();
             harness.run_ok();
             assert_eq!(
                 *harness.state(),
@@ -115,10 +114,10 @@ impl Conformance<'_> {
             );
         }
         if self.focusable {
-            harness.get_by_label(&label).focus();
+            control(&harness, &label).focus();
             harness.run_ok();
             assert!(
-                harness.get_by_label(&label).accesskit_node().is_focused(),
+                control(&harness, &label).accesskit_node().is_focused(),
                 "[{name}] {label:?} cannot take keyboard focus"
             );
             for key in self.keys.clone() {
@@ -130,7 +129,7 @@ impl Conformance<'_> {
                     before + 1,
                     "[{name}] {key:?} on focused {label:?} did not activate it"
                 );
-                harness.get_by_label(&label).focus();
+                control(&harness, &label).focus();
                 harness.run_ok();
             }
         }
@@ -145,21 +144,20 @@ impl Conformance<'_> {
                 *activations += 1;
             }
         });
-        let node = harness
-            .query_by_label(&label)
+        let node = control_query(&harness, &label)
             .unwrap_or_else(|| panic!("[{name}] no element labelled {label:?} when disabled"));
         assert!(
             node.is_disabled(),
             "[{name}] disabled {label:?} doesn't report disabled"
         );
-        harness.get_by_label(&label).click();
+        control(&harness, &label).click();
         harness.run_ok();
         // egui advertises a focus action on disabled widgets but never grants it: check
         // what happens, not what is advertised.
-        harness.get_by_label(&label).focus();
+        control(&harness, &label).focus();
         harness.run_ok();
         assert!(
-            !harness.get_by_label(&label).accesskit_node().is_focused(),
+            !control(&harness, &label).accesskit_node().is_focused(),
             "[{name}] disabled {label:?} took keyboard focus"
         );
         for key in [Key::Tab, Key::Enter, Key::Space] {
@@ -172,4 +170,26 @@ impl Conformance<'_> {
             "[{name}] disabled {label:?} was activated"
         );
     }
+}
+
+/// The control named `label`: text nodes with the same name (a tooltip that repeats it, a
+/// visible caption) are not the control.
+#[track_caller]
+fn control<'h, State>(
+    harness: &'h egui_kittest::Harness<'_, State>,
+    label: &'h str,
+) -> egui_kittest::Node<'h> {
+    control_query(harness, label).unwrap_or_else(|| panic!("no control labelled {label:?}"))
+}
+
+fn control_query<'h, State>(
+    harness: &'h egui_kittest::Harness<'_, State>,
+    label: &'h str,
+) -> Option<egui_kittest::Node<'h>> {
+    use egui::accesskit::Role;
+    let mut nodes: Vec<_> = harness.query_all_by_label(label).collect();
+    if nodes.len() > 1 {
+        nodes.retain(|node| !matches!(node.accesskit_node().role(), Role::Label));
+    }
+    nodes.into_iter().next()
 }

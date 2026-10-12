@@ -548,3 +548,33 @@ fn dialog_first_visible_frame_is_the_final_frame() {
         );
     }
 }
+
+#[test]
+fn dialog_passes_the_audit() {
+    let mut harness = dialog_harness();
+    testing::audit(&mut harness).assert_clean();
+}
+
+#[test]
+fn a_tall_dialog_body_takes_clicks_in_a_sized_harness() {
+    use archipel_kit::components::Button;
+    let mut h = testing::harness_state_sized(
+        archipel_kit::Theme::dark(),
+        archipel_kit::egui::vec2(1280.0, 800.0),
+        0u32,
+        |ui, clicks| {
+            Dialog::new("Environments")
+                .content(|ui| {
+                    ui.add_space(340.0);
+                    if ui.add(Button::secondary("New environment")).clicked() {
+                        *clicks += 1;
+                    }
+                })
+                .secondary("Close")
+                .show(ui.ctx());
+        },
+    );
+    h.get_by_label("New environment").click();
+    h.run();
+    assert_eq!(*h.state(), 1);
+}
