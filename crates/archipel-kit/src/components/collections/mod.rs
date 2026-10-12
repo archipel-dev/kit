@@ -963,8 +963,17 @@ pub(super) fn header(
     let mut moved: Option<(usize, usize)> = None;
     let mut x = rect.left() + size::ROW_PILL_INSET;
     for (index, column) in columns.iter_mut().enumerate() {
-        let cell = Rect::from_min_max(pos2(x, rect.top()), pos2(x + column.width, rect.bottom()))
-            .intersect(rect);
+        let width = if column.width.is_finite() {
+            column.width.max(0.0)
+        } else {
+            MIN_COLUMN
+        };
+        let full_cell = Rect::from_min_max(pos2(x, rect.top()), pos2(x + width, rect.bottom()));
+        x += width;
+        let cell = full_cell.intersect(rect);
+        if cell.width() <= HANDLE_WIDTH || !ui.is_rect_visible(cell) {
+            continue;
+        }
         // The title's target stops short of the edges, which belong to the resize handles.
         let title = ui.interact(
             cell.shrink2(vec2(HANDLE_WIDTH / 2.0, 0.0)),
@@ -1027,11 +1036,16 @@ pub(super) fn header(
             );
             icons::paint(&painter, icon, glyph, colors.text_secondary);
         }
-        // Resize handle on the right edge.
+        // Only a column's actual edge is resizable. A clipped column must not acquire a
+        // phantom resize handle at the viewport edge; fully hidden columns get no targets.
+        if full_cell.right() > rect.right() {
+            continue;
+        }
         let edge = Rect::from_center_size(
             pos2(cell.right(), cell.center().y),
             vec2(HANDLE_WIDTH, height),
-        );
+        )
+        .intersect(rect);
         let handle = ui.interact(edge, id.with(("resize", index)), Sense::drag());
         crate::cursor::on_hover(&handle, CursorIcon::ResizeColumn);
         ui.ctx().accesskit_node_builder(handle.id, |node| {
@@ -1052,7 +1066,6 @@ pub(super) fn header(
             (cell.top() + 7.0)..=(cell.bottom() - 7.0),
             Stroke::new(1.0_f32, line),
         );
-        x += column.width;
     }
     ui.painter().hline(
         rect.x_range(),

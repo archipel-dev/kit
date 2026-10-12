@@ -318,6 +318,41 @@ fn table_header_click_reports_sort() {
 }
 
 #[test]
+fn clipped_columns_do_not_register_headers_or_resize_handles() {
+    let mut h = testing::harness_state(Theme::dark(), None::<usize>, |ui, selected| {
+        ui.set_width(180.0);
+        let mut columns = [
+            Column::new("Visible", 240.0),
+            Column::new("Offscreen", 100.0),
+        ];
+        Table::new("narrow", &mut columns, 1, selected).show(ui, |_, _| Cell::new("value"));
+    });
+    h.run();
+    assert!(h.query_by_label("Offscreen").is_none());
+    assert!(h.query_by_label("Resize Offscreen").is_none());
+    assert!(
+        h.query_by_label("Resize Visible").is_none(),
+        "its real edge is offscreen"
+    );
+    assert!(h.get_by_label("Visible").rect().width() <= 180.0);
+}
+
+#[test]
+fn narrow_columns_keep_headers_aligned_with_the_caller_widths() {
+    let mut h = testing::harness_state(Theme::dark(), None::<usize>, |ui, selected| {
+        ui.set_width(260.0);
+        let mut columns = [Column::new("Tiny", 24.0), Column::new("Name", 120.0)];
+        Table::new("narrow-column", &mut columns, 1, selected).show(ui, |_, _| Cell::new("value"));
+    });
+    h.run();
+    let difference = h.get_by_label("Name").rect().left() - h.get_by_label("Tiny").rect().left();
+    assert!(
+        (difference - 24.0).abs() < 0.1,
+        "headers must use the same widths as rows"
+    );
+}
+
+#[test]
 fn table_rows_are_virtualized_and_selectable() {
     let mut harness = table_harness();
     let row = "GET, /api/users/1, 201, 49 ms";
