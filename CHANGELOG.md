@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/archipel-dev/kit/compare/v0.2.0...v0.2.1) (2026-10-12)
+
+
+### Features
+
+* hairline under every island header ([#35](https://github.com/archipel-dev/kit/issues/35)) ([7969287](https://github.com/archipel-dev/kit/commit/7969287b067112345cf6cea1a66308db40f03d12))
+
 ## [0.2.0](https://github.com/archipel-dev/kit/compare/v0.1.0...v0.2.0) (2026-10-12)
 
 
