@@ -1084,12 +1084,14 @@ pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &Column, cell: Cell, selec
         (None, true) => colors.text_strong,
         (None, false) => colors.text,
     };
-    let galley = common::galley(ui, cell.text.as_str(), font);
     let icon_width = if cell.icon.is_some() {
         size::ICON + size::ICON_TEXT_GAP
     } else {
         0.0
     };
+    // Text wider than the column ends in an ellipsis, as in Android Studio's tables.
+    let room = (rect.width() - 2.0 * CELL_PADDING - icon_width).max(0.0);
+    let galley = common::galley_elided(ui, cell.text.as_str(), font, room);
     let content = icon_width + galley.size().x;
     let mut x = match column.align {
         Align::Max => rect.right() - CELL_PADDING - content,
