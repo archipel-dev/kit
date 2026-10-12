@@ -80,6 +80,7 @@ pub struct CodeView<'a> {
     wrap: bool,
     folding: bool,
     scroll_to: Option<usize>,
+    stick_to_bottom: bool,
     revision: u64,
     height: Option<f32>,
     id: Option<Id>,
@@ -110,6 +111,7 @@ impl<'a> CodeView<'a> {
             wrap: false,
             folding: false,
             scroll_to: None,
+            stick_to_bottom: false,
             revision: 0,
             height: None,
             id: None,
@@ -151,6 +153,13 @@ impl<'a> CodeView<'a> {
     /// once, for example from a "go to line" action; passing it every frame pins the view.
     pub fn scroll_to_line(mut self, line: Option<usize>) -> Self {
         self.scroll_to = line;
+        self
+    }
+
+    /// Keeps the view scrolled to the end while the text grows, as a console or log does;
+    /// scrolling up leaves the end until the user scrolls back down.
+    pub fn stick_to_bottom(mut self, on: bool) -> Self {
+        self.stick_to_bottom = on;
         self
     }
 
@@ -436,7 +445,8 @@ impl<'a> View<'a> {
         child.set_clip_rect(area.intersect(ui.clip_rect()));
         let mut scroll = desktop(egui::ScrollArea::new([wrap_cols.is_none(), true]))
             .id_salt(self.id.with("scroll"))
-            .auto_shrink(false);
+            .auto_shrink(false)
+            .stick_to_bottom(self.spec.stick_to_bottom);
         if let Some(y) = scroll_y {
             scroll = scroll.vertical_scroll_offset(y);
         }

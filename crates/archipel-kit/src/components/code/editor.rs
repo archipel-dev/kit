@@ -207,8 +207,48 @@ struct Found {
     matches: Arc<Vec<(Range<usize>, Range<usize>)>>,
 }
 
+/// What [`CodeEditor::show`] reports besides the usual [`Response`].
+#[non_exhaustive]
+pub struct CodeEditorOutput {
+    /// The editor's response: `changed()` after every edit.
+    pub response: Response,
+    /// The selected text as a byte range of the text, `None` when nothing is selected (only a
+    /// caret, or the editor was never focused). A query editor runs just the selection.
+    pub selection: Option<Range<usize>>,
+}
+
+impl CodeEditor<'_> {
+    /// Adds the editor and reports the selection besides the response.
+    pub fn show(self, ui: &mut Ui) -> CodeEditorOutput {
+        let (response, text) = self.run(ui);
+        let selection = egui::text_edit::TextEditState::load(ui.ctx(), response.id)
+            .and_then(|state| state.cursor.char_range())
+            .map(|range| {
+                let [a, b] = range.sorted_cursors();
+                let byte = |chars: usize| {
+                    text.char_indices()
+                        .nth(chars)
+                        .map_or(text.len(), |(byte, _)| byte)
+                };
+                byte(a.index)..byte(b.index)
+            })
+            .filter(|range| !range.is_empty());
+        CodeEditorOutput {
+            response,
+            selection,
+        }
+    }
+}
+
 impl Widget for CodeEditor<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
+        self.run(ui).0
+    }
+}
+
+impl<'a> CodeEditor<'a> {
+    /// Draws the editor; returns its response and the text, as edited.
+    fn run(self, ui: &mut Ui) -> (Response, &'a mut String) {
         let ctx = ui.ctx().clone();
         let id = self.id.unwrap_or_else(|| ui.next_auto_id());
         ui.skip_ahead_auto_ids(1);
@@ -503,7 +543,7 @@ impl Widget for CodeEditor<'_> {
             WidgetInfo::text_edit(enabled, String::new(), String::new(), label.clone())
         });
         ctx.accesskit_node_builder(response.id, |node| node.set_label(label.clone()));
-        response
+        (response, self.text)
     }
 }
 

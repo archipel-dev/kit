@@ -186,6 +186,7 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("ButtonVariant", "enum"),
     ("CellEdit", "table edit state"),
     ("ChartColor", "enum"),
+    ("CodeEditorOutput", "response"),
     ("CollectionResponse", "response"),
     (
         "Completer",

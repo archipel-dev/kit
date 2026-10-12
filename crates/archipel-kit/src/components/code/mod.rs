@@ -8,7 +8,7 @@ mod template;
 mod text;
 mod view;
 
-pub use editor::CodeEditor;
+pub use editor::{CodeEditor, CodeEditorOutput};
 pub use highlight::{
     ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
 };

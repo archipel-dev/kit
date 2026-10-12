@@ -625,3 +625,60 @@ fn big_editor_text_stays_responsive() {
     // Generous: unoptimized test builds are far slower than release ones.
     assert!(started.elapsed().as_secs() < 30, "{:?}", started.elapsed());
 }
+
+#[test]
+fn the_editor_reports_its_selection_as_a_byte_range() {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (String::from("db.café.find()\nnext"), None),
+        |ui, (text, selection): &mut (String, Option<std::ops::Range<usize>>)| {
+            *selection = CodeEditor::new(text)
+                .label("Script")
+                .height(80.0)
+                .show(ui)
+                .selection;
+        },
+    );
+    harness.get_by_label("Script").focus();
+    harness.run();
+    assert_eq!(harness.state().1, None, "a caret is no selection");
+    harness.key_press(Key::ArrowUp);
+    harness.key_press(Key::Home);
+    harness.run();
+    // Select "db.café" (7 chars, 8 bytes) with Shift+Right.
+    for _ in 0..7 {
+        harness.key_press_modifiers(Modifiers::SHIFT, Key::ArrowRight);
+    }
+    harness.run();
+    let (text, selection) = harness.state();
+    let range = selection.clone().expect("a selection");
+    assert_eq!(&text[range], "db.café");
+}
+
+#[test]
+fn a_console_view_follows_the_end_as_it_grows() {
+    let log = |n: usize| {
+        (0..n)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (log(100), 0..0),
+        move |ui, (text, visible): &mut (String, std::ops::Range<usize>)| {
+            *visible = CodeView::new(text)
+                .label("Output")
+                .height(120.0)
+                .stick_to_bottom(true)
+                .show(ui)
+                .visible_lines;
+        },
+    );
+    harness.run();
+    assert_eq!(harness.state().1.end, 100, "starts at the end");
+    harness.state_mut().0 = log(150);
+    harness.run();
+    harness.run();
+    assert_eq!(harness.state().1.end, 150, "follows new lines");
+}

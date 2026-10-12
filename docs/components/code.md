@@ -44,6 +44,7 @@ fn body_panel(ui: &mut egui::Ui, request: &mut String, response: &str) {
 | `.wrap(bool)` | Soft wrap at the view's width instead of sideways scrolling. |
 | `.folding(bool)` | Fold arrows for `{…}` and `[…]` regions spanning several lines. |
 | `.scroll_to_line(Option<usize>)` | Centers a line (0-based), on the frame it is passed. |
+| `.stick_to_bottom(bool)` | Follows the end while the text grows (a console, a log); scrolling up stays there until the user scrolls back down. |
 | `.revision(u64)` | Bump when the text changes in place without changing its length. |
 | `.height(f32)` | Height (default: the available height, or 300 when unbounded). |
 | `.id(Id)` | Explicit id for several views in one place. |
@@ -111,6 +112,20 @@ it needs. Folding looks at brackets and `"` strings, so it suits JSON and JSON-l
 | `.bracket_pairing(bool)` | Inserts closing brackets and quotes (default on). |
 | `.completer(&dyn Completer)` | A completion list under the caret, as in [single-line fields](#autocomplete); <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it. `Completion::caret(n)` puts the caret inside the insertion (`user(id: \|)`). |
 | `.height(f32)`, `.id(Id)` | As in the view. |
+
+`ui.add(editor)` returns the response; `.show(ui)` returns a `CodeEditorOutput`: the
+`response` and the `selection`, the selected text as a byte range (`None` for a bare caret),
+so a query console can run just what is selected:
+
+```rust
+use archipel_kit::components::CodeEditor;
+
+fn console(ui: &mut archipel_kit::egui::Ui, script: &mut String) -> Option<String> {
+    let out = CodeEditor::new(script).label("Script").show(ui);
+    let run = ui.input(|i| i.modifiers.command && i.key_pressed(archipel_kit::egui::Key::Enter));
+    run.then(|| out.selection.map_or(script.clone(), |range| script[range].to_owned()))
+}
+```
 
 - <kbd>Tab</kbd> inserts spaces up to the next tab stop; over several selected lines it indents
   them, <kbd>Shift</kbd>+<kbd>Tab</kbd> unindents. <kbd>Ctrl</kbd>+<kbd>]</kbd> and
