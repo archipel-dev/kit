@@ -13,6 +13,33 @@ use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
 
 #[test]
+fn tab_bar_buttons_conform() {
+    // More tabs than fit: the strip shows "Show hidden tabs" next to "More actions".
+    let tabs: Vec<Tab> = (0..8)
+        .map(|i| Tab::new(format!("file{i}.rs")).closable(true))
+        .collect();
+    for button in ["Show hidden tabs", "More actions"] {
+        testing::conformance(button, |ui, enabled| {
+            ui.add_enabled_ui(enabled, |ui| {
+                let out = TabBar::new(&tabs, 0)
+                    .more_menu(|ui| {
+                        ui.add(MenuItem::new("Close All Tabs"));
+                    })
+                    .show(ui);
+                if button == "More actions" {
+                    out.more_button
+                } else {
+                    out.hidden_tabs_button
+                }
+                .expect("the strip shows the button")
+            })
+            .inner
+        })
+        .run();
+    }
+}
+
+#[test]
 fn buttons_conform() {
     for variant in ["primary", "secondary", "ghost", "danger"] {
         testing::conformance("Run", move |ui, enabled| {
