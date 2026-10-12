@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/archipel-dev/kit/compare/v0.2.2...v0.3.0) (2026-10-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* **tab-bar:** `Colors` gains `tab_scroll_thumb` and `tab_scroll_thumb_hover`; `TabBarResponse` is `#[non_exhaustive]` with two button responses and no longer `Copy`/`Eq`; the bar adds the 6 pt inset itself and fills the available width, so callers drop their own leading spacer.
+
+### Features
+
+* **tab-bar:** Android Studio's strip inset, overflow scrolling and strip buttons ([#39](https://github.com/archipel-dev/kit/issues/39)) ([9be68de](https://github.com/archipel-dev/kit/commit/9be68de72cefe14d32d0dd5fead54d52a08917bf))
+
 ## [0.2.2](https://github.com/archipel-dev/kit/compare/v0.2.1...v0.2.2) (2026-10-12)
 
 
