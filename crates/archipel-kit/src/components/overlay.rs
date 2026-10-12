@@ -419,10 +419,15 @@ impl<'a> Dialog<'a> {
                 // What doesn't scroll: the frame, the title as drawn (measured), the button
                 // row, and the four gaps between the title, body, space and buttons.
                 let title_height = ui.min_rect().height();
-                let chrome = frame_height
-                    + title_height
-                    + size::CONTROL_HEIGHT
-                    + 4.0 * size::SECTION_SPACING;
+                // A dialog without buttons (its body has its own) has no button row.
+                let has_buttons =
+                    self.primary.is_some() || self.secondary.is_some() || self.tertiary.is_some();
+                let button_row = if has_buttons {
+                    size::CONTROL_HEIGHT + 2.0 * size::SECTION_SPACING
+                } else {
+                    0.0
+                };
+                let chrome = frame_height + title_height + button_row + 2.0 * size::SECTION_SPACING;
                 let body_max = (max_height - chrome).max(size::ROW_HEIGHT);
                 // A solid scroll bar: it shows that there is more without hovering.
                 ui.scope(|ui| {
@@ -452,6 +457,9 @@ impl<'a> Dialog<'a> {
                             }
                         });
                 });
+                if !has_buttons {
+                    return;
+                }
                 ui.add_space(size::SECTION_SPACING);
                 // A fixed-height row: `with_layout` would take all the height left over.
                 // Drawn left to right so Tab follows reading order: tertiary, secondary,

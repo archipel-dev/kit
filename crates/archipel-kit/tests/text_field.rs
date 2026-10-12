@@ -2,9 +2,9 @@
 
 mod common;
 
-use archipel_kit::Theme;
 use archipel_kit::components::TextField;
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
+use archipel_kit::{Theme, egui};
 
 #[test]
 fn snapshot() {
@@ -122,4 +122,30 @@ fn clear_button_sits_at_the_measured_place() {
     );
     assert_eq!(clear.center().x, field.right() - size::CLEAR_BUTTON_INSET);
     assert_eq!(clear.center().y, field.center().y);
+}
+
+#[test]
+fn a_sized_field_keeps_its_width_in_a_right_to_left_row() {
+    let harness = testing::harness_state_sized(
+        Theme::dark(),
+        egui::vec2(400.0, 60.0),
+        (String::from("1000"), 50_u32),
+        |ui, (text, number)| {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add(TextField::new(text).name("Sample").width(80.0));
+                ui.add(archipel_kit::components::NumberField::new(number).name("Limit"));
+            });
+        },
+    );
+    let sample = harness.get_by_label("Sample").rect();
+    let limit = harness.get_by_label("Limit").rect();
+    assert!(sample.right() > 360.0, "at the right edge: {sample:?}");
+    assert!(
+        limit.right() <= sample.left(),
+        "left of it: {limit:?} {sample:?}"
+    );
+    assert!(
+        limit.width() < 64.0 && sample.width() < 80.0,
+        "their own widths, not the row: {limit:?} {sample:?}"
+    );
 }

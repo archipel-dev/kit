@@ -256,7 +256,10 @@ impl TextField<'_> {
         let colors = Theme::colors(ui.ctx());
         // A layout that has run out of room must not make egui allocate a negative size.
         let width = self.width.unwrap_or_else(|| ui.available_width()).max(0.0);
-        ui.vertical(|ui| {
+        // Exactly `width` wide, wherever the layout puts it (a right-to-left row too).
+        let column = vec2(width, ui.available_height().max(0.0));
+        let layout = egui::Layout::top_down(egui::Align::Min);
+        ui.allocate_ui_with_layout(column, layout, |ui| {
             ui.spacing_mut().item_spacing.y = 4.0;
             let label_id = self.label.as_ref().map(|label| {
                 ui.add(egui::Label::new(egui::RichText::new(label).color(
@@ -525,11 +528,15 @@ impl TextField<'_> {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
             }
             if let Some(error) = &self.error {
-                ui.add(egui::Label::new(
-                    egui::RichText::new(error)
-                        .color(colors.error)
-                        .font(typography::body(typography::SMALL + 1.0)),
-                ));
+                // The message may run past a narrow field (a number), as in Android Studio.
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(error)
+                            .color(colors.error)
+                            .font(typography::body(typography::SMALL + 1.0)),
+                    )
+                    .extend(),
+                );
                 super::Tooltip::new(error.clone()).show_for(&edited);
             }
             TextFieldOutput {
