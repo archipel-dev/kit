@@ -1,9 +1,10 @@
-//! `DragSource` and `DropZone`: drag a field onto a zone.
+//! Drag and drop: a row with a `DragSource` behaviour onto a `DropZone`.
 
 mod common;
 
 use archipel_kit::Theme;
-use archipel_kit::components::{DragSource, DropZone, ListRow};
+use archipel_kit::behaviour::DragSource;
+use archipel_kit::components::{DropZone, ListRow};
 use archipel_kit::egui::{self, Pos2, pos2};
 use archipel_kit::testing::{self, Harness, Queryable};
 
@@ -28,14 +29,12 @@ fn harness() -> Harness<'static, State> {
         State::default(),
         |ui, state| {
             for name in ["name", "price"] {
-                let row = DragSource::new(name, Field(name))
-                    .show(ui, |ui| ListRow::new(name).show(ui))
-                    .inner;
+                let row = ListRow::new(name).with(DragSource(Field(name))).show(ui);
                 if row.response.clicked() {
                     state.clicked = Some(name);
                 }
             }
-            DragSource::new("other", Other).show(ui, |ui| ListRow::new("other").show(ui));
+            ListRow::new("other").with(DragSource(Other)).show(ui);
             let filter = DropZone::new("filter")
                 .hint("Drop fields here to filter")
                 .show_hint(state.filter.is_empty())
@@ -80,7 +79,7 @@ fn drag(harness: &mut Harness<'_, State>, from: Pos2, to: Pos2, during: impl Fn(
 }
 
 #[test]
-fn a_field_dropped_on_a_zone_lands_there() {
+fn a_row_dropped_on_a_zone_lands_there() {
     let mut harness = harness();
     let from = center(&harness, "price");
     let to = center(&harness, "Drop fields here to filter");
@@ -124,7 +123,10 @@ fn snapshot_while_dragging() {
         |ui| {
             ui.set_width(280.0);
             for name in ["name", "price"] {
-                DragSource::new(name, Field(name)).show(ui, |ui| ListRow::new(name).show(ui));
+                ListRow::new(name)
+                    .icon(archipel_kit::Glyph::Key)
+                    .with(DragSource(Field(name)))
+                    .show(ui);
             }
             ui.add_space(8.0);
             let _ = DropZone::new("filter")

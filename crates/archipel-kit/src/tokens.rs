@@ -347,12 +347,11 @@ pub mod opacity {
     pub const SCRIM_DARK: f32 = 120.0 / 255.0;
     /// Opacity of the black scrim behind a modal dialog in light themes.
     pub const SCRIM_LIGHT: f32 = 60.0 / 255.0;
-    /// Opacity of a [`DragSource`](crate::components::DragSource)'s content left in place
-    /// while it is dragged.
+    /// Opacity of a row left in place while it is dragged (a
+    /// [`DragSource`](crate::behaviour::DragSource) on a [`ListRow`](crate::components::ListRow)).
     pub const DRAG_SOURCE: f32 = 0.4;
-    /// Opacity of the copy of a [`DragSource`](crate::components::DragSource)'s content that
-    /// follows the pointer.
-    pub const DRAG_GHOST: f32 = 0.85;
+    /// Opacity of the card with a dragged row's icon and label that follows the pointer.
+    pub const DRAG_IMAGE: f32 = 0.85;
 }
 
 /// Corner radii, in points.

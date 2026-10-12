@@ -51,7 +51,7 @@ pub use collections::{
     VirtualList,
 };
 pub use completion::{Completer, Completion, Completions};
-pub use drag::{DragSource, DropZone, DropZoneResponse};
+pub use drag::{DropZone, DropZoneResponse};
 pub use feedback::{Banner, MessageResponse, Severity, Toast};
 pub use form::{FieldLabel, Form, FormUi};
 pub use icon_button::IconButton;
