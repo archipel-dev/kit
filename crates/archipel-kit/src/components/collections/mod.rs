@@ -964,7 +964,7 @@ pub(super) fn header(
     let mut x = rect.left() + size::ROW_PILL_INSET;
     for (index, column) in columns.iter_mut().enumerate() {
         let width = if column.width.is_finite() {
-            column.width.max(MIN_COLUMN)
+            column.width.max(0.0)
         } else {
             MIN_COLUMN
         };
