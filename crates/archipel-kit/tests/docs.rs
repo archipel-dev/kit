@@ -88,7 +88,27 @@ fn every_snapshot_is_shown_in_the_docs() {
 
 #[test]
 fn every_component_is_documented() {
-    let source = fs::read_to_string("src/components/mod.rs").expect("components module");
+    // The modules that export the widgets (the editor module: its code view and editor).
+    let source: String = [
+        "ui/mod.rs",
+        "ui/tabs/mod.rs",
+        "ui/popup/mod.rs",
+        "openapi/ui/mod.rs",
+        "ide/mod.rs",
+        "action_system/mod.rs",
+        "wm/mod.rs",
+        "notification/mod.rs",
+    ]
+    .iter()
+    .map(|module| fs::read_to_string(Path::new("src").join(module)).expect("module source"))
+    .chain([fs::read_to_string("src/editor/mod.rs")
+        .expect("editor module")
+        .lines()
+        .filter(|line| line.starts_with("pub use code_"))
+        .collect::<Vec<_>>()
+        .join("\n")])
+    .collect::<Vec<_>>()
+    .join("\n");
     let components: BTreeSet<&str> = source
         .lines()
         .filter_map(|line| line.strip_prefix("pub use "))

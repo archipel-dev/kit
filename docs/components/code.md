@@ -12,8 +12,8 @@ the editor colors of the theme and the same optional gutter, find bar and highli
 ## Usage
 
 ```rust
-use archipel_kit::components::code::Json;
-use archipel_kit::components::{CodeEditor, CodeView};
+use archipel_kit::editor::Json;
+use archipel_kit::editor::{CodeEditor, CodeView};
 use archipel_kit::egui;
 
 fn body_panel(ui: &mut egui::Ui, request: &mut String, response: &str) {
@@ -77,8 +77,8 @@ everything and <kbd>Ctrl</kbd>+<kbd>C</kbd> copies. Arrow keys, <kbd>PgUp</kbd>/
   <img alt="The find bar over a code view, all matches highlighted and the current one stronger" src="img/code_view_find.light.png" width="360">
 </picture>
 
-<kbd>Ctrl</kbd>+<kbd>F</kbd> opens a find bar built from kit components: a `TextField`, the match
-count and `IconButton`s. All matches are highlighted, the current one stronger. <kbd>Enter</kbd>
+<kbd>Ctrl</kbd>+<kbd>F</kbd> opens a find bar built from kit components: a `JBTextField`, the match
+count and `ActionButton`s. All matches are highlighted, the current one stronger. <kbd>Enter</kbd>
 and <kbd>Shift</kbd>+<kbd>Enter</kbd> (or the arrows) step through the matches, scrolling and
 unfolding to show them; <kbd>Esc</kbd> closes the bar. Matching ignores ASCII case and stops at
 100 000 matches. The editor has the same bar.
@@ -118,7 +118,7 @@ it needs. Folding looks at brackets and `"` strings, so it suits JSON and JSON-l
 so a query console can run just what is selected:
 
 ```rust
-use archipel_kit::components::CodeEditor;
+use archipel_kit::editor::CodeEditor;
 
 fn console(ui: &mut archipel_kit::egui::Ui, script: &mut String) -> Option<String> {
     let out = CodeEditor::new(script).label("Script").show(ui);
@@ -162,8 +162,8 @@ dependencies. Plug in your own, for example the IDE's
 tree-sitter:
 
 ```rust
-use archipel_kit::components::CodeView;
-use archipel_kit::components::code::{Highlighter, Span, TokenKind};
+use archipel_kit::editor::CodeView;
+use archipel_kit::editor::{Highlighter, Span, TokenKind};
 use archipel_kit::egui;
 
 /// Marks `TODO` and `FIXME` in a log.
@@ -203,7 +203,7 @@ so even a one-line 10 MB body tokenizes once.
   <img alt="Single-line fields with resolved, unresolved and secret template variables" src="img/template_field.light.png" width="360">
 </picture>
 
-A URL bar or a header value is a single line, so it is a [`TextField`](text-field.md) with
+A URL bar or a header value is a single line, so it is a [`JBTextField`](jb-text-field.md) with
 `.highlighter(&dyn Highlighter)`, not a one-line `CodeEditor`: it keeps the field's height,
 focus ring, placeholder, clear button, leading icon and error message, so a highlighted input
 and a plain one sit side by side in a form and look the same. The text never wraps and
@@ -217,8 +217,8 @@ an inner highlighter for the text between them (`.inner(Json)`; plain text by de
 still being typed (`{{ba`) is drawn as a plain variable until it is closed.
 
 ```rust
-use archipel_kit::components::TextField;
-use archipel_kit::components::code::{TemplateHighlighter, TemplateToken};
+use archipel_kit::ui::JBTextField;
+use archipel_kit::editor::{TemplateHighlighter, TemplateToken};
 use archipel_kit::egui;
 
 fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
@@ -227,7 +227,7 @@ fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
         "base_url" | "user_id" => TemplateToken::Resolved,
         _ => TemplateToken::Unresolved,
     });
-    let out = TextField::new(url)
+    let out = JBTextField::new(url)
         .label("URL")
         .placeholder("https://example.com")
         .monospace(true)
@@ -249,7 +249,7 @@ suggestions, moves in it with <kbd>Up</kbd>/<kbd>Down</kbd>, inserts with <kbd>E
 no list open still submits.
 
 ```rust
-use archipel_kit::components::{Completion, Completions, TextField};
+use archipel_kit::ui::{Completion, Completions, JBTextField};
 use archipel_kit::egui;
 
 /// `{{` before the caret: offer the environment's variables.
@@ -269,13 +269,13 @@ fn variables(text: &str, caret: usize) -> Option<Completions> {
 }
 
 fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
-    TextField::new(url).name("URL").monospace(true).completer(&variables).show(ui).submitted
+    JBTextField::new(url).name("URL").monospace(true).completer(&variables).show(ui).submitted
 }
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/text_field_completion.dark.png">
-  <img alt="A URL field with the variables starting with us listed under the caret" src="img/text_field_completion.light.png" width="400">
+  <source media="(prefers-color-scheme: dark)" srcset="img/jb_text_field_completion.dark.png">
+  <img alt="A URL field with the variables starting with us listed under the caret" src="img/jb_text_field_completion.light.png" width="400">
 </picture>
 
 Each suggestion is one row: the label, and its `detail` dimmed at the right end. Tests:
@@ -285,13 +285,13 @@ Each suggestion is one row: the label, and its `detail` dimmed at the right end.
 
 To draw a different list, the field reports the caret instead:
 
-`TextField::show` returns a `TextFieldOutput`:
+`JBTextField::show` returns a `JBTextFieldOutput`:
 
 | Field | Meaning |
 |---|---|
 | `response` | The text edit's response (`changed()`, `has_focus()`, `lost_focus()`). |
 | `submitted` | The field lost focus because <kbd>Enter</kbd> was pressed. |
-| `caret_rect` | The caret as a screen rectangle; anchor a `parts::Popover` on it. |
+| `caret_rect` | The caret as a screen rectangle; anchor a `ui::popup::JBPopup` on it. |
 | `template` | `Option<TemplateAt>`: the `{{variable}}` the caret is in or just after. |
 | `insert_completion(ctx, &mut text, name)` | Replaces the token with `{{name}}`, puts the caret after it and focuses the field. |
 
@@ -303,15 +303,15 @@ function. The last caret is remembered per field, so `template` stays valid when
 suggestion has already moved the focus.
 
 The field does not draw the suggestions: the caller owns the list, so it can come from an
-environment, a request history or a language server. This is the whole wiring with `MenuItem`s
+environment, a request history or a language server. This is the whole wiring with `ActionMenuItem`s
 and the keyboard. The keys are consumed **before** the field, while the list is open, so the
 field does not move its caret on <kbd>Up</kbd>/<kbd>Down</kbd> or submit on <kbd>Enter</kbd>:
 
 ```rust
-use archipel_kit::components::code::{TemplateHighlighter, TemplateToken};
-use archipel_kit::components::{MenuItem, TextField};
+use archipel_kit::editor::{TemplateHighlighter, TemplateToken};
+use archipel_kit::{action_system::ActionMenuItem, ui::JBTextField};
 use archipel_kit::egui::{self, Key, Modifiers};
-use archipel_kit::parts::Popover;
+use archipel_kit::ui::popup::JBPopup;
 
 const VARIABLES: [&str; 3] = ["base_url", "user_id", "user_name"];
 
@@ -344,7 +344,7 @@ fn url_bar(ui: &mut egui::Ui, bar: &mut UrlBar) -> bool {
         });
     }
 
-    let out = TextField::new(&mut bar.url)
+    let out = JBTextField::new(&mut bar.url)
         .label("URL")
         .monospace(true)
         .highlighter(&highlighter)
@@ -377,9 +377,9 @@ fn url_bar(ui: &mut egui::Ui, bar: &mut UrlBar) -> bool {
     if let Some(caret) = out.caret_rect {
         let (matches, selected) = (bar.matches.clone(), bar.selected);
         let mut picked = None;
-        Popover::new("url-completions", caret).width(220.0).show(ui.ctx(), &mut bar.open, |ui| {
+        JBPopup::new("url-completions", caret).width(220.0).show(ui.ctx(), &mut bar.open, |ui| {
             for (i, name) in matches.iter().enumerate() {
-                if ui.add(MenuItem::new(*name).highlighted(i == selected)).clicked() {
+                if ui.add(ActionMenuItem::new(*name).highlighted(i == selected)).clicked() {
                     picked = Some(*name);
                 }
             }
@@ -398,7 +398,7 @@ fn url_bar(ui: &mut egui::Ui, bar: &mut UrlBar) -> bool {
   <img alt="A URL field with the suggestions for {{us open under the caret" src="img/template_autocomplete.light.png" width="400">
 </picture>
 
-`MenuItem::highlighted(true)` paints the hover fill for the row the keyboard is on.
+`ActionMenuItem::highlighted(true)` paints the hover fill for the row the keyboard is on.
 <kbd>Escape</kbd> is consumed by the wiring while the list is open (a second press leaves the
 field as usual), and the popover also closes on a click outside it. The suggestion rows are
 operated from the field like a combobox list, not by <kbd>Tab</kbd>. The audit therefore runs on
@@ -425,7 +425,7 @@ arrows are buttons named "Fold lines 3 to 9". The find bar's field is "Find"; it
 ## Testing
 
 ```rust
-use archipel_kit::components::{CodeEditor, CodeView};
+use archipel_kit::editor::{CodeEditor, CodeView};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::Theme;
 use archipel_kit::egui::Key;
@@ -444,5 +444,5 @@ harness.run();
 assert_eq!(harness.state(), "{\n    \n}");
 ```
 
-Source: [`components/code/`](../../crates/archipel-kit/src/components/code/) ·
+Source: [`editor/`](../../crates/archipel-kit/src/editor/) ·
 Tests: [`tests/code.rs`](../../crates/archipel-kit/tests/code.rs)

@@ -36,7 +36,7 @@ impl Default for State {
 
 impl State {
     fn show(&mut self, ui: &mut egui::Ui, enabled: bool) {
-        ui.add(SectionHeader::new("Template variables"));
+        ui.add(TitledSeparator::new("Template variables"));
         let submitted = self.url_bar.show(ui, enabled);
         if submitted {
             self.last_action = format!("Sent {}", self.url_bar.url);
@@ -44,13 +44,13 @@ impl State {
         ui.label("Type {{ for suggestions: Up/Down move, Enter or a click completes, Esc closes.");
         let highlighter = TemplateHighlighter::new(resolve_variable);
         ui.add(
-            TextField::new(&mut self.header)
+            JBTextField::new(&mut self.header)
                 .label("Header value")
                 .highlighter(&highlighter)
                 .clearable(true)
                 .enabled(enabled),
         );
-        ui.add(SectionHeader::new("Code view"));
+        ui.add(TitledSeparator::new("Code view"));
         CodeView::new(CODE_SAMPLE)
             .label("Response body")
             .highlighter(&Json)
@@ -58,7 +58,7 @@ impl State {
             .folding(true)
             .height(236.0)
             .show(ui);
-        ui.add(SectionHeader::new("Code editor"));
+        ui.add(TitledSeparator::new("Code editor"));
         ui.add(
             CodeEditor::new(&mut self.code)
                 .label("Request body")
@@ -111,7 +111,7 @@ impl UrlBar {
                 }
             });
         }
-        let out = TextField::new(&mut self.url)
+        let out = JBTextField::new(&mut self.url)
             .label("URL")
             .placeholder("https://example.com")
             .monospace(true)
@@ -149,12 +149,12 @@ impl UrlBar {
         if let Some(caret) = out.caret_rect {
             let (matches, selected) = (self.matches.clone(), self.selected);
             let mut picked = None;
-            Popover::new("gallery-url-completions", caret)
+            JBPopup::new("gallery-url-completions", caret)
                 .width(220.0)
                 .show(ui.ctx(), &mut self.open, |ui| {
                     for (i, name) in matches.iter().enumerate() {
                         if ui
-                            .add(MenuItem::new(*name).highlighted(i == selected))
+                            .add(ActionMenuItem::new(*name).highlighted(i == selected))
                             .clicked()
                         {
                             picked = Some(*name);

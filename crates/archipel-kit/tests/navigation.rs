@@ -1,10 +1,14 @@
-//! `SegmentedControl`, `TabBar` and `ListRow` tests: behavior, accessibility and snapshots.
+//! `SegmentedButton`, `JBTabs` and `ColoredListCellRenderer` tests: behavior, accessibility and snapshots.
 
 mod common;
 
-use archipel_kit::components::{ListRow, MenuItem, SegmentedControl, Tab, TabBar};
 use archipel_kit::testing::{self, NodeExt, NodeT, Queryable, Role};
 use archipel_kit::{Glyph, Icon, Theme, Tone};
+use archipel_kit::{
+    action_system::ActionMenuItem,
+    ui::tabs::{JBTabs, TabInfo},
+    ui::{ColoredListCellRenderer, SegmentedButton},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum View {
@@ -37,16 +41,16 @@ fn at_island_top(ui: &mut egui::Ui, width: f32, add: impl FnOnce(&mut egui::Ui))
 /// Wide enough for the three tabs of [`tabs`].
 const WIDE: f32 = 420.0;
 
-fn tabs() -> Vec<Tab> {
+fn tabs() -> Vec<TabInfo> {
     vec![
-        Tab::new("main.rs")
+        TabInfo::new("main.rs")
             .icon(Icon::for_file("main.rs"))
             .closable(true),
-        Tab::new("Cargo.toml")
+        TabInfo::new("Cargo.toml")
             .icon(Icon::for_file("Cargo.toml"))
             .closable(true)
             .modified(true),
-        Tab::new("README.md")
+        TabInfo::new("README.md")
             .icon(Icon::for_file("README.md"))
             .closable(true),
     ]
@@ -54,16 +58,16 @@ fn tabs() -> Vec<Tab> {
 
 #[test]
 fn segmented_snapshot() {
-    testing::snapshot_themes("segmented_control", common::IMG, |ui| {
-        ui.add(SegmentedControl::new(&mut View::Pretty, VIEWS));
-        ui.add(SegmentedControl::new(&mut View::Raw, VIEWS).enabled(false));
+    testing::snapshot_themes("segmented_button", common::IMG, |ui| {
+        ui.add(SegmentedButton::new(&mut View::Pretty, VIEWS));
+        ui.add(SegmentedButton::new(&mut View::Raw, VIEWS).enabled(false));
     });
 }
 
 #[test]
 fn segmented_selects_clicked_option() {
     let mut harness = testing::harness_state(Theme::dark(), View::Pretty, |ui, view| {
-        ui.add(SegmentedControl::new(view, VIEWS));
+        ui.add(SegmentedButton::new(view, VIEWS));
     });
     assert!(harness.get_by_label("Pretty").is_checked());
     harness.get_by_label("Raw").click();
@@ -74,21 +78,21 @@ fn segmented_selects_clicked_option() {
 }
 
 #[test]
-fn tab_bar_snapshot() {
-    testing::snapshot_themes("tab_bar", common::IMG, |ui| {
+fn jb_tabs_snapshot() {
+    testing::snapshot_themes("jb_tabs", common::IMG, |ui| {
         at_island_top(ui, WIDE, |ui| {
-            TabBar::new(&tabs(), 0).show(ui);
+            JBTabs::new(&tabs(), 0).show(ui);
         });
     });
 }
 
 #[test]
-fn tab_bar_reports_selection_and_close() {
+fn jb_tabs_reports_selection_and_close() {
     let tabs = tabs();
     let mut harness =
         testing::harness_state(Theme::dark(), (0usize, None), |ui, (current, closed)| {
             ui.set_width(WIDE);
-            let out = TabBar::new(&tabs, *current).show(ui);
+            let out = JBTabs::new(&tabs, *current).show(ui);
             if let Some(index) = out.selected {
                 *current = index;
             }
@@ -106,9 +110,9 @@ fn tab_bar_reports_selection_and_close() {
 }
 
 /// More tabs than fit in the 360 pt test island: they overflow.
-fn many_tabs() -> Vec<Tab> {
+fn many_tabs() -> Vec<TabInfo> {
     MANY.into_iter()
-        .map(|name| Tab::new(name).icon(Icon::for_file(name)).closable(true))
+        .map(|name| TabInfo::new(name).icon(Icon::for_file(name)).closable(true))
         .collect()
 }
 
@@ -157,9 +161,9 @@ fn overflowing(theme: Theme) -> egui_kittest::Harness<'static, TabsState> {
     let tabs = many_tabs();
     let mut harness = testing::harness_state(theme, TabsState::default(), move |ui, state| {
         ui.set_width(STRIP_WIDTH);
-        let out = TabBar::new(&tabs, state.current)
+        let out = JBTabs::new(&tabs, state.current)
             .more_menu(|ui| {
-                if ui.add(MenuItem::new("Close All Tabs")).clicked() {
+                if ui.add(ActionMenuItem::new("Close All Tabs")).clicked() {
                     state.more_clicked = true;
                 }
             })
@@ -192,12 +196,12 @@ fn wheel(harness: &mut egui_kittest::Harness<'_, TabsState>, delta: egui::Vec2, 
 }
 
 #[test]
-fn tab_bar_starts_inset_from_the_island_edge() {
+fn jb_tabs_starts_inset_from_the_island_edge() {
     let tabs = tabs();
     let harness = testing::harness_state(Theme::dark(), 0.0_f32, |ui, left| {
         ui.set_width(WIDE);
         *left = ui.max_rect().left();
-        TabBar::new(&tabs, 0).show(ui);
+        JBTabs::new(&tabs, 0).show(ui);
     });
     let first = harness.get_by_label("main.rs").rect();
     assert_eq!(
@@ -234,7 +238,7 @@ fn tabs_that_fit_do_not_scroll() {
     let tabs = tabs();
     let mut harness = testing::harness(Theme::dark(), |ui| {
         ui.set_width(WIDE);
-        TabBar::new(&tabs, 0).show(ui);
+        JBTabs::new(&tabs, 0).show(ui);
     });
     let before = harness.get_by_label("README.md").rect();
     harness.hover_at(harness.get_by_label("main.rs").rect().center());
@@ -404,16 +408,16 @@ fn more_actions_menu_runs_the_apps_actions() {
 }
 
 #[test]
-fn tab_bar_overflow_snapshot() {
+fn jb_tabs_overflow_snapshot() {
     let tabs = many_tabs();
     testing::snapshot_themes_after(
-        "tab_bar_overflow",
+        "jb_tabs_overflow",
         common::IMG,
         |ui| {
             at_island_top(ui, STRIP_WIDTH, |ui| {
-                TabBar::new(&tabs, 2)
+                JBTabs::new(&tabs, 2)
                     .more_menu(|ui| {
-                        ui.add(MenuItem::new("Close All Tabs"));
+                        ui.add(ActionMenuItem::new("Close All Tabs"));
                     })
                     .show(ui);
             });
@@ -429,16 +433,16 @@ fn tab_bar_overflow_snapshot() {
 }
 
 #[test]
-fn tab_bar_hidden_tabs_snapshot() {
+fn jb_tabs_hidden_tabs_snapshot() {
     let tabs = many_tabs();
     testing::snapshot_themes_after(
-        "tab_bar_hidden_tabs",
+        "jb_tabs_hidden_tabs",
         common::IMG,
         |ui| {
             at_island_top(ui, STRIP_WIDTH, |ui| {
-                TabBar::new(&tabs, 2)
+                JBTabs::new(&tabs, 2)
                     .more_menu(|ui| {
-                        ui.add(MenuItem::new("Close All Tabs"));
+                        ui.add(ActionMenuItem::new("Close All Tabs"));
                     })
                     .show(ui);
             });
@@ -456,39 +460,39 @@ fn tab_bar_hidden_tabs_snapshot() {
 }
 
 #[test]
-fn list_row_snapshot() {
-    testing::snapshot_themes("list_row", common::IMG, |ui| {
-        ListRow::new("archipel")
+fn colored_list_cell_renderer_snapshot() {
+    testing::snapshot_themes("colored_list_cell_renderer", common::IMG, |ui| {
+        ColoredListCellRenderer::new("archipel")
             .icon(Glyph::Project)
             .expanded(Some(true))
             .show(ui);
-        ListRow::new("src")
+        ColoredListCellRenderer::new("src")
             .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(true))
             .show(ui);
-        ListRow::new("main.rs")
+        ColoredListCellRenderer::new("main.rs")
             .icon(Icon::for_file("main.rs"))
             .depth(2)
             .selected(true)
             .show(ui);
-        ListRow::new("theme.rs")
+        ColoredListCellRenderer::new("theme.rs")
             .icon(Icon::for_file("theme.rs"))
             .depth(2)
             .label_tone(Tone::Modified)
             .show(ui);
-        ListRow::new("target")
+        ColoredListCellRenderer::new("target")
             .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(false))
             .secondary("excluded")
             .show(ui);
-        ListRow::new("Cargo.toml")
+        ColoredListCellRenderer::new("Cargo.toml")
             .icon(Icon::for_file("Cargo.toml"))
             .depth(1)
             .secondary("1 KB")
             .show(ui);
-        ListRow::new("Disabled")
+        ColoredListCellRenderer::new("Disabled")
             .icon(Glyph::FileText)
             .depth(1)
             .enabled(false)
@@ -504,7 +508,7 @@ struct TreeState {
 }
 
 fn tree(ui: &mut egui::Ui, state: &mut TreeState) {
-    let row = ListRow::new("src")
+    let row = ColoredListCellRenderer::new("src")
         .icon(Glyph::Folder)
         .expanded(Some(state.expanded))
         .show(ui);
@@ -515,7 +519,7 @@ fn tree(ui: &mut egui::Ui, state: &mut TreeState) {
         state.selected = Some("src");
     }
     if state.expanded {
-        let row = ListRow::new("main.rs")
+        let row = ColoredListCellRenderer::new("main.rs")
             .depth(1)
             .icon(Glyph::FileText)
             .selected(state.selected == Some("main.rs"))
@@ -530,7 +534,7 @@ fn tree(ui: &mut egui::Ui, state: &mut TreeState) {
 }
 
 #[test]
-fn list_row_click_selects_and_chevron_expands() {
+fn colored_list_cell_renderer_click_selects_and_chevron_expands() {
     let mut harness = testing::harness_state(Theme::dark(), TreeState::default(), tree);
     assert!(harness.query_by_label("main.rs").is_none());
     // The chevron sits at the start of the row.

@@ -32,7 +32,7 @@ pub struct Conformance<'a> {
 /// 4. Disabled: it reports disabled, clicks and keys do nothing, Tab skips it.
 ///
 /// ```no_run
-/// use archipel_kit::components::Button;
+/// use archipel_kit::ui::Button;
 /// use archipel_kit::testing;
 ///
 /// testing::conformance("Run", |ui, enabled| ui.add(Button::primary("Run").enabled(enabled)))

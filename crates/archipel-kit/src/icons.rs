@@ -155,7 +155,7 @@ const ARCHIVE_EXTENSIONS: [&str; 7] = ["jar", "zip", "tar", "gz", "tgz", "war", 
 /// icon drawn from the theme.
 ///
 /// Every component that takes an icon accepts `impl Into<Icon>`, so pass a glyph or a
-/// language directly: `IconButton::new(Glyph::Refresh, "Reload")`.
+/// language directly: `ActionButton::new(Glyph::Refresh, "Reload")`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Icon {
     /// A designed glyph from `archipel-icons`.

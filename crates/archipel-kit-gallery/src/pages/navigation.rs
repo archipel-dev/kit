@@ -10,10 +10,10 @@ enum View {
 pub(super) struct State {
     view: View,
     tab: usize,
-    tabs: Vec<Tab>,
+    tabs: Vec<TabInfo>,
     /// The overflowing strip: more tabs than fit, a "More actions" menu.
     many_tab: usize,
-    many_tabs: Vec<Tab>,
+    many_tabs: Vec<TabInfo>,
 }
 
 /// Files for the overflowing strip.
@@ -29,10 +29,14 @@ const MANY: [&str; 9] = [
     "CHANGELOG.md",
 ];
 
-fn file_tabs(names: &[&str]) -> Vec<Tab> {
+fn file_tabs(names: &[&str]) -> Vec<TabInfo> {
     names
         .iter()
-        .map(|name| Tab::new(*name).icon(Icon::for_file(name)).closable(true))
+        .map(|name| {
+            TabInfo::new(*name)
+                .icon(Icon::for_file(name))
+                .closable(true)
+        })
         .collect()
 }
 
@@ -50,9 +54,9 @@ impl Default for State {
 
 impl State {
     fn show(&mut self, ui: &mut egui::Ui, enabled: bool) {
-        ui.add(SectionHeader::new("Segmented control"));
+        ui.add(TitledSeparator::new("Segmented control"));
         ui.add(
-            SegmentedControl::new(
+            SegmentedButton::new(
                 &mut self.view,
                 [
                     (View::Pretty, "Pretty"),
@@ -62,9 +66,9 @@ impl State {
             )
             .enabled(enabled),
         );
-        ui.add(SectionHeader::new("Tab bar"));
+        ui.add(TitledSeparator::new("Tab bar"));
         ui.add(
-            SegmentedControl::new(
+            SegmentedButton::new(
                 &mut self.view,
                 [
                     (View::Pretty, "Pretty"),
@@ -78,7 +82,7 @@ impl State {
             .icon_only(true)
             .enabled(enabled),
         );
-        let out = TabBar::new(&self.tabs, self.tab).show(ui);
+        let out = JBTabs::new(&self.tabs, self.tab).show(ui);
         if let Some(index) = out.selected {
             self.tab = index;
         }
@@ -86,17 +90,17 @@ impl State {
             self.tabs.remove(index);
             self.tab = self.tab.min(self.tabs.len().saturating_sub(1));
         }
-        if self.tabs.is_empty() && ui.add(Link::new("Reopen tabs")).clicked() {
+        if self.tabs.is_empty() && ui.add(ActionLink::new("Reopen tabs")).clicked() {
             self.tabs = State::default().tabs;
         }
         // More tabs than fit: the strip scrolls (wheel, or the thin bar at its top edge
         // while the pointer is over it), and "Show hidden tabs" lists the ones out of view.
         let mut close_all = false;
         ui.allocate_ui(egui::vec2(360.0, tokens::size::HEADER_HEIGHT), |ui| {
-            let out = TabBar::new(&self.many_tabs, self.many_tab)
+            let out = JBTabs::new(&self.many_tabs, self.many_tab)
                 .id_salt("many")
                 .more_menu(|ui| {
-                    if ui.add(MenuItem::new("Close All Tabs")).clicked() {
+                    if ui.add(ActionMenuItem::new("Close All Tabs")).clicked() {
                         close_all = true;
                     }
                 })
@@ -112,7 +116,7 @@ impl State {
         if close_all {
             self.many_tabs.clear();
         }
-        if self.many_tabs.is_empty() && ui.add(Link::new("Reopen all tabs")).clicked() {
+        if self.many_tabs.is_empty() && ui.add(ActionLink::new("Reopen all tabs")).clicked() {
             self.many_tabs = file_tabs(&MANY);
             self.many_tab = 0;
         }

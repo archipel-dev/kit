@@ -13,31 +13,31 @@ with a line to the right edge and 20 pt above it, the group's rows indented 24 p
 ## Usage
 
 ```rust
-use archipel_kit::components::{Checkbox, Dropdown, FieldLabel, Form, Radio, TextField};
+use archipel_kit::{ui::{JBCheckBox, FieldLabel, Form, JBRadioButton, JBTextField}, openapi::ui::ComboBox};
 use archipel_kit::{egui, tokens};
 
 fn appearance(ui: &mut egui::Ui, readers: &mut bool, custom: &mut bool, zoom: &mut String, open: &mut u8) {
     let (mut font, mut size) = ("Inter", "13");
     Form::new().show(ui, |form| {
         form.group("Accessibility", |form| {
-            form.row("Zoom:", |ui| ui.add(TextField::new(zoom).name("Zoom").width(60.0)));
+            form.row("Zoom:", |ui| ui.add(JBTextField::new(zoom).name("Zoom").width(60.0)));
             form.fields(|ui| {
-                ui.add(Checkbox::new(custom, "Use custom font:"));
-                ui.add(Dropdown::new("font", &mut font, ["Inter"]).enabled(*custom));
+                ui.add(JBCheckBox::new(custom, "Use custom font:"));
+                ui.add(ComboBox::new("font", &mut font, ["Inter"]).enabled(*custom));
                 ui.add_space(tokens::size::FORM_CONTROL_SPACE);
                 ui.add(FieldLabel::new("Size:").enabled(*custom));
-                ui.add(Dropdown::new("size", &mut size, ["13"]).width(70.0).enabled(*custom));
+                ui.add(ComboBox::new("size", &mut size, ["13"]).width(70.0).enabled(*custom));
             });
             form.add(
-                Checkbox::new(readers, "Support screen readers")
+                JBCheckBox::new(readers, "Support screen readers")
                     .inline_comment("Requires restart")
                     .comment("Ctrl+Tab will navigate UI controls in dialogs."),
             );
         });
         form.group("Project", |form| {
             form.radios("Open project in", |ui| {
-                ui.add(Radio::new(open, 0, "New window"));
-                ui.add(Radio::new(open, 1, "Current window"));
+                ui.add(JBRadioButton::new(open, 0, "New window"));
+                ui.add(JBRadioButton::new(open, 1, "Current window"));
             });
         });
     });
@@ -59,8 +59,8 @@ fn appearance(ui: &mut egui::Ui, readers: &mut bool, custom: &mut bool, zoom: &m
 | `form.indent(\|form\| …)` | Rows that depend on the row above. |
 | `form.space()` | Extra space between loosely related rows. |
 | `form.ui()` | The `Ui`, for content that is not a row. |
-| `Checkbox`/`Radio` `.comment(text)` | Explanation below, 12 pt gray, aligned with the label, wrapped; also the accessible description. |
-| `Checkbox`/`Radio` `.inline_comment(text)` | Short note after the label (`Requires restart`), on its baseline. |
+| `JBCheckBox`/`JBRadioButton` `.comment(text)` | Explanation below, 12 pt gray, aligned with the label, wrapped; also the accessible description. |
+| `JBCheckBox`/`JBRadioButton` `.inline_comment(text)` | Short note after the label (`Requires restart`), on its baseline. |
 | `FieldLabel::new(text)` | `.enabled(bool)`: dimmed with a disabled field. |
 
 ## Behavior
@@ -93,5 +93,5 @@ Rows keep their controls' roles. Group titles and field labels are labels; a col
 group's title is a collapsing header that reports whether it is expanded; a comment below a
 checkbox or radio is its description.
 
-Source: [`components/form.rs`](../../crates/archipel-kit/src/components/form.rs) ·
+Source: [`ui/form.rs`](../../crates/archipel-kit/src/ui/form.rs) ·
 Tests: [`tests/form.rs`](../../crates/archipel-kit/tests/form.rs)

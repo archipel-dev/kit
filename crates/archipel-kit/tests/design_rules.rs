@@ -77,11 +77,11 @@ const RULES: &[Rule] = &[
             "egui::Hyperlink::",
             "egui::ComboBox::",
         ],
-        instead: "`Button`, `IconButton`, `Checkbox`, `Radio`, `Toggle`, `TextField`, \
-                  `Dropdown`, `Link` … (they have the measured sizes, states and focus)",
+        instead: "`Button`, `ActionButton`, `JBCheckBox`, `JBRadioButton`, `OnOffButton`, `JBTextField`, \
+                  `ComboBox`, `ActionLink` … (they have the measured sizes, states and focus)",
         allowed: &[(
-            "components/misc.rs",
-            "`Dropdown` wraps egui's combo box popup",
+            "openapi/ui/combo_box.rs",
+            "`ComboBox` wraps egui's combo box popup",
         )],
     },
     Rule {
@@ -91,7 +91,7 @@ const RULES: &[Rule] = &[
             ".on_hover_ui(",
             ".on_disabled_hover_text(",
         ],
-        instead: "`Tooltip::new(..).show_for(&response)` or `.with(Tooltip::new(..))` (the \
+        instead: "`HelpTooltip::new(..).show_for(&response)` or `.with(HelpTooltip::new(..))` (the \
                   tooltip surface, shortcut and placement of the kit)",
         allowed: &[],
     },
@@ -178,39 +178,40 @@ fn components_follow_the_design_rules() {
 const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("Avatar", "display only"),
     (
-        "Banner",
+        "InlineBanner",
         "composition of links and an icon button, audited in tests/feedback.rs",
     ),
-    ("BreadcrumbsResponse", "response"),
+    ("BreadcrumbsComponentResponse", "response"),
     ("Bucket", "chart data"),
     ("ButtonVariant", "enum"),
     ("CellEdit", "table edit state"),
     ("ChartColor", "enum"),
     ("CodeEditorOutput", "response"),
+    ("CodeViewResponse", "response"),
     ("CollectionResponse", "response"),
     (
         "Completer",
-        "trait: suggestions for TextField, tested in tests/completion.rs",
+        "trait: suggestions for JBTextField, tested in tests/completion.rs",
     ),
     ("Completion", "data"),
     ("Completions", "data"),
     ("Counter", "display only"),
     (
-        "Dialog",
+        "DialogWrapper",
         "composition of buttons and fields, audited in tests/overlays.rs",
     ),
-    ("DialogAction", "enum"),
+    ("ExitCode", "enum"),
     (
         "DropZone",
         "pointer drop target around content, no focus or keys of its own; tested in tests/drag.rs",
     ),
     ("DropZoneResponse", "response"),
     (
-        "EmptyState",
+        "StatusText",
         "composition with one button, audited in tests/feedback.rs",
     ),
     ("FieldLabel", "display only: names the field after it"),
-    ("Integer", "trait: the types a NumberField edits"),
+    ("Integer", "trait: the types a JBIntSpinner edits"),
     (
         "Form",
         "layout of other components, measured in tests/form.rs",
@@ -221,55 +222,73 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("Kbd", "display only"),
     ("KeyValueRow", "row data"),
     ("KeyValueTableResponse", "response"),
-    ("MenuHeader", "display only: a group title"),
-    ("MenuSeparator", "display only"),
+    ("ListSeparator", "display only: a line or a group title"),
+    (
+        "JBPopup",
+        "popup container, not a widget; exercised by tests/menus.rs and tests/template_field.rs",
+    ),
     ("MessageResponse", "response"),
     ("Orientation", "enum"),
     (
-        "Panel",
+        "SimpleToolWindowPanel",
         "composition of icon buttons, audited in tests/island_header.rs and data.rs",
     ),
     ("ProgressBar", "display only"),
     ("PropertyGrid", "display only"),
-    ("RowResponse", "response"),
-    ("Separator", "display only"),
-    ("Severity", "enum"),
+    ("CellRendererResponse", "response"),
+    ("SeparatorComponent", "display only"),
+    ("Status", "enum"),
     ("SortOrder", "enum"),
     ("Sparkline", "chart, audited in tests/chart.rs"),
-    ("Spinner", "display only"),
-    ("SplitResponse", "response"),
-    ("TabBarResponse", "response"),
+    ("AsyncProcessIcon", "display only"),
+    ("SplitterResponse", "response"),
+    ("JBTabsResponse", "response"),
     ("Tag", "display only"),
-    ("TextFieldOutput", "response"),
+    ("JBTextFieldOutput", "response"),
     (
-        "Toast",
+        "Notification",
         "composition of links and an icon button, audited in tests/feedback.rs",
     ),
     (
-        "ToolStripe",
-        "lays out `StripeButton`s, which conform; audited in tests/workbench.rs",
+        "ToolWindowToolbar",
+        "lays out `SquareStripeButton`s, which conform; audited in tests/workbench.rs",
     ),
-    ("Tooltip", "behaviour"),
-    ("TooltipExt", "trait"),
+    ("HelpTooltip", "behaviour"),
+    ("HelpTooltipExt", "trait"),
     ("ValueCell", "display only"),
-    ("WindowChrome", "enum"),
-    ("WindowToolbar", "toolbar frame, audited in tests/window.rs"),
+    ("IdeFrameDecorator", "enum"),
+    ("MainToolbar", "toolbar frame, audited in tests/window.rs"),
     (
-        "Workbench",
+        "ToolWindowPane",
         "layout of conforming parts, audited in tests/workbench.rs",
     ),
-    ("WorkbenchPlace", "enum"),
-    ("WorkbenchRegion", "enum"),
-    ("WorkbenchState", "layout state"),
+    ("ToolWindowPlace", "enum"),
+    ("ToolWindowAnchor", "enum"),
+    ("ToolWindowPaneState", "layout state"),
 ];
 
-#[test]
-fn every_interactive_component_passes_conformance() {
-    let module = fs::read_to_string("src/components/mod.rs").expect("components module");
+/// The modules whose `pub use` lines export the kit's widgets, relative to `src/`. The
+/// `editor` module only counts its code view and editor re-exports (its highlighters are
+/// data, not widgets).
+const WIDGET_MODULES: &[(&str, &str)] = &[
+    ("ui/mod.rs", "pub use "),
+    ("ui/tabs/mod.rs", "pub use "),
+    ("ui/popup/mod.rs", "pub use "),
+    ("openapi/ui/mod.rs", "pub use "),
+    ("ide/mod.rs", "pub use "),
+    ("action_system/mod.rs", "pub use "),
+    ("wm/mod.rs", "pub use "),
+    ("notification/mod.rs", "pub use "),
+    ("editor/mod.rs", "pub use code_"),
+];
+
+/// The uppercase names of the `pub use` statements of `module` that start with `prefix`.
+fn exported_names(module: &str, prefix: &str) -> Vec<String> {
+    let text = fs::read_to_string(Path::new("src").join(module)).expect("module source");
     let mut names = Vec::new();
     let mut statement = String::new();
-    for line in module.lines() {
-        if line.starts_with("pub use ") || !statement.is_empty() {
+    for line in text.lines() {
+        if line.starts_with(prefix) || !statement.is_empty() {
             statement.push_str(line);
             if line.trim_end().ends_with(';') {
                 let list = statement
@@ -288,6 +307,15 @@ fn every_interactive_component_passes_conformance() {
             }
         }
     }
+    names
+}
+
+#[test]
+fn every_interactive_component_passes_conformance() {
+    let names: Vec<String> = WIDGET_MODULES
+        .iter()
+        .flat_map(|(module, prefix)| exported_names(module, prefix))
+        .collect();
     let conformance = fs::read_to_string("tests/conformance.rs").expect("conformance tests");
     let missing: Vec<_> = names
         .iter()

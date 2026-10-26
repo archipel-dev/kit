@@ -26,12 +26,12 @@ the IDE, Nexus HTTP and Mongo Raabit, and their plugins.
   a doctest.
 
 ```rust
-use archipel_kit::components::{Banner, Button, Severity, TextField};
+use archipel_kit::ui::{InlineBanner, Button, Status, JBTextField};
 use archipel_kit::egui;
 
 fn connect_form(ui: &mut egui::Ui, url: &mut String) -> bool {
-    Banner::new(Severity::Info, "Paste a connection string").show(ui);
-    ui.add(TextField::new(url).label("URL").placeholder("mongodb://localhost:27017"));
+    InlineBanner::new(Status::Info, "Paste a connection string").show(ui);
+    ui.add(JBTextField::new(url).label("URL").placeholder("mongodb://localhost:27017"));
     ui.add(Button::primary("Connect").enabled(!url.is_empty())).clicked()
 }
 ```

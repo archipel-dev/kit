@@ -1,0 +1,26 @@
+//! The window manager: the IDE frame, its tool windows and their chrome.
+//!
+//! | Item | Use it for |
+//! |---|---|
+//! | [`ToolWindowPane`] ([`ToolWindowPaneState`], [`ToolWindowAnchor`], [`ToolWindowPlace`]) | The docked islands shell. |
+//! | [`SimpleToolWindowPanel`] | An island with a header: views, tabs and actions. |
+//! | [`ToolWindowToolbar`], [`SquareStripeButton`] | The tool window stripes at the window edges. |
+//! | [`StatusBarWidget`] | A status bar item. |
+//! | [`MainToolbar`], [`IdeFrameDecorator`] | The main toolbar and the window frame. |
+//! | [`ToolbarComboButton`] | A main toolbar control that opens a list. |
+
+mod simple_tool_window_panel;
+mod status_bar_widget;
+mod stripe;
+mod tool_window_pane;
+mod toolbar_combo_button;
+mod window;
+
+pub use simple_tool_window_panel::SimpleToolWindowPanel;
+pub use status_bar_widget::StatusBarWidget;
+pub use stripe::{SquareStripeButton, ToolWindowToolbar};
+pub use tool_window_pane::{
+    ToolWindowAnchor, ToolWindowPane, ToolWindowPaneState, ToolWindowPlace,
+};
+pub use toolbar_combo_button::ToolbarComboButton;
+pub use window::{IdeFrameDecorator, MainToolbar};

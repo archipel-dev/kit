@@ -1,12 +1,13 @@
-//! `VirtualList`, `Tree`, `Table` and `TreeTable` tests.
+//! `JBList`, `Tree`, `JBTable` and `TreeTable` tests.
 
 mod common;
 
-use archipel_kit::components::{
-    Cell, CellEdit, Column, ListRow, SortOrder, Table, Tree, TreeRow, TreeTable, VirtualList,
-};
 use archipel_kit::icons::Language;
 use archipel_kit::testing::{self, NodeExt, Queryable};
+use archipel_kit::ui::{
+    Cell, CellEdit, ColoredListCellRenderer, ColumnInfo, JBList, JBTable, SortOrder, Tree,
+    TreeNode, TreeTable,
+};
 use archipel_kit::{Glyph, Theme, Tone, ValueKind};
 use egui::Key;
 
@@ -16,13 +17,13 @@ fn label(i: usize) -> String {
 
 #[test]
 fn list_snapshot() {
-    testing::snapshot_themes("virtual_list", common::IMG, |ui| {
+    testing::snapshot_themes("jb_list", common::IMG, |ui| {
         ui.set_width(280.0);
         let mut selected = Some(2);
-        let _ = VirtualList::new("history", 1_000, &mut selected)
+        let _ = JBList::new("history", 1_000, &mut selected)
             .height(144.0)
             .show(ui, |i| {
-                ListRow::new(label(i))
+                ColoredListCellRenderer::new(label(i))
                     .icon(Glyph::Send)
                     .secondary(format!("{} ms", 20 + i * 7 % 90))
             });
@@ -32,9 +33,9 @@ fn list_snapshot() {
 #[test]
 fn list_draws_only_visible_rows() {
     let harness = testing::harness_state(Theme::dark(), None, |ui, selected| {
-        let _ = VirtualList::new("big", 100_000, selected)
+        let _ = JBList::new("big", 100_000, selected)
             .height(120.0)
-            .show(ui, |i| ListRow::new(label(i)));
+            .show(ui, |i| ColoredListCellRenderer::new(label(i)));
     });
     assert!(harness.query_by_label(&label(0)).is_some());
     assert!(harness.query_by_label(&label(4)).is_some());
@@ -46,9 +47,9 @@ fn list_draws_only_visible_rows() {
 fn list_harness() -> testing::Harness<'static, (Option<usize>, Option<usize>)> {
     let mut harness =
         testing::harness_state(Theme::dark(), (None, None), |ui, (selected, opened)| {
-            let out = VirtualList::new("keys", 1_000, selected)
+            let out = JBList::new("keys", 1_000, selected)
                 .height(120.0)
-                .show(ui, |i| ListRow::new(label(i)));
+                .show(ui, |i| ColoredListCellRenderer::new(label(i)));
             if out.activated.is_some() {
                 *opened = out.activated;
             }
@@ -125,19 +126,19 @@ fn keys_do_nothing_without_focus() {
 }
 
 /// The visible rows of a small project tree.
-fn project_rows(src: bool, tests: bool) -> Vec<TreeRow> {
-    let mut rows = vec![TreeRow::new("kit", 0).icon(Glyph::Folder).parent(true)];
-    rows.push(TreeRow::new("src", 1).icon(Glyph::Folder).parent(src));
+fn project_rows(src: bool, tests: bool) -> Vec<TreeNode> {
+    let mut rows = vec![TreeNode::new("kit", 0).icon(Glyph::Folder).parent(true)];
+    rows.push(TreeNode::new("src", 1).icon(Glyph::Folder).parent(src));
     if src {
-        rows.push(TreeRow::new("lib.rs", 2).icon(Language::Rust));
-        rows.push(TreeRow::new("theme.rs", 2).icon(Language::Rust));
+        rows.push(TreeNode::new("lib.rs", 2).icon(Language::Rust));
+        rows.push(TreeNode::new("theme.rs", 2).icon(Language::Rust));
     }
-    rows.push(TreeRow::new("tests", 1).icon(Glyph::Folder).parent(tests));
+    rows.push(TreeNode::new("tests", 1).icon(Glyph::Folder).parent(tests));
     if tests {
-        rows.push(TreeRow::new("docs.rs", 2).icon(Language::Rust));
+        rows.push(TreeNode::new("docs.rs", 2).icon(Language::Rust));
     }
     rows.push(
-        TreeRow::new("Cargo.toml", 1)
+        TreeNode::new("Cargo.toml", 1)
             .icon(Language::Toml)
             .secondary("workspace"),
     );
@@ -241,12 +242,12 @@ fn tree_chevron_click_toggles() {
 
 const STATUS: [u16; 6] = [200, 201, 404, 200, 500, 304];
 
-fn request_columns() -> Vec<Column> {
+fn request_columns() -> Vec<ColumnInfo> {
     vec![
-        Column::new("Method", 70.0),
-        Column::new("URL", 190.0).mono(),
-        Column::new("Status", 64.0).right(),
-        Column::new("Time", 70.0).right(),
+        ColumnInfo::new("Method", 70.0),
+        ColumnInfo::new("URL", 190.0).mono(),
+        ColumnInfo::new("Status", 64.0).right(),
+        ColumnInfo::new("Time", 70.0).right(),
     ]
 }
 
@@ -267,11 +268,11 @@ fn request_cell(row: usize, col: usize) -> Cell {
 
 #[test]
 fn table_snapshot() {
-    testing::snapshot_themes("table", common::IMG, |ui| {
+    testing::snapshot_themes("jb_table", common::IMG, |ui| {
         ui.set_width(420.0);
         let mut columns = request_columns();
         let mut selected = Some(1);
-        let _ = Table::new("requests", &mut columns, 500, &mut selected)
+        let _ = JBTable::new("requests", &mut columns, 500, &mut selected)
             .sort(Some((3, SortOrder::Descending)))
             .height(144.0)
             .show(ui, request_cell);
@@ -280,7 +281,7 @@ fn table_snapshot() {
 
 #[derive(Default)]
 struct TableState {
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     selected: Option<usize>,
     sort: Option<(usize, SortOrder)>,
 }
@@ -291,7 +292,7 @@ fn table_harness() -> testing::Harness<'static, TableState> {
         ..TableState::default()
     };
     let mut harness = testing::harness_state(Theme::dark(), state, |ui, state| {
-        let out = Table::new("requests", &mut state.columns, 10_000, &mut state.selected)
+        let out = JBTable::new("requests", &mut state.columns, 10_000, &mut state.selected)
             .sort(state.sort)
             .height(160.0)
             .show(ui, request_cell);
@@ -322,10 +323,10 @@ fn clipped_columns_do_not_register_headers_or_resize_handles() {
     let mut h = testing::harness_state(Theme::dark(), None::<usize>, |ui, selected| {
         ui.set_width(180.0);
         let mut columns = [
-            Column::new("Visible", 240.0),
-            Column::new("Offscreen", 100.0),
+            ColumnInfo::new("Visible", 240.0),
+            ColumnInfo::new("Offscreen", 100.0),
         ];
-        Table::new("narrow", &mut columns, 1, selected).show(ui, |_, _| Cell::new("value"));
+        JBTable::new("narrow", &mut columns, 1, selected).show(ui, |_, _| Cell::new("value"));
     });
     h.run();
     assert!(h.query_by_label("Offscreen").is_none());
@@ -341,8 +342,12 @@ fn clipped_columns_do_not_register_headers_or_resize_handles() {
 fn narrow_columns_keep_headers_aligned_with_the_caller_widths() {
     let mut h = testing::harness_state(Theme::dark(), None::<usize>, |ui, selected| {
         ui.set_width(260.0);
-        let mut columns = [Column::new("Tiny", 24.0), Column::new("Name", 120.0)];
-        Table::new("narrow-column", &mut columns, 1, selected).show(ui, |_, _| Cell::new("value"));
+        let mut columns = [
+            ColumnInfo::new("Tiny", 24.0),
+            ColumnInfo::new("Name", 120.0),
+        ];
+        JBTable::new("narrow-column", &mut columns, 1, selected)
+            .show(ui, |_, _| Cell::new("value"));
     });
     h.run();
     let difference = h.get_by_label("Name").rect().left() - h.get_by_label("Tiny").rect().left();
@@ -390,27 +395,27 @@ fn table_columns_resize_by_dragging_the_header_edge() {
 // ---- TreeTable ----
 
 /// The visible rows of a small MongoDB document: key | value | type.
-fn document_rows(address_open: bool) -> Vec<TreeRow> {
+fn document_rows(address_open: bool) -> Vec<TreeNode> {
     let mut rows = vec![
-        TreeRow::new("name", 0).editable(true),
-        TreeRow::new("age", 0),
-        TreeRow::new("address", 0)
+        TreeNode::new("name", 0).editable(true),
+        TreeNode::new("age", 0),
+        TreeNode::new("address", 0)
             .icon(Glyph::Folder)
             .parent(address_open),
     ];
     if address_open {
-        rows.push(TreeRow::new("city", 1));
-        rows.push(TreeRow::new("zip", 1));
+        rows.push(TreeNode::new("city", 1));
+        rows.push(TreeNode::new("zip", 1));
     }
-    rows.push(TreeRow::new("active", 0));
+    rows.push(TreeNode::new("active", 0));
     rows
 }
 
-fn document_columns() -> Vec<Column> {
+fn document_columns() -> Vec<ColumnInfo> {
     vec![
-        Column::new("Key", 130.0),
-        Column::new("Value", 150.0).mono(),
-        Column::new("Type", 70.0),
+        ColumnInfo::new("Key", 130.0),
+        ColumnInfo::new("Value", 150.0).mono(),
+        ColumnInfo::new("Type", 70.0),
     ]
 }
 
@@ -454,7 +459,7 @@ fn tree_table_snapshot() {
 
 #[derive(Default)]
 struct DocState {
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     selected: Option<usize>,
     address_open: bool,
     name: String,
@@ -737,8 +742,8 @@ fn tree_table_header_sorts_and_edge_resizes_the_column() {
 
 #[test]
 fn tree_table_with_100k_rows_draws_only_the_visible_ones() {
-    let rows: Vec<TreeRow> = (0..100_000)
-        .map(|i| TreeRow::new(format!("field{i}"), i % 3))
+    let rows: Vec<TreeNode> = (0..100_000)
+        .map(|i| TreeNode::new(format!("field{i}"), i % 3))
         .collect();
     let mut state = (document_columns(), Some(0usize));
     let mut harness = testing::harness_state(Theme::dark(), (), move |ui, _| {
@@ -804,11 +809,11 @@ fn tree_table_editing_snapshot() {
     results.unwrap();
 }
 
-// ---- Table: inline edit and column reorder ----
+// ---- JBTable: inline edit and column reorder ----
 
 #[derive(Default)]
 struct EditableTable {
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     /// The data column shown at each position.
     order: Vec<usize>,
     selected: Option<usize>,
@@ -823,7 +828,7 @@ struct EditableTable {
 fn editable_table_ui(ui: &mut egui::Ui, state: &mut EditableTable) {
     let order = state.order.clone();
     let urls = state.urls.clone();
-    let out = Table::new("requests", &mut state.columns, 10_000, &mut state.selected)
+    let out = JBTable::new("requests", &mut state.columns, 10_000, &mut state.selected)
         .sort(state.sort)
         .reorderable(true)
         .height(160.0)
@@ -1062,7 +1067,7 @@ fn table_editing_snapshot() {
         harness.run();
         harness.fit_contents();
         results.add(harness.try_snapshot_options(
-            format!("table_edit.{suffix}"),
+            format!("jb_table_edit.{suffix}"),
             &testing::SnapshotOptions::new().output_path(common::IMG),
         ));
     }
@@ -1075,12 +1080,12 @@ fn table_editing_snapshot() {
 /// selected, like tones do, and `.tone` still works next to `.value_kind`.
 #[test]
 fn table_value_kinds_snapshot() {
-    testing::snapshot_themes("table_value_kinds", common::IMG, |ui| {
+    testing::snapshot_themes("jb_table_value_kinds", common::IMG, |ui| {
         ui.set_width(380.0);
         let mut columns = vec![
-            Column::new("Kind", 90.0),
-            Column::new("Value", 200.0).mono(),
-            Column::new("Tone", 60.0),
+            ColumnInfo::new("Kind", 90.0),
+            ColumnInfo::new("Value", 200.0).mono(),
+            ColumnInfo::new("Tone", 60.0),
         ];
         let mut selected = Some(0);
         let samples = [
@@ -1094,7 +1099,7 @@ fn table_value_kinds_snapshot() {
             ("Key", "address", ValueKind::Key),
             ("Punctuation", "{ 2 fields }", ValueKind::Punctuation),
         ];
-        let _ = Table::new("kinds", &mut columns, samples.len(), &mut selected)
+        let _ = JBTable::new("kinds", &mut columns, samples.len(), &mut selected)
             .height(24.0 * 9.0)
             .show(ui, |row, col| match col {
                 0 => Cell::new(samples[row].0),
@@ -1109,8 +1114,8 @@ fn table_value_kinds_snapshot() {
 
 #[test]
 fn tree_rows_take_behaviours_and_pass_the_audit() {
-    use archipel_kit::behaviour::{ContextMenu, DragSource, DropTarget};
-    use archipel_kit::components::MenuItem;
+    use archipel_kit::action_system::ActionMenuItem;
+    use archipel_kit::behaviour::{DragSource, DropTarget, PopupHandler};
 
     #[derive(Default)]
     struct State {
@@ -1132,8 +1137,8 @@ fn tree_rows_take_behaviours_and_pass_the_audit() {
             .show_with(ui, |index, row| {
                 let row = row
                     .with(DragSource(index))
-                    .with(ContextMenu::new(move |ui| {
-                        if ui.add(MenuItem::new("Rename…")).clicked() {
+                    .with(PopupHandler::new(move |ui| {
+                        if ui.add(ActionMenuItem::new("Rename…")).clicked() {
                             renamed.borrow_mut().push(index);
                         }
                     }));
@@ -1177,16 +1182,16 @@ fn tree_rows_take_behaviours_and_pass_the_audit() {
     );
 }
 
-/// A flat list of tree nodes drawn from `ListRow`s: group 0 has two children.
+/// A flat list of tree nodes drawn from `ColoredListCellRenderer`s: group 0 has two children.
 fn node_harness() -> testing::Harness<'static, (Option<usize>, bool)> {
     let mut harness =
         testing::harness_state(Theme::dark(), (None, true), |ui, (selected, open)| {
             let rows = if *open { 3 } else { 1 };
-            let out = VirtualList::new("nodes", rows, selected)
+            let out = JBList::new("nodes", rows, selected)
                 .height(120.0)
                 .show(ui, |i| match i {
-                    0 => ListRow::new("Group").expanded(Some(*open)),
-                    n => ListRow::new(format!("Child {n}")).depth(1),
+                    0 => ColoredListCellRenderer::new("Group").expanded(Some(*open)),
+                    n => ColoredListCellRenderer::new(format!("Child {n}")).depth(1),
                 });
             if out.toggled == Some(0) {
                 *open = !*open;

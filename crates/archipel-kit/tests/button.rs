@@ -2,9 +2,9 @@
 
 mod common;
 
-use archipel_kit::components::{Button, IconButton};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme, Tone};
+use archipel_kit::{action_system::ActionButton, ui::Button};
 
 #[test]
 fn snapshot() {
@@ -26,14 +26,14 @@ fn snapshot() {
 }
 
 #[test]
-fn icon_button_snapshot() {
-    testing::snapshot_themes("icon_button", common::IMG, |ui| {
+fn action_button_snapshot() {
+    testing::snapshot_themes("action_button", common::IMG, |ui| {
         ui.horizontal(|ui| {
-            ui.add(IconButton::new(Glyph::Refresh, "Reload"));
-            ui.add(IconButton::new(Glyph::Run, "Run").tone(Tone::Run));
-            ui.add(IconButton::new(Glyph::Stop, "Stop").tone(Tone::Stop));
-            ui.add(IconButton::new(Glyph::Pin, "Pin").selected(true));
-            ui.add(IconButton::new(Glyph::Debug, "Debug").enabled(false));
+            ui.add(ActionButton::new(Glyph::Refresh, "Reload"));
+            ui.add(ActionButton::new(Glyph::Run, "Run").tone(Tone::Run));
+            ui.add(ActionButton::new(Glyph::Stop, "Stop").tone(Tone::Stop));
+            ui.add(ActionButton::new(Glyph::Pin, "Pin").selected(true));
+            ui.add(ActionButton::new(Glyph::Debug, "Debug").enabled(false));
         });
     });
 }
@@ -79,10 +79,10 @@ fn keyboard_activates_focused_button() {
 }
 
 #[test]
-fn icon_button_is_named_by_its_label_and_reports_toggle_state() {
+fn action_button_is_named_by_its_label_and_reports_toggle_state() {
     let mut harness = testing::harness_state(Theme::dark(), false, |ui, pinned| {
         if ui
-            .add(IconButton::new(Glyph::Pin, "Pin tab").selected(*pinned))
+            .add(ActionButton::new(Glyph::Pin, "Pin tab").selected(*pinned))
             .clicked()
         {
             *pinned = !*pinned;

@@ -6,7 +6,7 @@
 //! themes:
 //!
 //! ```no_run
-//! use archipel_kit::components::Button;
+//! use archipel_kit::ui::Button;
 //! use archipel_kit::testing::{self, Queryable};
 //! use archipel_kit::Theme;
 //!

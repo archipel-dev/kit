@@ -36,9 +36,9 @@ impl State {
         let latency = [
             12.0, 14.5, 11.0, 13.0, 30.0, 18.0, 16.5, 15.0, 14.0, 17.0, 12.5, 13.5,
         ];
-        ui.add(SectionHeader::new("Histogram: value distribution"));
+        ui.add(TitledSeparator::new("Histogram: value distribution"));
         Histogram::new("price", &price).show(ui);
-        ui.add(SectionHeader::new("Selectable, on the sequential ramp"));
+        ui.add(TitledSeparator::new("Selectable, on the sequential ramp"));
         let out = Histogram::new("price", &price)
             .selectable(true)
             .ramp(true)
@@ -50,7 +50,7 @@ impl State {
         if let Some(index) = out.clicked {
             self.last_action = format!("Bucket {} activated", price[index].label());
         }
-        ui.add(SectionHeader::new("Top values (horizontal)"));
+        ui.add(TitledSeparator::new("Top values (horizontal)"));
         let out = Histogram::new("city", &cities)
             .horizontal(true)
             .selectable(true)
@@ -59,13 +59,13 @@ impl State {
         if out.selected.is_some() {
             self.city = out.selected;
         }
-        ui.add(SectionHeader::new("Disabled and empty"));
+        ui.add(TitledSeparator::new("Disabled and empty"));
         Histogram::new("price", &price)
             .height(56.0)
             .enabled(false)
             .show(ui);
         Histogram::new("price", &[]).height(40.0).show(ui);
-        ui.add(SectionHeader::new("Sparklines"));
+        ui.add(TitledSeparator::new("Sparklines"));
         ui.horizontal(|ui| {
             ui.label("p95 latency");
             ui.add(Sparkline::new("p95 latency", &latency).tooltip(true));

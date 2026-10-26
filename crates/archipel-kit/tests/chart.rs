@@ -2,8 +2,8 @@
 
 mod common;
 
-use archipel_kit::components::{Bucket, ChartColor, Histogram, Sparkline};
 use archipel_kit::testing::{self, Queryable};
+use archipel_kit::ui::{Bucket, ChartColor, Histogram, Sparkline};
 use archipel_kit::{Theme, Tone, cursor, egui};
 use egui::{CursorIcon, Key};
 
@@ -236,7 +236,7 @@ fn a_tooltip_attached_by_the_caller_replaces_the_automatic_one() {
     let buckets = price();
     let mut harness = testing::harness(Theme::dark(), |ui| {
         Histogram::new("price", &buckets)
-            .with(archipel_kit::components::Tooltip::new("Filter by price"))
+            .with(archipel_kit::ide::HelpTooltip::new("Filter by price"))
             .show(ui);
     });
     harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 260.0));

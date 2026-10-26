@@ -3,10 +3,10 @@
 
 mod common;
 
-use archipel_kit::components::code::{
+use archipel_kit::editor::{CodeEditor, CodeView};
+use archipel_kit::editor::{
     ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
 };
-use archipel_kit::components::{CodeEditor, CodeView};
 use archipel_kit::parts::ValueKind;
 use archipel_kit::testing::{self, NodeExt, NodeT, Queryable, Role};
 use archipel_kit::{Theme, egui};
@@ -452,7 +452,7 @@ fn wrapped_view_breaks_long_lines() {
 
 #[test]
 fn highlighters_color_the_expected_tokens() {
-    use archipel_kit::components::code::{
+    use archipel_kit::editor::{
         Highlighter, Span, TokenKind,
         TokenKind::{Attribute, Comment, Error, Keyword, Number, Property, Tag, Variable},
     };

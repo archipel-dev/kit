@@ -1,7 +1,7 @@
 //! The content of a row: icon, label, secondary text, trailing text.
 
 use super::{State, Tone};
-use crate::components::common;
+use crate::common;
 use crate::icons::{self, Icon};
 use crate::theme::Theme;
 use crate::tokens::{size, typography};
@@ -24,7 +24,7 @@ impl fmt::Debug for IconPainter<'_> {
 /// the label, dimmed secondary text after it, and right-aligned trailing text (a shortcut, a
 /// count).
 #[derive(Debug, Clone, Default)]
-pub struct RowContent<'a> {
+pub struct SimpleColoredComponent<'a> {
     /// Icon in the icon column.
     pub icon: Option<Icon>,
     /// Meaning of the icon's color (default: the icon gray).
@@ -48,7 +48,7 @@ pub struct RowContent<'a> {
     pub reserve_right: f32,
 }
 
-impl<'a> RowContent<'a> {
+impl<'a> SimpleColoredComponent<'a> {
     /// A row reading `label`.
     pub fn new(label: &'a str) -> Self {
         Self {

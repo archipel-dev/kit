@@ -16,7 +16,7 @@ UI and draw without per-frame allocations beyond the text layout.
 ## Usage
 
 ```rust
-use archipel_kit::components::{Bucket, ChartColor, Histogram, Sparkline};
+use archipel_kit::ui::{Bucket, ChartColor, Histogram, Sparkline};
 use archipel_kit::{Tone, egui};
 
 fn field_stats(ui: &mut egui::Ui, selected: &mut Option<usize>, latency: &[f32]) {
@@ -63,7 +63,7 @@ fn field_stats(ui: &mut egui::Ui, selected: &mut Option<usize>, latency: &[f32])
 | `.selectable(bool)` | Opt into click, arrow keys and Enter. |
 | `.selected(Option<usize>)` | The caller's selection. |
 | `.enabled(bool)` | Disabled charts are dimmed and inert. |
-| `.with(behaviour)` | [Behaviours](../behaviours.md): a context menu, or your own `Tooltip`, which replaces the automatic one. |
+| `.with(behaviour)` | [Behaviours](../behaviours.md): a context menu, or your own `HelpTooltip`, which replaces the automatic one. |
 | `Sparkline::new(name, &[f32])` | `.width(f32)` (96 pt; the height is fixed), `.color`, `.last_marker(bool)`, `.min_max_band(bool)`, `.scale(low, high)`, `.tooltip(bool)`, `.format(fn(f32) -> String)`. |
 
 `Histogram::show` returns a `HistogramResponse`: `response`, `hovered`, `selected` (changed
@@ -99,5 +99,5 @@ others `Image`. A sparkline is an image named "Sparkline of latency: 12 points, 
 max 30, last 13.5". Don't use color alone to tell series apart; the tooltip, labels and
 summary carry the values.
 
-Source: [`components/chart.rs`](../../crates/archipel-kit/src/components/chart.rs) ·
+Source: [`ui/chart.rs`](../../crates/archipel-kit/src/ui/chart.rs) ·
 Tests: [`tests/chart.rs`](../../crates/archipel-kit/tests/chart.rs)

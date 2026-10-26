@@ -44,13 +44,13 @@ The colors and icons come straight from the GUI. The shapes follow terminal conv
 |---|---|
 | Floating islands on the frame color | `Island`: a flat block of the island color, one cell apart on a `Frame`; no borders |
 | Tool window header, active tool window | A title pill on the first row, in the accent when the panel has focus (like Telescope titles) |
-| Editor tabs | `TabBar`, a tab line like NvChad's tabufline: buffers on the frame color, the selected one in the island color so it joins the editor |
+| Editor tabs | `JBTabs`, a tab line like NvChad's tabufline: buffers on the frame color, the selected one in the island color so it joins the editor |
 | Status bar | `StatusBar`: a mode block in the accent ending in a half circle, key hints, and a status block on the right |
 | Text field | A prompt: a pill of the field color with the label pill (or a search icon) inside, the error on the next row |
 | Selected row (inset pill) | A full-width bar in the selection color; quieter when the list isn't focused |
 | Hover | The hover color on the focused row (keyboard focus stands in for the mouse) |
 | Rounded buttons | A filled label with one cell of padding; the shortcut key is underlined; focus shows `❯ … ❮` |
-| Banner | One row: an edge in the severity color, icon and text on the tint, actions as bold links |
+| InlineBanner | One row: an edge in the severity color, icon and text on the tint, actions as bold links |
 | Theme colors (`Theme::colors`) | 24-bit colors from the same `Theme`; translucent colors are blended over the island |
 | Glyphs, language and symbol icons | Nerd Font codicons and logos in the same colors (language colors lifted to 3:1 contrast) |
 
@@ -68,7 +68,7 @@ Components are ratatui `Widget`s that borrow a `Look`. They are stateless like t
 components: your app owns the state and passes it in on every frame.
 
 ```rust
-use archipel_kit_tui::components::{Button, Checkbox, Frame, Island};
+use archipel_kit_tui::components::{Button, JBCheckBox, Frame, Island};
 use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 use archipel_kit_tui::{Glyph, Look};
 
@@ -78,7 +78,7 @@ fn draw(look: &Look, format_on_save: bool, area: Rect, buf: &mut Buffer) {
     let panel = Rect::new(1, 1, area.width - 2, area.height - 2);
     let inner = island.inner(panel);
     island.render(panel, buf);
-    Checkbox::new(look, format_on_save, "Format on save")
+    JBCheckBox::new(look, format_on_save, "Format on save")
         .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
     let run = Button::primary(look, "Apply").icon(Glyph::Success);
     let width = run.width();
@@ -113,14 +113,14 @@ focus markers included.
 
 <img alt="Buttons in the terminal" src="img/button.dark.svg" width="538"> <img alt="Buttons, light" src="img/button.light.svg" width="538">
 
-### Checkbox, Radio, Toggle
+### JBCheckBox, JBRadioButton, OnOffButton
 
-`Checkbox` (checked, unchecked, `mixed`, disabled), `Radio` and the `Toggle` switch. A
+`JBCheckBox` (checked, unchecked, `mixed`, disabled), `JBRadioButton` and the `OnOffButton` switch. A
 `focused` row gets the hover color.
 
 <img alt="Checkboxes, radio buttons and toggles" src="img/choice.dark.svg" width="403"> <img alt="Choices, light" src="img/choice.light.svg" width="403">
 
-### TextField
+### JBTextField
 
 A prompt-style input: the label in a pill (a search icon without a label), a placeholder
 while empty, an accent pill and a cursor while focused, and a red pill with the message on
@@ -128,7 +128,7 @@ the next row on error. `height()` is 1, or 2 with an error.
 
 <img alt="Text fields: placeholder, focused, error" src="img/text-field.dark.svg" width="370"> <img alt="Text fields, light" src="img/text-field.light.svg" width="370">
 
-### ListRow
+### ColoredListCellRenderer
 
 Rows of lists and trees: `depth`, an `expanded` chevron, an icon (`Glyph`, `Language` or
 `Symbol`), `secondary` text, and `selected`, shown as a full-width bar. Use
@@ -136,14 +136,14 @@ Rows of lists and trees: `depth`, an `expanded` chevron, an icon (`Glyph`, `Lang
 
 <img alt="A project tree and a structure view" src="img/list-row.dark.svg" width="336"> <img alt="List rows, light" src="img/list-row.light.svg" width="336">
 
-### TabBar
+### JBTabs
 
 The tab line of open buffers. Each tab has its language icon. A green dot marks a modified
 buffer, and the selected tab has a red close icon. Put it directly above the editor panel.
 
 <img alt="Editor tabs" src="img/tab-bar.dark.svg" width="504"> <img alt="Editor tabs, light" src="img/tab-bar.light.svg" width="504">
 
-### Banner
+### InlineBanner
 
 Info, success, warning and error messages with actions on the right.
 
@@ -156,7 +156,7 @@ The status line: `mode` (the accent block at the left), key hints as (key, actio
 
 <img alt="Status bar with mode, key hints and position" src="img/status-bar.dark.svg" width="605"> <img alt="Status bar, light" src="img/status-bar.light.svg" width="605">
 
-### SegmentedControl, ProgressBar, Kbd, Chip
+### SegmentedButton, ProgressBar, Kbd, Chip
 
 <img alt="Segmented control, progress bar, key caps and chips" src="img/misc.dark.svg" width="437"> <img alt="Misc, light" src="img/misc.light.svg" width="437">
 
@@ -207,7 +207,7 @@ light, and `q` quits.
   declarative view layer from the kit roadmap, so a screen isn't written twice by hand.
 - **Interaction helpers**: focus order, mouse hit testing and scrolling lists, shared by all
   components.
-- **More components**: Dropdown and menus as popups, Toast, dialogs, tooltips (on focus), and a
+- **More components**: ComboBox and menus as popups, Notification, dialogs, tooltips (on focus), and a
   split layout with draggable dividers.
 - **`archipel-theme` crate**: the theme and tokens without egui, so the TUI doesn't compile
   egui.

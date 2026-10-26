@@ -27,7 +27,7 @@ impl State {
                 let mut parent = all;
                 if form
                     .add(
-                        Checkbox::new(&mut parent, "All inspections")
+                        JBCheckBox::new(&mut parent, "All inspections")
                             .mixed(some && !all)
                             .enabled(enabled),
                     )
@@ -37,14 +37,14 @@ impl State {
                 }
                 let [a, b, c] = &mut self.checks;
                 form.indent(|form| {
-                    form.add(Checkbox::new(a, "Unused imports").enabled(enabled));
+                    form.add(JBCheckBox::new(a, "Unused imports").enabled(enabled));
                     form.add(
-                        Checkbox::new(b, "Spelling")
+                        JBCheckBox::new(b, "Spelling")
                             .inline_comment("Requires restart")
                             .enabled(enabled),
                     );
                     form.add(
-                        Checkbox::new(c, "Deprecated API")
+                        JBCheckBox::new(c, "Deprecated API")
                             .comment("Highlights calls to APIs marked deprecated by their library")
                             .enabled(enabled),
                     );
@@ -52,13 +52,14 @@ impl State {
             });
             form.group("Radio buttons", |form| {
                 form.radios("Indent with", |ui| {
-                    ui.add(Radio::new(&mut self.indent, 0, "Tabs").enabled(enabled));
-                    ui.add(Radio::new(&mut self.indent, 1, "Spaces").enabled(enabled));
+                    ui.add(JBRadioButton::new(&mut self.indent, 0, "Tabs").enabled(enabled));
+                    ui.add(JBRadioButton::new(&mut self.indent, 1, "Spaces").enabled(enabled));
                 });
             });
             form.group("Toggles", |form| {
                 form.add(
-                    Toggle::new(&mut self.toggles[0], "Save files automatically").enabled(enabled),
+                    OnOffButton::new(&mut self.toggles[0], "Save files automatically")
+                        .enabled(enabled),
                 );
             });
         });

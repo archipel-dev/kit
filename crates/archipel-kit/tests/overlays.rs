@@ -1,35 +1,38 @@
-//! `Tooltip`, `Dialog`, `MenuSeparator` and cursor tests.
+//! `HelpTooltip`, `DialogWrapper`, `ListSeparator` and cursor tests.
 
 mod common;
 
-use archipel_kit::components::{
-    Button, Dialog, DialogAction, IconButton, Link, ListRow, MenuItem, MenuSeparator, TextField,
-    Tooltip, TooltipExt,
-};
 use archipel_kit::testing::{self, Queryable};
 use archipel_kit::{Glyph, Theme, cursor};
+use archipel_kit::{
+    action_system::{ActionButton, ActionMenuItem},
+    ide::{HelpTooltip, HelpTooltipExt},
+    openapi::ui::{DialogWrapper, ExitCode},
+    ui::popup::ListSeparator,
+    ui::{ActionLink, Button, ColoredListCellRenderer, JBTextField},
+};
 use egui::CursorIcon;
 
 #[test]
-fn tooltip_snapshot() {
-    testing::snapshot_themes("tooltip", common::IMG, |ui| {
+fn help_tooltip_snapshot() {
+    testing::snapshot_themes("help_tooltip", common::IMG, |ui| {
         ui.spacing_mut().item_spacing.y = 10.0;
         for tooltip in [
-            Tooltip::new("Run 'gallery'").shortcut("Shift+F10"),
-            Tooltip::new("Search Everywhere")
+            HelpTooltip::new("Run 'gallery'").shortcut("Shift+F10"),
+            HelpTooltip::new("Search Everywhere")
                 .shortcut("Double Shift")
                 .hint("Find files, actions, classes and symbols in one place."),
         ] {
-            Tooltip::frame(ui.ctx()).show(ui, |ui| tooltip.content(ui));
+            HelpTooltip::frame(ui.ctx()).show(ui, |ui| tooltip.content(ui));
         }
     });
 }
 
 #[test]
-fn tooltip_shows_after_hovering() {
+fn help_tooltip_shows_after_hovering() {
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        ui.add(IconButton::new(Glyph::Run, "Run"))
-            .tooltip_with(Tooltip::new("Run 'gallery'").shortcut("Shift+F10"));
+        ui.add(ActionButton::new(Glyph::Run, "Run"))
+            .tooltip_with(HelpTooltip::new("Run 'gallery'").shortcut("Shift+F10"));
     });
     harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 160.0));
     assert!(harness.query_by_label("Run 'gallery'").is_none());
@@ -39,7 +42,7 @@ fn tooltip_shows_after_hovering() {
 }
 
 #[test]
-fn tooltip_explains_disabled_widgets() {
+fn help_tooltip_explains_disabled_widgets() {
     let mut harness = testing::harness(Theme::dark(), |ui| {
         ui.add(Button::primary("Deploy").enabled(false))
             .tooltip("Connect a cluster first");
@@ -53,17 +56,17 @@ fn tooltip_explains_disabled_widgets() {
 #[test]
 fn menu_separator_divides_items() {
     let harness = testing::harness(Theme::dark(), |ui| {
-        ui.add(MenuItem::new("Open…"));
-        ui.add(MenuSeparator);
-        ui.add(MenuItem::new("Exit"));
+        ui.add(ActionMenuItem::new("Open…"));
+        ui.add(ListSeparator::new());
+        ui.add(ActionMenuItem::new("Exit"));
     });
     let open = harness.get_by_label("Open…").rect();
     let exit = harness.get_by_label("Exit").rect();
     assert!(exit.top() - open.bottom() >= 8.0, "{open:?} {exit:?}");
 }
 
-fn delete_dialog(ui: &mut egui::Ui) -> Option<DialogAction> {
-    Dialog::new("Delete “main.rs”?")
+fn delete_dialog(ui: &mut egui::Ui) -> Option<ExitCode> {
+    DialogWrapper::new("Delete “main.rs”?")
         .icon(Glyph::Warning)
         .message("The file will be moved to the trash. You can restore it from there.")
         .primary("Delete")
@@ -73,31 +76,41 @@ fn delete_dialog(ui: &mut egui::Ui) -> Option<DialogAction> {
 }
 
 #[test]
-fn dialog_snapshot() {
-    testing::snapshot_themes_sized("dialog", common::IMG, egui::vec2(520.0, 240.0), |ui| {
-        ui.label("Editor content behind the dialog");
-        let _ = delete_dialog(ui);
-    });
+fn dialog_wrapper_snapshot() {
+    testing::snapshot_themes_sized(
+        "dialog_wrapper",
+        common::IMG,
+        egui::vec2(520.0, 240.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            let _ = delete_dialog(ui);
+        },
+    );
 }
 
 #[test]
-fn dialog_with_content_snapshot() {
-    testing::snapshot_themes_sized("dialog_form", common::IMG, egui::vec2(520.0, 260.0), |ui| {
-        ui.label("Editor content behind the dialog");
-        let mut name = String::from("feature/islands");
-        let _ = Dialog::new("New Branch")
-            .content(|ui| {
-                ui.add(TextField::new(&mut name).label("Branch name"));
-            })
-            .primary("Create")
-            .secondary("Cancel")
-            .width(360.0)
-            .show(ui.ctx());
-    });
+fn dialog_wrapper_with_content_snapshot() {
+    testing::snapshot_themes_sized(
+        "dialog_wrapper_form",
+        common::IMG,
+        egui::vec2(520.0, 260.0),
+        |ui| {
+            ui.label("Editor content behind the dialog");
+            let mut name = String::from("feature/islands");
+            let _ = DialogWrapper::new("New Branch")
+                .content(|ui| {
+                    ui.add(JBTextField::new(&mut name).label("Branch name"));
+                })
+                .primary("Create")
+                .secondary("Cancel")
+                .width(360.0)
+                .show(ui.ctx());
+        },
+    );
 }
 
 /// Runs `delete_dialog` and records the first action.
-fn dialog_harness() -> testing::Harness<'static, Option<DialogAction>> {
+fn dialog_wrapper_harness() -> testing::Harness<'static, Option<ExitCode>> {
     let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
         if let Some(done) = delete_dialog(ui) {
             action.get_or_insert(done);
@@ -109,35 +122,35 @@ fn dialog_harness() -> testing::Harness<'static, Option<DialogAction>> {
 }
 
 #[test]
-fn dialog_reports_buttons() {
-    let mut harness = dialog_harness();
+fn dialog_wrapper_reports_buttons() {
+    let mut harness = dialog_wrapper_harness();
     harness.get_by_label("Delete").click();
     harness.run();
-    assert_eq!(*harness.state(), Some(DialogAction::Primary));
+    assert_eq!(*harness.state(), Some(ExitCode::Primary));
 
-    let mut harness = dialog_harness();
+    let mut harness = dialog_wrapper_harness();
     harness.get_by_label("Cancel").click();
     harness.run();
-    assert_eq!(*harness.state(), Some(DialogAction::Secondary));
+    assert_eq!(*harness.state(), Some(ExitCode::Secondary));
 }
 
 #[test]
-fn dialog_keys_confirm_and_dismiss() {
-    let mut harness = dialog_harness();
+fn dialog_wrapper_keys_confirm_and_dismiss() {
+    let mut harness = dialog_wrapper_harness();
     harness.key_press(egui::Key::Enter);
     harness.run();
-    assert_eq!(*harness.state(), Some(DialogAction::Primary));
+    assert_eq!(*harness.state(), Some(ExitCode::Primary));
 
-    let mut harness = dialog_harness();
+    let mut harness = dialog_wrapper_harness();
     harness.key_press(egui::Key::Escape);
     harness.run();
-    assert_eq!(*harness.state(), Some(DialogAction::Dismissed));
+    assert_eq!(*harness.state(), Some(ExitCode::Dismissed));
 }
 
 #[test]
-fn dialog_disabled_primary_ignores_enter() {
+fn dialog_wrapper_disabled_primary_ignores_enter() {
     let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
-        let shown = Dialog::new("Rename")
+        let shown = DialogWrapper::new("Rename")
             .primary("Rename")
             .primary_enabled(false)
             .secondary("Cancel")
@@ -166,10 +179,10 @@ fn cursor_harness(
 #[test]
 fn components_set_their_cursor() {
     let mut harness = cursor_harness(|ui| {
-        ui.add(Link::new("Configure…"));
+        ui.add(ActionLink::new("Configure…"));
         ui.add(Button::primary("Run"));
         ui.add(Button::secondary("Stop").enabled(false));
-        ListRow::new("main.rs").show(ui);
+        ColoredListCellRenderer::new("main.rs").show(ui);
     });
     harness.get_by_label("Configure…").hover();
     harness.run();
@@ -212,7 +225,7 @@ fn theme_picks_the_action_cursor() {
 fn parent_override_wins_over_children() {
     let mut harness = cursor_harness(|ui| {
         cursor::override_in(ui, Some(CursorIcon::Progress), |ui| {
-            ui.add(Link::new("Configure…"));
+            ui.add(ActionLink::new("Configure…"));
         });
     });
     harness.get_by_label("Configure…").hover();
@@ -224,7 +237,7 @@ fn parent_override_wins_over_children() {
 fn no_override_leaves_children_alone() {
     let mut harness = cursor_harness(|ui| {
         cursor::override_in(ui, None, |ui| {
-            ui.add(Link::new("Configure…"));
+            ui.add(ActionLink::new("Configure…"));
         });
     });
     harness.get_by_label("Configure…").hover();
@@ -236,7 +249,7 @@ fn no_override_leaves_children_alone() {
 fn fallback_loses_to_children() {
     let mut harness = cursor_harness(|ui| {
         cursor::fallback_in(ui, CursorIcon::Grab, |ui| {
-            ui.add(Link::new("Configure…"));
+            ui.add(ActionLink::new("Configure…"));
             ui.add_space(40.0);
         });
     });
@@ -250,14 +263,12 @@ fn fallback_loses_to_children() {
 }
 
 /// A dialog with a multiline field (focused) and a single-line one.
-fn field_dialog_harness(
-    multiline: bool,
-) -> testing::Harness<'static, (Option<DialogAction>, String)> {
+fn field_dialog_harness(multiline: bool) -> testing::Harness<'static, (Option<ExitCode>, String)> {
     let mut harness = testing::harness_state(
         Theme::dark(),
         (None, String::new()),
         move |ui, (action, text)| {
-            let shown = Dialog::new("Note")
+            let shown = DialogWrapper::new("Note")
                 .content(|ui| {
                     let edit = if multiline {
                         egui::TextEdit::multiline(text)
@@ -284,7 +295,7 @@ fn field_dialog_harness(
 }
 
 #[test]
-fn dialog_enter_in_multiline_field_is_a_new_line() {
+fn dialog_wrapper_enter_in_multiline_field_is_a_new_line() {
     let mut harness = field_dialog_harness(true);
     harness.key_press(egui::Key::Enter);
     harness.run();
@@ -293,22 +304,22 @@ fn dialog_enter_in_multiline_field_is_a_new_line() {
 }
 
 #[test]
-fn dialog_ctrl_enter_confirms_from_a_multiline_field() {
+fn dialog_wrapper_ctrl_enter_confirms_from_a_multiline_field() {
     for modifiers in [egui::Modifiers::CTRL, egui::Modifiers::COMMAND] {
         let mut harness = field_dialog_harness(true);
         harness.key_combination_modifiers(modifiers, &[egui::Key::Enter]);
         harness.run();
-        assert_eq!(harness.state().0, Some(DialogAction::Primary));
+        assert_eq!(harness.state().0, Some(ExitCode::Primary));
     }
 }
 
 #[test]
-fn dialog_enter_in_single_line_field_confirms() {
+fn dialog_wrapper_enter_in_single_line_field_confirms() {
     let mut harness = testing::harness_state(
         Theme::dark(),
         (None, String::from("x")),
         |ui, (action, text)| {
-            let shown = Dialog::new("Note")
+            let shown = DialogWrapper::new("Note")
                 .content(|ui| {
                     ui.add(egui::TextEdit::singleline(text));
                 })
@@ -327,21 +338,21 @@ fn dialog_enter_in_single_line_field_confirms() {
     harness.run();
     harness.key_press(egui::Key::Enter);
     harness.run();
-    assert_eq!(harness.state().0, Some(DialogAction::Primary));
+    assert_eq!(harness.state().0, Some(ExitCode::Primary));
 }
 
 #[test]
-fn dialog_enter_on_a_focused_button_keeps_working() {
+fn dialog_wrapper_enter_on_a_focused_button_keeps_working() {
     let mut harness = field_dialog_harness(true);
     harness.get_by_label("Cancel").focus();
     harness.run();
     harness.key_press(egui::Key::Enter);
     harness.run();
-    assert_eq!(harness.state().0, Some(DialogAction::Secondary));
+    assert_eq!(harness.state().0, Some(ExitCode::Secondary));
 }
 
 fn list_dialog(ui: &mut egui::Ui, lines: usize) {
-    let _ = Dialog::new("Select files")
+    let _ = DialogWrapper::new("Select files")
         .content(|ui| {
             for i in 0..lines {
                 ui.label(format!("file-{i}.rs"));
@@ -353,7 +364,7 @@ fn list_dialog(ui: &mut egui::Ui, lines: usize) {
 }
 
 #[test]
-fn dialog_is_as_tall_as_its_content() {
+fn dialog_wrapper_is_as_tall_as_its_content() {
     let height = |lines: usize| {
         let mut harness = testing::harness(Theme::dark(), move |ui| list_dialog(ui, lines));
         harness.set_size(egui::vec2(520.0, 600.0));
@@ -370,7 +381,7 @@ fn dialog_is_as_tall_as_its_content() {
 }
 
 #[test]
-fn dialog_scrolls_beyond_its_max_height() {
+fn dialog_wrapper_scrolls_beyond_its_max_height() {
     let mut harness = testing::harness(Theme::dark(), |ui| list_dialog(ui, 60));
     harness.set_size(egui::vec2(520.0, 300.0));
     harness.run_steps(3);
@@ -384,9 +395,9 @@ fn dialog_scrolls_beyond_its_max_height() {
 }
 
 #[test]
-fn dialog_scroll_snapshot() {
+fn dialog_wrapper_scroll_snapshot() {
     testing::snapshot_themes_sized(
-        "dialog_scroll",
+        "dialog_wrapper_scroll",
         common::IMG,
         egui::vec2(520.0, 300.0),
         |ui| {
@@ -397,9 +408,9 @@ fn dialog_scroll_snapshot() {
 }
 
 #[test]
-fn dialog_short_content_snapshot() {
+fn dialog_wrapper_short_content_snapshot() {
     testing::snapshot_themes_sized(
-        "dialog_short",
+        "dialog_wrapper_short",
         common::IMG,
         egui::vec2(520.0, 400.0),
         |ui| {
@@ -410,7 +421,7 @@ fn dialog_short_content_snapshot() {
 }
 
 #[test]
-fn dialog_tertiary_button_reports_and_sits_left() {
+fn dialog_wrapper_tertiary_button_reports_and_sits_left() {
     let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
         if let Some(done) = tertiary_dialog(ui, 2) {
             action.get_or_insert(done);
@@ -423,11 +434,11 @@ fn dialog_tertiary_button_reports_and_sits_left() {
     assert!(reset.right() < cancel.left(), "{reset:?} {cancel:?}");
     harness.get_by_label("Reset").click();
     harness.run_steps(3);
-    assert_eq!(*harness.state(), Some(DialogAction::Tertiary));
+    assert_eq!(*harness.state(), Some(ExitCode::Tertiary));
 }
 
 #[test]
-fn dialog_tertiary_stays_reachable_when_content_scrolls() {
+fn dialog_wrapper_tertiary_stays_reachable_when_content_scrolls() {
     let mut harness = testing::harness(Theme::dark(), |ui| {
         let _ = tertiary_dialog(ui, 60);
     });
@@ -437,8 +448,8 @@ fn dialog_tertiary_stays_reachable_when_content_scrolls() {
     assert!(reset.bottom() <= 300.0 && reset.top() >= 0.0, "{reset:?}");
 }
 
-fn tertiary_dialog(ui: &mut egui::Ui, lines: usize) -> Option<DialogAction> {
-    Dialog::new("Select files")
+fn tertiary_dialog(ui: &mut egui::Ui, lines: usize) -> Option<ExitCode> {
+    DialogWrapper::new("Select files")
         .content(|ui| {
             for i in 0..lines {
                 ui.label(format!("file-{i}.rs"));
@@ -451,9 +462,9 @@ fn tertiary_dialog(ui: &mut egui::Ui, lines: usize) -> Option<DialogAction> {
 }
 
 #[test]
-fn dialog_tertiary_snapshot() {
+fn dialog_wrapper_tertiary_snapshot() {
     testing::snapshot_themes_sized(
-        "dialog_tertiary",
+        "dialog_wrapper_tertiary",
         common::IMG,
         egui::vec2(520.0, 300.0),
         |ui| {
@@ -464,7 +475,7 @@ fn dialog_tertiary_snapshot() {
 }
 
 #[test]
-fn dialog_tab_order_follows_the_visual_order() {
+fn dialog_wrapper_tab_order_follows_the_visual_order() {
     let mut harness = testing::harness(Theme::dark(), |ui| {
         let _ = tertiary_dialog(ui, 2);
     });
@@ -488,9 +499,9 @@ fn dialog_tab_order_follows_the_visual_order() {
 
 /// A focusable widget that is not a text field keeps the focus on Enter: Enter confirms.
 #[test]
-fn dialog_enter_confirms_with_a_custom_widget_holding_focus() {
+fn dialog_wrapper_enter_confirms_with_a_custom_widget_holding_focus() {
     let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
-        let shown = Dialog::new("Pick")
+        let shown = DialogWrapper::new("Pick")
             .content(|ui| {
                 let (_, response) = ui.allocate_exact_size(
                     egui::vec2(80.0, 24.0),
@@ -513,13 +524,13 @@ fn dialog_enter_confirms_with_a_custom_widget_holding_focus() {
     harness.run_steps(3);
     harness.key_press(egui::Key::Enter);
     harness.run_steps(2);
-    assert_eq!(*harness.state(), Some(DialogAction::Primary));
+    assert_eq!(*harness.state(), Some(ExitCode::Primary));
 }
 
 /// The first frame a dialog is visible must already be final: no jump of the buttons or
 /// of the dialog itself when it opens.
 #[test]
-fn dialog_first_visible_frame_is_the_final_frame() {
+fn dialog_wrapper_first_visible_frame_is_the_final_frame() {
     for theme in [Theme::dark(), Theme::light()] {
         let mut harness = testing::harness(theme, |ui| {
             let _ = tertiary_dialog(ui, 3);
@@ -550,20 +561,20 @@ fn dialog_first_visible_frame_is_the_final_frame() {
 }
 
 #[test]
-fn dialog_passes_the_audit() {
-    let mut harness = dialog_harness();
+fn dialog_wrapper_passes_the_audit() {
+    let mut harness = dialog_wrapper_harness();
     testing::audit(&mut harness).assert_clean();
 }
 
 #[test]
 fn a_tall_dialog_body_takes_clicks_in_a_sized_harness() {
-    use archipel_kit::components::Button;
+    use archipel_kit::ui::Button;
     let mut h = testing::harness_state_sized(
         archipel_kit::Theme::dark(),
         archipel_kit::egui::vec2(1280.0, 800.0),
         0u32,
         |ui, clicks| {
-            Dialog::new("Environments")
+            DialogWrapper::new("Environments")
                 .content(|ui| {
                     ui.add_space(340.0);
                     if ui.add(Button::secondary("New environment")).clicked() {

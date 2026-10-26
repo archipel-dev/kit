@@ -2,9 +2,12 @@
 
 mod common;
 
-use archipel_kit::components::{Checkbox, Dropdown, FieldLabel, Form, Radio, TextField};
 use archipel_kit::testing::{self, Queryable};
 use archipel_kit::{Theme, egui, tokens};
+use archipel_kit::{
+    openapi::ui::ComboBox,
+    ui::{FieldLabel, Form, JBCheckBox, JBRadioButton, JBTextField},
+};
 use egui_kittest::kittest::NodeT;
 
 fn settings_page(ui: &mut egui::Ui) {
@@ -14,31 +17,31 @@ fn settings_page(ui: &mut egui::Ui) {
     let (mut font, mut size, mut open) = ("Inter", "13", 2);
     Form::new().show(ui, |form| {
         form.add(
-            Checkbox::new(&mut lighter, "Different tool window background")
+            JBCheckBox::new(&mut lighter, "Different tool window background")
                 .comment("Use a lighter color in the dark theme and a darker one in the light theme"),
         );
         form.group("Accessibility", |form| {
-            form.row("Zoom:", |ui| ui.add(TextField::new(&mut zoom).name("Zoom").width(60.0)));
+            form.row("Zoom:", |ui| ui.add(JBTextField::new(&mut zoom).name("Zoom").width(60.0)));
             form.space();
             form.fields(|ui| {
-                ui.add(Checkbox::new(&mut custom, "Use custom font:"));
-                ui.add(Dropdown::new("font", &mut font, ["Inter"]).width(200.0).enabled(custom));
+                ui.add(JBCheckBox::new(&mut custom, "Use custom font:"));
+                ui.add(ComboBox::new("font", &mut font, ["Inter"]).width(200.0).enabled(custom));
                 ui.add_space(tokens::size::FORM_CONTROL_SPACE);
                 ui.add(FieldLabel::new("Size:").enabled(custom));
-                ui.add(Dropdown::new("size", &mut size, ["13"]).width(70.0).enabled(custom));
+                ui.add(ComboBox::new("size", &mut size, ["13"]).width(70.0).enabled(custom));
             });
             form.add(
-                Checkbox::new(&mut readers, "Support screen readers")
+                JBCheckBox::new(&mut readers, "Support screen readers")
                     .inline_comment("Requires restart")
                     .comment("Ctrl+Tab and Ctrl+Shift+Tab will navigate UI controls in dialogs and will not be available for switching editor tabs."),
             );
-            form.add(Checkbox::new(&mut contrast, "Use contrast scrollbars"));
+            form.add(JBCheckBox::new(&mut contrast, "Use contrast scrollbars"));
         });
         form.group("Project", |form| {
             form.radios("Open project in", |ui| {
-                ui.add(Radio::new(&mut open, 0, "New window"));
-                ui.add(Radio::new(&mut open, 1, "Current window"));
-                ui.add(Radio::new(&mut open, 2, "Ask"));
+                ui.add(JBRadioButton::new(&mut open, 0, "New window"));
+                ui.add(JBRadioButton::new(&mut open, 1, "Current window"));
+                ui.add(JBRadioButton::new(&mut open, 2, "Ask"));
             });
         });
     });
@@ -73,7 +76,7 @@ fn first_group_has_no_space_above() {
     let harness = testing::harness(Theme::dark(), |ui| {
         Form::new().show(ui, |form| {
             form.group("General", |form| {
-                form.add(Checkbox::new(&mut false, "Show tips"));
+                form.add(JBCheckBox::new(&mut false, "Show tips"));
             });
         });
     });
@@ -86,10 +89,10 @@ fn first_group_has_no_space_above() {
 }
 
 #[test]
-fn comment_describes_the_checkbox_and_does_not_toggle_it() {
+fn comment_describes_the_check_box_and_does_not_toggle_it() {
     let mut harness = testing::harness_state(Theme::dark(), false, |ui, checked| {
         ui.add(
-            Checkbox::new(checked, "Support screen readers")
+            JBCheckBox::new(checked, "Support screen readers")
                 .inline_comment("Requires restart")
                 .comment("Tooltips on mouse hover will be disabled."),
         );
@@ -125,10 +128,10 @@ fn advanced(ui: &mut egui::Ui, open: &mut bool) {
     Form::new().show(ui, |form| {
         form.collapsible("Advanced", open, |form| {
             form.row("Timeout:", |ui| {
-                ui.add(TextField::new(&mut timeout).name("Timeout").width(60.0))
+                ui.add(JBTextField::new(&mut timeout).name("Timeout").width(60.0))
             });
             form.comment("Seconds before a query is cancelled");
-            form.add(Checkbox::new(&mut retry, "Retry reads"));
+            form.add(JBCheckBox::new(&mut retry, "Retry reads"));
         });
     });
 }
@@ -178,9 +181,9 @@ fn labelled_rows_start_their_fields_in_one_column() {
         |ui, (name, uri)| {
             ui.set_width(420.0);
             Form::new().show(ui, |form| {
-                form.row("Name:", |ui| ui.add(TextField::new(name).name("Name")));
+                form.row("Name:", |ui| ui.add(JBTextField::new(name).name("Name")));
                 form.row("Connection string:", |ui| {
-                    ui.add(TextField::new(uri).name("Connection string"))
+                    ui.add(JBTextField::new(uri).name("Connection string"))
                 });
             });
         },

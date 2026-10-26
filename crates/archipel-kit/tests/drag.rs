@@ -4,9 +4,9 @@ mod common;
 
 use archipel_kit::Theme;
 use archipel_kit::behaviour::DragSource;
-use archipel_kit::components::{DropZone, ListRow};
 use archipel_kit::egui::{self, Pos2, pos2};
 use archipel_kit::testing::{self, Harness, Queryable};
+use archipel_kit::ui::{ColoredListCellRenderer, DropZone};
 
 #[derive(Debug, Clone, PartialEq)]
 struct Field(&'static str);
@@ -29,12 +29,16 @@ fn harness() -> Harness<'static, State> {
         State::default(),
         |ui, state| {
             for name in ["name", "price"] {
-                let row = ListRow::new(name).with(DragSource(Field(name))).show(ui);
+                let row = ColoredListCellRenderer::new(name)
+                    .with(DragSource(Field(name)))
+                    .show(ui);
                 if row.response.clicked() {
                     state.clicked = Some(name);
                 }
             }
-            ListRow::new("other").with(DragSource(Other)).show(ui);
+            ColoredListCellRenderer::new("other")
+                .with(DragSource(Other))
+                .show(ui);
             let filter = DropZone::new("filter")
                 .hint("Drop fields here to filter")
                 .show_hint(state.filter.is_empty())
@@ -118,9 +122,9 @@ fn a_click_still_reaches_the_row() {
 #[test]
 fn an_unrelated_drop_target_does_not_consume_a_field_payload() {
     use archipel_kit::behaviour::{Behaviour, DropTarget};
-    use archipel_kit::components::Button;
+    use archipel_kit::ui::Button;
     let mut h = testing::harness_state(Theme::dark(), None::<Field>, |ui, dropped| {
-        ListRow::new("Field source")
+        ColoredListCellRenderer::new("Field source")
             .with(DragSource(Field("price")))
             .show(ui);
         let response = ui.add(Button::secondary("Mixed target"));
@@ -153,7 +157,7 @@ fn snapshot_while_dragging() {
         |ui| {
             ui.set_width(280.0);
             for name in ["name", "price"] {
-                ListRow::new(name)
+                ColoredListCellRenderer::new(name)
                     .icon(archipel_kit::Glyph::Key)
                     .with(DragSource(Field(name)))
                     .show(ui);

@@ -16,7 +16,7 @@ archipel-kit = { git = "https://github.com/archipel-dev/kit", features = ["testi
 the test can drive the UI and inspect the result:
 
 ```rust
-use archipel_kit::components::{Checkbox, TextField};
+use archipel_kit::ui::{JBCheckBox, JBTextField};
 use archipel_kit::testing::{self, NodeExt, Queryable};
 use archipel_kit::Theme;
 
@@ -27,8 +27,8 @@ struct Form {
 }
 
 let mut harness = testing::harness_state(Theme::dark(), Form::default(), |ui, form| {
-    ui.add(TextField::new(&mut form.name).label("Repository name"));
-    ui.add(Checkbox::new(&mut form.private, "Private"));
+    ui.add(JBTextField::new(&mut form.name).label("Repository name"));
+    ui.add(JBCheckBox::new(&mut form.private, "Private"));
 });
 
 let input = harness.get_by_label("Repository name");
@@ -57,11 +57,11 @@ widget's accessible name rather than the test.
 `{dir}/{name}.dark.png` and `{name}.light.png`:
 
 ```rust,no_run
-use archipel_kit::components::{Banner, Severity};
+use archipel_kit::ui::{InlineBanner, Status};
 use archipel_kit::testing;
 
 testing::snapshot_themes("sync_banner", "tests/snapshots", |ui| {
-    Banner::new(Severity::Warning, "Gradle sync needed").action("Sync").show(ui);
+    InlineBanner::new(Status::Warning, "Gradle sync needed").action("Sync").show(ui);
 });
 ```
 

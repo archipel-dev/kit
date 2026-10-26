@@ -5,7 +5,7 @@
 //! Keys: `←`/`→` or `h`/`l` pages, `↑`/`↓` or `j`/`k` move, `space` toggles,
 //! `t` dark/light, `q` quits. Use a Nerd Font in the terminal (JetBrainsMono Nerd Font).
 
-use archipel_kit::components::Severity;
+use archipel_kit::ui::Status;
 use archipel_kit_tui::components::*;
 use archipel_kit_tui::ratatui::buffer::Buffer;
 use archipel_kit_tui::ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -36,7 +36,7 @@ impl App {
         let island = Island::new(look).title("Archipel Kit").focused(true);
         let inner = island.inner(body);
         island.render(body, buf);
-        SegmentedControl::new(look, &PAGES, self.page)
+        SegmentedButton::new(look, &PAGES, self.page)
             .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
         let hints = [
             ("←→", "page"),
@@ -72,22 +72,22 @@ impl App {
                 }
                 let labels = ["Format on save", "Optimize imports", "Mixed"];
                 for (i, label) in labels.iter().enumerate() {
-                    Checkbox::new(look, self.checks[i], label)
+                    JBCheckBox::new(look, self.checks[i], label)
                         .mixed(i == 2 && !self.checks[2])
                         .focused(self.row == i)
                         .render(row(2 + i as u16), buf);
                 }
                 for (i, label) in ["Spaces", "Tabs"].iter().enumerate() {
-                    Radio::new(look, self.radio == i, label).render(row(6 + i as u16), buf);
+                    JBRadioButton::new(look, self.radio == i, label).render(row(6 + i as u16), buf);
                 }
-                Toggle::new(look, self.toggle, "Power save mode")
+                OnOffButton::new(look, self.toggle, "Power save mode")
                     .focused(self.row == 3)
                     .render(row(9), buf);
                 let field = |y: u16| Rect::new(inner.x, inner.y + y, inner.width.min(40), 3);
-                TextField::new(look, "")
+                JBTextField::new(look, "")
                     .placeholder("Search everywhere")
                     .render(field(11), buf);
-                TextField::new(look, "8o80")
+                JBTextField::new(look, "8o80")
                     .label("Port")
                     .error(Some("Must be a number"))
                     .render(field(14), buf);
@@ -98,7 +98,7 @@ impl App {
                     (Some(Language::Toml.into()), "Cargo.toml", true),
                     (Some(Glyph::FileText.into()), "README.md", false),
                 ];
-                TabBar::new(look, &tabs, self.row % 3)
+                JBTabs::new(look, &tabs, self.row % 3)
                     .render(Rect::new(inner.x, inner.y, inner.width, 2), buf);
                 let rows: [(&str, u16, Option<bool>, RowIcon); 8] = [
                     ("kit", 0, Some(true), Glyph::Folder.into()),
@@ -121,7 +121,7 @@ impl App {
                     ("colors", 1, None, Symbol::new(SymbolKind::Field).into()),
                 ];
                 for (i, (label, depth, expanded, icon)) in rows.into_iter().enumerate() {
-                    ListRow::new(look, label)
+                    ColoredListCellRenderer::new(look, label)
                         .depth(depth)
                         .expanded(expanded)
                         .icon(icon)
@@ -134,13 +134,13 @@ impl App {
             }
             2 => {
                 let severities = [
-                    (Severity::Info, "Indexing finished"),
-                    (Severity::Success, "Build succeeded"),
-                    (Severity::Warning, "Low disk space"),
-                    (Severity::Error, "Connection lost"),
+                    (Status::Info, "Indexing finished"),
+                    (Status::Success, "Build succeeded"),
+                    (Status::Warning, "Low disk space"),
+                    (Status::Error, "Connection lost"),
                 ];
                 for (i, (severity, text)) in severities.into_iter().enumerate() {
-                    Banner::new(look, severity, text, &["Retry", "Dismiss"])
+                    InlineBanner::new(look, severity, text, &["Retry", "Dismiss"])
                         .render(row(2 * i as u16), buf);
                 }
                 ProgressBar::new(look, 0.6).render(row(9), buf);

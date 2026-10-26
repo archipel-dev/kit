@@ -10,7 +10,7 @@
 //!
 //! ```
 //! # egui::__run_test_ui(|ui| {
-//! use archipel_kit::{components::Button, cursor, egui::CursorIcon};
+//! use archipel_kit::{ui::Button, cursor, egui::CursorIcon};
 //!
 //! let loading = true;
 //! cursor::override_in(ui, loading.then_some(CursorIcon::Progress), |ui| {
