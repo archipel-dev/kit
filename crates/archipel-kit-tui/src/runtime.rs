@@ -363,6 +363,24 @@ pub fn run_app(look: Look, app: &mut impl App, options: RunOptions) -> io::Resul
     result
 }
 
+/// Like [`run_app`], with a keymap built for the detected operating system.
+///
+/// # Errors
+///
+/// When the terminal fails.
+pub fn run_app_with_keymap(
+    look: Look,
+    app: &mut impl App,
+    options: RunOptions,
+    keymap: impl FnOnce(archipel_kit::action_system::Os) -> Keymap,
+) -> io::Result<()> {
+    let (mut terminal, caps) = setup(options)?;
+    let mut rt = Runtime::with(look, keymap(caps.os), caps);
+    let result = run(&mut terminal, &mut rt, app, options);
+    restore();
+    result
+}
+
 /// The event loop: wait for input or the app's next deadline, advance the clock, deliver
 /// events, tick, draw, and publish clipboard copies as OSC 52, until `rt.quit` is set.
 ///

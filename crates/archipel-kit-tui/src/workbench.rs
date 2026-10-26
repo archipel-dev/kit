@@ -683,7 +683,8 @@ impl Workbench {
         let focused = self.focused_tool() == Some(window.id.as_str());
         fill_rect(buf, rect, Style::default().bg(p.darker_black).fg(p.white));
         let header = Rect::new(rect.x, rect.y, rect.width, 1.min(rect.height));
-        let (fg, bg) = if focused {
+        let tabbed = window.contents.len() > 1;
+        let (fg, bg) = if focused && !tabbed {
             (p.on(p.nord_blue), p.nord_blue)
         } else {
             (p.light_grey, p.one_bg)

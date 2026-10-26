@@ -948,12 +948,25 @@ impl PopupChain {
                         0
                     },
             )
-            .max(query_w)
-            .min(screen.width.max(1));
+            .max(query_w);
+        // A centered Telescope float takes about two thirds of the screen.
+        let centered = telescope && depth == 0 && matches!(placement, Placement::Center);
+        let width = if centered {
+            width.max((screen.width * 65 / 100).clamp(44, 110))
+        } else {
+            width
+        }
+        .min(screen.width.max(1));
         // Height.
         let max_body = screen.height.saturating_sub(header + 1).max(1);
         let want_body = lines.len().max(1) as u16;
-        let body = if telescope {
+        let body = if centered {
+            // The results area fills the float even when there are few results.
+            (screen.height * 55 / 100)
+                .saturating_sub(header)
+                .max(want_body.min(14))
+                .min(max_body)
+        } else if telescope {
             want_body.min(max_body.min(14))
         } else {
             want_body.min(max_body)

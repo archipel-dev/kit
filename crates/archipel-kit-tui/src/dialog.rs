@@ -235,10 +235,17 @@ impl<M: 'static> Dialog<M> {
 impl<M: 'static> Overlay<M> for Dialog<M> {
     fn event(&mut self, rt: &mut Runtime, event: &Event) -> Handled<M> {
         // The content first.
-        if let Some(content) = &mut self.content
-            && content.event(rt, event)
-        {
-            return Handled::consumed();
+        if let Some(content) = &mut self.content {
+            let used = content.event(rt, event);
+            let revision = content.revision();
+            if self.validated_revision.is_some() && self.validated_revision != Some(revision) {
+                // The input changed: validate 300 ms after the last change.
+                self.validated_revision = Some(revision);
+                self.changed_at = Some(rt.now);
+            }
+            if used {
+                return Handled::consumed();
+            }
         }
         match event {
             Event::Key(key) if key.kind != KeyEventKind::Release => {

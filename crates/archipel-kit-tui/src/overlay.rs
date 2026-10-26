@@ -161,14 +161,18 @@ impl<M> Layers<M> {
     /// Delivers `event`. Returns whether a layer consumed it and the messages produced.
     pub fn event(&mut self, rt: &mut Runtime, event: &Event) -> (bool, Vec<M>) {
         let mut messages = Vec::new();
-        for i in (0..self.ambient.len()).rev() {
-            let handled = self.ambient[i].event(rt, event);
-            messages.extend(handled.messages);
-            if handled.close {
-                self.ambient.remove(i);
-            }
-            if handled.consumed {
-                return (true, messages);
+        // While a modal layer is open it gets everything; balloons only take events when the
+        // stack is empty.
+        if self.stack.is_empty() {
+            for i in (0..self.ambient.len()).rev() {
+                let handled = self.ambient[i].event(rt, event);
+                messages.extend(handled.messages);
+                if handled.close {
+                    self.ambient.remove(i);
+                }
+                if handled.consumed {
+                    return (true, messages);
+                }
             }
         }
         let mut consumed = false;
@@ -219,17 +223,18 @@ impl<M> Layers<M> {
             .reduce(f64::min)
     }
 
-    /// Draws the stack bottom to top, then the ambient layers.
+    /// Draws the ambient layers (balloons), then the stack bottom to top: a dialog or popup
+    /// is always above the balloons.
     pub fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) {
+        for layer in &mut self.ambient {
+            layer.draw(rt, area, buf);
+        }
         for entry in &mut self.stack {
             if entry.layer.modal() {
                 rt.hits.block(area);
                 rt.focus.trap();
             }
             entry.layer.draw(rt, area, buf);
-        }
-        for layer in &mut self.ambient {
-            layer.draw(rt, area, buf);
         }
     }
 }

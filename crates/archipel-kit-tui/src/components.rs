@@ -1971,7 +1971,7 @@ impl<'a> StatusBar<'a> {
                 self.diagnostics
                     .map(|d| text_width(&Self::diagnostics_text(&d))),
             ),
-            (StatusSlot::Lsp, self.lsp.map(|t| text_width(t) + 9)),
+            (StatusSlot::Lsp, self.lsp.map(|t| text_width(t) + 10)),
         ]
         .into_iter()
         .filter_map(|(slot, w)| w.map(|w| (slot, w)))

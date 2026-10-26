@@ -342,6 +342,7 @@ pub fn terminal_keymap(os: Os) -> Keymap {
     add("Switcher", &format!("{LEADER_GENERAL} > T"));
     add("CloseActiveTab", &format!("{LEADER_GENERAL} > W"));
     add("ShowIntentionActions", &format!("{LEADER_GENERAL} > Enter"));
+    add("Exit", &format!("{LEADER_GENERAL} > Q"));
     keymap
 }
 
@@ -510,5 +511,215 @@ impl DoubleShift {
             _ => {}
         }
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use archipel_kit::action_system::KeyResolution;
+
+    fn stroke(text: &str) -> KeyStroke {
+        KeyStroke::parse(text).expect("stroke")
+    }
+
+    #[test]
+    fn letters_digits_and_symbols_map_to_the_gui_keys() {
+        let k = |code, mods| key_stroke(&KeyEvent::new(code, mods)).expect("stroke");
+        assert_eq!(k(KeyCode::Char('a'), KeyModifiers::NONE), stroke("A"));
+        assert_eq!(k(KeyCode::Char('A'), KeyModifiers::NONE), stroke("shift A"));
+        assert_eq!(
+            k(KeyCode::Char('a'), KeyModifiers::CONTROL),
+            stroke("ctrl A")
+        );
+        assert_eq!(k(KeyCode::Char('1'), KeyModifiers::ALT), stroke("alt 1"));
+        assert_eq!(k(KeyCode::Char('?'), KeyModifiers::NONE), stroke("shift /"));
+        assert_eq!(k(KeyCode::BackTab, KeyModifiers::NONE), stroke("shift Tab"));
+        assert_eq!(
+            k(KeyCode::F(12), KeyModifiers::CONTROL | KeyModifiers::SHIFT),
+            stroke("ctrl shift F12")
+        );
+        assert_eq!(k(KeyCode::Esc, KeyModifiers::SHIFT), stroke("shift Esc"));
+        assert_eq!(
+            k(
+                KeyCode::Char('\''),
+                KeyModifiers::CONTROL | KeyModifiers::SHIFT
+            ),
+            stroke("ctrl shift '")
+        );
+    }
+
+    #[test]
+    fn modifier_keys_have_no_stroke() {
+        let key = KeyEvent::new(
+            KeyCode::Modifier(ct::ModifierKeyCode::LeftShift),
+            KeyModifiers::NONE,
+        );
+        assert_eq!(key_stroke(&key), None);
+    }
+
+    #[test]
+    fn typed_chars_exclude_control_alt_and_super() {
+        assert_eq!(
+            typed_char(&KeyEvent::new(KeyCode::Char('x'), KeyModifiers::SHIFT)),
+            Some('x')
+        );
+        assert_eq!(
+            typed_char(&KeyEvent::new(KeyCode::Char('x'), KeyModifiers::CONTROL)),
+            None
+        );
+        assert_eq!(
+            typed_char(&KeyEvent::new(KeyCode::Char('x'), KeyModifiers::ALT)),
+            None
+        );
+        assert_eq!(
+            typed_char(&KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            None
+        );
+    }
+
+    #[test]
+    fn the_terminal_keymap_resolves_the_gui_keys_and_the_fallback_chords() {
+        let keymap = terminal_keymap(Os::Linux);
+        assert_eq!(
+            keymap.resolve(&stroke("alt 1")),
+            KeyResolution::Matched(vec!["ActivateToolWindow1".into()])
+        );
+        assert_eq!(
+            keymap.resolve(&stroke("ctrl W")),
+            KeyResolution::AwaitSecond
+        );
+        let mut pending = None;
+        assert_eq!(
+            keymap.feed(&mut pending, stroke("ctrl W"), 0.0),
+            KeyResolution::AwaitSecond
+        );
+        assert_eq!(
+            keymap.feed(&mut pending, stroke("3"), 0.5),
+            KeyResolution::Matched(vec!["ActivateToolWindow3".into()])
+        );
+        // The second stroke must come within two seconds.
+        assert_eq!(
+            keymap.feed(&mut pending, stroke("ctrl W"), 1.0),
+            KeyResolution::AwaitSecond
+        );
+        assert_ne!(
+            keymap.feed(&mut pending, stroke("3"), 4.0),
+            KeyResolution::Matched(vec!["ActivateToolWindow3".into()])
+        );
+    }
+
+    #[test]
+    fn a_legacy_terminal_cannot_send_ctrl_shift_letters_or_ctrl_tab() {
+        let legacy = Caps {
+            kitty: false,
+            os: Os::Linux,
+        };
+        let kitty = Caps {
+            kitty: true,
+            os: Os::Linux,
+        };
+        for text in ["ctrl shift A", "ctrl Tab", "ctrl 1", "cmd C"] {
+            assert!(!sendable(&stroke(text), &legacy), "{text}");
+            assert!(
+                text.starts_with("cmd") && !sendable(&stroke(text), &legacy)
+                    || sendable(&stroke(text), &kitty),
+                "{text}"
+            );
+        }
+        assert!(sendable(&stroke("ctrl A"), &legacy));
+        assert!(sendable(&stroke("alt Left"), &legacy));
+        assert!(!sendable(
+            &stroke("alt 1"),
+            &Caps {
+                kitty: false,
+                os: Os::MacOs
+            }
+        ));
+    }
+
+    #[test]
+    fn the_shortcut_text_shows_the_combo_the_terminal_can_send() {
+        let keymap = terminal_keymap(Os::Linux);
+        let legacy = Caps {
+            kitty: false,
+            os: Os::Linux,
+        };
+        let kitty = Caps {
+            kitty: true,
+            os: Os::Linux,
+        };
+        assert_eq!(
+            display_shortcut(&keymap, "GotoAction", &kitty).as_deref(),
+            Some("Ctrl+Shift+A")
+        );
+        assert_eq!(
+            display_shortcut(&keymap, "GotoAction", &legacy).as_deref(),
+            Some("Ctrl+P")
+        );
+        assert_eq!(
+            display_shortcut(&keymap, "ActivateToolWindow1", &legacy).as_deref(),
+            Some("Alt+1")
+        );
+        let mac = Caps {
+            kitty: false,
+            os: Os::MacOs,
+        };
+        let mac_keymap = terminal_keymap(Os::MacOs);
+        assert_eq!(
+            display_shortcut(&mac_keymap, "ActivateToolWindow1", &mac).as_deref(),
+            Some("⌃W 1"),
+            "Option+digit types a symbol on macOS: the chord is shown"
+        );
+    }
+
+    fn shift(up: bool) -> Event {
+        let key = KeyEvent::new_with_kind(
+            KeyCode::Modifier(ct::ModifierKeyCode::LeftShift),
+            KeyModifiers::SHIFT,
+            if up {
+                KeyEventKind::Release
+            } else {
+                KeyEventKind::Press
+            },
+        );
+        if up {
+            Event::KeyUp(key)
+        } else {
+            Event::Key(key)
+        }
+    }
+
+    #[test]
+    fn two_taps_of_shift_within_half_a_second_are_a_double_shift() {
+        let mut d = DoubleShift::default();
+        assert!(!d.feed(&shift(false), 0.0));
+        assert!(!d.feed(&shift(true), 0.05));
+        assert!(!d.feed(&shift(false), 0.2));
+        assert!(d.feed(&shift(true), 0.25));
+    }
+
+    #[test]
+    fn slow_taps_or_a_key_in_between_are_not_a_double_shift() {
+        let mut d = DoubleShift::default();
+        d.feed(&shift(false), 0.0);
+        d.feed(&shift(true), 0.05);
+        d.feed(&shift(false), 0.8);
+        assert!(!d.feed(&shift(true), 0.85), "too slow");
+        let mut d = DoubleShift::default();
+        d.feed(&shift(false), 0.0);
+        d.feed(&shift(true), 0.05);
+        d.feed(&key(KeyCode::Char('a')), 0.1);
+        d.feed(&shift(false), 0.2);
+        assert!(!d.feed(&shift(true), 0.25), "a key in between resets it");
+        let mut d = DoubleShift::default();
+        d.feed(&shift(false), 0.0);
+        d.feed(&key(KeyCode::Char('A')), 0.02);
+        d.feed(&shift(true), 0.05);
+        d.feed(&shift(false), 0.1);
+        assert!(
+            !d.feed(&shift(true), 0.15),
+            "Shift used as a modifier is not a tap"
+        );
     }
 }

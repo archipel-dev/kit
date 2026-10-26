@@ -371,6 +371,35 @@ fn a_narrow_status_bar_drops_the_least_important_slots_first() {
 }
 
 #[test]
+fn status_bar_segments_keep_a_blank_cell_before_the_next_separator() {
+    use archipel_kit_tui::components::StatusSlot;
+    let look = Look::dark();
+    let branch = git();
+    for width in [80u16, 100, 120, 140] {
+        let build = || {
+            StatusBar::new(&look)
+                .mode("NORMAL", look.palette.nord_blue)
+                .file(Language::Rust, "components.rs")
+                .git(&branch)
+                .center("indexing")
+                .diagnostics(Diagnostics::default())
+                .lsp("rust-analyzer")
+                .cwd("kit")
+                .cursor("Ln 12, Col 8")
+        };
+        let area = Rect::new(0, 0, width, 1);
+        let buf = render(width, 1, |area, buf| build().render(area, buf));
+        for (slot, rect) in build().slots(area) {
+            if matches!(slot, StatusSlot::Mode | StatusSlot::File) || rect.x == 0 {
+                continue;
+            }
+            let before = buf[(rect.x - 1, 0)].symbol().to_owned();
+            assert_eq!(before, " ", "{slot:?} at {width}: {:?}", lines(&buf));
+        }
+    }
+}
+
+#[test]
 fn status_bar_slots_do_not_overlap() {
     let look = Look::dark();
     let git = git();
