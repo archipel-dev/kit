@@ -162,7 +162,7 @@ measured (`constant`, `punctuation`, `tag`, `attribute`), and kit-only roles wit
 key. They stay documented here; `dark()` and `light()` are not patched to match.
 
 <!-- generated:validation:begin -->
-**`Colors`, `islands_dark` vs `Theme::dark()`:** 52 exact, 1 near, 6 differ, 10 kept (no IntelliJ key).
+**`Colors`, `islands_dark` vs `Theme::dark()`:** 56 exact, 1 near, 10 differ, 10 kept (no IntelliJ key).
 
 | Field | Measured (`Theme::dark()`) | Generated (`islands_dark`) | Verdict | Source |
 |---|---|---|---|---|
@@ -183,6 +183,10 @@ key. They stay documented here; `dark()` and `light()` are not patched to match.
 | `vcs_untracked` | #E37774 | #E88F89 | differs (24) | `scheme FILESTATUS_UNKNOWN` |
 | `icon` | #CED0D6 | _kept (no key)_ | measured value | - |
 | `folder_fill` | #43454A | _kept (no key)_ | measured value | - |
+| `selection_text` | #DFE1E5 | #D1D3D9 | differs (14) | `List.selectionForeground` |
+| `selection_text_inactive` | #DFE1E5 | #D1D3D9 | differs (14) | `List.selectionInactiveForeground` |
+| `button_start` | #000000/00 | #191A1C/00 | differs (28) | `Button.startBackground` |
+| `button_end` | #000000/00 | #191A1C/00 | differs (28) | `Button.endBackground` |
 
 **`EditorColors`, `islands_dark` with scheme Islands Dark vs `Theme::dark()`:** 27 exact, 1 near, 5 differ, 1 kept.
 
@@ -196,7 +200,7 @@ key. They stay documented here; `dark()` and `light()` are not patched to match.
 | `invalid` | #FA6675 | #F75464 | differs (18) | `BAD_CHARACTER.fg` |
 | `search_result_current` | #1F7C94 | _kept (no key)_ | measured value | - |
 
-**`Colors`, `islands_light` vs `Theme::light()`:** 53 exact, 0 near, 6 differ, 10 kept (no IntelliJ key).
+**`Colors`, `islands_light` vs `Theme::light()`:** 58 exact, 1 near, 8 differ, 10 kept (no IntelliJ key).
 
 | Field | Measured (`Theme::light()`) | Generated (`islands_light`) | Verdict | Source |
 |---|---|---|---|---|
@@ -216,6 +220,9 @@ key. They stay documented here; `dark()` and `light()` are not patched to match.
 | `vcs_ignored` | #818594 | #6C707E | differs (22) | `scheme FILESTATUS_DELETED` |
 | `icon` | #73767C | _kept (no key)_ | measured value | - |
 | `folder_fill` | #EBECF0 | _kept (no key)_ | measured value | - |
+| `header_active` | #FFFFFF | #F7F8F9 | near (8) | `ToolWindow.Header.background` |
+| `button_start` | #000000/00 | #FFFFFF | differs (255) | `Button.startBackground` |
+| `button_end` | #000000/00 | #FFFFFF | differs (255) | `Button.endBackground` |
 
 **`EditorColors`, `islands_light` with scheme New UI Light vs `Theme::light()`:** 27 exact, 1 near, 5 differ, 1 kept.
 

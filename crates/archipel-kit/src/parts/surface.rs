@@ -1,7 +1,7 @@
 //! The surfaces things are drawn on.
 
 use crate::theme::Theme;
-use crate::tokens::{popup, radius, size};
+use crate::tokens::{radius, size};
 use egui::{CornerRadius, Margin, Stroke};
 
 /// A themed surface. Every container in the kit is one of these, so a new component that
@@ -21,6 +21,11 @@ pub enum Surface {
     Chrome,
     /// An input field's box (without focus or error state; see [`Surface::field_stroke`]).
     Field,
+    /// A flush panel: an island's fill with square corners, for the New UI and Classic
+    /// looks, where panels touch and 1 px lines separate them
+    /// ([`Surface::island_lines`] draws those). [`Surface::Island`] turns into this by
+    /// itself in those looks.
+    Flat,
 }
 
 impl Surface {
@@ -28,38 +33,74 @@ impl Surface {
     pub fn frame(self, ctx: &egui::Context) -> egui::Frame {
         let colors = Theme::colors(ctx);
         let style = ctx.style();
+        let metrics = crate::tokens::metrics(ctx);
         match self {
+            // In the flush looks an island is a square panel (its radius is 0).
             Surface::Island => egui::Frame::new()
                 .fill(colors.island)
-                .corner_radius(radius::ISLAND)
+                .corner_radius(metrics.island_radius)
+                .inner_margin(Margin::same(size::CONTENT_INSET as i8)),
+            Surface::Flat => egui::Frame::new()
+                .fill(colors.island)
                 .inner_margin(Margin::same(size::CONTENT_INSET as i8)),
             Surface::Popup => egui::Frame::popup(&style)
                 .fill(colors.popup)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
-                .corner_radius(radius::POPUP)
-                .inner_margin(Margin::symmetric(0, popup::PADDING as i8)),
+                .corner_radius(metrics.popup_radius)
+                .inner_margin(Margin::symmetric(0, metrics.popup_padding as i8)),
             Surface::Tooltip => egui::Frame::popup(&style)
                 .fill(colors.tooltip)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
-                .corner_radius(CornerRadius::same(radius::CONTROL))
-                // Android Studio's tooltips: 16 pt at the sides, 36 pt high for one line.
+                .corner_radius(CornerRadius::same(metrics.control_radius))
+                // Android Studio's tooltips: 16 pt at the sides, 36 pt high for one line
+                // (Classic: the smaller classic insets).
                 .inner_margin(Margin::symmetric(
-                    size::TOOLTIP_PADDING_X as i8,
-                    size::TOOLTIP_PADDING_Y as i8,
+                    metrics.tooltip_padding_x as i8,
+                    metrics.tooltip_padding_y as i8,
                 )),
             Surface::Dialog => egui::Frame::popup(&style)
                 .fill(colors.popup)
                 .stroke(Stroke::new(1.0_f32, colors.popup_border))
-                .corner_radius(CornerRadius::same(radius::ISLAND))
+                .corner_radius(CornerRadius::same(
+                    if metrics.look == crate::UiLook::Classic {
+                        0
+                    } else {
+                        radius::ISLAND
+                    },
+                ))
                 .inner_margin(Margin::same(size::DIALOG_PADDING as i8 + 4)),
             Surface::Chrome => egui::Frame::new()
                 .fill(colors.frame)
-                .inner_margin(Margin::same(size::ISLAND_GAP as i8)),
+                .inner_margin(Margin::same(metrics.island_gap as i8)),
             Surface::Field => egui::Frame::new()
                 .fill(colors.field)
                 .stroke(Stroke::new(1.0_f32, colors.border))
-                .corner_radius(CornerRadius::same(radius::CONTROL))
+                .corner_radius(CornerRadius::same(metrics.control_radius))
                 .inner_margin(Margin::symmetric(8, 0)),
+        }
+    }
+
+    /// The 1 px lines of a flush panel at `rect` on the `sides` that touch another panel
+    /// (`[left, top, right, bottom]`), in the theme's divider color. Nothing in Islands, where
+    /// gaps separate the panels.
+    pub fn island_lines(painter: &egui::Painter, rect: egui::Rect, sides: [bool; 4]) {
+        let metrics = crate::tokens::metrics(painter.ctx());
+        if metrics.panel_line <= 0.0 {
+            return;
+        }
+        let stroke = Stroke::new(metrics.panel_line, Theme::colors(painter.ctx()).divider);
+        let h = metrics.panel_line / 2.0;
+        if sides[0] {
+            painter.vline(rect.left() + h, rect.y_range(), stroke);
+        }
+        if sides[1] {
+            painter.hline(rect.x_range(), rect.top() + h, stroke);
+        }
+        if sides[2] {
+            painter.vline(rect.right() - h, rect.y_range(), stroke);
+        }
+        if sides[3] {
+            painter.hline(rect.x_range(), rect.bottom() - h, stroke);
         }
     }
 

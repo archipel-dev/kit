@@ -45,6 +45,8 @@ impl BreadcrumbsComponent {
     /// Draws the path in a row, [`size::STATUS_ITEM_HEIGHT`] high.
     pub fn show(self, ui: &mut Ui) -> BreadcrumbsComponentResponse {
         let colors = Theme::colors(ui.ctx());
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let (item_height, hover_radius) = (metrics.status_item_height, metrics.status_hover_radius);
         let mut clicked = None;
         let mut crumbs = Vec::with_capacity(self.crumbs.len());
         ui.horizontal(|ui| {
@@ -59,7 +61,7 @@ impl BreadcrumbsComponent {
                 };
                 let width = 2.0 * size::BREADCRUMB_PADDING + icon_width + galley.size().x;
                 let (rect, response) =
-                    ui.allocate_exact_size(vec2(width, size::STATUS_ITEM_HEIGHT), Sense::click());
+                    ui.allocate_exact_size(vec2(width, item_height), Sense::click());
                 crate::cursor::on_hover_action(&response);
                 response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
                 if response.clicked() {
@@ -71,7 +73,7 @@ impl BreadcrumbsComponent {
                     let painter = ui.painter();
                     let fill = state.flat_fill(&colors);
                     if fill != egui::Color32::TRANSPARENT {
-                        painter.rect_filled(rect, CornerRadius::same(radius::CONTROL), fill);
+                        painter.rect_filled(rect, CornerRadius::same(hover_radius), fill);
                     }
                     if response.has_focus() {
                         common::focus_ring(painter, rect, radius::CONTROL, &colors);
@@ -96,10 +98,8 @@ impl BreadcrumbsComponent {
                 }
                 crumbs.push(response);
                 if index + 1 < count {
-                    let (chevron, _) = ui.allocate_exact_size(
-                        vec2(size::ICON, size::STATUS_ITEM_HEIGHT),
-                        Sense::hover(),
-                    );
+                    let (chevron, _) =
+                        ui.allocate_exact_size(vec2(size::ICON, item_height), Sense::hover());
                     icons::paint(
                         ui.painter(),
                         Rect::from_center_size(chevron.center(), vec2(size::ICON, size::ICON)),

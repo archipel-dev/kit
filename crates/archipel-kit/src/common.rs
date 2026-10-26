@@ -71,3 +71,8 @@ pub(crate) fn enabled_text(enabled: bool, color: Color32, colors: &Colors) -> Co
 pub(crate) fn menu_rows(ui: &mut Ui) {
     ui.spacing_mut().item_spacing.y = 0.0;
 }
+
+/// The color `t` (0 to 1) of the way from `a` to `b`, per channel (alpha included).
+pub(crate) fn lerp_color(a: egui::Color32, b: egui::Color32, t: f32) -> egui::Color32 {
+    a.lerp_to_gamma(b, t)
+}

@@ -3,7 +3,6 @@
 use super::engine::{DrawnRow, RowCtx, Rows, SelectionTarget, Spec, TreeMove, collection};
 use super::{edit, header, paint_cell, row_pill_joined, tree_horizontal};
 use crate::common;
-use crate::icons::{self, Glyph};
 use crate::parts::{SimpleColoredComponent, State, TextFragment};
 use crate::theme::Theme;
 use crate::tokens::size;
@@ -179,7 +178,10 @@ impl<'a> TreeTable<'a> {
                 let (id, columns, editing) = (self.id, self.columns, &mut *self.editing);
                 let tree_row = &self.rows[index];
                 let (rect, response) = ui.allocate_exact_size(
-                    vec2(ui.available_width(), size::ROW_HEIGHT),
+                    vec2(
+                        ui.available_width(),
+                        crate::tokens::metrics(ui.ctx()).row_height,
+                    ),
                     Sense::CLICK,
                 );
                 crate::cursor::on_hover(&response, CursorIcon::Default);
@@ -201,7 +203,8 @@ impl<'a> TreeTable<'a> {
                 // a `Tree`.
                 let chevron = Rect::from_min_size(
                     pos2(
-                        rect.left() + size::indent(tree_row.depth) - size::ROW_PILL_INSET,
+                        rect.left() + crate::tokens::metrics(ui.ctx()).indent(tree_row.depth)
+                            - crate::tokens::metrics(ui.ctx()).row_pill_inset,
                         rect.center().y - size::CHEVRON_COLUMN / 2.0,
                     ),
                     vec2(size::CHEVRON_COLUMN, size::CHEVRON_COLUMN),
@@ -229,7 +232,7 @@ impl<'a> TreeTable<'a> {
                 }
 
                 let mut column_rects = Vec::with_capacity(columns.len());
-                let mut x = rect.left() + size::ROW_PILL_INSET;
+                let mut x = rect.left() + crate::tokens::metrics(ui.ctx()).row_pill_inset;
                 for column in columns {
                     column_rects.push(
                         Rect::from_min_max(
@@ -287,8 +290,12 @@ impl<'a> TreeTable<'a> {
                     if ctx.lead {
                         common::focus_ring(
                             ui.painter(),
-                            rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0)).shrink(1.0),
-                            crate::tokens::radius::ROW,
+                            rect.shrink2(vec2(
+                                crate::tokens::metrics(ui.ctx()).row_pill_inset,
+                                0.0,
+                            ))
+                            .shrink(1.0),
+                            crate::tokens::metrics(ui.ctx()).row_radius,
                             &colors,
                         );
                     }
@@ -298,12 +305,12 @@ impl<'a> TreeTable<'a> {
                     let mut clip = ui.new_child(UiBuilder::new().max_rect(key_rect));
                     clip.set_clip_rect(key_rect.intersect(ui.clip_rect()));
                     if tree_row.children {
-                        let glyph = if tree_row.expanded {
-                            Glyph::ChevronDown
-                        } else {
-                            Glyph::ChevronRight
-                        };
-                        icons::paint(clip.painter(), chevron, glyph, colors.text_secondary);
+                        crate::parts::paint_expander(
+                            clip.painter(),
+                            chevron,
+                            tree_row.expanded,
+                            colors.text_secondary,
+                        );
                     }
                     let mut content_x = chevron.right() + 2.0;
                     if tree_row.busy {
@@ -359,7 +366,7 @@ impl<'a> TreeTable<'a> {
                         if editing.is_editing(index, col) {
                             editing.show(ui, column_rects[col], column.title(), column.mono);
                         } else {
-                            paint_cell(ui, column_rects[col], column, cell, selected, ctx.search);
+                            paint_cell(ui, column_rects[col], column, cell, state, ctx.search);
                         }
                     }
                 }

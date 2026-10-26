@@ -190,6 +190,18 @@ plugin view embedded with `show_inside` in a host window that already drew that 
 passes `.frame_background(false)`; otherwise it paints its own frame over the host's and
 the glow stops at a hard edge around the embedded islands.
 
+## Looks
+
+The pane follows the context's [UI look](../looks.md): in New UI and Classic the panels are
+flush (no gaps, square corners) and 1 pt lines in the theme's `divider` color separate
+them, the stripes and the status bar. Classic replaces the icon stripes with three
+`Stripe`s of rotated `StripeButton`s (the classic `StripeButton`: tool window name and icon,
+label font −2, filled while open) along the left, right and bottom edges; `StripeSide` says
+which edge. Presentation mode hides the stripes, the status bar and the tool windows,
+Distraction Free mode the stripes and the status bar (the state is kept; they come back
+with the mode). `.main_menu(group, context)` gives the toolbar the main menu: a menu bar
+row in Classic, a hamburger button in New UI and Islands.
+
 ## A whole window
 
 `workbench_ide` is built only from kit components, laid out like Android Studio: a toolbar

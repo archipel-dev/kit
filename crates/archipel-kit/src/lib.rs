@@ -16,6 +16,8 @@
 //!
 //! - [`theme`]: colors of the dark and light looks, stored per [`egui::Context`].
 //! - [`tokens`]: sizes, radii and typography shared by every component.
+//! - [`look`]: the UI look (Islands, New UI, Classic), compact density and view modes, stored
+//!   per [`egui::Context`]; [`tokens::metrics`] resolves the sizes that depend on it.
 //! - [`icons`]: the [`Glyph`]s of the `archipel-icons` kit and file-type [`Icon`]s.
 //!
 //! The widgets are grouped by the IntelliJ Platform area their names come from:
@@ -49,6 +51,7 @@ pub mod editor;
 pub mod host;
 pub mod icons;
 pub mod ide;
+pub mod look;
 pub mod notification;
 pub mod openapi;
 pub mod parts;
@@ -63,8 +66,10 @@ pub mod testing;
 
 pub use egui;
 pub use icons::{Glyph, Icon};
+pub use look::{LookSettings, Metrics, UiLook, ViewMode};
 pub use parts::{Tone, ValueKind};
 pub use style::install;
+pub use style::install_with_look;
 pub use theme::{EditorScheme, Theme};
 
 /// The code blocks of the guides and component pages in `docs/`, compiled and run as
@@ -122,5 +127,6 @@ mod docs {
         JBTextField = "components/jb-text-field.md";
         Notification = "components/notification.md";
         GotItTooltip = "components/got-it-tooltip.md";
+        Looks = "looks.md";
     }
 }

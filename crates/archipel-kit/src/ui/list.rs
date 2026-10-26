@@ -2,13 +2,13 @@
 
 use crate::behaviour::{Behaviour, Behaviours};
 use crate::common;
-use crate::icons::{self, Glyph, Icon};
+use crate::icons::Icon;
 use crate::ide::HelpTooltip;
 use crate::parts::{
     IconPainter, SimpleColoredComponent, SimpleTextAttributes, Slot, State, TextFragment, Tone,
 };
 use crate::theme::Theme;
-use crate::tokens::{opacity, popup, radius, size};
+use crate::tokens::{opacity, size};
 use crate::ui::SpeedSearchComparator;
 use egui::{
     Color32, CornerRadius, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2,
@@ -330,13 +330,18 @@ impl<'a> ColoredListCellRenderer<'a> {
                     secondary: self.secondary.as_deref(),
                     ..SimpleColoredComponent::default()
                 };
-                let pill = row.shrink2(vec2(size::ROW_INSET, 0.0));
+                let pill = row.shrink2(vec2(crate::tokens::metrics(ui.ctx()).row_inset, 0.0));
                 // Enabled, unselected: the plain row.
                 let state = State {
                     enabled: true,
                     ..State::default()
                 };
-                content.paint(ui, pill, pill.left() + popup::ITEM_PADDING, state);
+                content.paint(
+                    ui,
+                    pill,
+                    pill.left() + crate::tokens::metrics(ui.ctx()).popup_item_padding,
+                    state,
+                );
             });
         // Held where it was grabbed.
         ctx.transform_layer_shapes(
@@ -348,6 +353,7 @@ impl<'a> ColoredListCellRenderer<'a> {
     /// Draws the row across the available width.
     pub fn show(self, ui: &mut Ui) -> CellRendererResponse {
         let colors = Theme::colors(ui.ctx());
+        let metrics = crate::tokens::metrics(ui.ctx());
         // Behaviours that need more sense (a drag source) are part of the one registration, so
         // the row keeps its place in the Tab order.
         let sense = if self.enabled && self.focusable {
@@ -358,7 +364,7 @@ impl<'a> ColoredListCellRenderer<'a> {
             Sense::hover()
         };
         let (rect, response) =
-            ui.allocate_exact_size(vec2(ui.available_width(), size::ROW_HEIGHT), sense);
+            ui.allocate_exact_size(vec2(ui.available_width(), metrics.row_height), sense);
         crate::cursor::on_hover(&response, egui::CursorIcon::Default);
         response.widget_info(|| {
             let mut info = WidgetInfo::selected(
@@ -378,17 +384,18 @@ impl<'a> ColoredListCellRenderer<'a> {
         let mut elided = false;
         // Measured on Android Studio: the pill is inset 12 pt (popup lists: as menu items);
         // the expander column starts at the pill's edge and moves 19 pt per level.
+        // Classic: the selection is the whole row.
         let pill = if self.flat {
-            rect.shrink2(vec2(popup::ITEM_INSET, 0.0))
+            rect.shrink2(vec2(metrics.popup_item_inset, 0.0))
         } else {
-            rect.shrink2(vec2(size::ROW_INSET, 0.0))
+            rect.shrink2(vec2(metrics.row_inset, 0.0))
         };
         let chevron = Rect::from_min_size(
             pos2(
                 if self.flat {
-                    pill.left() + popup::ITEM_PADDING
+                    pill.left() + metrics.popup_item_padding
                 } else {
-                    rect.left() + size::indent(self.depth)
+                    rect.left() + metrics.indent(self.depth)
                 },
                 rect.center().y - size::CHEVRON_COLUMN / 2.0,
             ),
@@ -445,8 +452,16 @@ impl<'a> ColoredListCellRenderer<'a> {
             // Neighbors that are selected too join into one block: only its outer corners
             // are round.
             let (top, bottom) = (
-                if self.joined_above { 0 } else { radius::ROW },
-                if self.joined_below { 0 } else { radius::ROW },
+                if self.joined_above {
+                    0
+                } else {
+                    metrics.row_radius
+                },
+                if self.joined_below {
+                    0
+                } else {
+                    metrics.row_radius
+                },
             );
             let corner = CornerRadius {
                 nw: top,
@@ -466,15 +481,10 @@ impl<'a> ColoredListCellRenderer<'a> {
                 );
             }
             if (response.has_focus() || self.lead) && !self.selected {
-                common::focus_ring(painter, pill.shrink(1.0), radius::ROW, &colors);
+                common::focus_ring(painter, pill.shrink(1.0), metrics.row_radius, &colors);
             }
             if let Some(expanded) = self.expanded {
-                let icon = if expanded {
-                    Glyph::ChevronDown
-                } else {
-                    Glyph::ChevronRight
-                };
-                icons::paint(painter, chevron, icon, colors.text_secondary);
+                crate::parts::paint_expander(painter, chevron, expanded, colors.text_secondary);
             }
             let mut x = if self.flat {
                 chevron.right()

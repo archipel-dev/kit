@@ -2,6 +2,7 @@
 
 - [Getting started](getting-started.md): add the crate, install the theme, build a panel.
 - [Theming](theming.md): colors, tokens, dark and light, custom themes.
+- [UI looks](looks.md): Islands, New UI and Classic, compact mode and the view modes, switchable at runtime.
 - [Theme mapping](theme-mapping.md): which IntelliJ key fills which kit color in every bundled theme (generated).
 - [Testing](testing.md): behavior, accessibility and snapshot tests for your own UI.
 - [Cursors](cursors.md): which cursor shows where, and how parents override it.

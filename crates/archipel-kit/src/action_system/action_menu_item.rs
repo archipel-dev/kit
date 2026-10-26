@@ -4,7 +4,7 @@ use crate::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{SimpleColoredComponent, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{popup, radius, size, typography};
+use crate::tokens::{popup, size, typography};
 use egui::{
     Color32, CornerRadius, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
 };
@@ -154,7 +154,8 @@ impl<'a> ActionMenuItem<'a> {
                 .filter(|_| self.submenu.is_none() && !self.arrow),
             ..SimpleColoredComponent::default()
         };
-        let chrome = 2.0 * (popup::ITEM_INSET + popup::ITEM_PADDING);
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let chrome = 2.0 * (metrics.popup_item_inset + metrics.popup_item_padding);
         let large_icon = popup::LARGE_ICON + 2.0 * size::ICON_TEXT_GAP;
         content.min_width(ui)
             + chrome
@@ -254,10 +255,12 @@ impl Widget for ActionMenuItem<'_> {
                 .max(self.natural_width(ui))
                 .max(popup::MIN_WIDTH),
         };
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let row_height = metrics.popup_row_height;
         let height = if two_line {
-            size::ROW_HEIGHT + popup::DESCRIPTION_HEIGHT
+            row_height + popup::DESCRIPTION_HEIGHT
         } else {
-            size::ROW_HEIGHT
+            row_height
         };
         let sense = match (self.enabled, self.managed) {
             (false, _) => Sense::hover(),
@@ -288,13 +291,19 @@ impl Widget for ActionMenuItem<'_> {
         if ui.is_rect_visible(rect) {
             let mut state = State::of(&response);
             state.hovered = self.enabled && (self.highlighted || current);
-            let pill = rect.shrink2(vec2(popup::ITEM_INSET, 0.0));
+            // Classic menus highlight the whole row, flat.
+            let pill = rect.shrink2(vec2(metrics.popup_item_inset, 0.0));
             let fill = state.menu_fill(&colors);
             if fill != Color32::TRANSPARENT {
                 ui.painter()
-                    .rect_filled(pill, CornerRadius::same(radius::ROW), fill);
+                    .rect_filled(pill, CornerRadius::same(metrics.row_radius), fill);
             }
-            let mut x = pill.left() + popup::ITEM_PADDING;
+            // A theme whose selection has a foreground of its own (white on the classic
+            // themes' blue) paints the highlighted item's text in it.
+            if state.hovered && colors.selection_text != colors.text_strong {
+                state.selected = true;
+            }
+            let mut x = pill.left() + metrics.popup_item_padding;
             if self.mnemonic_column > 0.0 {
                 if let Some(mnemonic) = self.mnemonic {
                     let galley = common::galley(
@@ -307,7 +316,7 @@ impl Widget for ActionMenuItem<'_> {
                 x += self.mnemonic_column;
             }
             if let Some(description) = &self.description {
-                let line = Rect::from_min_size(pill.min, vec2(pill.width(), size::ROW_HEIGHT));
+                let line = Rect::from_min_size(pill.min, vec2(pill.width(), row_height));
                 if let Some(icon) = icon {
                     let icon_rect = Rect::from_center_size(
                         pos2(x + popup::LARGE_ICON / 2.0, line.center().y),
@@ -333,7 +342,7 @@ impl Widget for ActionMenuItem<'_> {
                     ui,
                     description,
                     typography::body(typography::BODY),
-                    (pill.right() - popup::ITEM_PADDING - text_x).max(0.0),
+                    (pill.right() - metrics.popup_item_padding - text_x).max(0.0),
                 );
                 let color = if self.enabled {
                     colors.text_placeholder
@@ -348,7 +357,7 @@ impl Widget for ActionMenuItem<'_> {
                 let chevron = Rect::from_min_size(
                     pos2(
                         pill.right() - size::ROW_PILL_INSET - size::ICON,
-                        rect.top() + (size::ROW_HEIGHT - size::ICON) / 2.0,
+                        rect.top() + (row_height - size::ICON) / 2.0,
                     ),
                     vec2(size::ICON, size::ICON),
                 );

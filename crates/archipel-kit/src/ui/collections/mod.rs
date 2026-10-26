@@ -813,7 +813,10 @@ impl<'a> JBTable<'a> {
                 let colors = Theme::colors(ui.ctx());
                 let (index, selected) = (ctx.index, ctx.selected);
                 let (rect, response) = ui.allocate_exact_size(
-                    vec2(ui.available_width(), size::ROW_HEIGHT),
+                    vec2(
+                        ui.available_width(),
+                        crate::tokens::metrics(ui.ctx()).row_height,
+                    ),
                     Sense::CLICK,
                 );
                 crate::cursor::on_hover(&response, CursorIcon::Default);
@@ -830,7 +833,7 @@ impl<'a> JBTable<'a> {
                         label.join(", "),
                     )
                 });
-                let mut x = rect.left() + size::ROW_PILL_INSET;
+                let mut x = rect.left() + crate::tokens::metrics(ui.ctx()).row_pill_inset;
                 let column_rects: Vec<Rect> = columns
                     .iter()
                     .map(|column| {
@@ -875,8 +878,12 @@ impl<'a> JBTable<'a> {
                     if ctx.lead {
                         common::focus_ring(
                             ui.painter(),
-                            rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0)).shrink(1.0),
-                            radius::ROW,
+                            rect.shrink2(vec2(
+                                crate::tokens::metrics(ui.ctx()).row_pill_inset,
+                                0.0,
+                            ))
+                            .shrink(1.0),
+                            crate::tokens::metrics(ui.ctx()).row_radius,
                             &colors,
                         );
                     }
@@ -885,7 +892,7 @@ impl<'a> JBTable<'a> {
                             self.editing
                                 .show(ui, column_rects[col], column.title(), column.mono);
                         } else {
-                            paint_cell(ui, column_rects[col], column, cell, selected, ctx.search);
+                            paint_cell(ui, column_rects[col], column, cell, state, ctx.search);
                         }
                     }
                 }
@@ -953,10 +960,12 @@ pub(super) fn row_pill_joined(
     if fill == egui::Color32::TRANSPARENT {
         return;
     }
-    let pill = rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0));
+    // Classic selects the whole row, flat; New UI and Islands a rounded, inset pill.
+    let metrics = crate::tokens::metrics(painter.ctx());
+    let pill = rect.shrink2(vec2(metrics.row_pill_inset, 0.0));
     let (top, bottom) = (
-        if above { 0 } else { radius::ROW },
-        if below { 0 } else { radius::ROW },
+        if above { 0 } else { metrics.row_radius },
+        if below { 0 } else { metrics.row_radius },
     );
     painter.rect_filled(
         pill,
@@ -987,12 +996,14 @@ pub(super) fn header(
     reorder: bool,
 ) -> (Option<usize>, Option<Vec<usize>>) {
     let colors = Theme::colors(ui.ctx());
-    let height = size::ROW_HEIGHT + 4.0;
+    let metrics = crate::tokens::metrics(ui.ctx());
+    // Islands: a row and 4 pt; Classic: `TableHeader.height` 25.
+    let height = metrics.table_header_height;
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     let font = typography::semibold(ui.ctx(), typography::BODY);
     let mut clicked = None;
     let mut moved: Option<(usize, usize)> = None;
-    let mut x = rect.left() + size::ROW_PILL_INSET;
+    let mut x = rect.left() + metrics.row_pill_inset;
     for (index, column) in columns.iter_mut().enumerate() {
         let width = if column.width.is_finite() {
             column.width.max(0.0)
@@ -1117,7 +1128,7 @@ pub(super) fn paint_cell(
     rect: Rect,
     column: &ColumnInfo,
     cell: Cell,
-    selected: bool,
+    state: crate::parts::State,
     search: Option<&SpeedSearchComparator>,
 ) {
     let colors = Theme::colors(ui.ctx());
@@ -1129,11 +1140,11 @@ pub(super) fn paint_cell(
     } else {
         typography::body(typography::BODY)
     };
-    let color = match (cell.color, selected) {
-        (Some(CellColor::Tone(tone)), _) => tone.color(&colors),
-        (Some(CellColor::Kind(kind)), _) => kind.resolve(ui.ctx()),
-        (None, true) => colors.text_strong,
-        (None, false) => colors.text,
+    let color = match cell.color {
+        Some(CellColor::Tone(tone)) => tone.color(&colors),
+        Some(CellColor::Kind(kind)) => kind.resolve(ui.ctx()),
+        None if state.selected => state.text(crate::parts::Tone::Default, &colors),
+        None => colors.text,
     };
     let icon_width = if cell.icon.is_some() {
         size::ICON + size::ICON_TEXT_GAP

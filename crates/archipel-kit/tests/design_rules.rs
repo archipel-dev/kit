@@ -180,6 +180,14 @@ fn components_follow_the_design_rules() {
 const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("Avatar", "display only"),
     (
+        "Stripe",
+        "a container of StripeButtons, which pass conformance in tests/conformance.rs",
+    ),
+    (
+        "StripeSide",
+        "an enum (which frame edge a Stripe runs along)",
+    ),
+    (
         "InlineBanner",
         "composition of links and an icon button, audited in tests/feedback.rs",
     ),

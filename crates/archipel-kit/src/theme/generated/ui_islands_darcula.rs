@@ -1779,6 +1779,14 @@ pub(in crate::theme) fn colors(mut c: Colors) -> Colors {
     c.vcs_added = px(0x629755FF); // scheme FILESTATUS_ADDED
     c.vcs_untracked = px(0xD1675AFF); // scheme FILESTATUS_UNKNOWN
     c.vcs_ignored = px(0x6C6C6CFF); // scheme FILESTATUS_DELETED
+    c.selection_text = px(0xDFE1E5FF); // List.selectionForeground
+    c.selection_text_inactive = px(0xDFE1E5FF); // List.selectionInactiveForeground
+    c.divider = px(0x404040FF); // Borders.color
+    c.header_active = px(0x2B2B2BFF); // ToolWindow.Header.background
+    c.header_inactive = px(0x2B2B2BFF); // ToolWindow.Header.inactiveBackground
+    c.button_start = px(0x4C5052FF); // Button.startBackground
+    c.button_end = px(0x4C5052FF); // Button.endBackground
+    c.accent_end = px(0x365880FF); // Button.default.endBackground
     // Kept at the measured value: accent_disabled, text_on_accent_disabled, tab_scroll_thumb, tab_scroll_thumb_hover, control, clear_icon, clear_icon_hover, clear_hover, banner_info.background, banner_info.border, banner_warning.background, banner_warning.border, banner_error.background, banner_error.border, banner_success.background, banner_success.border, icon, folder_fill.
     c
 }

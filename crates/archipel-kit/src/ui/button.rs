@@ -2,7 +2,7 @@
 
 use crate::icons::{self, Icon};
 use crate::theme::Theme;
-use crate::tokens::{radius, size};
+use crate::tokens::size;
 use egui::{
     Color32, CornerRadius, Response, Sense, Stroke, StrokeKind, Ui, Widget, WidgetInfo, WidgetText,
     WidgetType, vec2,
@@ -135,10 +135,11 @@ impl Button {
 impl Widget for Button {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
+        let metrics = crate::tokens::metrics(ui.ctx());
         let height = if self.small {
-            size::CONTROL_HEIGHT_SMALL
+            metrics.control_height_small
         } else {
-            size::CONTROL_HEIGHT
+            metrics.control_height
         };
         let galley = self.label.clone().into_galley(
             ui,
@@ -233,23 +234,50 @@ impl Widget for Button {
                 },
             ),
         };
-        let corner = CornerRadius::same(radius::CONTROL);
+        let control_radius = metrics.control_radius;
+        let corner = CornerRadius::same(control_radius);
         let painter = ui.painter();
         let focused = response.has_focus();
         let filled = matches!(self.variant, ButtonVariant::Primary | ButtonVariant::Danger);
+        // Classic fills buttons with a top-to-bottom gradient (`startBackground` to
+        // `endBackground`); New UI and Islands are flat.
+        let gradient = match (self.variant, self.enabled) {
+            _ if !metrics.button_gradient => None,
+            (ButtonVariant::Primary, true) => Some((
+                darken(colors.accent, pressed),
+                darken(colors.accent_end, pressed),
+            )),
+            (ButtonVariant::Secondary, true) if !pressed => {
+                Some((colors.button_start, colors.button_end))
+            }
+            _ => None,
+        };
+        if let Some((top, bottom)) = gradient {
+            let inner = if focused && filled {
+                rect.shrink(1.0)
+            } else {
+                rect
+            };
+            crate::parts::fill_gradient(painter, inner, corner, top, bottom);
+        }
+        let fill = if gradient.is_some() {
+            Color32::TRANSPARENT
+        } else {
+            fill
+        };
         if focused && filled {
             // A filled button keeps a 1 pt gap inside its focus ring, as in Android Studio.
             painter.rect(rect.shrink(1.0), corner, fill, stroke, StrokeKind::Inside);
             painter.rect_stroke(
                 rect.expand(2.0),
-                CornerRadius::same(radius::CONTROL + 2),
+                CornerRadius::same(control_radius + 2),
                 Stroke::new(size::FOCUS_RING, colors.focus_ring),
                 StrokeKind::Inside,
             );
         } else {
             painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
             if focused {
-                crate::parts::focus_ring(painter, rect, radius::CONTROL, &colors);
+                crate::parts::focus_ring(painter, rect, control_radius, &colors);
             }
         }
         let content = vec2(icon_width + galley.size().x, galley.size().y);

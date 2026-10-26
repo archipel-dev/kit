@@ -1915,6 +1915,14 @@ pub(in crate::theme) fn colors(mut c: Colors) -> Colors {
     c.vcs_added = px(0x067D17FF); // scheme FILESTATUS_ADDED
     c.vcs_untracked = px(0xB23247FF); // scheme FILESTATUS_UNKNOWN
     c.vcs_ignored = px(0x6C707EFF); // scheme FILESTATUS_DELETED
+    c.selection_text = px(0x000000FF); // List.selectionForeground
+    c.selection_text_inactive = px(0x000000FF); // List.selectionInactiveForeground
+    c.divider = px(0xE9EAEEFF); // Borders.color
+    c.header_active = px(0xF7F8F9FF); // ToolWindow.Header.background
+    c.header_inactive = px(0xFFFFFFFF); // ToolWindow.Header.inactiveBackground
+    c.button_start = px(0xFFFFFFFF); // Button.startBackground
+    c.button_end = px(0xFFFFFFFF); // Button.endBackground
+    c.accent_end = px(0x3871E1FF); // Button.default.endBackground
     // Kept at the measured value: accent_disabled, text_on_accent_disabled, tab_scroll_thumb, tab_scroll_thumb_hover, control, clear_icon, clear_icon_hover, clear_hover, icon, folder_fill.
     c
 }

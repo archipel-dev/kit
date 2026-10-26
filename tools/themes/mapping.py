@@ -109,6 +109,17 @@ COLORS = [
     # Icons. `categorical` and `sequential` (chart palettes) are kit-defined, not IntelliJ's.
     ("icon", []),  # Component.iconColor is a 50 % alpha gray: not a stroke color
     ("folder_fill", []),
+
+    # UI looks (docs/looks.md). The selection foreground is white on the classic light themes'
+    # dark blue selection, so selected rows use it instead of `text_strong`.
+    ("selection_text", ["ui:List.selectionForeground", "ui:Tree.selectionForeground", "self:text_strong"]),
+    ("selection_text_inactive", ["ui:List.selectionInactiveForeground", "ui:Tree.selectionInactiveForeground", "self:text_strong"]),
+    ("divider", ["ui:Borders.color", "ui:OnePixelDivider.background", "ui:StatusBar.borderColor", "self:separator"]),
+    ("header_active", ["ui:ToolWindow.Header.background", "self:island"]),
+    ("header_inactive", ["ui:ToolWindow.Header.inactiveBackground", "self:island"]),
+    ("button_start", ["ui:Button.startBackground"]),
+    ("button_end", ["ui:Button.endBackground", "self:button_start"]),
+    ("accent_end", ["ui:Button.default.endBackground", "self:accent"]),
 ]
 
 EDITOR = [

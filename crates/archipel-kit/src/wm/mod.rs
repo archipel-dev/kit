@@ -29,7 +29,9 @@ pub use status_bar::{
     StatusBarResponse, StatusBarWidgetItem, TextPresentation, WidgetPresentation,
 };
 pub use status_bar_widget::StatusBarWidget;
-pub use stripe::{SquareStripeButton, StripeResponse, ToolWindowToolbar};
+pub use stripe::{
+    SquareStripeButton, Stripe, StripeButton, StripeResponse, StripeSide, ToolWindowToolbar,
+};
 pub use tool_window::{Content, ContentManager, ToolWindow, ToolWindowEvent};
 pub use tool_window_pane::{
     ToolWindowAnchor, ToolWindowPane, ToolWindowPaneState, ToolWindowPlace,

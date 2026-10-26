@@ -7,18 +7,18 @@ Generated from the data files of IntelliJ Community `idea/262.10968.63` (commit 
 
 | Theme | `Theme::` | IntelliJ theme chain | Editor scheme | UI keys | Colors from IntelliJ | Kept measured |
 |---|---|---|---|---|---|---|
-| Islands Dark | `islands_dark()` | Darcula → ExperimentalDark → Islands Dark | Islands Dark | 1744 | 59 / 69 | 10 |
-| Islands Light | `islands_light()` | Darcula → IntelliJ → ExperimentalLight → ExperimentalLightWithLightHeader → Islands Light | New UI Light | 1826 | 59 / 69 | 10 |
-| Islands Darcula | `islands_darcula()` | Darcula → ExperimentalDark → Islands Darcula | Darcula | 1700 | 51 / 69 | 18 |
-| High Contrast | `high_contrast()` | Darcula → ExperimentalDark → Islands Dark → JetBrainsHighContrastTheme | High Contrast | 1824 | 58 / 69 | 11 |
-| New UI Dark | `new_ui_dark()` | Darcula → ExperimentalDark | New UI Dark | 1511 | 51 / 69 | 18 |
-| New UI Light | `new_ui_light()` | Darcula → IntelliJ → ExperimentalLight | New UI Light | 1628 | 51 / 69 | 18 |
-| Light with Light Header | `light_with_light_header()` | Darcula → IntelliJ → ExperimentalLight → ExperimentalLightWithLightHeader | New UI Light | 1629 | 51 / 69 | 18 |
-| Darcula | `darcula()` | Darcula | Darcula | 1106 | 51 / 69 | 18 |
-| IntelliJ Light | `intellij_light()` | Darcula → IntelliJ → JetBrainsLightTheme | IntelliJ Light | 1391 | 51 / 69 | 18 |
-| High Contrast (Classic) | `classic_high_contrast()` | Darcula → HighContrastClassic | High Contrast (Classic) | 1389 | 58 / 69 | 11 |
-| macOS Light | `macos_light()` | Darcula → IntelliJ → macOSLight | Default | 1397 | 51 / 69 | 18 |
-| Windows 10 Light | `windows10_light()` | Darcula → IntelliJ → win10Light | Default | 1427 | 51 / 69 | 18 |
+| Islands Dark | `islands_dark()` | Darcula → ExperimentalDark → Islands Dark | Islands Dark | 1744 | 67 / 77 | 10 |
+| Islands Light | `islands_light()` | Darcula → IntelliJ → ExperimentalLight → ExperimentalLightWithLightHeader → Islands Light | New UI Light | 1826 | 67 / 77 | 10 |
+| Islands Darcula | `islands_darcula()` | Darcula → ExperimentalDark → Islands Darcula | Darcula | 1700 | 59 / 77 | 18 |
+| High Contrast | `high_contrast()` | Darcula → ExperimentalDark → Islands Dark → JetBrainsHighContrastTheme | High Contrast | 1824 | 66 / 77 | 11 |
+| New UI Dark | `new_ui_dark()` | Darcula → ExperimentalDark | New UI Dark | 1511 | 59 / 77 | 18 |
+| New UI Light | `new_ui_light()` | Darcula → IntelliJ → ExperimentalLight | New UI Light | 1628 | 59 / 77 | 18 |
+| Light with Light Header | `light_with_light_header()` | Darcula → IntelliJ → ExperimentalLight → ExperimentalLightWithLightHeader | New UI Light | 1629 | 59 / 77 | 18 |
+| Darcula | `darcula()` | Darcula | Darcula | 1106 | 59 / 77 | 18 |
+| IntelliJ Light | `intellij_light()` | Darcula → IntelliJ → JetBrainsLightTheme | IntelliJ Light | 1391 | 59 / 77 | 18 |
+| High Contrast (Classic) | `classic_high_contrast()` | Darcula → HighContrastClassic | High Contrast (Classic) | 1389 | 66 / 77 | 11 |
+| macOS Light | `macos_light()` | Darcula → IntelliJ → macOSLight | Default | 1397 | 59 / 77 | 18 |
+| Windows 10 Light | `windows10_light()` | Darcula → IntelliJ → win10Light | Default | 1427 | 59 / 77 | 18 |
 
 ## Editor schemes
 
@@ -116,6 +116,14 @@ Generated from the data files of IntelliJ Community `idea/262.10968.63` (commit 
 | `vcs_ignored` | `scheme:FILESTATUS_DELETED` |
 | `icon` | _no IntelliJ key: measured value_ |
 | `folder_fill` | _no IntelliJ key: measured value_ |
+| `selection_text` | `ui:List.selectionForeground`, `ui:Tree.selectionForeground`, `self:text_strong` |
+| `selection_text_inactive` | `ui:List.selectionInactiveForeground`, `ui:Tree.selectionInactiveForeground`, `self:text_strong` |
+| `divider` | `ui:Borders.color`, `ui:OnePixelDivider.background`, `ui:StatusBar.borderColor`, `self:separator` |
+| `header_active` | `ui:ToolWindow.Header.background`, `self:island` |
+| `header_inactive` | `ui:ToolWindow.Header.inactiveBackground`, `self:island` |
+| `button_start` | `ui:Button.startBackground` |
+| `button_end` | `ui:Button.endBackground`, `self:button_start` |
+| `accent_end` | `ui:Button.default.endBackground`, `self:accent` |
 
 Source syntax is documented at the top of `tools/themes/mapping.py`.
 
@@ -157,6 +165,10 @@ Source syntax is documented at the top of `tools/themes/mapping.py`.
 | `variable` | `attr:DEFAULT_FUNCTION_DECLARATION.fg`, `attr:DEFAULT_INSTANCE_METHOD.fg`, `attr:DEFAULT_STATIC_METHOD.fg`, `attr:DEFAULT_LOCAL_VARIABLE.fg` |
 | `invalid` | `attr:BAD_CHARACTER.fg`, `attr:WRONG_REFERENCES_ATTRIBUTES.fg`, `attr:ERRORS_ATTRIBUTES.effect` |
 | `search_result_current` | _no IntelliJ key: measured value_ |
+
+## Fields without a mapping
+
+Kit fields that `mapping.py` does not list keep the measured value in every theme: `Colors::got_it`, `Colors::got_it_border`, `Colors::loading_veil`, `Colors::popup_mnemonic`, `Colors::search_match`, `Colors::speed_search_background`, `Colors::speed_search_border`, `EditorColors::change_added`, `EditorColors::change_deleted`, `EditorColors::change_modified`, `EditorColors::fold_marker`, `EditorColors::folded_background`, `EditorColors::folded_border`, `EditorColors::folded_text`, `EditorColors::indent_guide_selected`, `EditorColors::right_margin`, `EditorColors::search_stripe`, `EditorColors::selection_inactive`, `EditorColors::whitespace`.
 
 ## Fields that fell back to the measured values
 
@@ -204,7 +216,7 @@ Where no IntelliJ key resolves, the field keeps the kit's measured value (`Theme
 
 ### `Colors`: islands_dark vs Theme::dark()
 
-exact 52, near 1, differs 6, kept (no key) 10.
+exact 56, near 1, differs 10, kept (no key) 10.
 
 | Field | Measured (`Theme::dark()`) | Generated (`islands_dark`) | Verdict | Source |
 |---|---|---|---|---|
@@ -277,6 +289,14 @@ exact 52, near 1, differs 6, kept (no key) 10.
 | `vcs_ignored` | #6F737A | #6F737A | exact | `scheme FILESTATUS_DELETED` |
 | `icon` | #CED0D6 | _kept (no key)_ | measured value | - |
 | `folder_fill` | #43454A | _kept (no key)_ | measured value | - |
+| `selection_text` | #DFE1E5 | #D1D3D9 | differs (14) | `List.selectionForeground` |
+| `selection_text_inactive` | #DFE1E5 | #D1D3D9 | differs (14) | `List.selectionInactiveForeground` |
+| `divider` | #26282C | #26282C | exact | `Borders.color` |
+| `header_active` | #191A1C | #191A1C | exact | `ToolWindow.Header.background` |
+| `header_inactive` | #191A1C | #191A1C | exact | `ToolWindow.Header.inactiveBackground` |
+| `button_start` | #000000/00 | #191A1C/00 | differs (28) | `Button.startBackground` |
+| `button_end` | #000000/00 | #191A1C/00 | differs (28) | `Button.endBackground` |
+| `accent_end` | #3871E1 | #3871E1 | exact | `Button.default.endBackground` |
 
 ### `EditorColors`: islands_dark vs Theme::dark()
 
@@ -321,7 +341,7 @@ exact 27, near 1, differs 5, kept (no key) 1.
 
 ### `Colors`: islands_light vs Theme::light()
 
-exact 53, near 0, differs 6, kept (no key) 10.
+exact 58, near 1, differs 8, kept (no key) 10.
 
 | Field | Measured (`Theme::light()`) | Generated (`islands_light`) | Verdict | Source |
 |---|---|---|---|---|
@@ -394,6 +414,14 @@ exact 53, near 0, differs 6, kept (no key) 10.
 | `vcs_ignored` | #818594 | #6C707E | differs (22) | `scheme FILESTATUS_DELETED` |
 | `icon` | #73767C | _kept (no key)_ | measured value | - |
 | `folder_fill` | #EBECF0 | _kept (no key)_ | measured value | - |
+| `selection_text` | #000000 | #000000 | exact | `List.selectionForeground` |
+| `selection_text_inactive` | #000000 | #000000 | exact | `List.selectionInactiveForeground` |
+| `divider` | #E9EAEE | #E9EAEE | exact | `Borders.color` |
+| `header_active` | #FFFFFF | #F7F8F9 | near (8) | `ToolWindow.Header.background` |
+| `header_inactive` | #FFFFFF | #FFFFFF | exact | `ToolWindow.Header.inactiveBackground` |
+| `button_start` | #000000/00 | #FFFFFF | differs (255) | `Button.startBackground` |
+| `button_end` | #000000/00 | #FFFFFF | differs (255) | `Button.endBackground` |
+| `accent_end` | #3871E1 | #3871E1 | exact | `Button.default.endBackground` |
 
 ### `EditorColors`: islands_light vs Theme::light()
 

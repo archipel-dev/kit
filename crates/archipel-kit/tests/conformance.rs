@@ -15,7 +15,10 @@ use archipel_kit::{
         JBCheckBox, JBIntSpinner, JBList, JBRadioButton, JBTable, JBTextField, OnOffButton,
         SegmentedButton, TitledSeparator, Tree, TreeNode, TreeTable,
     },
-    wm::{SquareStripeButton, StatusBarWidget, ToolbarComboButton, ToolbarSplitButton},
+    wm::{
+        SquareStripeButton, StatusBarWidget, StripeButton, StripeSide, ToolbarComboButton,
+        ToolbarSplitButton,
+    },
 };
 
 #[test]
@@ -162,6 +165,22 @@ fn status_bar_and_stripe_controls_conform() {
         ui.add_enabled(enabled, SquareStripeButton::new(Glyph::Folder, "Project"))
     })
     .run();
+}
+
+#[test]
+fn classic_stripe_buttons_conform() {
+    // The Classic look's text stripe buttons, on each side of the frame.
+    for side in [StripeSide::Left, StripeSide::Right, StripeSide::Bottom] {
+        testing::conformance("Terminal", move |ui, enabled| {
+            ui.add_enabled(
+                enabled,
+                StripeButton::new("Terminal")
+                    .icon(Glyph::Terminal)
+                    .side(side),
+            )
+        })
+        .run();
+    }
 }
 
 #[test]

@@ -241,6 +241,28 @@ pub struct Colors {
     pub got_it: Color32,
     /// Outline of a got-it tooltip (`feedback-border`).
     pub got_it_border: Color32,
+
+    // UI looks (`docs/looks.md`, looks spec §2, §4).
+    /// Text of a selected row in a focused list, tree, table or menu
+    /// (`List.selectionForeground`): white on the classic light themes' dark blue selection.
+    pub selection_text: Color32,
+    /// Text of a selected row whose list has no focus (`List.selectionInactiveForeground`).
+    pub selection_text_inactive: Color32,
+    /// 1 px line between flush panels, stripes and status bar in the New UI and Classic looks
+    /// (`Borders.color`, `OnePixelDivider.background`).
+    pub divider: Color32,
+    /// Header of the active tool window in the Classic look (`ToolWindow.Header.background`).
+    pub header_active: Color32,
+    /// Header of an inactive tool window in the Classic look
+    /// (`ToolWindow.Header.inactiveBackground`).
+    pub header_inactive: Color32,
+    /// Top of a secondary button's gradient in the Classic look (`Button.startBackground`).
+    pub button_start: Color32,
+    /// Bottom of a secondary button's gradient in the Classic look (`Button.endBackground`).
+    pub button_end: Color32,
+    /// Bottom of a primary button's gradient in the Classic look
+    /// (`Button.default.endBackground`; the top is [`Colors::accent`]).
+    pub accent_end: Color32,
 }
 
 /// Code editor colors.
@@ -480,6 +502,17 @@ impl Theme {
                 // IntelliJ spec section 15.2: got-it-bg #2E4D89, feedback-border #33353B.
                 got_it: rgb(0x2E4D89),
                 got_it_border: rgb(0x33353B),
+                // Islands Dark: List.selectionForeground is the default text color.
+                selection_text: rgb(0xDFE1E5),
+                selection_text_inactive: rgb(0xDFE1E5),
+                // Islands Dark: Borders.color is the main window color; tool window headers
+                // are the island color; secondary buttons are not filled.
+                divider: rgb(0x26282C),
+                header_active: rgb(0x191A1C),
+                header_inactive: rgb(0x191A1C),
+                button_start: rgba(0x00000000),
+                button_end: rgba(0x00000000),
+                accent_end: rgb(0x3871E1),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
@@ -644,6 +677,15 @@ impl Theme {
                 // IntelliJ spec section 15.2: got-it-bg #FFFFFF, feedback-border #D1D3D9.
                 got_it: rgb(0xFFFFFF),
                 got_it_border: rgb(0xD1D3D9),
+                // Islands Light: as in Islands Dark (see there).
+                selection_text: rgb(0x000000),
+                selection_text_inactive: rgb(0x000000),
+                divider: rgb(0xE9EAEE),
+                header_active: rgb(0xFFFFFF),
+                header_inactive: rgb(0xFFFFFF),
+                button_start: rgba(0x00000000),
+                button_end: rgba(0x00000000),
+                accent_end: rgb(0x3871E1),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,

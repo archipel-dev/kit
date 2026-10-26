@@ -205,6 +205,7 @@ impl<'a> SimpleToolWindowPanel<'a> {
     /// Draws the panel with `body` below the title bar.
     pub fn show<R>(self, ui: &mut Ui, body: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
         let colors = Theme::colors(ui.ctx());
+        let metrics = crate::tokens::metrics(ui.ctx());
         let empty_context = DataContext::empty();
         let data_context = self.data_context.unwrap_or(&empty_context);
         let on_hide = self.on_hide;
@@ -223,20 +224,33 @@ impl<'a> SimpleToolWindowPanel<'a> {
             .memory(|m| m.focused())
             .and_then(|id| ui.ctx().read_response(id))
             .is_some_and(|r| previous.is_some_and(|p| p.contains_rect(r.rect)));
-        let opacity = if self.hover_actions {
+        // Classic shows the header actions always (looks spec §5).
+        let opacity = if self.hover_actions && !metrics.header_actions_always {
             actions_opacity(ui.ctx(), panel_id.with("actions"), hovered || focused)
         } else {
             1.0
         };
         let result = egui::Frame::new()
             .fill(colors.island)
-            .corner_radius(CornerRadius::same(radius::ISLAND))
+            .corner_radius(CornerRadius::same(metrics.island_radius))
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
                 let (header, _) = ui.allocate_exact_size(
-                    vec2(ui.available_width(), size::HEADER_HEIGHT),
+                    vec2(ui.available_width(), metrics.header_height),
                     Sense::hover(),
                 );
+                // Classic highlights the active tool window's header (looks spec §2.3).
+                if metrics.active_header_highlight {
+                    ui.painter().rect_filled(
+                        header,
+                        0.0,
+                        if focused {
+                            colors.header_active
+                        } else {
+                            colors.header_inactive
+                        },
+                    );
+                }
                 // Clicks on the header's own area, under everything drawn on it: a click
                 // activates the tool window, a close click (middle button, or Shift and the
                 // left button) hides it, a double click toggles maximize, a popup trigger
@@ -360,6 +374,12 @@ impl<'a> SimpleToolWindowPanel<'a> {
                         .and_then(|(views, selected)| views.get(**selected))
                         .unwrap_or(&self.title)
                         .clone();
+                    // Classic ends the title with a colon before the content tabs.
+                    let shown = if metrics.look == crate::UiLook::Classic && self.tabs.is_some() {
+                        format!("{shown}:")
+                    } else {
+                        shown
+                    };
                     let galley = common::galley(
                         ui,
                         shown.as_str(),
@@ -432,8 +452,8 @@ impl<'a> SimpleToolWindowPanel<'a> {
                                     })
                                     .fold(0.0, f32::max)
                                     + 2.0
-                                        * (crate::tokens::popup::ITEM_INSET
-                                            + crate::tokens::popup::ITEM_PADDING),
+                                        * (crate::tokens::metrics(ui.ctx()).popup_item_inset
+                                            + crate::tokens::metrics(ui.ctx()).popup_item_padding),
                             )
                             .show(ui.ctx(), &mut open, |ui| {
                                 for (index, view) in views.iter().enumerate() {
@@ -491,9 +511,17 @@ impl<'a> SimpleToolWindowPanel<'a> {
                         for &index in &visible {
                             let (galley, width) = measured[index].clone();
                             let label = &tabs[index];
+                            let pills = metrics.tab_style == crate::look::TabStyle::Pill;
                             let rect = egui::Rect::from_center_size(
                                 egui::pos2(x + width / 2.0, header.center().y),
-                                vec2(width, tab::HEIGHT),
+                                vec2(
+                                    width,
+                                    if pills {
+                                        metrics.tab_height
+                                    } else {
+                                        header.height()
+                                    },
+                                ),
                             );
                             x += width + tab::CONTENT_GAP;
                             let response = ui.interact(
@@ -526,7 +554,29 @@ impl<'a> SimpleToolWindowPanel<'a> {
                             }
                             let painter = ui.painter().with_clip_rect(clip);
                             let corner = CornerRadius::same(radius::TAB);
-                            if is_selected {
+                            if !pills {
+                                // New UI and Classic header tabs: a 3 pt underline under the
+                                // selected one (radius 2 in New UI), a hover fill.
+                                if response.hovered() && !is_selected {
+                                    painter.rect_filled(rect, 0.0, colors.hover);
+                                }
+                                if is_selected {
+                                    let line = egui::Rect::from_min_max(
+                                        egui::pos2(
+                                            rect.left(),
+                                            rect.bottom() - tab::HEADER_UNDERLINE,
+                                        ),
+                                        rect.right_bottom(),
+                                    );
+                                    let fill = if focused || metrics.look != crate::UiLook::Classic
+                                    {
+                                        colors.tab_selected_border
+                                    } else {
+                                        colors.text_disabled
+                                    };
+                                    painter.rect_filled(line, metrics.tab_underline_radius, fill);
+                                }
+                            } else if is_selected {
                                 // Blue while the tool window is active, gray otherwise.
                                 let (fill, border) = if focused {
                                     (colors.tab_selected, colors.tab_selected_border)
@@ -609,13 +659,20 @@ impl<'a> SimpleToolWindowPanel<'a> {
                 if hide_requested && let Some(hide) = on_hide {
                     hide();
                 }
-                if self.header_separator {
+                if self.header_separator || metrics.header_line_always {
                     // As in Android Studio: a 1 pt line in the frame color, from edge to edge,
-                    // right below the 40 pt header.
+                    // right below the 40 pt header (flush looks: in the divider color).
                     ui.painter().hline(
                         header.x_range(),
                         header.bottom() + 0.5,
-                        Stroke::new(1.0_f32, colors.frame),
+                        Stroke::new(
+                            1.0_f32,
+                            if metrics.is_islands() {
+                                colors.frame
+                            } else {
+                                colors.divider
+                            },
+                        ),
                     );
                 }
                 ui.spacing_mut().item_spacing.y = ui.ctx().style().spacing.item_spacing.y;
