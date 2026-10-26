@@ -93,7 +93,13 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Row | 24 pt; selection pill inset 12 pt from the island's sides, radius 4 | `ColoredListCellRenderer`, `tokens::size::ROW_INSET` |
 | Levels | Expander column (16 pt) starts at the pill's edge and moves 19 pt per level; icon 5 pt after it; text 4 pt after the icon | `TREE_INDENT`, `CHEVRON_GAP` |
 | Selection | Focused `#2A4371` / light `#D0DFFE`; without focus `#33353B` / light `#E9EAEE` | `Colors::selection`, `selection_inactive` |
-| Hover | No fill in trees and lists (popup lists highlight like menus) | `State::row_fill` |
+| Hover | No fill in trees and lists (popup lists highlight like menus). The IntelliJ spec (section 3.1) lists hover colors `#00000008` / `#FFFFFF10` (`Colors::row_hover`), but the measurement of Android Studio shows none, so the kit keeps none. | `State::row_fill` |
+| Multiple selection | Neighboring selected rows join into one block, only the outer corners round (IntelliJ spec section 3.1; arc 8 is a 4 pt radius). Shift extends from the anchor, Ctrl/Cmd toggles, a right click keeps the selection when it lands inside it. | `ListSelectionModel`, `SelectionMode` |
+| Page keys | First to the edge of the view, then a page further (Swing `scrollUpChangeSelection`). No wrap at the ends (`ide.tree.ui.cyclic.scrolling.allowed` is off). | `JBList`, `Tree`, `JBTable`, `TreeTable` |
+| Speed search | Opens on a letter, digit or `*_-+"'/.#$>: ,;?!@%^&`; popup at the top-left (`SpeedSearch.background` `#FFFFFF`, border `#EBECF0` light; the kit takes the tool window background and popup border in the dark theme, height 24 pt and icon gaps are kit choices); stays open when emptied; arrows jump between matches. Match background `#FEE6B1` light (dark `#694820` is the kit's choice). | `SpeedSearch`, `Colors::search_match`, `Colors::speed_search_*`, `tokens::speed_search` |
+| Empty text | Centered gray lines, link fragments in the link color; default "Nothing to show" (IntelliJ spec section 13.7). | `StatusText` |
+| Loading panel | Veil rgba(200, 200, 200, 240) (light), shown after the start delay, spinner and text; fade-out time 0.2 s is a kit choice (the spec gives none). | `JBLoadingPanel`, `Colors::loading_veil`, `tokens::loading` |
+| Scroll bar fade | The 7 pt thumb (measured) brightens after 150 ms of hover over 125 ms and dims after 300 ms over 125 ms (IntelliJ spec section 13.1); `ScrollBar.width` is not in the spec, so the measured 7 pt stays. | `parts::ScrollBar`, `tokens::scroll_bar` |
 
 ### Tool window stripes
 

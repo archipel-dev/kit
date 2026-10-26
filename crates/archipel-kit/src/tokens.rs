@@ -563,3 +563,52 @@ pub mod typography {
         FontId::proportional(size)
     }
 }
+
+/// Scroll bar fade, from the IntelliJ spec section 13.1: after the pointer enters the bar's
+/// strip the thumb waits 150 ms, then brightens over 125 ms; after it leaves it waits 300 ms,
+/// then dims over 125 ms. The bar's width and colors stay the measured ones of [`scroll`].
+pub mod scroll_bar {
+    /// Seconds the pointer must be over the bar before the thumb starts to brighten.
+    pub const ENTER_DELAY: f32 = 0.150;
+    /// Seconds after the pointer left the bar before the thumb starts to dim.
+    pub const LEAVE_DELAY: f32 = 0.300;
+    /// Seconds the thumb takes to brighten or dim.
+    pub const FADE: f32 = 0.125;
+    /// Shortest thumb, in points, so a very long list still has something to grab (the
+    /// measured minimum of the kit's scroll bars; the spec has no value).
+    pub const MIN_THUMB: f32 = 12.0;
+}
+
+/// The speed search popup (IntelliJ spec section 3.4).
+pub mod speed_search {
+    /// Height of the popup field (kit choice; the spec gives no value).
+    pub const HEIGHT: f32 = super::size::CONTROL_HEIGHT_SMALL;
+    /// Space between the popup's left edge and its search icon.
+    pub const ICON_INSET: f32 = 8.0;
+    /// Gap between the search icon and the text (spec: 10).
+    pub const ICON_GAP: f32 = 10.0;
+    /// Space after the text.
+    pub const PADDING_END: f32 = 8.0;
+    /// Corner radius of the background behind a matched fragment of text.
+    pub const MATCH_RADIUS: u8 = 2;
+    /// The text field is at least as wide as this placeholder hint.
+    pub const PLACEHOLDER: &str = "Search";
+}
+
+/// Loading panels ([`JBLoadingPanel`](crate::ui::JBLoadingPanel)), IntelliJ spec section 13.7.
+pub mod loading {
+    /// Seconds the veil takes to fade out when loading ends (kit choice; the spec only
+    /// says "fade-out animator").
+    pub const FADE_OUT: f32 = 0.2;
+    /// Gap between the spinner and the text beneath it.
+    pub const TEXT_GAP: f32 = 8.0;
+}
+
+/// The empty text of collections (IntelliJ `StatusText`).
+pub mod empty_text {
+    /// Shown by an empty list, tree or table that was given no text of its own
+    /// (`StatusText.getDefaultEmptyText`).
+    pub const DEFAULT: &str = "Nothing to show";
+    /// Space between two lines of a [`StatusText`](crate::ui::StatusText) block.
+    pub const LINE_GAP: f32 = 2.0;
+}

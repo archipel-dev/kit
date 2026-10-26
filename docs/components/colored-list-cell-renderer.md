@@ -45,6 +45,35 @@ fn project_tree(ui: &mut egui::Ui, tree: &mut Tree, files: &[&str]) {
 
 For long lists, draw only the visible rows with `egui::ScrollArea::show_rows`.
 
+### Text fragments
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/colored_list_cell_renderer_fragments.dark.png">
+  <img alt="Rows whose text is made of fragments: grayed, error, italic, small, link, struck out and bold" src="img/colored_list_cell_renderer_fragments.light.png" width="340">
+</picture>
+
+`.append(text, SimpleTextAttributes)` adds a fragment after the label, like
+`SimpleColoredComponent.append`. `SimpleTextAttributes` (in `parts`, with `TextFragment`)
+has the IDE's presets (`REGULAR_ATTRIBUTES`, `REGULAR_BOLD_ATTRIBUTES`, `GRAYED_ATTRIBUTES`,
+`GRAYED_SMALL_ATTRIBUTES`, `ERROR_ATTRIBUTES`, `LINK_ATTRIBUTES`, `EXCLUDED_ATTRIBUTES`,
+`SEARCH_MATCH_ATTRIBUTES` …) and builders (`.bold(true)`, `.italic(true)`, `.underline(true)`,
+`.strikeout(true)`, `.smaller(true)`, `.with_tone(Tone)`). Colors are tones, so they follow
+the theme and the selection. A [speed search](speed-search.md) matches the label and the
+fragments together and highlights the matches (`STYLE_SEARCH_MATCH`).
+
+```rust
+use archipel_kit::parts::SimpleTextAttributes;
+use archipel_kit::ui::ColoredListCellRenderer;
+use archipel_kit::egui;
+
+fn row(ui: &mut egui::Ui) {
+    ColoredListCellRenderer::new("main.rs")
+        .append("  src/bin", SimpleTextAttributes::GRAYED_ATTRIBUTES)
+        .append("  2 errors", SimpleTextAttributes::ERROR_ATTRIBUTES)
+        .show(ui);
+}
+```
+
 ### Leading content, emphasis, tints and long labels
 
 <picture>

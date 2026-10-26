@@ -220,7 +220,7 @@ impl Frame {
         self,
         ctx: &Context,
         response: &mut crate::ui::CollectionResponse,
-        keys: &super::Keys,
+        keys: &super::engine::Keys,
         selected: Option<usize>,
         columns: usize,
         mut cell: impl FnMut(usize, usize) -> (bool, String),
@@ -250,7 +250,9 @@ impl Frame {
             if let Some(col) = target {
                 begin(ctx, id, row, col, &cell(row, col).1);
                 if keys.enter {
+                    // The edit took the key: neither an activation nor an expand.
                     response.activated = None;
+                    response.toggled = None;
                 }
             }
         }

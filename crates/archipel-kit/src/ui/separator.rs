@@ -26,6 +26,7 @@ use egui::{Sense, Stroke, Ui, Widget, vec2};
 pub struct TitledSeparator<'a> {
     title: String,
     open: Option<&'a mut bool>,
+    chevron_at_end: bool,
 }
 
 impl TitledSeparator<'static> {
@@ -34,6 +35,7 @@ impl TitledSeparator<'static> {
         Self {
             title: title.into(),
             open: None,
+            chevron_at_end: false,
         }
     }
 }
@@ -46,7 +48,15 @@ impl<'a> TitledSeparator<'a> {
         TitledSeparator {
             title: self.title,
             open: Some(open),
+            chevron_at_end: self.chevron_at_end,
         }
+    }
+
+    /// Puts the chevron of a [`collapsible`](Self::collapsible) header at the right end of
+    /// the line instead of before the title (`CollapsiblePanel`'s `collapseButtonAtLeft` off).
+    pub fn chevron_at_end(mut self, at_end: bool) -> Self {
+        self.chevron_at_end = at_end;
+        self
     }
 }
 
@@ -67,7 +77,8 @@ impl Widget for TitledSeparator<'_> {
         };
         let (rect, mut response) =
             ui.allocate_exact_size(vec2(ui.available_width(), size::ROW_HEIGHT), sense);
-        let chevron_width = if collapsible {
+        let at_end = self.chevron_at_end;
+        let chevron_width = if collapsible && !at_end {
             size::ICON + size::ICON_TEXT_GAP
         } else {
             0.0
@@ -106,29 +117,47 @@ impl Widget for TitledSeparator<'_> {
             crate::icons::paint(
                 ui.painter(),
                 egui::Rect::from_center_size(
-                    egui::pos2(rect.left() + size::ICON / 2.0, rect.center().y),
+                    egui::pos2(
+                        if at_end {
+                            rect.right() - size::ICON / 2.0
+                        } else {
+                            rect.left() + size::ICON / 2.0
+                        },
+                        rect.center().y,
+                    ),
                     vec2(size::ICON, size::ICON),
                 ),
                 glyph,
                 text_color,
             );
             if response.has_focus() {
-                // Around the chevron and title, not the line.
-                let target = egui::Rect::from_min_max(
-                    rect.left_top(),
-                    egui::pos2(
-                        (text_right + size::ICON_TEXT_GAP).min(rect.right()),
-                        rect.bottom(),
-                    ),
-                );
+                // Around the chevron and title, not the line (at the end: around the whole
+                // row, as the chevron is far from the title).
+                let target = if at_end {
+                    rect
+                } else {
+                    egui::Rect::from_min_max(
+                        rect.left_top(),
+                        egui::pos2(
+                            (text_right + size::ICON_TEXT_GAP).min(rect.right()),
+                            rect.bottom(),
+                        ),
+                    )
+                };
                 common::focus_ring(ui.painter(), target, radius::CONTROL, &colors);
             }
         }
         common::text(ui.painter(), egui::pos2(text_left, top), galley, text_color);
         let start = text_right + size::GROUP_LINE_GAP;
-        if start < rect.right() {
+        // A chevron at the end keeps its room: the line stops before it.
+        let line_end = if at_end && collapsible {
+            rect.right() - size::ICON - size::ICON_TEXT_GAP
+        } else {
+            rect.right()
+        };
+        if start < line_end {
             ui.painter().hline(
-                start..=rect.right(),
+                start..=line_end,
                 y,
                 Stroke::new(1.0_f32, colors.group_separator),
             );

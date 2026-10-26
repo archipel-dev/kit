@@ -208,8 +208,24 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("DropZoneResponse", "response"),
     (
         "StatusText",
-        "composition with one button, audited in tests/feedback.rs",
+        "composition with one button or links, audited in tests/feedback.rs and tests/status_and_loading.rs",
     ),
+    ("CollapsiblePanelResponse", "response"),
+    (
+        "JBLoadingPanel",
+        "veil over other components: audited in tests/status_and_loading.rs",
+    ),
+    ("ListSelectionModel", "selection state of collections"),
+    ("SelectionMode", "enum"),
+    ("SelectionTarget", "where a collection keeps its selection"),
+    ("PUNCTUATION_MARKS", "constant"),
+    (
+        "SpeedSearch",
+        "option of the collections, tested in tests/speed_search.rs",
+    ),
+    ("SpeedSearchState", "caller-owned state"),
+    ("SpeedSearchComparator", "text matcher"),
+    ("StatusTextResponse", "response"),
     ("FieldLabel", "display only: names the field after it"),
     ("Integer", "trait: the types a JBIntSpinner edits"),
     (

@@ -164,6 +164,22 @@ fn collapsible_titled_separator_conforms() {
 }
 
 #[test]
+fn collapsible_panel_conforms() {
+    let mut collapsed = true;
+    testing::conformance("Advanced settings", move |ui, enabled| {
+        ui.add_enabled_ui(enabled, |ui| {
+            archipel_kit::ui::CollapsiblePanel::new("Advanced settings", &mut collapsed)
+                .show(ui, |ui| {
+                    ui.label("Body");
+                })
+                .header
+        })
+        .inner
+    })
+    .run();
+}
+
+#[test]
 fn colored_list_cell_renderer_conforms() {
     testing::conformance("main.rs", |ui, enabled| {
         ui.add_enabled_ui(enabled, |ui| {

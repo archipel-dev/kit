@@ -1,13 +1,15 @@
 //! `TreeTable`: a tree whose rows have columns.
 
-use super::edit;
-use super::{DrawnRow, Spec, apply_tree_key, collection, header, paint_cell};
+use super::engine::{DrawnRow, RowCtx, Rows, SelectionTarget, Spec, TreeMove, collection};
+use super::{edit, header, paint_cell, row_pill_joined, tree_horizontal};
 use crate::common;
 use crate::icons::{self, Glyph};
-use crate::parts::{SimpleColoredComponent, State};
+use crate::parts::{SimpleColoredComponent, State, TextFragment};
 use crate::theme::Theme;
 use crate::tokens::size;
-use crate::ui::{Cell, CollectionResponse, ColumnInfo, SortOrder, TreeNode};
+use crate::ui::{
+    Cell, CollectionResponse, ColumnInfo, SortOrder, SpeedSearch, StatusText, TreeNode,
+};
 use egui::{CursorIcon, Id, Rect, Sense, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, vec2};
 
 /// A virtualized tree whose rows have columns: a MongoDB document or nested JSON as
@@ -19,9 +21,11 @@ use egui::{CursorIcon, Id, Rect, Sense, Ui, UiBuilder, WidgetInfo, WidgetType, p
 ///
 /// - The **first column is the tree column**: chevron, icon and key come from the
 ///   [`TreeNode`]. The other columns come from `cell(row, column)`.
-/// - <kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Home</kbd>/<kbd>End</kbd>, <kbd>PgUp</kbd>/<kbd>PgDn</kbd>
-///   move the selection; <kbd>→</kbd>/<kbd>←</kbd> expand, collapse or walk to the first
-///   child or the parent; <kbd>Enter</kbd> or a double-click activates a row.
+/// - Selection and keys as in [`JBList`](crate::ui::JBList) (<kbd>Shift</kbd> and
+///   <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> select several rows with a
+///   [`ListSelectionModel`](crate::ui::ListSelectionModel)); <kbd>→</kbd>/<kbd>←</kbd> expand,
+///   collapse or walk to the first child or the parent; <kbd>Enter</kbd> or a double-click
+///   expands a parent and activates a leaf.
 /// - **Inline edit**: mark cells [`editable`](Cell::editable) (the key with
 ///   [`TreeNode::editable`]). <kbd>F2</kbd>, <kbd>Enter</kbd> or a double-click on such a
 ///   cell opens a field in the cell; <kbd>Enter</kbd> commits, <kbd>Escape</kbd> cancels. A
@@ -80,28 +84,32 @@ pub struct TreeTable<'a> {
     name: String,
     columns: &'a mut [ColumnInfo],
     rows: &'a [TreeNode],
-    selected: &'a mut Option<usize>,
+    selected: SelectionTarget<'a>,
     sort: Option<(usize, SortOrder)>,
     height: f32,
+    search: Option<SpeedSearch<'a>>,
+    empty: Option<StatusText>,
 }
 
 impl<'a> TreeTable<'a> {
     /// A tree table of the visible `rows` in `columns` with a unique `id_salt`, editing
-    /// `selected`.
+    /// `selected` (a `&mut Option<usize>` or a `&mut ListSelectionModel`).
     pub fn new(
         id_salt: impl std::hash::Hash,
         columns: &'a mut [ColumnInfo],
         rows: &'a [TreeNode],
-        selected: &'a mut Option<usize>,
+        selected: impl Into<SelectionTarget<'a>>,
     ) -> Self {
         Self {
             id: Id::new(id_salt),
             name: "Tree table".into(),
             columns,
             rows,
-            selected,
+            selected: selected.into(),
             sort: None,
             height: 240.0,
+            search: None,
+            empty: None,
         }
     }
 
@@ -123,6 +131,19 @@ impl<'a> TreeTable<'a> {
         self
     }
 
+    /// Lets the user type to search the visible rows: a row matches when its key or one of
+    /// its cells does (see [`JBList::speed_search`](crate::ui::JBList::speed_search)).
+    pub fn speed_search(mut self, search: SpeedSearch<'a>) -> Self {
+        self.search = Some(search);
+        self
+    }
+
+    /// What to show when there are no rows (default: "Nothing to show").
+    pub fn empty_text(mut self, text: StatusText) -> Self {
+        self.empty = Some(text);
+        self
+    }
+
     /// Draws the header and the visible rows; `cell(row, column)` gives the cells of the
     /// columns after the first.
     pub fn show(
@@ -130,40 +151,41 @@ impl<'a> TreeTable<'a> {
         ui: &mut Ui,
         mut cell: impl FnMut(usize, usize) -> Cell,
     ) -> CollectionResponse {
-        let Self {
-            id,
-            name,
-            columns,
-            rows,
-            selected,
-            sort,
-            height,
-        } = self;
-        let ctx = ui.ctx().clone();
-        let colors = Theme::colors(&ctx);
-        let (sort_clicked, _) = header(ui, id, columns, sort, false);
-        let columns: &[ColumnInfo] = columns;
-        let mut editing = edit::Frame::new(&ctx, id);
-        let was_editing = edit::current(&ctx, id).is_some();
+        struct TreeTableRows<'t, F> {
+            id: Id,
+            columns: &'t [ColumnInfo],
+            rows: &'t [TreeNode],
+            cell: &'t mut F,
+            editing: &'t mut edit::Frame,
+        }
+        impl<F: FnMut(usize, usize) -> Cell> Rows for TreeTableRows<'_, F> {
+            fn texts(&mut self, index: usize) -> Vec<String> {
+                let mut texts = vec![self.rows[index].search_text()];
+                texts.extend((1..self.columns.len()).map(|col| (self.cell)(index, col).text));
+                texts
+            }
 
-        let (mut response, keys) = collection(
-            ui,
-            Spec {
-                id,
-                len: rows.len(),
-                height,
-                role: egui::accesskit::Role::TreeGrid,
-                name: &name,
-            },
-            selected,
-            |ui, index, selected, focused| {
-                let tree_row = &rows[index];
+            fn horizontal(&mut self, index: usize, left: bool) -> Option<TreeMove> {
+                tree_horizontal(self.rows, index, left)
+            }
+
+            fn enter_toggles(&mut self, index: usize) -> bool {
+                self.rows.get(index).is_some_and(|row| row.has_children())
+            }
+
+            fn row(&mut self, ui: &mut Ui, ctx: RowCtx<'_>) -> DrawnRow {
+                let colors = Theme::colors(ui.ctx());
+                let (index, selected) = (ctx.index, ctx.selected);
+                let (id, columns, editing) = (self.id, self.columns, &mut *self.editing);
+                let tree_row = &self.rows[index];
                 let (rect, response) = ui.allocate_exact_size(
                     vec2(ui.available_width(), size::ROW_HEIGHT),
                     Sense::CLICK,
                 );
                 crate::cursor::on_hover(&response, CursorIcon::Default);
-                let cells: Vec<Cell> = (1..columns.len()).map(|col| cell(index, col)).collect();
+                let cells: Vec<Cell> = (1..columns.len())
+                    .map(|col| (self.cell)(index, col))
+                    .collect();
                 response.widget_info(|| {
                     let mut label = vec![tree_row.label.as_str()];
                     label.extend(cells.iter().map(|c| c.text.as_str()));
@@ -252,8 +274,24 @@ impl<'a> TreeTable<'a> {
                 }
 
                 if ui.is_rect_visible(rect) {
-                    let state = State::of(&response).selected(selected).inactive(!focused);
-                    common::row_pill(ui.painter(), rect, state.row_fill(&colors));
+                    let state = State::of(&response)
+                        .selected(selected)
+                        .inactive(!ctx.focused);
+                    row_pill_joined(
+                        ui.painter(),
+                        rect,
+                        state.row_fill(&colors),
+                        ctx.joined_above,
+                        ctx.joined_below,
+                    );
+                    if ctx.lead {
+                        common::focus_ring(
+                            ui.painter(),
+                            rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0)).shrink(1.0),
+                            crate::tokens::radius::ROW,
+                            &colors,
+                        );
+                    }
 
                     // The key column: chevron, icon and key (or its editor).
                     let key_rect = column_rects[0];
@@ -290,11 +328,22 @@ impl<'a> TreeTable<'a> {
                             0.0
                         };
                     let key_editing = editing.is_editing(index, 0);
+                    let fragments: Vec<TextFragment> = tree_row
+                        .fragments
+                        .iter()
+                        .map(|(text, attributes)| TextFragment::new(text.as_str(), *attributes))
+                        .collect();
+                    let matches = ctx
+                        .search
+                        .and_then(|search| search.matching_fragments(&tree_row.search_text()))
+                        .unwrap_or_default();
                     let content = SimpleColoredComponent {
                         icon: tree_row.icon,
                         icon_tone: tree_row.icon_tone,
                         label: if key_editing { "" } else { &tree_row.label },
                         secondary: tree_row.secondary.as_deref().filter(|_| !key_editing),
+                        fragments: if key_editing { &[] } else { &fragments },
+                        matches: if key_editing { &[] } else { &matches },
                         ..SimpleColoredComponent::new("")
                     };
                     content.paint(&clip, key_rect, content_x, state);
@@ -310,7 +359,7 @@ impl<'a> TreeTable<'a> {
                         if editing.is_editing(index, col) {
                             editing.show(ui, column_rects[col], column.title(), column.mono);
                         } else {
-                            paint_cell(ui, column_rects[col], column, cell, selected);
+                            paint_cell(ui, column_rects[col], column, cell, selected, ctx.search);
                         }
                     }
                 }
@@ -319,14 +368,52 @@ impl<'a> TreeTable<'a> {
                     toggled,
                     handled,
                 }
+            }
+        }
+
+        let Self {
+            id,
+            name,
+            columns,
+            rows,
+            selected,
+            sort,
+            height,
+            search,
+            empty,
+        } = self;
+        let ctx = ui.ctx().clone();
+        let (sort_clicked, _) = header(ui, id, columns, sort, false);
+        let columns: &[ColumnInfo] = columns;
+        let mut editing = edit::Frame::new(&ctx, id);
+
+        let (mut response, keys) = collection(
+            ui,
+            Spec {
+                id,
+                len: rows.len(),
+                height,
+                role: egui::accesskit::Role::TreeGrid,
+                name: &name,
+                search,
+                empty,
+            },
+            selected,
+            &mut TreeTableRows {
+                id,
+                columns,
+                rows,
+                cell: &mut cell,
+                editing: &mut editing,
             },
         );
 
+        let current = response.current;
         editing.finish(
             &ctx,
             &mut response,
             &keys,
-            *selected,
+            current,
             columns.len(),
             |row, col| match col {
                 0 => (rows[row].editable, rows[row].label.clone()),
@@ -335,13 +422,6 @@ impl<'a> TreeTable<'a> {
                     (cell.editable, cell.text)
                 }
             },
-        );
-
-        apply_tree_key(
-            rows,
-            selected,
-            keys.horizontal.filter(|_| !was_editing),
-            &mut response,
         );
         response.sort_clicked = sort_clicked;
         response
