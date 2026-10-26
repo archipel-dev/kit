@@ -88,6 +88,7 @@ mod docs {
         Cursors = "cursors.md";
         Behaviours = "behaviours.md";
         BuildingComponents = "building-components.md";
+        EditorModel = "editor-model.md";
         Collections = "components/collections.md";
         TreeTable = "components/tree-table.md";
         HelpTooltip = "components/help-tooltip.md";

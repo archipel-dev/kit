@@ -8,6 +8,7 @@
 - [Terminal UI](tui/README.md): the same theme, icons and components in the terminal (ratatui).
 - [Behaviours](behaviours.md): tooltips, context menus, cursors and drag and drop on any widget with `.with(...)`.
 - [Action system](action-system.md): IntelliJ-style actions, presentations, groups, keymaps and host services.
+- [Editor model](editor-model.md): the JetBrains-faithful logic of the code editor: carets, actions, undo, keymap.
 - [Building a component](building-components.md): from parts, with slots and behaviours, proven by conformance and the audit.
 - [Contributing a component](contributing.md): the checklist every component meets.
 - [Design rules](design-rules.md): the Islands look and feel every component follows, and how to measure a new one against Android Studio ([tools](../tools/reference/README.md)).

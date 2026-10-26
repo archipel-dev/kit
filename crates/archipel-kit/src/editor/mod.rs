@@ -8,11 +8,13 @@
 //! | [`Highlighter`], [`TokenKind`], [`Span`] | The highlighter interface. |
 //! | [`PlainText`], [`Json`], [`ExtendedJson`], [`JavaScript`], [`GraphQl`], [`Xml`] | Ready-made highlighters. |
 //! | [`TemplateHighlighter`], [`TemplateToken`], [`TemplateAt`], [`template_at`] | `{{variable}}` templates over any highlighter. |
+//! | [`model`] | The JetBrains-faithful, UI-free editing logic: document, carets, actions, undo, keymap. |
 
 mod code_editor;
 mod code_view;
 mod find;
 mod highlight;
+pub mod model;
 mod template;
 mod text;
 
