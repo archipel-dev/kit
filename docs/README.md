@@ -30,8 +30,8 @@
 | [JBList, Tree, JBTable](components/collections.md) | <img src="components/img/jb_table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
 | [ColoredListCellRenderer](components/colored-list-cell-renderer.md) | <img src="components/img/colored_list_cell_renderer.dark.png" width="160"> | Lists and trees. |
-| [InlineBanner](components/inline-banner.md) | <img src="components/img/inline_banner.dark.png" width="160"> | Inline messages with actions. |
-| [Notification](components/notification.md) | <img src="components/img/notification.dark.png" width="160"> | Notifications. |
+| [InlineBanner, EditorNotificationPanel](components/inline-banner.md) | <img src="components/img/inline_banner.dark.png" width="160"> | Inline messages with actions. |
+| [Notification](components/notification.md) | <img src="components/img/notification.dark.png" width="160"> | Notifications and balloons. |
 | [AsyncProcessIcon, ProgressBar](components/progress.md) | <img src="components/img/progress.dark.png" width="160"> | Work in progress. |
 | [StatusText](components/status-text.md) | <img src="components/img/status_text.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
@@ -44,6 +44,7 @@
 | [ToolWindowPane](components/tool-window-pane.md) | <img src="components/img/tool_window_pane_4.dark.png" width="160"> | Shared docked island shell with caller-owned layout. |
 | [ActionMenuItem, ListSeparator, ActionLink](components/action-menu-item.md) | <img src="components/img/action_menu_item.dark.png" width="140"> | Menus and inline actions. |
 | [HelpTooltip](components/help-tooltip.md) | <img src="components/img/help_tooltip.dark.png" width="140"> | Naming controls, shortcuts, why something is disabled. |
+| [GotItTooltip](components/got-it-tooltip.md) | <img src="components/img/got_it_tooltip.dark.png" width="140"> | One-shot onboarding bubbles pointing at a control. |
 | [DialogWrapper](components/dialog-wrapper.md) | <img src="components/img/dialog_wrapper.dark.png" width="160"> | Decisions and short forms. |
 | [Icons](components/icons.md) | <img src="icons/img/actual-size.dark.png" width="160"> | Glyphs and file-type icons. |
 

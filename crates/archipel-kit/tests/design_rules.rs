@@ -265,6 +265,45 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("ToolWindowPlace", "enum"),
     ("ToolWindowAnchor", "enum"),
     ("ToolWindowPaneState", "layout state"),
+    // Overlays family (dialogs, notifications, tooltips, banners).
+    (
+        "EditorNotificationPanel",
+        "composition of links and an icon button, audited in tests/notifications.rs",
+    ),
+    ("ProgressState", "enum"),
+    ("OK_EXIT_CODE", "constant"),
+    ("CANCEL_EXIT_CODE", "constant"),
+    ("CLOSE_EXIT_CODE", "constant"),
+    ("NEXT_USER_EXIT_CODE", "constant"),
+    ("MessageIcon", "enum"),
+    (
+        "Messages",
+        "builders of DialogWrapper, tested in tests/dialog_wrapper.rs",
+    ),
+    (
+        "DialogValidation",
+        "state of a dialog's validation, tested in tests/dialog_wrapper.rs",
+    ),
+    ("ValidationInfo", "data"),
+    ("GotItDismissal", "enum"),
+    ("GotItPosition", "enum"),
+    ("GotItResponse", "response"),
+    (
+        "GotItTooltip",
+        "overlay bubble with a button and links; keys, focus and timing tested in tests/tooltips.rs",
+    ),
+    ("HelpTooltipResponse", "response"),
+    ("NotificationEvent", "response"),
+    ("NotificationEventKind", "enum"),
+    ("NotificationId", "data"),
+    (
+        "NotificationsManager",
+        "balloon stack of cards that are audited in tests/notifications.rs",
+    ),
+    ("NotificationAction", "data"),
+    ("NotificationDisplayType", "enum"),
+    ("NotificationGroup", "data"),
+    ("NotificationType", "enum"),
 ];
 
 /// The modules whose `pub use` lines export the kit's widgets, relative to `src/`. The

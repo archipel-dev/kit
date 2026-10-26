@@ -17,12 +17,15 @@ pub enum Status {
     Warning,
     /// Something failed.
     Error,
+    /// A suggestion or announcement: the info tint with the sparkle icon (IntelliJ
+    /// `EditorNotificationPanel.Status.Promo`, spec section 10.2).
+    Promo,
 }
 
 impl Status {
     pub(crate) fn tint(self, colors: &Colors) -> Tint {
         match self {
-            Status::Info => colors.banner_info,
+            Status::Info | Status::Promo => colors.banner_info,
             Status::Success => colors.banner_success,
             Status::Warning => colors.banner_warning,
             Status::Error => colors.banner_error,
@@ -32,6 +35,7 @@ impl Status {
     pub(crate) fn icon(self) -> Glyph {
         match self {
             Status::Info => Glyph::Info,
+            Status::Promo => Glyph::Sparkle,
             Status::Success => Glyph::Success,
             Status::Warning => Glyph::Warning,
             Status::Error => Glyph::Error,
@@ -40,7 +44,7 @@ impl Status {
 
     pub(crate) fn icon_color(self, colors: &Colors) -> egui::Color32 {
         match self {
-            Status::Info => colors.link,
+            Status::Info | Status::Promo => colors.link,
             Status::Success => colors.success,
             Status::Warning => colors.warning,
             Status::Error => colors.error,
@@ -55,6 +59,11 @@ pub struct MessageResponse {
     pub action: Option<usize>,
     /// The close button was clicked.
     pub dismissed: bool,
+    /// The gear button was clicked (see [`InlineBanner::gear_action`]).
+    pub gear: bool,
+    /// A button or link of the message has the keyboard focus (a notification closes on
+    /// <kbd>Esc</kbd> while it does).
+    pub focused: bool,
 }
 
 /// A full-width message above the content it is about: a missing SDK, an outdated index,
@@ -76,6 +85,7 @@ pub struct InlineBanner {
     text: String,
     actions: Vec<String>,
     dismissible: bool,
+    gear: Option<String>,
 }
 
 impl InlineBanner {
@@ -86,7 +96,15 @@ impl InlineBanner {
             text: text.into(),
             actions: Vec::new(),
             dismissible: false,
+            gear: None,
         }
+    }
+
+    /// Shows a gear button named `name` before the close button
+    /// ([`MessageResponse::gear`]; IntelliJ `setGearAction`).
+    pub fn gear_action(mut self, name: impl Into<String>) -> Self {
+        self.gear = Some(name.into());
+        self
     }
 
     /// Adds an action button; [`MessageResponse::action`] reports its index when clicked.
@@ -134,18 +152,24 @@ impl InlineBanner {
                     );
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.spacing_mut().item_spacing.x = size::BANNER_ACTION_GAP;
-                        if self.dismissible
-                            && ui
-                                .add(ActionButton::new(Glyph::Close, "Dismiss").small(true))
-                                .clicked()
-                        {
-                            out.dismissed = true;
+                        if self.dismissible {
+                            let close =
+                                ui.add(ActionButton::new(Glyph::Close, "Dismiss").small(true));
+                            out.dismissed |= close.clicked();
+                            out.focused |= close.has_focus();
+                        }
+                        if let Some(name) = &self.gear {
+                            let gear = ui.add(ActionButton::new(Glyph::Settings, name).small(true));
+                            out.gear |= gear.clicked();
+                            out.focused |= gear.has_focus();
                         }
                         // Actions are links, as in Android Studio's editor notifications.
                         for (index, label) in self.actions.iter().enumerate().rev() {
-                            if ui.add(crate::ui::ActionLink::new(label.as_str())).clicked() {
+                            let link = ui.add(crate::ui::ActionLink::new(label.as_str()));
+                            if link.clicked() {
                                 out.action = Some(index);
                             }
+                            out.focused |= link.has_focus();
                         }
                         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                             ui.spacing_mut().item_spacing.x = size::BANNER_ICON_GAP;

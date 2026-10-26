@@ -132,8 +132,9 @@ pub mod size {
     pub const BANNER_ICON_GAP: f32 = 10.0;
     /// Space between a banner's action links.
     pub const BANNER_ACTION_GAP: f32 = 22.0;
-    /// Width of a notification card (370 pt in Android Studio).
-    pub const NOTIFICATION_WIDTH: f32 = 370.0;
+    /// Width of a notification card: 360 (`BalloonLayoutConfiguration`, IntelliJ spec section
+    /// 10.1; Android Studio's card measured 370 pt with its border).
+    pub const NOTIFICATION_WIDTH: f32 = 360.0;
     /// Space inside a notification card.
     pub const NOTIFICATION_PADDING: f32 = 12.0;
     /// Space inside a breadcrumb at each end.
@@ -191,6 +192,59 @@ pub mod size {
     pub fn indent(depth: usize) -> f32 {
         CONTENT_INSET + depth as f32 * TREE_INDENT
     }
+    // Overlays family (IntelliJ UX spec sections 7, 10, 11 and 13.8).
+    /// Gap between the buttons of a dialog (`BASE_BUTTON_GAP`, IntelliJ spec section 7).
+    pub const DIALOG_BUTTON_GAP: f32 = 12.0;
+    /// Edge of the icon of a message dialog (IntelliJ spec section 7: 32 x 32).
+    pub const MESSAGE_ICON: f32 = 32.0;
+    /// Most notification balloons on screen at once (`ide.notification.visible.count`).
+    pub const NOTIFICATION_VISIBLE_COUNT: usize = 2;
+    /// Gap between stacked notification balloons. Not in the spec: the kit's own choice.
+    pub const NOTIFICATION_STACK_GAP: f32 = 8.0;
+    /// Distance of the balloon stack from the window's right and bottom edge (kit measured).
+    pub const NOTIFICATION_MARGIN: f32 = 16.0;
+    /// Share of the window's height a notification balloon may take before its text
+    /// scrolls (IntelliJ spec section 10.1: 75%).
+    pub const NOTIFICATION_MAX_HEIGHT_SHARE: f32 = 0.75;
+    /// Space inside an editor notification panel above and below its line
+    /// (`Editor.Notification.borderInsets`, IntelliJ spec section 10.2).
+    pub const EDITOR_NOTIFICATION_PADDING_Y: f32 = 10.0;
+    /// Space inside an editor notification panel at its sides (same key).
+    pub const EDITOR_NOTIFICATION_PADDING_X: f32 = 12.0;
+    /// Space between an editor notification panel's icon and text (spec section 10.2).
+    pub const EDITOR_NOTIFICATION_ICON_GAP: f32 = 8.0;
+    /// Space after an editor notification panel's text, before its links (spec section 10.2).
+    pub const EDITOR_NOTIFICATION_TEXT_END: f32 = 20.0;
+    /// Widest text of a help tooltip (`HelpTooltip.maxWidth`, IntelliJ spec section 11.1).
+    pub const HELP_TOOLTIP_MAX_WIDTH: f32 = 250.0;
+    /// Gap between the parts of a help tooltip: title, description, link.
+    pub const HELP_TOOLTIP_GAP: f32 = 6.0;
+    /// Edge of the external-link icon after a help tooltip's link.
+    pub const HELP_TOOLTIP_LINK_ICON: f32 = 12.0;
+    /// Widest text of a got-it tooltip (IntelliJ spec section 11.2).
+    pub const GOT_IT_MAX_WIDTH: f32 = 280.0;
+    /// Space inside a got-it tooltip, at its sides (`GotItTooltip.insets`, spec 11.2).
+    pub const GOT_IT_INSET_X: f32 = 8.0;
+    /// Space inside a got-it tooltip, above and below.
+    pub const GOT_IT_INSET_Y: f32 = 7.0;
+    /// Space between a got-it tooltip's text and its button row (`buttonTopInset`).
+    pub const GOT_IT_BUTTON_TOP: f32 = 12.0;
+    /// Space below a got-it tooltip's button row (`buttonBottomInset`).
+    pub const GOT_IT_BUTTON_BOTTOM: f32 = 6.0;
+    /// Space between a got-it tooltip's step number and its text.
+    pub const GOT_IT_STEP_GAP: f32 = 6.0;
+    /// Length of a got-it tooltip's arrow (pointer size 16 x 8, spec section 11.2).
+    pub const GOT_IT_ARROW_LENGTH: f32 = 8.0;
+    /// Base of a got-it tooltip's arrow.
+    pub const GOT_IT_ARROW_WIDTH: f32 = 16.0;
+    /// Distance from the corner to the arrow's middle on a `BottomLeft` tooltip (`getArrowShift`:
+    /// 15 plus the arc).
+    pub const GOT_IT_ARROW_SHIFT: f32 = 15.0;
+    /// Height of a progress bar's track. Kept from the measurement of Android Studio: IntelliJ
+    /// spec section 13.8 says the key `ProgressBar.height` is not known.
+    pub const PROGRESS_BAR_HEIGHT: f32 = 4.0;
+    /// Height a progress bar takes in a layout, around its track.
+    pub const PROGRESS_BAR_ROW: f32 = 8.0;
 }
 
 /// Charts (histograms, sparklines), in points.
@@ -353,6 +407,39 @@ pub mod motion {
     pub const TAB_SCROLL_HIDE_DELAY: f32 = 0.2;
     /// The fade-out of the tab strip's scroll bar once the hide delay has passed.
     pub const TAB_SCROLL_FADE_OUT: f32 = 0.1;
+    // Overlays family (IntelliJ UX spec sections 7, 10, 11 and 13.8).
+    /// Pause before a dialog validates after the last input change (DialogWrapper's
+    /// validation delay, IntelliJ spec section 7: 300 ms).
+    pub const DIALOG_VALIDATION_DELAY: f32 = 0.3;
+    /// A notification balloon fades out after this long on screen (IntelliJ spec section
+    /// 10.1: 10 000 ms).
+    pub const NOTIFICATION_HIDE_DELAY: f32 = 10.0;
+    /// A sticky notification balloon stays this long (IntelliJ spec section 10.1: 300 000 ms).
+    pub const NOTIFICATION_STICKY_HIDE_DELAY: f32 = 300.0;
+    /// The fade-out of a notification balloon (IntelliJ spec section 10.1: 200 ms cycle).
+    pub const NOTIFICATION_FADE_OUT: f32 = 0.2;
+    /// A help tooltip shows this long after the pointer rests on its owner (`ide.tooltip.
+    /// initialReshowDelay`, IntelliJ spec section 11.1: 500 ms).
+    pub const HELP_TOOLTIP_SHOW_DELAY: f32 = 0.5;
+    /// A help tooltip hides this long after the pointer leaves (`ide.tooltip.initialDelay.
+    /// highlighter`: 150 ms).
+    pub const HELP_TOOLTIP_HIDE_DELAY: f32 = 0.15;
+    /// A one-line help tooltip hides by itself after this long (`ide.helptooltip.regular.
+    /// dismissDelay`: 10 000 ms).
+    pub const HELP_TOOLTIP_DISMISS_SINGLE_LINE: f32 = 10.0;
+    /// A help tooltip with a description or link hides by itself after this long
+    /// (`ide.helptooltip.full.dismissDelay`: 30 000 ms).
+    pub const HELP_TOOLTIP_DISMISS_MULTI_LINE: f32 = 30.0;
+    /// A got-it tooltip with a timeout closes after this long (IntelliJ spec section 11.2:
+    /// 5000 ms).
+    pub const GOT_IT_TIMEOUT: f32 = 5.0;
+    /// One frame of the async process icon (`AnimatedIcon.Default`: 125 ms).
+    pub const ASYNC_PROCESS_FRAME: f32 = 0.125;
+    /// Frames in one turn of the async process icon.
+    pub const ASYNC_PROCESS_FRAMES: u32 = 8;
+    /// One pass of an indeterminate progress bar's segment. Kept from the measurement of
+    /// Android Studio (IntelliJ spec section 13.8 gives no period).
+    pub const PROGRESS_INDETERMINATE_PERIOD: f32 = 1.0 / 0.6;
 }
 
 /// Opacities, from 0 to 1.

@@ -116,5 +116,6 @@ mod docs {
         JBTabs = "components/jb-tabs.md";
         JBTextField = "components/jb-text-field.md";
         Notification = "components/notification.md";
+        GotItTooltip = "components/got-it-tooltip.md";
     }
 }
