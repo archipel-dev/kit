@@ -40,35 +40,25 @@
 <text x="352.8" y="13.5" fill="#A56906">2</text>
 <text x="369.6" y="13.5" fill="#C54E58">-</text>
 <text x="378.0" y="13.5" fill="#C54E58">1</text>
-<text x="403.2" y="13.5" fill="#777777">i</text>
-<text x="411.6" y="13.5" fill="#777777">n</text>
-<text x="420.0" y="13.5" fill="#777777">d</text>
-<text x="428.4" y="13.5" fill="#777777">e</text>
-<text x="436.8" y="13.5" fill="#777777">x</text>
-<text x="445.2" y="13.5" fill="#777777">i</text>
-<text x="453.6" y="13.5" fill="#777777">n</text>
-<text x="462.0" y="13.5" fill="#777777">g</text>
-<text x="478.8" y="13.5" fill="#777777">6</text>
-<text x="487.2" y="13.5" fill="#777777">2</text>
-<text x="495.6" y="13.5" fill="#777777">%</text>
-<svg x="521.3" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="6.65 3.45 6.92 1.5 9.08 1.5 9.35 3.45 11.27 4.55 13.01 3.86 14.09 5.73 12.5 6.89 12.5 9.11 14.09 10.27 13.01 12.14 11.27 11.45 9.35 12.55 9.08 14.5 6.92 14.5 6.65 12.55 4.73 11.45 2.99 12.14 1.91 10.27 3.5 9.11 3.5 6.89 1.91 5.73 2.99 3.86 4.73 4.55" fill="none" stroke="#338555" stroke-width="1"/><circle cx="8" cy="8" r="2.25" fill="none" stroke="#338555" stroke-width="1"/></svg>
-<text x="537.6" y="13.5" fill="#338555">L</text>
-<text x="546.0" y="13.5" fill="#338555">S</text>
-<text x="554.4" y="13.5" fill="#338555">P</text>
-<text x="571.2" y="13.5" fill="#338555">~</text>
-<text x="588.0" y="13.5" fill="#338555">r</text>
-<text x="596.4" y="13.5" fill="#338555">u</text>
-<text x="604.8" y="13.5" fill="#338555">s</text>
-<text x="613.2" y="13.5" fill="#338555">t</text>
-<text x="621.6" y="13.5" fill="#338555">-</text>
-<text x="630.0" y="13.5" fill="#338555">a</text>
-<text x="638.4" y="13.5" fill="#338555">n</text>
-<text x="646.8" y="13.5" fill="#338555">a</text>
-<text x="655.2" y="13.5" fill="#338555">l</text>
-<text x="663.6" y="13.5" fill="#338555">y</text>
-<text x="672.0" y="13.5" fill="#338555">z</text>
-<text x="680.4" y="13.5" fill="#338555">e</text>
-<text x="688.8" y="13.5" fill="#338555">r</text>
+<text x="411.6" y="13.5" fill="#777777">i</text>
+<text x="420.0" y="13.5" fill="#777777">n</text>
+<text x="428.4" y="13.5" fill="#777777">d</text>
+<text x="436.8" y="13.5" fill="#777777">e</text>
+<text x="445.2" y="13.5" fill="#777777">x</text>
+<text x="453.6" y="13.5" fill="#777777">i</text>
+<text x="462.0" y="13.5" fill="#777777">n</text>
+<text x="470.4" y="13.5" fill="#777777">g</text>
+<text x="487.2" y="13.5" fill="#777777">6</text>
+<text x="495.6" y="13.5" fill="#777777">2</text>
+<text x="504.0" y="13.5" fill="#777777">%</text>
+<svg x="538.1" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6" fill="none" stroke="#C54E58" stroke-width="1"/><polyline points="8 5 8 9" fill="none" stroke="#C54E58" stroke-width="1"/><circle cx="8" cy="11.25" r="0.9" fill="#C54E58"/></svg>
+<text x="554.4" y="13.5" fill="#C54E58">1</text>
+<svg x="580.1" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="8 1.5 15 14 1 14" fill="#D59637"/><polyline points="8 5.75 8 9.5" fill="none" stroke="#EEEEEE" stroke-width="1.5"/><circle cx="8" cy="11.75" r="0.9" fill="#EEEEEE"/></svg>
+<text x="596.4" y="13.5" fill="#A56906">2</text>
+<svg x="622.1" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="8 1.5 15 14 1 14" fill="#D59637"/><polyline points="8 5.75 8 9.5" fill="none" stroke="#EEEEEE" stroke-width="1.5"/><circle cx="8" cy="11.75" r="0.9" fill="#EEEEEE"/></svg>
+<text x="638.4" y="13.5" fill="#979797">0</text>
+<svg x="664.1" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5" fill="#71A1FE"/><polyline points="8 7.25 8 11.5" fill="none" stroke="#EEEEEE" stroke-width="1.5"/><circle cx="8" cy="4.75" r="1" fill="#EEEEEE"/></svg>
+<text x="680.4" y="13.5" fill="#338555">3</text>
 <g shape-rendering="geometricPrecision"><path d="M705.9 0.0 A8.4 9.0 0 0 0 705.9 18.0 Z" fill="#7A3E9D"/></g>
 <svg x="706.1" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="1.5 3 6 3 7.5 5 14.5 5 14.5 13 1.5 13" fill="none" stroke="#FFFFFF" stroke-width="1"/></svg>
 <text x="730.8" y="13.5" fill="#080808">k</text>

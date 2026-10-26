@@ -221,3 +221,7 @@ light, and `q` quits.
 ## Lists, trees, tables and speed search
 
 <img alt="List with speed search, tree and table" src="img/collections.dark.svg" width="504"> <img alt="Collections, light" src="img/collections.light.svg" width="504">
+
+## Popups and menus
+
+<img alt="Action popup menu with a submenu, and a Telescope-style list" src="img/popup.dark.svg" width="605"> <img alt="Popups, light" src="img/popup.light.svg" width="605">

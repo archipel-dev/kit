@@ -44,6 +44,7 @@ pub mod hit;
 pub mod input;
 pub mod palette;
 pub mod pointer;
+pub mod popup;
 pub mod runtime;
 pub mod testing;
 pub mod tooltip;

@@ -229,7 +229,7 @@ fn the_view_scrolls_to_keep_the_selection_visible() {
 #[test]
 fn a_click_selects_a_row_and_focuses_the_list() {
     let mut h = harness();
-    h.click(0 + 3, 2);
+    h.click(3, 2);
     assert_eq!(selected(&mut h), [2]);
     assert!(h.rt.focused(LIST));
 }

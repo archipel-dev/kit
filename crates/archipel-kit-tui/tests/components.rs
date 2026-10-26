@@ -301,10 +301,80 @@ fn status_bars() {
 }
 
 #[test]
+fn a_narrow_status_bar_drops_the_least_important_slots_first() {
+    use archipel_kit_tui::components::StatusSlot::{
+        self, Center, Cursor, Cwd, File, Git, Lsp, Mode,
+    };
+    let look = Look::dark();
+    let branch = git();
+    let slots_at = |width: u16| -> Vec<_> {
+        StatusBar::new(&look)
+            .mode("NORMAL", look.palette.nord_blue)
+            .file(Language::Rust, "components.rs")
+            .git(&branch)
+            .center("indexing 62%")
+            .diagnostics(Diagnostics::default())
+            .lsp("rust-analyzer")
+            .cwd("kit")
+            .cursor("Ln 12, Col 8")
+            .slots(Rect::new(0, 0, width, 1))
+            .into_iter()
+            .map(|(slot, _)| slot)
+            .collect()
+    };
+    let wide = slots_at(160);
+    for slot in [
+        Mode,
+        File,
+        Git,
+        Center,
+        StatusSlot::Diagnostics,
+        Lsp,
+        Cwd,
+        Cursor,
+    ] {
+        assert!(wide.contains(&slot), "{slot:?} at 160");
+    }
+    // Medium: the message and the language server go first.
+    let medium = slots_at(95);
+    assert!(!medium.contains(&Lsp), "{medium:?}");
+    for slot in [Mode, File, Cursor, Cwd] {
+        assert!(medium.contains(&slot), "{slot:?} stays at 95: {medium:?}");
+    }
+    // Narrow: only the mode block and the position remain.
+    let narrow = slots_at(34);
+    assert!(
+        narrow.contains(&Mode) && narrow.contains(&Cursor),
+        "{narrow:?}"
+    );
+    assert!(!narrow.contains(&File) || narrow.len() <= 3, "{narrow:?}");
+    // No width makes the language server text run into its neighbor.
+    for width in 1..=140u16 {
+        let buf = render(width, 1, |area, buf| {
+            StatusBar::new(&look)
+                .mode("NORMAL", look.palette.nord_blue)
+                .file(Language::Rust, "components.rs")
+                .git(&branch)
+                .center("indexing 62%")
+                .diagnostics(Diagnostics::default())
+                .lsp("rust-analyzer")
+                .cwd("kit")
+                .cursor("Ln 12, Col 8")
+                .render(area, buf);
+        });
+        let text = lines(&buf).join("");
+        assert!(
+            !text.contains("rust-analyze ") && !text.contains("rust-analyz "),
+            "{width}: {text}"
+        );
+    }
+}
+
+#[test]
 fn status_bar_slots_do_not_overlap() {
     let look = Look::dark();
     let git = git();
-    for width in [20u16, 40, 80, 120] {
+    for width in [1u16, 10, 20, 40, 80, 120] {
         let bar = StatusBar::new(&look)
             .mode("NORMAL", look.palette.nord_blue)
             .file(Language::Rust, "a.rs")

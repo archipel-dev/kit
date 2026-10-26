@@ -1944,61 +1944,74 @@ impl<'a> StatusBar<'a> {
     }
 
     /// Where the slots are, for hit testing, as (slot, rectangle).
+    ///
+    /// Slots never overlap. When the bar is too narrow, the least important slots are
+    /// dropped first, as NvChad does: the centered message, the language server, the
+    /// diagnostics, the branch block, the working directory, the file name, and last the
+    /// cursor position and the mode block.
     pub fn slots(&self, area: Rect) -> Vec<(StatusSlot, Rect)> {
-        let mut out = Vec::new();
         let y = area.y;
-        let mut x = area.x;
-        if let Some((label, _)) = self.mode {
-            let w = text_width(label) + 5 + 1;
-            out.push((StatusSlot::Mode, Rect::new(x, y, w.min(area.width), 1)));
-            x += w + 1;
-        }
-        if let Some((_, name)) = self.file {
-            let w = text_width(name) + 4;
-            out.push((StatusSlot::File, Rect::new(x, y, w, 1)));
-            x += w;
-        }
-        if let Some(git) = self.git {
-            let w = text_width(&Self::git_text(git)) + 2;
-            out.push((StatusSlot::Git, Rect::new(x, y, w, 1)));
-            x += w;
-        }
-        let left_end = x.min(area.right());
-        out.retain(|(_, r)| r.right() <= area.right());
-        // Right side, from the edge inwards; slots that would run into the left side are
-        // dropped (the least important are the innermost).
-        let mut right = area.right();
-        let mut blocked = false;
-        let mut push_right = |slot: StatusSlot, w: u16, out: &mut Vec<(StatusSlot, Rect)>| {
-            if blocked || right.saturating_sub(left_end) < w {
-                blocked = true;
-                return;
-            }
-            right -= w;
-            out.push((slot, Rect::new(right, y, w, 1)));
-        };
-        if let Some(text) = self.cursor {
-            push_right(StatusSlot::Cursor, 3 + text_width(text) + 2 + 1, &mut out);
-        }
-        if let Some(text) = self.cwd {
-            push_right(StatusSlot::Cwd, 3 + text_width(text) + 2 + 1, &mut out);
-        }
-        if let Some(text) = self.lsp {
-            push_right(StatusSlot::Lsp, text_width(text) + 9, &mut out);
-        }
-        if let Some(d) = &self.diagnostics {
-            push_right(
+        let widths: Vec<(StatusSlot, u16)> = [
+            (
+                StatusSlot::Mode,
+                self.mode.map(|(label, _)| text_width(label) + 5 + 1 + 1),
+            ),
+            (
+                StatusSlot::Cursor,
+                self.cursor.map(|t| 3 + text_width(t) + 2 + 1),
+            ),
+            (StatusSlot::File, self.file.map(|(_, n)| text_width(n) + 4)),
+            (StatusSlot::Cwd, self.cwd.map(|t| 3 + text_width(t) + 2 + 1)),
+            (
+                StatusSlot::Git,
+                self.git.map(|g| text_width(&Self::git_text(g)) + 2),
+            ),
+            (
                 StatusSlot::Diagnostics,
-                text_width(&Self::diagnostics_text(d)),
-                &mut out,
-            );
+                self.diagnostics
+                    .map(|d| text_width(&Self::diagnostics_text(&d))),
+            ),
+            (StatusSlot::Lsp, self.lsp.map(|t| text_width(t) + 9)),
+        ]
+        .into_iter()
+        .filter_map(|(slot, w)| w.map(|w| (slot, w)))
+        .collect();
+        // Keep slots in priority order while they fit.
+        let mut used = 0u16;
+        let mut kept = Vec::new();
+        for (slot, w) in widths {
+            if used.saturating_add(w) <= area.width {
+                used += w;
+                kept.push((slot, w));
+            }
         }
-        let center_w = text_width(self.center);
-        if center_w > 0 && right > left_end {
-            let space = right - left_end;
-            let w = center_w.min(space);
-            let cx = left_end + (space - w) / 2;
-            out.push((StatusSlot::Center, Rect::new(cx, y, w, 1)));
+        let width_of = |slot: StatusSlot| kept.iter().find(|(s, _)| *s == slot).map(|(_, w)| *w);
+        let mut out = Vec::new();
+        let mut left = area.x;
+        for slot in [StatusSlot::Mode, StatusSlot::File, StatusSlot::Git] {
+            if let Some(w) = width_of(slot) {
+                out.push((slot, Rect::new(left, y, w, 1)));
+                left += w;
+            }
+        }
+        let mut right = area.right();
+        for slot in [
+            StatusSlot::Cursor,
+            StatusSlot::Cwd,
+            StatusSlot::Lsp,
+            StatusSlot::Diagnostics,
+        ] {
+            if let Some(w) = width_of(slot) {
+                right -= w;
+                out.push((slot, Rect::new(right, y, w, 1)));
+            }
+        }
+        // The message takes what is left between the two sides, if it is readable there.
+        let space = right.saturating_sub(left).saturating_sub(2);
+        let center_w = text_width(self.center).min(space);
+        if center_w > 0 && center_w >= 4.min(text_width(self.center)) {
+            let cx = left + 1 + (space - center_w) / 2;
+            out.push((StatusSlot::Center, Rect::new(cx, y, center_w, 1)));
         }
         out
     }
@@ -2123,7 +2136,7 @@ impl Widget for StatusBar<'_> {
                 rect,
                 rect.x,
                 rect.y,
-                self.center,
+                &clip(self.center, rect.width),
                 Style::default().bg(bar).fg(p.light_grey),
             );
         }
@@ -2151,7 +2164,7 @@ impl Widget for StatusBar<'_> {
                 let style = Style::default()
                     .bg(bg)
                     .fg(if n == 0 { p.grey_fg } else { color });
-                x = put(buf, rect, x, rect.y, &format!("{icon} {n}"), style) + 3;
+                x = put(buf, rect, x, rect.y, &format!("{icon} {n}"), style) + 2;
             }
         }
         if let (Some(name), Some(rect)) = (self.lsp, rect_of(StatusSlot::Lsp)) {
