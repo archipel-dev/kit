@@ -69,21 +69,22 @@ Components are ratatui `Widget`s that borrow a `Look`. They are stateless like t
 components: your app owns the state and passes it in on every frame.
 
 ```rust
-use archipel_kit_tui::components::{Button, JBCheckBox, Frame, Island};
+use archipel_kit_tui::components::{Button, JBCheckBox, Pane, PaneKind};
 use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 use archipel_kit_tui::{Glyph, Look};
 
 fn draw(look: &Look, format_on_save: bool, area: Rect, buf: &mut Buffer) {
-    Frame::new(look).render(area, buf);
-    let island = Island::new(look).title("Settings");
-    let panel = Rect::new(1, 1, area.width - 2, area.height - 2);
-    let inner = island.inner(panel);
-    island.render(panel, buf);
+    let pane = Pane::new(look).kind(PaneKind::Sidebar).title("Settings");
+    let inner = pane.inner(area);
+    pane.render(area, buf);
     JBCheckBox::new(look, format_on_save, "Format on save")
-        .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
-    let run = Button::primary(look, "Apply").icon(Glyph::Success);
+        .on(look.palette.darker_black)
+        .render(Rect::new(inner.x + 1, inner.y + 1, inner.width, 1), buf);
+    let run = Button::primary(look, "Apply")
+        .icon(Glyph::Success)
+        .on(look.palette.darker_black);
     let width = run.width();
-    run.render(Rect::new(inner.x, inner.y + 2, width, 1), buf);
+    run.render(Rect::new(inner.x + 1, inner.y + 3, width, 1), buf);
 }
 
 let look = Look::dark();
@@ -212,3 +213,7 @@ light, and `q` quits.
   split layout with draggable dividers.
 - **`archipel-theme` crate**: the theme and tokens without egui, so the TUI doesn't compile
   egui.
+
+## Interactive controls
+
+<img alt="Controls" src="img/controls.dark.svg" width="504"> <img alt="Controls, light" src="img/controls.light.svg" width="504">

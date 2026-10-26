@@ -1,38 +1,51 @@
 //! # Archipel Kit TUI
 //!
-//! Archipel Kit for the terminal: the same [`Theme`] colors, the same icons and components
-//! with the same names, drawn into terminal cells with [ratatui]. An app built on the kit
-//! can offer a GUI and a TUI that look and work alike.
+//! Archipel Kit for the terminal: the same [`Theme`] colors, the same icons, and the same
+//! component, action and shortcut names as the GUI kit, drawn into terminal cells with
+//! [ratatui]. It looks like NvChad, the Neovim distribution, and behaves like an IntelliJ
+//! app: the same actions, keymap and focus rules as the GUI. An app built on the kit can
+//! offer a GUI and a TUI that work alike.
 //!
 //! ```
-//! use archipel_kit_tui::{Look, components::{Button, Island}};
+//! use archipel_kit_tui::{Look, components::{Button, Pane, PaneKind}};
 //! use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
 //!
 //! let look = Look::dark();
 //! let area = Rect::new(0, 0, 30, 4);
 //! let mut buf = Buffer::empty(area);
-//! let island = Island::new(&look).title("Project");
-//! let inner = island.inner(area);
-//! island.render(area, &mut buf);
-//! Button::primary(&look, "Run").render(inner, &mut buf);
+//! let pane = Pane::new(&look).kind(PaneKind::Sidebar).title("Project");
+//! let inner = pane.inner(area);
+//! pane.render(area, &mut buf);
+//! Button::primary(&look, "Run").on(look.palette.darker_black).render(inner, &mut buf);
 //! ```
 //!
-//! The look is the GUI's (theme colors, icons, Islands layout) in the flat style of modern
-//! Neovim setups such as NvChad:
+//! The look is NvChad's:
 //!
-//! - **Islands** are flat blocks of the island color one cell apart on the frame color, with
-//!   a title pill, in the accent when the panel has focus. No borders.
-//! - **Colors** come from the kit [`Theme`] as 24-bit color; translucent colors (hover,
-//!   selection) are blended over the island.
+//! - **Panes** are flat, full-bleed backgrounds edge to edge: the editor on `black`, side
+//!   bars and the bottom terminal on `darker_black`, a thin separator line between them.
+//!   No islands, no gaps.
+//! - **Colors** are the NvChad roles (`black`, `black2`, `one_bg`, `line`, …) computed from
+//!   the kit [`Theme`] by [`NvChadPalette`], so every bundled IntelliJ theme works.
 //! - **Icons** are Nerd Font characters: kit [`Glyph`]s map to codicons, languages to their
 //!   logos in the language color, symbols to codicon symbols in the symbol color. Use a Nerd
 //!   Font in the terminal; JetBrainsMono Nerd Font matches the GUI's code font.
 //!
-//! The guide with images is `docs/tui/README.md`.
+//! The interactive layer: [`runtime`] (event loop, keymap dispatch, focus, hit map, layers),
+//! and the components in [`controls`], [`collections`], [`popup`], [`workbench`] and
+//! [`overlay`]. The guide with images is `docs/tui/README.md`.
 
+pub mod clipboard;
 pub mod components;
+pub mod controls;
+pub mod focus;
 pub mod glyphs;
+pub mod hit;
+pub mod input;
+pub mod palette;
+pub mod pointer;
+pub mod runtime;
 pub mod testing;
+pub mod tooltip;
 
 pub use archipel_icons::{Glyph, Language, Symbol, SymbolKind};
 
@@ -41,7 +54,11 @@ pub use archipel_icons::{Glyph, Language, Symbol, SymbolKind};
 #[doc = include_str!("../../../docs/tui/README.md")]
 struct TuiGuide;
 pub use archipel_kit::Theme;
+pub use hit::{HitMap, Id};
+pub use input::{Caps, Event};
+pub use palette::{Mode, NvChadPalette};
 pub use ratatui;
+pub use runtime::{App, Runtime};
 
 use ratatui::style::{Color, Modifier, Style};
 
@@ -50,6 +67,8 @@ use ratatui::style::{Color, Modifier, Style};
 pub struct Look {
     /// The theme the colors come from.
     pub theme: Theme,
+    /// The NvChad color roles derived from the theme.
+    pub palette: NvChadPalette,
 }
 
 impl Look {
@@ -65,12 +84,14 @@ impl Look {
 
     /// `theme` in the terminal.
     pub fn new(theme: Theme) -> Self {
-        Self { theme }
+        let palette = NvChadPalette::new(&theme);
+        Self { theme, palette }
     }
 
-    /// `color` as a terminal color, blended over the island when it is translucent.
+    /// `color` as a terminal color, blended over the editor background when it is
+    /// translucent.
     pub fn color(&self, color: archipel_kit::egui::Color32) -> Color {
-        self.color_over(color, self.theme.colors.island)
+        self.color_over(color, self.theme.editor.background)
     }
 
     /// `color` blended over `background`.
@@ -97,22 +118,28 @@ impl Look {
         Color::Rgb((value >> 16) as u8, (value >> 8) as u8, value as u8)
     }
 
-    /// Text in `color` on the island.
+    /// Text in `color` on the editor background.
     pub fn text(&self, color: archipel_kit::egui::Color32) -> Style {
         Style::default()
             .fg(self.color(color))
-            .bg(self.color(self.theme.colors.island))
+            .bg(self.palette.black)
     }
 
-    /// Default text on the island.
+    /// Default text on the editor background.
     pub fn body(&self) -> Style {
-        self.text(self.theme.colors.text)
+        Style::default()
+            .fg(self.palette.white)
+            .bg(self.palette.black)
     }
 
-    /// Bold strong text on the island.
+    /// Bold strong text on the editor background.
     pub fn strong(&self) -> Style {
-        self.text(self.theme.colors.text_strong)
-            .add_modifier(Modifier::BOLD)
+        self.body().add_modifier(Modifier::BOLD)
+    }
+
+    /// `fg` on `bg`.
+    pub fn on(&self, fg: Color, bg: Color) -> Style {
+        Style::default().fg(fg).bg(bg)
     }
 
     /// The Nerd Font character of `glyph`.
@@ -136,8 +163,8 @@ impl Look {
     /// `0xRRGGBB` as a foreground on the island, mixed toward the text color until it has
     /// 3:1 contrast (dark language colors on a dark island stay visible).
     pub fn readable(&self, value: u32) -> Color {
-        let island = self.theme.colors.island;
-        let text = self.theme.colors.text_strong;
+        let island = self.theme.editor.background;
+        let text = self.theme.editor.text;
         let channel = |v: u32, shift: u32| ((v >> shift) & 0xFF) as f32;
         let (mut r, mut g, mut b) = (channel(value, 16), channel(value, 8), channel(value, 0));
         let luminance = |r: f32, g: f32, b: f32| {

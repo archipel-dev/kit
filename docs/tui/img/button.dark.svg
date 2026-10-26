@@ -1,22 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="537.6" height="90.0" viewBox="0 0 537.6 90.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<svg xmlns="http://www.w3.org/2000/svg" width="537.6" height="108.0" viewBox="0 0 537.6 108.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
 <rect x="0.0" y="0.0" width="537.6" height="18" fill="#191A1C"/>
 <rect x="0.0" y="18.0" width="16.8" height="18" fill="#191A1C"/>
 <rect x="16.8" y="18.0" width="58.8" height="18" fill="#3871E1"/>
 <rect x="75.6" y="18.0" width="16.8" height="18" fill="#191A1C"/>
-<rect x="92.4" y="18.0" width="67.2" height="18" fill="#40434A"/>
+<rect x="92.4" y="18.0" width="67.2" height="18" fill="#313335"/>
 <rect x="159.6" y="18.0" width="109.2" height="18" fill="#191A1C"/>
-<rect x="268.8" y="18.0" width="67.2" height="18" fill="#C54E58"/>
+<rect x="268.8" y="18.0" width="67.2" height="18" fill="#F57E84"/>
 <rect x="336.0" y="18.0" width="201.6" height="18" fill="#191A1C"/>
 <svg x="25.7" y="20.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="3.5 2.5 12.5 8 3.5 13.5" fill="#4E9D6C"/></svg>
-<text x="42.0" y="31.5" fill="#FFFFFF" font-weight="bold" text-decoration="underline">R</text>
-<text x="50.4" y="31.5" fill="#FFFFFF">u</text>
-<text x="58.8" y="31.5" fill="#FFFFFF">n</text>
-<text x="100.8" y="31.5" fill="#DFE1E5" font-weight="bold" text-decoration="underline">C</text>
-<text x="109.2" y="31.5" fill="#DFE1E5">a</text>
-<text x="117.6" y="31.5" fill="#DFE1E5">n</text>
-<text x="126.0" y="31.5" fill="#DFE1E5">c</text>
-<text x="134.4" y="31.5" fill="#DFE1E5">e</text>
-<text x="142.8" y="31.5" fill="#DFE1E5">l</text>
+<text x="42.0" y="31.5" fill="#191A1C" font-weight="bold" text-decoration="underline">R</text>
+<text x="50.4" y="31.5" fill="#191A1C">u</text>
+<text x="58.8" y="31.5" fill="#191A1C">n</text>
+<text x="100.8" y="31.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">C</text>
+<text x="109.2" y="31.5" fill="#BCBEC4">a</text>
+<text x="117.6" y="31.5" fill="#BCBEC4">n</text>
+<text x="126.0" y="31.5" fill="#BCBEC4">c</text>
+<text x="134.4" y="31.5" fill="#BCBEC4">e</text>
+<text x="142.8" y="31.5" fill="#BCBEC4">l</text>
 <text x="184.8" y="31.5" fill="#71A1FE">D</text>
 <text x="193.2" y="31.5" fill="#71A1FE">e</text>
 <text x="201.6" y="31.5" fill="#71A1FE">t</text>
@@ -24,42 +24,43 @@
 <text x="218.4" y="31.5" fill="#71A1FE">i</text>
 <text x="226.8" y="31.5" fill="#71A1FE">l</text>
 <text x="235.2" y="31.5" fill="#71A1FE">s</text>
-<text x="277.2" y="31.5" fill="#FFFFFF">D</text>
-<text x="285.6" y="31.5" fill="#FFFFFF">e</text>
-<text x="294.0" y="31.5" fill="#FFFFFF">l</text>
-<text x="302.4" y="31.5" fill="#FFFFFF">e</text>
-<text x="310.8" y="31.5" fill="#FFFFFF">t</text>
-<text x="319.2" y="31.5" fill="#FFFFFF">e</text>
+<text x="277.2" y="31.5" fill="#191A1C">D</text>
+<text x="285.6" y="31.5" fill="#191A1C">e</text>
+<text x="294.0" y="31.5" fill="#191A1C">l</text>
+<text x="302.4" y="31.5" fill="#191A1C">e</text>
+<text x="310.8" y="31.5" fill="#191A1C">t</text>
+<text x="319.2" y="31.5" fill="#191A1C">e</text>
 <rect x="0.0" y="36.0" width="537.6" height="18" fill="#191A1C"/>
 <rect x="0.0" y="54.0" width="16.8" height="18" fill="#191A1C"/>
 <rect x="16.8" y="54.0" width="75.6" height="18" fill="#3871E1"/>
 <rect x="92.4" y="54.0" width="16.8" height="18" fill="#191A1C"/>
-<rect x="109.2" y="54.0" width="84.0" height="18" fill="#40434A"/>
+<rect x="109.2" y="54.0" width="84.0" height="18" fill="#222325"/>
 <rect x="193.2" y="54.0" width="344.4" height="18" fill="#191A1C"/>
 <text x="8.4" y="67.5" fill="#3871E1" font-weight="bold">❯</text>
-<text x="25.2" y="67.5" fill="#FFFFFF">F</text>
-<text x="33.6" y="67.5" fill="#FFFFFF">o</text>
-<text x="42.0" y="67.5" fill="#FFFFFF">c</text>
-<text x="50.4" y="67.5" fill="#FFFFFF">u</text>
-<text x="58.8" y="67.5" fill="#FFFFFF">s</text>
-<text x="67.2" y="67.5" fill="#FFFFFF">e</text>
-<text x="75.6" y="67.5" fill="#FFFFFF">d</text>
+<text x="25.2" y="67.5" fill="#191A1C">F</text>
+<text x="33.6" y="67.5" fill="#191A1C">o</text>
+<text x="42.0" y="67.5" fill="#191A1C">c</text>
+<text x="50.4" y="67.5" fill="#191A1C">u</text>
+<text x="58.8" y="67.5" fill="#191A1C">s</text>
+<text x="67.2" y="67.5" fill="#191A1C">e</text>
+<text x="75.6" y="67.5" fill="#191A1C">d</text>
 <text x="92.4" y="67.5" fill="#3871E1" font-weight="bold">❮</text>
-<text x="117.6" y="67.5" fill="#73767C">D</text>
-<text x="126.0" y="67.5" fill="#73767C">i</text>
-<text x="134.4" y="67.5" fill="#73767C">s</text>
-<text x="142.8" y="67.5" fill="#73767C">a</text>
-<text x="151.2" y="67.5" fill="#73767C">b</text>
-<text x="159.6" y="67.5" fill="#73767C">l</text>
-<text x="168.0" y="67.5" fill="#73767C">e</text>
-<text x="176.4" y="67.5" fill="#73767C">d</text>
-<text x="218.4" y="67.5" fill="#4C4F56">D</text>
-<text x="226.8" y="67.5" fill="#4C4F56">i</text>
-<text x="235.2" y="67.5" fill="#4C4F56">s</text>
-<text x="243.6" y="67.5" fill="#4C4F56">a</text>
-<text x="252.0" y="67.5" fill="#4C4F56">b</text>
-<text x="260.4" y="67.5" fill="#4C4F56">l</text>
-<text x="268.8" y="67.5" fill="#4C4F56">e</text>
-<text x="277.2" y="67.5" fill="#4C4F56">d</text>
+<text x="117.6" y="67.5" fill="#5D5F63">D</text>
+<text x="126.0" y="67.5" fill="#5D5F63">i</text>
+<text x="134.4" y="67.5" fill="#5D5F63">s</text>
+<text x="142.8" y="67.5" fill="#5D5F63">a</text>
+<text x="151.2" y="67.5" fill="#5D5F63">b</text>
+<text x="159.6" y="67.5" fill="#5D5F63">l</text>
+<text x="168.0" y="67.5" fill="#5D5F63">e</text>
+<text x="176.4" y="67.5" fill="#5D5F63">d</text>
+<text x="218.4" y="67.5" fill="#5D5F63">D</text>
+<text x="226.8" y="67.5" fill="#5D5F63">i</text>
+<text x="235.2" y="67.5" fill="#5D5F63">s</text>
+<text x="243.6" y="67.5" fill="#5D5F63">a</text>
+<text x="252.0" y="67.5" fill="#5D5F63">b</text>
+<text x="260.4" y="67.5" fill="#5D5F63">l</text>
+<text x="268.8" y="67.5" fill="#5D5F63">e</text>
+<text x="277.2" y="67.5" fill="#5D5F63">d</text>
 <rect x="0.0" y="72.0" width="537.6" height="18" fill="#191A1C"/>
+<rect x="0.0" y="90.0" width="537.6" height="18" fill="#191A1C"/>
 </svg>
