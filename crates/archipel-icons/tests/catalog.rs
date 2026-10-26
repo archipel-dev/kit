@@ -139,53 +139,61 @@ fn review_sheets() {
     }
     const COLUMNS: usize = 6;
     const ICON: f32 = 96.0;
-    let look = &LOOKS[0];
-    for (page, chunk) in Glyph::ALL.chunks(24).enumerate() {
-        let rows = chunk.len().div_ceil(COLUMNS);
-        let size = vec2(
-            COLUMNS as f32 * (ICON + 24.0) + 24.0,
-            rows as f32 * (ICON + 40.0) + 24.0,
-        );
-        let mut harness = sheet(size, 1.0, look.background, |painter| {
-            for (index, glyph) in chunk.iter().enumerate() {
-                let min = pos2(
-                    24.0 + (index % COLUMNS) as f32 * (ICON + 24.0),
-                    24.0 + (index / COLUMNS) as f32 * (ICON + 40.0),
-                );
-                let rect = Rect::from_min_size(min, vec2(ICON, ICON));
-                let unit = ICON / 16.0;
-                for i in 0..=16 {
-                    let color = if i == 1 || i == 15 {
-                        Color32::from_rgb(0x80, 0x40, 0x40)
-                    } else {
-                        Color32::from_gray(0x2C)
-                    };
-                    let offset = i as f32 * unit;
-                    painter.vline(
-                        rect.left() + offset,
-                        rect.y_range(),
-                        Stroke::new(1.0_f32, color),
+    for look in &LOOKS {
+        for (page, chunk) in Glyph::ALL.chunks(24).enumerate() {
+            let rows = chunk.len().div_ceil(COLUMNS);
+            let size = vec2(
+                COLUMNS as f32 * (ICON + 24.0) + 24.0,
+                rows as f32 * (ICON + 40.0) + 24.0,
+            );
+            let mut harness = sheet(size, 1.0, look.background, |painter| {
+                for (index, glyph) in chunk.iter().enumerate() {
+                    let min = pos2(
+                        24.0 + (index % COLUMNS) as f32 * (ICON + 24.0),
+                        24.0 + (index / COLUMNS) as f32 * (ICON + 40.0),
                     );
-                    painter.hline(
-                        rect.x_range(),
-                        rect.top() + offset,
-                        Stroke::new(1.0_f32, color),
+                    let rect = Rect::from_min_size(min, vec2(ICON, ICON));
+                    let unit = ICON / 16.0;
+                    for i in 0..=16 {
+                        let color = if i == 1 || i == 15 {
+                            Color32::from_rgb(0x80, 0x40, 0x40)
+                        } else {
+                            if look.name == "dark" {
+                                Color32::from_gray(0x2C)
+                            } else {
+                                Color32::from_gray(0xE8)
+                            }
+                        };
+                        let offset = i as f32 * unit;
+                        painter.vline(
+                            rect.left() + offset,
+                            rect.y_range(),
+                            Stroke::new(1.0_f32, color),
+                        );
+                        painter.hline(
+                            rect.x_range(),
+                            rect.top() + offset,
+                            Stroke::new(1.0_f32, color),
+                        );
+                    }
+                    archipel_icons::paint(painter, rect, *glyph, look.ink, &look.tones);
+                    painter.text(
+                        rect.center_bottom() + vec2(0.0, 14.0),
+                        egui::Align2::CENTER_CENTER,
+                        glyph.name(),
+                        egui::FontId::proportional(13.0),
+                        look.text,
                     );
                 }
-                archipel_icons::paint(painter, rect, *glyph, look.ink, &look.tones);
-                painter.text(
-                    rect.center_bottom() + vec2(0.0, 14.0),
-                    egui::Align2::CENTER_CENTER,
-                    glyph.name(),
-                    egui::FontId::proportional(13.0),
-                    look.text,
-                );
-            }
-        });
-        let image = harness.render().expect("render");
-        std::fs::create_dir_all("../../target/icon-review").expect("review dir");
-        image
-            .save(format!("../../target/icon-review/page-{page}.png"))
-            .expect("save review sheet");
+            });
+            let image = harness.render().expect("render");
+            std::fs::create_dir_all("../../target/icon-review").expect("review dir");
+            image
+                .save(format!(
+                    "../../target/icon-review/page-{page}.{}.png",
+                    look.name
+                ))
+                .expect("save review sheet");
+        }
     }
 }

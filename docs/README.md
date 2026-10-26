@@ -6,7 +6,7 @@
 - [Theme mapping](theme-mapping.md): which IntelliJ key fills which kit color in every bundled theme (generated).
 - [Testing](testing.md): behavior, accessibility and snapshot tests for your own UI.
 - [Cursors](cursors.md): which cursor shows where, and how parents override it.
-- [Icon kit](icons/README.md): 113 designed glyphs, [78 language icons](icons/languages.md), [code symbols](icons/symbols.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
+- [Icon kit](icons/README.md): 128 designed glyphs, [78 language icons](icons/languages.md), [code symbols](icons/symbols.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).
 - [Terminal UI](tui/README.md): the same theme, icons and components in the terminal (ratatui).
 - [Behaviours](behaviours.md): tooltips, context menus, cursors and drag and drop on any widget with `.with(...)`.
 - [Action system](action-system.md): IntelliJ-style actions, presentations, groups, keymaps and host services.
