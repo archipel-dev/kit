@@ -17,7 +17,7 @@ the names, then fix the imports with the paths).
 | `action_system` | ActionButton, ActionMenuItem |
 | `wm` | ToolWindowPane, ToolWindowPaneState, ToolWindowAnchor, ToolWindowPlace, SquareStripeButton, ToolWindowToolbar, StatusBarWidget, MainToolbar, IdeFrameDecorator, ToolbarComboButton, SimpleToolWindowPanel |
 | `notification` | Notification |
-| `editor` | CodeView, CodeEditor, the highlighters (formerly `components::code`) |
+| `editor` | EditorComponent, the highlighters (formerly `components::code`), `editor::model` |
 | `parts`, `behaviour`, `cursor`, `icons`, `theme`, `tokens`, `testing` | Unchanged, minus the moved items below |
 
 ## Renamed types
@@ -124,10 +124,10 @@ These types keep their names; only the module changed (`archipel_kit::components
 | `initials` | `archipel_kit::ui::initials` |
 | `Orientation` | `archipel_kit::openapi::ui::Orientation` |
 | `Side` | `archipel_kit::openapi::ui::Side` |
-| `CodeView` | `archipel_kit::editor::CodeView` |
-| `CodeViewResponse` | `archipel_kit::editor::CodeViewResponse` |
-| `CodeEditor` | `archipel_kit::editor::CodeEditor` |
-| `CodeEditorOutput` | `archipel_kit::editor::CodeEditorOutput` |
+| `CodeView` | `archipel_kit::editor::EditorComponent` with `.viewer(true)` on a `model::Editor` |
+| `CodeViewResponse` | `archipel_kit::editor::EditorComponentResponse` |
+| `CodeEditor` | `archipel_kit::editor::EditorComponent` on a `model::Editor` |
+| `CodeEditorOutput` | `archipel_kit::editor::EditorComponentResponse` (`selection` is still the byte range) |
 | `Highlighter` | `archipel_kit::editor::Highlighter` |
 | `TokenKind` | `archipel_kit::editor::TokenKind` |
 | `Span` | `archipel_kit::editor::Span` |
@@ -147,3 +147,22 @@ These types keep their names; only the module changed (`archipel_kit::components
 Documentation pages and snapshot images were renamed after the new type names (for example
 `docs/components/dropdown.md` is now `docs/components/combo-box.md`, `img/tab_bar.*.png` is `img/jb_tabs.*.png`).
 AccessKit labels and visible strings are unchanged.
+
+## CodeView and CodeEditor became EditorComponent
+
+`CodeView` and `CodeEditor` are gone (no aliases); `EditorComponent` replaces both. It
+borrows a `model::Editor` instead of a `&str` or `&mut String`: the caller owns the document,
+the carets, the undo history, the folds and the settings.
+
+| Before | Now |
+|---|---|
+| `CodeView::new(&text)` | `EditorComponent::new(&mut editor).viewer(true)` with `let mut editor = Editor::new(&text)`; `editor.set_text(..)` when the text changes (it replaces the `.revision(n)` call) |
+| `CodeEditor::new(&mut text)` | `EditorComponent::new(&mut editor)`; read the text with `editor.document.text()` |
+| `.folding(true)` (brackets) | `.bracket_folding(true)`; fold regions of your own: `editor.folding.add_region(..)` with `.folding(true)` |
+| `.tab_width(n)`, `.use_tabs(b)`, `.auto_indent(b)`, `.bracket_pairing(b)` | `editor.settings.tab_size` and `indent_size`, `use_tab_character`, `smart_indent_on_enter`, `auto_pair_brackets` and `auto_pair_quotes` |
+| `.scroll_to_line`, `.stick_to_bottom`, `.wrap`, `.line_numbers`, `.label`, `.placeholder`, `.completer`, `.enabled`, `.tab_indents`, `.height`, `.id`, `.highlighter` | Unchanged |
+| `response.changed()` | `response.changed()` and `EditorComponentResponse::text_changed` |
+| `CodeEditorOutput::selection` | `EditorComponentResponse::selection` |
+| `CodeViewResponse::{line_count, visible_lines, laid_out_rows, matches}` | The same fields of `EditorComponentResponse` |
+| <kbd>Ctrl</kbd>+<kbd>]</kbd> / <kbd>[</kbd> indent | Gone: they are the IntelliJ code block navigation. Use <kbd>Tab</kbd> and <kbd>Shift</kbd>+<kbd>Tab</kbd> |
+| egui's undo and word movement | The model's: IntelliJ word stops, smart Home/End, caret-restoring undo |

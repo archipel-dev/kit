@@ -109,6 +109,38 @@ impl Editor {
         outcome
     }
 
+    /// Toggles the region at `index` (a click on its gutter chevron); with `recursive`
+    /// (Alt+click) the regions nested in it follow. A caret that ends up hidden moves to the
+    /// start of the collapsed region.
+    pub fn toggle_fold_region(&mut self, index: usize, recursive: bool) {
+        let Some(region) = self.folding.regions().get(index) else {
+            return;
+        };
+        let expand = !region.expanded;
+        let (start, end) = (region.start, region.end);
+        if recursive {
+            for i in 0..self.folding.regions().len() {
+                let nested = {
+                    let r = &self.folding.regions()[i];
+                    r.start >= start && r.end <= end
+                };
+                if nested {
+                    self.folding.set_expanded(i, expand);
+                }
+            }
+        } else {
+            self.folding.set_expanded(index, expand);
+        }
+        for caret in self.carets.carets_mut() {
+            for offset in [&mut caret.offset, &mut caret.anchor] {
+                if let Some(region) = self.folding.collapsed_region_hiding(*offset) {
+                    *offset = region.start;
+                }
+            }
+        }
+        self.carets.normalize();
+    }
+
     fn run_undo(&mut self, redo: bool) -> EditOutcome {
         let mut outcome = EditOutcome::new();
         let result = if redo {

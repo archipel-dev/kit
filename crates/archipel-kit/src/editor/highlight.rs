@@ -95,8 +95,8 @@ pub struct Span {
 }
 
 /// Maps code to styled [`Span`]s. Implement it to plug your own tokenizer (a tree-sitter
-/// query, a language server's semantic tokens) into [`CodeView`](crate::editor::CodeView) and
-/// [`CodeEditor`](crate::editor::CodeEditor).
+/// query, a language server's semantic tokens) into the
+/// [`EditorComponent`](crate::editor::EditorComponent).
 ///
 /// The views ask for one line at a time, so only visible lines are tokenized.
 /// Constructs that span lines (block comments, template strings) carry a `state` from

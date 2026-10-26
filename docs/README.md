@@ -27,7 +27,7 @@
 | [SegmentedButton](components/segmented-button.md) | <img src="components/img/segmented_button.dark.png" width="140"> | Switching views. |
 | [JBTabs](components/jb-tabs.md) | <img src="components/img/jb_tabs.dark.png" width="160"> | Editor tabs. |
 | [KeyValueTable](components/key-value-table.md) | <img src="components/img/key_value.dark.png" width="160"> | Query parameters, headers, form fields, environment variables. |
-| [CodeView, CodeEditor](components/code.md) | <img src="components/img/code_view.dark.png" width="160"> | Read-only and editable code with highlighting and find. |
+| [EditorComponent](components/code.md) | <img src="components/img/code_view.dark.png" width="160"> | The IntelliJ editor: editable and read-only code with multiple carets, folding, gutter, highlighting and find. |
 | [JBList, Tree, JBTable](components/collections.md) | <img src="components/img/jb_table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
 | [ColoredListCellRenderer](components/colored-list-cell-renderer.md) | <img src="components/img/colored_list_cell_renderer.dark.png" width="160"> | Lists and trees. |

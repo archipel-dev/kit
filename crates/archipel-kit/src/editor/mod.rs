@@ -1,25 +1,28 @@
-//! Code views and editors: [`CodeView`] shows large read-only text, [`CodeEditor`] edits
-//! text in place, both with token highlighting from a [`Highlighter`].
+//! The code editor: [`EditorComponent`] shows and edits a [`model::Editor`] with token
+//! highlighting from a [`Highlighter`]; with `viewer(true)` it is a read-only code view.
 //!
 //! | Item | Use it for |
 //! |---|---|
-//! | [`CodeView`], [`CodeViewResponse`] | Large read-only text with folding, find and wrapping. |
-//! | [`CodeEditor`], [`CodeEditorOutput`] | Editable code. |
+//! | [`EditorComponent`], [`EditorComponentResponse`] | The editor widget: editable code, or a read-only view of large text with folding and find. |
+//! | [`GutterIcon`], [`ChangeMarker`], [`RangeHighlight`], [`GutterClick`], [`NavigationRequest`], [`HoverInfo`] | What the caller hands to it (gutter icons, markers, highlights) and what it reports back. |
 //! | [`Highlighter`], [`TokenKind`], [`Span`] | The highlighter interface. |
 //! | [`PlainText`], [`Json`], [`ExtendedJson`], [`JavaScript`], [`GraphQl`], [`Xml`] | Ready-made highlighters. |
 //! | [`TemplateHighlighter`], [`TemplateToken`], [`TemplateAt`], [`template_at`] | `{{variable}}` templates over any highlighter. |
 //! | [`model`] | The JetBrains-faithful, UI-free editing logic: document, carets, actions, undo, keymap. |
 
-mod code_editor;
-mod code_view;
+mod decorations;
+mod editor_component;
 mod find;
 mod highlight;
 pub mod model;
+mod selection_shape;
 mod template;
-mod text;
 
-pub use code_editor::{CodeEditor, CodeEditorOutput};
-pub use code_view::{CodeView, CodeViewResponse};
+pub use decorations::{
+    ChangeKind, ChangeMarker, GutterArea, GutterClick, GutterIcon, HighlightSeverity, HoverInfo,
+    NavigationKind, NavigationRequest, RangeHighlight,
+};
+pub use editor_component::{EditorComponent, EditorComponentResponse};
 pub use highlight::{
     ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
 };
@@ -27,8 +30,8 @@ pub(crate) use highlight::{styled_job, token_format};
 pub use template::{TemplateAt, TemplateHighlighter, TemplateToken, template_at};
 
 use crate::theme::Theme;
-use crate::tokens::{radius, size};
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, StrokeKind, TextStyle, Ui};
+use crate::tokens::radius;
+use egui::{FontId, Rect, StrokeKind, TextStyle, Ui};
 
 /// Texts up to this many bytes are exposed to screen readers as the node's value.
 const A11Y_VALUE_LIMIT: usize = 64 * 1024;
@@ -38,38 +41,6 @@ fn code_font(ui: &Ui) -> (FontId, f32) {
     let font = TextStyle::Monospace.resolve(ui.style());
     let cell = ui.fonts_mut(|fonts| fonts.glyph_width(&font, 'M'));
     (font, cell)
-}
-
-/// Width of a gutter showing line numbers up to `lines`, with a fold column when `fold`.
-fn gutter_width(lines: usize, cell: f32, numbers: bool, fold: bool) -> f32 {
-    let mut width = 0.0;
-    if numbers {
-        width += lines.to_string().len().max(2) as f32 * cell + 2.0 * size::CODE_PADDING;
-    }
-    if fold {
-        width += size::CHEVRON_COLUMN + if numbers { 0.0 } else { size::CODE_PADDING };
-    }
-    width
-}
-
-/// Paints one line number right-aligned in `gutter`, vertically centered on `y`.
-fn paint_number(
-    painter: &Painter,
-    gutter: Rect,
-    y: f32,
-    number: usize,
-    font: &FontId,
-    color: Color32,
-    fold: bool,
-) {
-    let right = gutter.right() - size::CODE_PADDING - if fold { size::CHEVRON_COLUMN } else { 0.0 };
-    painter.text(
-        Pos2::new(right, y),
-        Align2::RIGHT_CENTER,
-        number.to_string(),
-        font.clone(),
-        color,
-    );
 }
 
 /// The editor box: its background, and the border (accent when focused) over the content.

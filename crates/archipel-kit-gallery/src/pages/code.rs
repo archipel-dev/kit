@@ -1,4 +1,5 @@
 use super::*;
+use archipel_kit::editor::model::Editor;
 
 /// The JSON of the Code page.
 const CODE_SAMPLE: &str = r#"{
@@ -15,7 +16,8 @@ const CODE_SAMPLE: &str = r#"{
 
 pub(super) struct State {
     last_action: String,
-    code: String,
+    viewer: Editor,
+    editor: Editor,
     url_bar: UrlBar,
     header: String,
 }
@@ -24,7 +26,8 @@ impl Default for State {
     fn default() -> Self {
         Self {
             last_action: String::new(),
-            code: CODE_SAMPLE.into(),
+            viewer: Editor::new(CODE_SAMPLE),
+            editor: Editor::new(CODE_SAMPLE),
             url_bar: UrlBar {
                 url: "{{base_url}}/users/{{user_id}}?key={{token}}&q={{missing}}".into(),
                 ..UrlBar::default()
@@ -50,17 +53,18 @@ impl State {
                 .clearable(true)
                 .enabled(enabled),
         );
-        ui.add(TitledSeparator::new("Code view"));
-        CodeView::new(CODE_SAMPLE)
+        ui.add(TitledSeparator::new("Viewer"));
+        EditorComponent::new(&mut self.viewer)
             .label("Response body")
             .highlighter(&Json)
+            .viewer(true)
             .line_numbers(true)
-            .folding(true)
+            .bracket_folding(true)
             .height(236.0)
             .show(ui);
-        ui.add(TitledSeparator::new("Code editor"));
+        ui.add(TitledSeparator::new("Editor"));
         ui.add(
-            CodeEditor::new(&mut self.code)
+            EditorComponent::new(&mut self.editor)
                 .label("Request body")
                 .highlighter(&Json)
                 .line_numbers(true)

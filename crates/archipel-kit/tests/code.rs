@@ -1,9 +1,11 @@
-//! `CodeView` and `CodeEditor` tests: behavior, accessibility, virtualization and
-//! dark/light snapshots.
+//! `EditorComponent` as a code view (`viewer(true)`) and as a code editor: behavior,
+//! accessibility, virtualization and dark/light snapshots. The rules of the IntelliJ editor
+//! (keys, mouse, painting) are in `tests/editor_component.rs`.
 
 mod common;
 
-use archipel_kit::editor::{CodeEditor, CodeView};
+use archipel_kit::editor::EditorComponent;
+use archipel_kit::editor::model::Editor;
 use archipel_kit::editor::{
     ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
 };
@@ -54,12 +56,14 @@ fn big_json(n: usize) -> String {
 
 #[test]
 fn view_snapshot() {
+    let mut viewer = Editor::new(BODY);
     testing::snapshot_themes("code_view", common::IMG, |ui| {
-        CodeView::new(BODY)
+        EditorComponent::new(&mut viewer)
             .label("Response body")
             .highlighter(&Json)
+            .viewer(true)
             .line_numbers(true)
-            .folding(true)
+            .bracket_folding(true)
             .height(236.0)
             .show(ui);
     });
@@ -67,13 +71,15 @@ fn view_snapshot() {
 
 #[test]
 fn view_find_snapshot() {
+    let mut viewer = Editor::new(BODY);
     testing::snapshot_themes_after(
         "code_view_find",
         common::IMG,
         |ui| {
-            CodeView::new(BODY)
+            EditorComponent::new(&mut viewer)
                 .label("Response body")
                 .highlighter(&Json)
+                .viewer(true)
                 .line_numbers(true)
                 .height(236.0)
                 .show(ui);
@@ -91,39 +97,44 @@ fn view_find_snapshot() {
 
 #[test]
 fn highlighting_snapshot() {
+    let samples: [(&str, &dyn Highlighter, &str); 6] = [
+        ("JSON", &Json, "{ \"ok\": true, \"n\": [1, -2.5e3, null] }"),
+        (
+            "Extended JSON",
+            &ExtendedJson,
+            "{ _id: ObjectId(\"65f0\"), at: ISODate(\"2026\") }",
+        ),
+        (
+            "XML",
+            &Xml,
+            "<a href=\"/x\" id='y'>Tom &amp; Jerry</a> <!-- note -->",
+        ),
+        (
+            "GraphQL",
+            &GraphQl,
+            "query Q($id: ID!) { user(id: $id) @live { name } }",
+        ),
+        (
+            "JavaScript",
+            &JavaScript,
+            "const n = items.map(x => x * 2); // double",
+        ),
+        (
+            "Plain text",
+            &PlainText,
+            "Just some text, 42 and \"quotes\".",
+        ),
+    ];
+    let mut editors: Vec<Editor> = samples
+        .iter()
+        .map(|(_, _, code)| Editor::new(code))
+        .collect();
     testing::snapshot_themes("code_highlighting", common::IMG, |ui| {
-        let samples: [(&str, &dyn Highlighter, &str); 6] = [
-            ("JSON", &Json, "{ \"ok\": true, \"n\": [1, -2.5e3, null] }"),
-            (
-                "Extended JSON",
-                &ExtendedJson,
-                "{ _id: ObjectId(\"65f0\"), at: ISODate(\"2026\") }",
-            ),
-            (
-                "XML",
-                &Xml,
-                "<a href=\"/x\" id='y'>Tom &amp; Jerry</a> <!-- note -->",
-            ),
-            (
-                "GraphQL",
-                &GraphQl,
-                "query Q($id: ID!) { user(id: $id) @live { name } }",
-            ),
-            (
-                "JavaScript",
-                &JavaScript,
-                "const n = items.map(x => x * 2); // double",
-            ),
-            (
-                "Plain text",
-                &PlainText,
-                "Just some text, 42 and \"quotes\".",
-            ),
-        ];
-        for (name, highlighter, code) in samples {
-            CodeView::new(code)
-                .label(name)
-                .highlighter(highlighter)
+        for ((name, highlighter, _), editor) in samples.iter().zip(editors.iter_mut()) {
+            EditorComponent::new(editor)
+                .label(*name)
+                .highlighter(*highlighter)
+                .viewer(true)
                 .height(30.0)
                 .id(egui::Id::new(name))
                 .show(ui);
@@ -199,13 +210,13 @@ fn extended_json_survives_broken_input() {
 
 #[test]
 fn editor_snapshot() {
-    let mut body = BODY.to_owned();
+    let mut editor = Editor::new(BODY);
     testing::snapshot_themes_after(
         "code_editor",
         common::IMG,
         |ui| {
             ui.add(
-                CodeEditor::new(&mut body)
+                EditorComponent::new(&mut editor)
                     .label("Request body")
                     .highlighter(&Json)
                     .line_numbers(true)
@@ -222,10 +233,12 @@ fn editor_snapshot() {
 }
 
 #[test]
-fn view_exposes_a_document_with_its_text() {
+fn viewer_exposes_a_document_with_its_text() {
+    let mut viewer = Editor::new("let x = 1;");
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        CodeView::new("let x = 1;")
+        EditorComponent::new(&mut viewer)
             .label("Script")
+            .viewer(true)
             .height(60.0)
             .show(ui);
     });
@@ -243,11 +256,12 @@ fn a_big_document_lays_out_only_its_visible_lines() {
     struct Report(Option<usize>, (usize, std::ops::Range<usize>, usize));
     let mut harness = testing::harness_state(
         Theme::dark(),
-        Report::default(),
-        |ui, Report(jump, report)| {
-            let r = CodeView::new(&text)
+        (Editor::new(&text), Report::default()),
+        |ui, (editor, Report(jump, report))| {
+            let r = EditorComponent::new(editor)
                 .label("Big")
                 .highlighter(&Json)
+                .viewer(true)
                 .line_numbers(true)
                 .scroll_to_line(jump.take())
                 .height(300.0)
@@ -256,10 +270,10 @@ fn a_big_document_lays_out_only_its_visible_lines() {
         },
     );
     harness.run_ok();
-    harness.state_mut().0 = Some(150_000);
+    harness.state_mut().1.0 = Some(150_000);
     harness.run_ok();
     harness.run_ok();
-    let report = harness.state().1.clone();
+    let report = harness.state().1.1.clone();
     let (lines, visible, laid_out) = report;
     assert_eq!(lines, 200_002);
     assert!(
@@ -272,28 +286,41 @@ fn a_big_document_lays_out_only_its_visible_lines() {
 
 #[test]
 fn select_all_and_copy() {
-    let mut harness = testing::harness_state(Theme::dark(), None, |ui, copied| {
-        CodeView::new(BODY).label("Body").height(200.0).show(ui);
-        record_copy(ui.ctx(), copied);
-    });
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (Editor::new(BODY), None),
+        |ui, (editor, copied)| {
+            EditorComponent::new(editor)
+                .label("Body")
+                .viewer(true)
+                .height(200.0)
+                .show(ui);
+            record_copy(ui.ctx(), copied);
+        },
+    );
     harness.get_by_label("Body").focus();
     harness.run_ok();
     ctrl(&harness, Key::A);
     harness.run_ok();
     ctrl(&harness, Key::C);
     harness.run_ok();
-    assert_eq!(harness.state().as_deref(), Some(BODY));
+    assert_eq!(harness.state().1.as_deref(), Some(BODY));
 }
 
 #[test]
 fn dragging_selects_text() {
-    let mut harness = testing::harness_state(Theme::dark(), None, |ui, copied| {
-        CodeView::new("hello world\nsecond")
-            .label("Body")
-            .height(80.0)
-            .show(ui);
-        record_copy(ui.ctx(), copied);
-    });
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        (Editor::new("hello world\nsecond"), None),
+        |ui, (editor, copied)| {
+            EditorComponent::new(editor)
+                .label("Body")
+                .viewer(true)
+                .height(80.0)
+                .show(ui);
+            record_copy(ui.ctx(), copied);
+        },
+    );
     let rect = harness.get_by_label("Body").rect();
     let y = rect.top() + 4.0 + 10.0;
     let start = egui::pos2(rect.left() + 8.0, y);
@@ -317,16 +344,18 @@ fn dragging_selects_text() {
     harness.run_ok();
     ctrl(&harness, Key::C);
     harness.run_ok();
-    assert_eq!(harness.state().as_deref(), Some("hello"));
+    assert_eq!(harness.state().1.as_deref(), Some("hello"));
 }
 
 #[test]
 fn find_highlights_counts_and_closes() {
     let mut matches = 0;
+    let mut viewer = Editor::new(BODY);
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        matches = CodeView::new(BODY)
+        matches = EditorComponent::new(&mut viewer)
             .label("Body")
             .highlighter(&Json)
+            .viewer(true)
             .height(236.0)
             .show(ui)
             .matches;
@@ -365,9 +394,11 @@ fn find_highlights_counts_and_closes() {
 #[test]
 fn find_counts_matches_case_insensitively() {
     let mut matches = 0;
+    let mut viewer = Editor::new("Foo foo\nFOO bar");
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        matches = CodeView::new("Foo foo\nFOO bar")
+        matches = EditorComponent::new(&mut viewer)
             .label("Body")
+            .viewer(true)
             .height(100.0)
             .show(ui)
             .matches;
@@ -386,12 +417,14 @@ fn find_counts_matches_case_insensitively() {
 #[test]
 fn folding_hides_the_lines_of_a_region() {
     let mut visible = 0..0;
+    let mut viewer = Editor::new(BODY);
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        let r = CodeView::new(BODY)
+        let r = EditorComponent::new(&mut viewer)
             .label("Body")
             .highlighter(&Json)
+            .viewer(true)
             .line_numbers(true)
-            .folding(true)
+            .bracket_folding(true)
             .height(260.0)
             .show(ui);
         visible = r.visible_lines;
@@ -411,9 +444,11 @@ fn folding_hides_the_lines_of_a_region() {
 
 #[test]
 fn cursor_is_a_beam_over_text_and_an_arrow_over_the_gutter() {
+    let mut viewer = Editor::new(BODY);
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        CodeView::new(BODY)
+        EditorComponent::new(&mut viewer)
             .label("Body")
+            .viewer(true)
             .line_numbers(true)
             .height(200.0)
             .show(ui);
@@ -435,11 +470,12 @@ fn cursor_is_a_beam_over_text_and_an_arrow_over_the_gutter() {
 
 #[test]
 fn wrapped_view_breaks_long_lines() {
-    let long = "x".repeat(400);
+    let mut viewer = Editor::new(&"x".repeat(400));
     let mut rows = 0;
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        rows = CodeView::new(&long)
+        rows = EditorComponent::new(&mut viewer)
             .label("Body")
+            .viewer(true)
             .wrap(true)
             .height(200.0)
             .show(ui)
@@ -502,28 +538,33 @@ fn highlighters_color_the_expected_tokens() {
 
 // ---- editor ----
 
+fn editor_harness<'a>(
+    text: &str,
+    configure: impl Fn(&mut Editor) + 'a,
+) -> testing::Harness<'a, Editor> {
+    let mut editor = Editor::new(text);
+    configure(&mut editor);
+    testing::harness_state(Theme::dark(), editor, |ui, editor| {
+        ui.add(EditorComponent::new(editor).label("Body").height(100.0));
+    })
+}
+
 #[test]
-fn typing_updates_the_bound_string() {
-    let mut harness = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
-        ui.add(CodeEditor::new(text).label("Body").height(100.0));
-    });
+fn typing_updates_the_document() {
+    let mut harness = editor_harness("", |_| {});
     let editor = harness.get_by_label("Body");
     assert_eq!(editor.role(), Role::TextInput);
     editor.focus();
     editor.type_text("let a");
     harness.run_ok();
-    assert_eq!(harness.state(), "let a");
+    assert_eq!(harness.state().document.text(), "let a");
 }
 
 #[test]
 fn tab_inserts_spaces_and_enter_keeps_the_indent() {
-    let mut harness = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
-        ui.add(
-            CodeEditor::new(text)
-                .label("Body")
-                .height(100.0)
-                .tab_width(2),
-        );
+    let mut harness = editor_harness("", |e| {
+        e.settings.tab_size = 2;
+        e.settings.indent_size = 2;
     });
     harness.get_by_label("Body").focus();
     harness.run_ok();
@@ -535,7 +576,7 @@ fn tab_inserts_spaces_and_enter_keeps_the_indent() {
     harness.run_ok();
     harness.get_by_label("Body").type_text("b");
     harness.run_ok();
-    assert_eq!(harness.state(), "  a\n  b");
+    assert_eq!(harness.state().document.text(), "  a\n  b");
     assert!(
         harness.get_by_label("Body").accesskit_node().is_focused(),
         "Tab stays in the editor"
@@ -544,45 +585,39 @@ fn tab_inserts_spaces_and_enter_keeps_the_indent() {
 
 #[test]
 fn brackets_pair_and_the_closer_is_skipped() {
-    let mut harness = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
-        ui.add(CodeEditor::new(text).label("Body").height(100.0));
-    });
+    let mut harness = editor_harness("", |_| {});
     harness.get_by_label("Body").focus();
     harness.run_ok();
     harness.get_by_label("Body").type_text("{");
     harness.run_ok();
-    assert_eq!(harness.state(), "{}");
+    assert_eq!(harness.state().document.text(), "{}");
     harness.key_press(Key::Enter);
     harness.run_ok();
-    assert_eq!(harness.state(), "{\n    \n}");
+    assert_eq!(harness.state().document.text(), "{\n    \n}");
     harness.get_by_label("Body").type_text("x");
     harness.run_ok();
-    assert_eq!(harness.state(), "{\n    x\n}");
+    assert_eq!(harness.state().document.text(), "{\n    x\n}");
 }
 
 #[test]
 fn bracket_pairing_can_be_turned_off() {
-    let mut harness = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
-        ui.add(
-            CodeEditor::new(text)
-                .label("Body")
-                .bracket_pairing(false)
-                .height(100.0),
-        );
+    let mut harness = editor_harness("", |e| {
+        e.settings.auto_pair_brackets = false;
+        e.settings.auto_pair_quotes = false;
     });
     harness.get_by_label("Body").focus();
     harness.run_ok();
     harness.get_by_label("Body").type_text("(");
     harness.run_ok();
-    assert_eq!(harness.state(), "(");
+    assert_eq!(harness.state().document.text(), "(");
 }
 
 #[test]
 fn editor_find_opens_and_closes() {
     let mut harness =
-        testing::harness_state(Theme::dark(), "one two one".to_owned(), |ui, text| {
+        testing::harness_state(Theme::dark(), Editor::new("one two one"), |ui, editor| {
             ui.add(
-                CodeEditor::new(text)
+                EditorComponent::new(editor)
                     .label("Body")
                     .tab_indents(false)
                     .height(160.0),
@@ -597,7 +632,11 @@ fn editor_find_opens_and_closes() {
     assert!(harness.query_by_label("Next match").is_some());
     harness.get_by_label("Next match").click();
     harness.run_ok();
-    assert_eq!(harness.state(), "one two one", "find doesn't edit the text");
+    assert_eq!(
+        harness.state().document.text(),
+        "one two one",
+        "find doesn't edit the text"
+    );
     testing::audit(&mut harness).assert_clean();
     harness.get_by_label("Close find").click();
     harness.run_ok();
@@ -606,12 +645,11 @@ fn editor_find_opens_and_closes() {
 
 #[test]
 fn big_editor_text_stays_responsive() {
-    // About 1 MB: the documented limit.
     let text = big_json(25_000);
     assert!(text.len() > 900_000, "{} bytes", text.len());
-    let mut harness = testing::harness_state(Theme::dark(), text, |ui, text| {
+    let mut harness = testing::harness_state(Theme::dark(), Editor::new(&text), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Body")
                 .highlighter(&Json)
                 .line_numbers(true)
@@ -627,12 +665,12 @@ fn big_editor_text_stays_responsive() {
 }
 
 #[test]
-fn the_editor_reports_its_selection_as_a_byte_range() {
+fn the_component_reports_its_selection_as_a_byte_range() {
     let mut harness = testing::harness_state(
         Theme::dark(),
-        (String::from("db.café.find()\nnext"), None),
-        |ui, (text, selection): &mut (String, Option<std::ops::Range<usize>>)| {
-            *selection = CodeEditor::new(text)
+        (Editor::new("db.café.find()\nnext"), None),
+        |ui, (editor, selection): &mut (Editor, Option<std::ops::Range<usize>>)| {
+            *selection = EditorComponent::new(editor)
                 .label("Script")
                 .height(80.0)
                 .show(ui)
@@ -650,9 +688,9 @@ fn the_editor_reports_its_selection_as_a_byte_range() {
         harness.key_press_modifiers(Modifiers::SHIFT, Key::ArrowRight);
     }
     harness.run();
-    let (text, selection) = harness.state();
+    let (editor, selection) = harness.state();
     let range = selection.clone().expect("a selection");
-    assert_eq!(&text[range], "db.café");
+    assert_eq!(&editor.document.text()[range], "db.café");
 }
 
 #[test]
@@ -665,10 +703,11 @@ fn a_console_view_follows_the_end_as_it_grows() {
     };
     let mut harness = testing::harness_state(
         Theme::dark(),
-        (log(100), 0..0),
-        move |ui, (text, visible): &mut (String, std::ops::Range<usize>)| {
-            *visible = CodeView::new(text)
+        (Editor::new(&log(100)), 0..0),
+        move |ui, (editor, visible): &mut (Editor, std::ops::Range<usize>)| {
+            *visible = EditorComponent::new(editor)
                 .label("Output")
+                .viewer(true)
                 .height(120.0)
                 .stick_to_bottom(true)
                 .show(ui)
@@ -677,7 +716,7 @@ fn a_console_view_follows_the_end_as_it_grows() {
     );
     harness.run();
     assert_eq!(harness.state().1.end, 100, "starts at the end");
-    harness.state_mut().0 = log(150);
+    harness.state_mut().0.set_text(&log(150));
     harness.run();
     harness.run();
     assert_eq!(harness.state().1.end, 150, "follows new lines");

@@ -1,0 +1,376 @@
+//! What the component knows about a document and highlighter, computed once and cached across
+//! frames: the longest line, highlighter checkpoints, bracket fold regions, find results and
+//! the occurrences of the selected text. It lives in the egui context under the component's id
+//! and is rebuilt when the document changes.
+
+use crate::editor::highlight::{Highlighter, Span};
+use crate::editor::model::{Document, FoldRegion};
+use crate::tokens::editor::MAX_SELECTION_OCCURRENCES;
+use egui::{Context, Id};
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::ops::Range;
+use std::sync::{Arc, Mutex};
+
+/// Lines longer than this have their spans cached instead of recomputed every frame.
+const LONG_LINE: usize = 4096;
+/// A highlighter state is remembered for every this many lines.
+const CHECKPOINT: usize = 256;
+/// Find stops collecting here; the count reads "100000+".
+pub(crate) const MAX_MATCHES: usize = 100_000;
+
+type Ranges = Arc<Vec<Range<usize>>>;
+
+#[derive(Default)]
+struct Inner {
+    checkpoints: Vec<u32>,
+    long: HashMap<usize, (Arc<Vec<Span>>, u32)>,
+    brackets: Option<Arc<Vec<BracketRegion>>>,
+    widths: Option<Arc<Vec<u32>>>,
+    found: Option<(String, Arc<Vec<Range<usize>>>)>,
+    occurrences: Option<(Range<usize>, Ranges)>,
+}
+
+/// A bracket pair spanning several lines: the range from the opener to just after the closer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct BracketRegion {
+    pub start: usize,
+    pub end: usize,
+    pub opener: char,
+}
+
+pub(crate) struct DocCache {
+    key: u64,
+    /// The longest line, in columns.
+    pub max_cols: usize,
+    inner: Mutex<Inner>,
+}
+
+/// A cheap identity of a document: its modification stamp, length, the tab size and a sample
+/// of the content. Hashing all of a 10 MB text every frame would cost more than drawing it.
+fn fingerprint(doc: &Document, tab_size: usize, highlighter: &str) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let bytes = doc.text().as_bytes();
+    (doc.modification_stamp(), bytes.len(), tab_size, highlighter).hash(&mut hasher);
+    let edge = bytes.len().min(256);
+    bytes[..edge].hash(&mut hasher);
+    bytes[bytes.len() - edge..].hash(&mut hasher);
+    let stride = (bytes.len() / 512).max(1);
+    for chunk in bytes.chunks(8).step_by(stride.div_ceil(8)) {
+        chunk.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+impl DocCache {
+    /// The cache of `doc` in `ctx` under `id`, rebuilt when the text or the highlighter
+    /// changed.
+    pub fn get(
+        ctx: &Context,
+        id: Id,
+        doc: &Document,
+        highlighter: &dyn Highlighter,
+        tab_size: usize,
+    ) -> Arc<DocCache> {
+        let key = fingerprint(doc, tab_size, highlighter.name());
+        let slot = id.with("archipel-editor-cache");
+        if let Some(cache) = ctx.data(|d| d.get_temp::<Arc<DocCache>>(slot))
+            && cache.key == key
+        {
+            return cache;
+        }
+        let cache = Arc::new(DocCache::build(doc, key, tab_size));
+        ctx.data_mut(|d| d.insert_temp(slot, cache.clone()));
+        cache
+    }
+
+    fn build(doc: &Document, key: u64, tab_size: usize) -> DocCache {
+        let tab = tab_size.max(1);
+        let mut max_cols = 0;
+        for line in doc.text().split('\n') {
+            let line = line.strip_suffix('\r').unwrap_or(line);
+            let cols = if line.is_ascii() && !line.as_bytes().contains(&b'\t') {
+                line.len()
+            } else {
+                line.chars().fold(0, |col, c| {
+                    if c == '\t' {
+                        (col / tab + 1) * tab
+                    } else {
+                        col + 1
+                    }
+                })
+            };
+            max_cols = max_cols.max(cols);
+        }
+        DocCache {
+            key,
+            max_cols,
+            inner: Mutex::new(Inner {
+                checkpoints: vec![0],
+                ..Inner::default()
+            }),
+        }
+    }
+
+    fn inner(&self) -> std::sync::MutexGuard<'_, Inner> {
+        self.inner.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Highlighter state at the start of `line`.
+    pub fn state_at(&self, doc: &Document, highlighter: &dyn Highlighter, line: usize) -> u32 {
+        if highlighter.stateless() {
+            return 0;
+        }
+        let mut inner = self.inner();
+        let mut scratch = Vec::new();
+        while inner.checkpoints.len() <= line / CHECKPOINT {
+            let first = (inner.checkpoints.len() - 1) * CHECKPOINT;
+            let mut state = inner.checkpoints[inner.checkpoints.len() - 1];
+            for l in first..first + CHECKPOINT {
+                scratch.clear();
+                tokenize(&mut inner, doc, highlighter, l, &mut state, &mut scratch);
+            }
+            inner.checkpoints.push(state);
+        }
+        let first = line / CHECKPOINT * CHECKPOINT;
+        let mut state = inner.checkpoints[line / CHECKPOINT];
+        for l in first..line {
+            scratch.clear();
+            tokenize(&mut inner, doc, highlighter, l, &mut state, &mut scratch);
+        }
+        state
+    }
+
+    /// The spans of `line`, and `state` advanced past it. Short lines are tokenized into
+    /// `out`; the spans of long lines are cached and returned instead (`out` stays empty).
+    pub fn spans(
+        &self,
+        doc: &Document,
+        highlighter: &dyn Highlighter,
+        line: usize,
+        state: &mut u32,
+        out: &mut Vec<Span>,
+    ) -> Option<Arc<Vec<Span>>> {
+        let mut inner = self.inner();
+        tokenize(&mut inner, doc, highlighter, line, state, out)
+    }
+
+    /// The width in columns of every line (for soft wrap).
+    pub fn widths(&self, doc: &Document, tab_size: usize) -> Arc<Vec<u32>> {
+        let mut inner = self.inner();
+        if let Some(widths) = &inner.widths {
+            return widths.clone();
+        }
+        let tab = tab_size.max(1);
+        let widths: Vec<u32> = doc
+            .text()
+            .split('\n')
+            .map(|line| {
+                let line = line.strip_suffix('\r').unwrap_or(line);
+                if line.is_ascii() && !line.as_bytes().contains(&b'\t') {
+                    line.len() as u32
+                } else {
+                    line.chars().fold(0u32, |col, c| {
+                        if c == '\t' {
+                            (col / tab as u32 + 1) * tab as u32
+                        } else {
+                            col + 1
+                        }
+                    })
+                }
+            })
+            .collect();
+        let widths = Arc::new(widths);
+        inner.widths = Some(widths.clone());
+        widths
+    }
+
+    /// Bracket pairs (`{}` and `[]`) whose closer is on a later line than the opener, sorted by
+    /// start, one per opener line (the longest). Strings in double quotes are skipped.
+    pub fn brackets(&self, doc: &Document) -> Arc<Vec<BracketRegion>> {
+        let mut inner = self.inner();
+        if let Some(brackets) = &inner.brackets {
+            return brackets.clone();
+        }
+        let text = doc.text();
+        let bytes = text.as_bytes();
+        let mut stack: Vec<(usize, usize, u8)> = Vec::new();
+        let mut regions: Vec<(usize, usize, usize, u8)> = Vec::new();
+        let mut line_start = 0;
+        for (line, piece) in text.split('\n').enumerate() {
+            let (mut in_string, mut escaped) = (false, false);
+            for (i, &b) in piece.as_bytes().iter().enumerate() {
+                if in_string {
+                    match b {
+                        _ if escaped => escaped = false,
+                        b'\\' => escaped = true,
+                        b'"' => in_string = false,
+                        _ => {}
+                    }
+                } else {
+                    match b {
+                        b'"' => in_string = true,
+                        b'{' | b'[' => stack.push((line_start + i, line, b)),
+                        b'}' | b']' => {
+                            if let Some((open, open_line, opener)) = stack.pop()
+                                && open_line < line
+                            {
+                                regions.push((open, line_start + i + 1, open_line, opener));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            line_start += piece.len() + 1;
+        }
+        let _ = bytes;
+        regions.sort_unstable_by_key(|&(start, end, _, _)| (start, std::cmp::Reverse(end)));
+        let mut out: Vec<BracketRegion> = Vec::new();
+        let mut last_line = usize::MAX;
+        for (start, end, open_line, opener) in regions {
+            if open_line == last_line {
+                continue;
+            }
+            last_line = open_line;
+            out.push(BracketRegion {
+                start,
+                end,
+                opener: opener as char,
+            });
+        }
+        let out = Arc::new(out);
+        inner.brackets = Some(out.clone());
+        out
+    }
+
+    /// Byte ranges of `query` in the document, ASCII case-insensitive (other characters match
+    /// exactly), cached for the last query.
+    pub fn find(&self, doc: &Document, query: &str) -> Arc<Vec<Range<usize>>> {
+        let mut inner = self.inner();
+        if let Some((q, found)) = &inner.found
+            && q == query
+        {
+            return found.clone();
+        }
+        let found = Arc::new(search(doc.text(), query));
+        inner.found = Some((query.to_owned(), found.clone()));
+        found
+    }
+
+    /// The other occurrences of the text at `selection` (exact match), or none when there are
+    /// more than [`MAX_SELECTION_OCCURRENCES`]. The selection itself is not in the list.
+    pub fn occurrences(&self, doc: &Document, selection: Range<usize>) -> Arc<Vec<Range<usize>>> {
+        let mut inner = self.inner();
+        if let Some((s, found)) = &inner.occurrences
+            && *s == selection
+        {
+            return found.clone();
+        }
+        let needle = doc.slice(selection.start, selection.end);
+        let mut found = Vec::new();
+        if !needle.is_empty() {
+            for (at, m) in doc.text().match_indices(needle) {
+                if at != selection.start {
+                    found.push(at..at + m.len());
+                }
+                if found.len() > MAX_SELECTION_OCCURRENCES {
+                    found.clear();
+                    break;
+                }
+            }
+        }
+        let found = Arc::new(found);
+        inner.occurrences = Some((selection, found.clone()));
+        found
+    }
+}
+
+fn tokenize(
+    inner: &mut Inner,
+    doc: &Document,
+    highlighter: &dyn Highlighter,
+    line: usize,
+    state: &mut u32,
+    out: &mut Vec<Span>,
+) -> Option<Arc<Vec<Span>>> {
+    if line >= doc.line_count() {
+        return None;
+    }
+    let content = doc.line_text(line);
+    if content.len() <= LONG_LINE {
+        highlighter.highlight_line(content, state, out);
+        return None;
+    }
+    if let Some((spans, end_state)) = inner.long.get(&line) {
+        *state = *end_state;
+        return Some(spans.clone());
+    }
+    let mut spans = Vec::new();
+    highlighter.highlight_line(content, state, &mut spans);
+    let spans = Arc::new(spans);
+    if inner.long.len() >= 8 {
+        inner.long.clear();
+    }
+    inner.long.insert(line, (spans.clone(), *state));
+    Some(spans)
+}
+
+/// Byte ranges of `query` in `text`: ASCII case-insensitive for ASCII queries, exact
+/// otherwise. At most [`MAX_MATCHES`].
+pub(crate) fn search(text: &str, query: &str) -> Vec<Range<usize>> {
+    let mut found = Vec::new();
+    if query.is_empty() {
+        return found;
+    }
+    if !query.is_ascii() {
+        found.extend(
+            text.match_indices(query)
+                .take(MAX_MATCHES)
+                .map(|(at, m)| at..at + m.len()),
+        );
+        return found;
+    }
+    let needle = query.to_ascii_lowercase().into_bytes();
+    let hay = text.as_bytes();
+    let (lower, upper) = (needle[0], needle[0].to_ascii_uppercase());
+    let mut at = 0;
+    while at + needle.len() <= hay.len() && found.len() < MAX_MATCHES {
+        match hay[at..hay.len() + 1 - needle.len()]
+            .iter()
+            .position(|&b| b == lower || b == upper)
+        {
+            None => break,
+            Some(offset) => {
+                let start = at + offset;
+                if hay[start..start + needle.len()].eq_ignore_ascii_case(&needle) {
+                    found.push(start..start + needle.len());
+                    at = start + needle.len();
+                } else {
+                    at = start + 1;
+                }
+            }
+        }
+    }
+    found
+}
+
+/// The fold regions for `brackets`, keeping the collapsed state of regions in `old` that
+/// start at the same offset.
+pub(crate) fn fold_regions(brackets: &[BracketRegion], old: &[FoldRegion]) -> Vec<FoldRegion> {
+    brackets
+        .iter()
+        .map(|b| {
+            let expanded = old
+                .iter()
+                .find(|r| r.start == b.start)
+                .is_none_or(|r| r.expanded);
+            FoldRegion {
+                start: b.start,
+                end: b.end,
+                placeholder: if b.opener == '{' { "{...}" } else { "[...]" }.to_owned(),
+                expanded,
+            }
+        })
+        .collect()
+}
