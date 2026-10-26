@@ -1,11 +1,15 @@
-//! The workbench: tool windows around an editor, with stripes, headers, splitters and the
+//! The workbench: tool windows around an editor, with title lines, splitters and the
 //! IntelliJ tool window keys.
 //!
 //! It keeps the GUI kit's model types: [`ToolWindowPaneState`] (the split ratios, which
 //! anchors are hidden, the maximized one), [`ToolWindow`] and [`ContentManager`]. The
-//! TUI draws them NvChad-style: a left side bar like nvim-tree, a bottom pane like a toggled
-//! terminal split, a thin separator line between panes, and a narrow stripe of icon buttons
-//! (left for left and bottom windows, right for right windows).
+//! TUI draws them as NvChad does: a left side bar like nvim-tree whose title line sits in the
+//! top row (the tabufline offset, so the app's tab bar continues to its right), a bottom
+//! pane like a toggled horizontal terminal split with a thin title line, and a thin
+//! separator line between panes. There is no stripe column and no header action icons: tool
+//! windows are driven by keys, the command palette and clicks on the pane title; header
+//! actions are a context menu ([`WorkbenchEvent::HeaderMenu`]). Apps that want the GUI's
+//! icon stripes opt in with [`Workbench::stripes`].
 //!
 //! Keys, through the keymap's action ids (call [`Workbench::perform`] for each id of
 //! [`Runtime::actions`] when nothing else used the key):
@@ -20,10 +24,11 @@
 //! | `MaximizeToolWindow` | Ctrl+Shift+' | toggle maximized |
 //! | `ResizeToolWindowLeft/Right/Up/Down` | Ctrl+Alt+Shift+arrows | resize by two cells |
 //!
-//! Mouse: a stripe button toggles its window (middle click or Shift+click hides it, right
-//! click asks for a menu); a click in a pane focuses it; a header click focuses, a double
-//! click maximizes, a middle or Shift click hides, the minimize button hides; dragging a
-//! separator resizes (a double click resets it); the header tabs select contents.
+//! Mouse: a click in a pane focuses it; a click on a pane title focuses, a double click
+//! maximizes, a middle or Shift click hides, a right click asks for a menu; dragging a
+//! separator resizes (a double click resets it); the title's content tabs select contents.
+//! With stripes enabled, a stripe button toggles its window (middle click or Shift+click
+//! hides it, right click asks for a menu).
 
 use crate::components::{RowIcon, fill, fill_rect, put, text_width};
 use crate::hit::Id;
@@ -36,7 +41,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 
-/// Cells of a stripe.
+/// Cells of a stripe (when [`Workbench::stripes`] is on).
 pub const STRIPE_WIDTH: u16 = 3;
 /// The smallest width of a side tool window.
 const MIN_SIDE: u16 = 12;
@@ -77,7 +82,7 @@ pub enum WorkbenchEvent {
     ContentCloseRequested(String, usize),
     /// A context menu was requested on a tool window header.
     HeaderMenu(String, u16, u16),
-    /// A context menu was requested on a stripe button.
+    /// A context menu was requested on a stripe button (stripes only).
     StripeMenu(String, u16, u16),
 }
 
@@ -91,9 +96,9 @@ enum Splitter {
 /// The rectangles of a workbench for one screen size.
 #[derive(Debug, Clone, Default)]
 pub struct WorkbenchLayout {
-    /// The left stripe.
+    /// The left stripe (empty unless stripes are on).
     pub left_stripe: Rect,
-    /// The right stripe.
+    /// The right stripe (empty unless stripes are on).
     pub right_stripe: Rect,
     /// The left tool window pane (header included).
     pub left: Option<Rect>,
@@ -134,6 +139,7 @@ pub struct Workbench {
     pub windows: Vec<ToolWindow>,
     /// Which part has keyboard focus.
     pub focus: WorkbenchFocus,
+    stripes: bool,
     last_tool: Option<String>,
     stash: Option<[bool; 3]>,
     drag: Option<Splitter>,
@@ -159,6 +165,7 @@ impl Workbench {
             state: ToolWindowPaneState::default(),
             windows,
             focus: WorkbenchFocus::Editor,
+            stripes: false,
             last_tool: None,
             stash: None,
             drag: None,
@@ -167,6 +174,19 @@ impl Workbench {
             area: Rect::default(),
             id: Id::new("workbench"),
         }
+    }
+
+    /// Turns the stripe columns (icon buttons at the screen edges) on or off. Off by default:
+    /// the terminal layout has none, as NvChad has none.
+    #[must_use]
+    pub fn stripes(mut self, on: bool) -> Self {
+        self.stripes = on;
+        self
+    }
+
+    /// Whether the stripe columns are drawn.
+    pub fn has_stripes(&self) -> bool {
+        self.stripes
     }
 
     /// The windows anchored at `anchor`, in order.
@@ -407,14 +427,16 @@ impl Workbench {
     /// drops the side windows and the bottom window.
     pub fn layout(&self, area: Rect) -> WorkbenchLayout {
         let mut layout = WorkbenchLayout::default();
-        let has_left_stripe = self
-            .windows
-            .iter()
-            .any(|w| matches!(w.anchor, ToolWindowAnchor::Left | ToolWindowAnchor::Bottom));
-        let has_right_stripe = self
-            .windows
-            .iter()
-            .any(|w| w.anchor == ToolWindowAnchor::Right);
+        let has_left_stripe = self.stripes
+            && self
+                .windows
+                .iter()
+                .any(|w| matches!(w.anchor, ToolWindowAnchor::Left | ToolWindowAnchor::Bottom));
+        let has_right_stripe = self.stripes
+            && self
+                .windows
+                .iter()
+                .any(|w| w.anchor == ToolWindowAnchor::Right);
         let roomy = area.width >= STRIPE_WIDTH * 2 + MIN_EDITOR + 2;
         let ls = if has_left_stripe && roomy {
             STRIPE_WIDTH
@@ -552,10 +574,6 @@ impl Workbench {
         self.id.with(Id::new(window).0 ^ 0xAA)
     }
 
-    fn hide_button_id(&self, window: &str) -> Id {
-        self.id.with(Id::new(window).0 ^ 0xCC)
-    }
-
     fn tab_id(&self, window: &str, index: usize) -> Id {
         self.id.with(Id::new(window).0 ^ 0xDD ^ index as u64)
     }
@@ -564,7 +582,7 @@ impl Workbench {
         self.id.with(0x5000 + anchor_index_of(s) as u64)
     }
 
-    /// Draws the stripes, separators and tool window headers, and registers the mouse targets;
+    /// Draws the stripes (if on), separators and tool window title lines, and registers the mouse targets;
     /// returns where the editor and the tool window bodies are for the app to fill.
     pub fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) -> WorkbenchAreas {
         self.area = area;
@@ -661,7 +679,13 @@ impl Workbench {
             let style = Style::default().fg(p.line).bg(p.black);
             for y in rect.top()..rect.bottom() {
                 for x in rect.left()..rect.right() {
-                    put(buf, *rect, x, y, if horizontal { "─" } else { "│" }, style);
+                    if !horizontal && y == rect.top() {
+                        // The title row is one bar (the tabufline offset): no line in it.
+                        let bar = Style::default().bg(p.darker_black);
+                        put(buf, *rect, x, y, " ", bar);
+                    } else {
+                        put(buf, *rect, x, y, if horizontal { "─" } else { "│" }, style);
+                    }
                 }
             }
             rt.hits.add(*rect, self.splitter_id(*splitter));
@@ -683,16 +707,28 @@ impl Workbench {
         let focused = self.focused_tool() == Some(window.id.as_str());
         fill_rect(buf, rect, Style::default().bg(p.darker_black).fg(p.white));
         let header = Rect::new(rect.x, rect.y, rect.width, 1.min(rect.height));
-        let tabbed = window.contents.len() > 1;
-        let (fg, bg) = if focused && !tabbed {
-            (p.on(p.nord_blue), p.nord_blue)
-        } else {
-            (p.light_grey, p.one_bg)
-        };
+        let bar = Style::default().bg(p.darker_black).fg(p.light_grey);
+        fill_rect(buf, header, bar);
         rt.hits.add(header, self.header_id(&window.id));
-        let mut x =
-            crate::components::title_block(buf, header, rect.x + 1, rect.y, &window.title, fg, bg)
-                + 1;
+        // The title line as nvim-tree's offset: icon and name, no block, no buttons.
+        let mut x = header.x + 1;
+        if let Some(icon) = icon_of(&window.icon) {
+            let (ch, color) = icon.char_and_color(&rt.look);
+            let color = if focused { p.nord_blue } else { color };
+            x = put(
+                buf,
+                header,
+                x,
+                header.y,
+                &ch.to_string(),
+                Style::default().fg(color).bg(p.darker_black),
+            ) + 1;
+        }
+        let title = Style::default()
+            .fg(if focused { p.white } else { p.light_grey })
+            .bg(p.darker_black)
+            .add_modifier(Modifier::BOLD);
+        x = put(buf, header, x, header.y, &window.title, title) + 2;
         if window.contents.len() > 1 {
             for (i, content) in window.contents.contents().iter().enumerate() {
                 let selected = window.contents.selected_index() == Some(i);
@@ -711,23 +747,6 @@ impl Workbench {
                 rt.clickable(self.tab_id(&window.id, i), r);
                 x += w;
             }
-        }
-        let hide = Rect::new(
-            rect.right().saturating_sub(3),
-            rect.y,
-            3.min(rect.width),
-            1.min(rect.height),
-        );
-        if rect.width > 12 {
-            put(
-                buf,
-                hide,
-                hide.x + 1,
-                hide.y,
-                &rt.look.glyph(crate::Glyph::Minimize),
-                Style::default().fg(p.light_grey).bg(p.darker_black),
-            );
-            rt.clickable(self.hide_button_id(&window.id), hide);
         }
         Rect::new(
             rect.x,
@@ -791,12 +810,6 @@ impl Workbench {
                     events.push(WorkbenchEvent::StripeMenu(id.clone(), p.x, p.y));
                 } else if p.clicked(self.button_id(id)) && !p.shift() {
                     events.extend(self.toggle(id));
-                }
-                return events;
-            }
-            if p.over(self.hide_button_id(id)) {
-                if p.clicked(self.hide_button_id(id)) {
-                    events.extend(self.hide(id));
                 }
                 return events;
             }

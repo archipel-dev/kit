@@ -1,6 +1,9 @@
-//! A terminal IDE built from the kit: project tree, editor tabs, run window, toolbar, status
-//! line, Search Everywhere, context menus, dialogs, notifications and a theme switcher. It
-//! looks like NvChad and behaves like an IntelliJ app.
+//! A terminal IDE built from the kit: project tree, editor tabs, run window, status line,
+//! Search Everywhere, context menus, dialogs, notifications and a theme switcher. It looks
+//! like NvChad and behaves like an IntelliJ app: no stripes and no toolbar, the top row is
+//! the tabufline (the tree's title, the buffers, the theme toggle and close-all), the run
+//! configuration lives in the status line, and everything else is a key, Find Action or a
+//! context menu.
 //!
 //! `cargo run -p archipel-kit-tui --example ide`
 //!
@@ -12,10 +15,11 @@
 //! | Alt+1 / Alt+4 / Alt+3, or Ctrl+W then 1 / 4 / 3 | Project, Run, Notifications |
 //! | Esc, Shift+Esc, F12, Ctrl+Shift+F12 | back to the editor, hide, jump, hide all |
 //! | Shift Shift, Ctrl+Shift+A, Ctrl+P | Search Everywhere / Go to Action |
-//! | Shift+F10, Ctrl+F2 | Run, Stop |
+//! | Shift+F10, Ctrl+F2, Shift+F9 | Run, Stop, Debug |
+//! | Alt+Shift+F10, click the run segment in the status line | choose the run configuration |
 //! | Alt+Left / Alt+Right | previous / next tab |
 //! | Ctrl+F4, Ctrl+K then W | close the tab |
-//! | Ctrl+T | next theme |
+//! | Ctrl+T, click the sun in the tabufline | next theme |
 //! | Ctrl+K then Q | quit |
 //! | Ctrl+N | New File dialog |
 //! | Ctrl+S | save the file (clears the modified dot) |
@@ -25,13 +29,12 @@
 //! the combos a legacy terminal cannot send (Ctrl+K then ? shows them).
 //!
 //! The mouse works everywhere: click, double click, drag splitters and tabs, wheel, right
-//! click for context menus, middle click on a tab to close it.
+//! click for context menus (on a tool window title too), middle click on a tab to close it.
 
 #![allow(missing_docs)]
 
 use archipel_kit::action_system::{
     ActionPlace, AnAction, AnActionEvent, DataContext, DefaultActionGroup, Presentation, Shortcut,
-    Toggle, ToggleAction,
 };
 use archipel_kit::editor::PlainText;
 use archipel_kit::editor::model::Editor;
@@ -42,7 +45,6 @@ use archipel_kit::ui::popup::PopupStep;
 use archipel_kit::wm::{Content, ToolWindow, ToolWindowAnchor};
 use archipel_kit_tui::balloon::Balloons;
 use archipel_kit_tui::collections::{JBList, JBTree, RowData, TreeEvent, TreeNode};
-use archipel_kit_tui::combo::{ComboBoxControl, ComboBoxState, ComboEvent};
 use archipel_kit_tui::components::{
     Diagnostics, GitStatus, Pane, PaneKind, ProgressBar, RowIcon, StatusBar, StatusSlot, TabInfo,
 };
@@ -58,22 +60,19 @@ use archipel_kit_tui::popup::{
 };
 use archipel_kit_tui::statusbar::{StatusBarControl, StatusEvent};
 use archipel_kit_tui::tabs::{TabsControl, TabsEvent, TabsState};
-use archipel_kit_tui::toolbar::{ActionToolbar, ToolbarEvent, ToolbarState};
 use archipel_kit_tui::tooltip::Tooltip;
 use archipel_kit_tui::workbench::{Workbench, WorkbenchEvent, WorkbenchFocus};
 use archipel_kit_tui::{Glyph, Language, Look, Mode, Runtime, Theme, runtime};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::widgets::Widget;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 const TREE: Id = Id::new("ide.tree");
 const EDITOR: Id = Id::new("ide.editor");
 const TABS: Id = Id::new("ide.tabs");
-const TOOLBAR: Id = Id::new("ide.toolbar");
-const COMBO: Id = Id::new("ide.configs");
 const RUN_LIST: Id = Id::new("ide.run");
 const STATUS: Id = Id::new("ide.status");
 const DASH: Id = Id::new("ide.dash");
@@ -84,7 +83,14 @@ const TAB_BUTTONS: Id = Id::new("ide.tabbuttons");
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     Run,
+    Debug,
     Stop,
+    SelectConfig,
+    ToggleSyntax,
+    ToggleReadOnly,
+    HideWindow(&'static str),
+    MaximizeWindow(&'static str),
+    HideAllWindows,
     NextTheme,
     SearchEverywhere,
     CloseTab,
@@ -107,7 +113,6 @@ struct Cmd {
     description: &'static str,
     command: Command,
     queue: Queue,
-    enabled: Option<Rc<Cell<bool>>>,
 }
 
 impl AnAction for Cmd {
@@ -121,36 +126,8 @@ impl AnAction for Cmd {
             .description(self.description)
     }
 
-    fn update(&self, e: &mut AnActionEvent<'_>) {
-        if let Some(enabled) = &self.enabled {
-            e.presentation.enabled = enabled.get();
-        }
-    }
-
     fn action_performed(&self, _e: &AnActionEvent<'_>) {
         self.queue.borrow_mut().push(self.command.clone());
-    }
-}
-
-struct ReadOnlyToggle(Rc<Cell<bool>>);
-
-impl ToggleAction for ReadOnlyToggle {
-    fn id(&self) -> &str {
-        "ToggleReadOnly"
-    }
-
-    fn template_presentation(&self) -> Presentation {
-        Presentation::new("Read-Only")
-            .icon(Glyph::Lock)
-            .description("Open files as viewers: move, select, copy and find, no editing")
-    }
-
-    fn is_selected(&self, _e: &AnActionEvent<'_>) -> bool {
-        self.0.get()
-    }
-
-    fn set_selected(&self, _e: &AnActionEvent<'_>, selected: bool) {
-        self.0.set(selected);
     }
 }
 
@@ -162,34 +139,11 @@ struct Doc {
     highlighter: CodeHighlighter,
 }
 
-struct SyntaxToggle(Rc<Cell<bool>>);
-
-impl ToggleAction for SyntaxToggle {
-    fn id(&self) -> &str {
-        "ToggleSyntax"
-    }
-
-    fn template_presentation(&self) -> Presentation {
-        Presentation::new("Syntax Highlighting")
-            .icon(Glyph::Code)
-            .description("Tint keywords, strings and comments")
-    }
-
-    fn is_selected(&self, _e: &AnActionEvent<'_>) -> bool {
-        self.0.get()
-    }
-
-    fn set_selected(&self, _e: &AnActionEvent<'_>, selected: bool) {
-        self.0.set(selected);
-    }
-}
-
 /// What layers tell the app.
 pub enum Msg {
     Command(Command),
     NewFile(String),
     Confirmed(String, ExitCode),
-    Config(usize),
 }
 
 struct Files(HashMap<String, String>);
@@ -402,20 +356,17 @@ pub struct IdeApp {
     tab_state: TabsState,
     tab_control: TabsControl,
     docs: Vec<Doc>,
-    read_only: Rc<Cell<bool>>,
-    toolbar: ActionToolbar,
-    toolbar_state: ToolbarState,
+    read_only: bool,
     status: StatusBarControl,
     configs: Vec<String>,
-    config: ComboBoxState,
+    config: usize,
     balloons: Rc<RefCell<Balloons>>,
     run_log: Vec<RowData>,
     run_list: JBList,
-    running: Rc<Cell<bool>>,
+    running: bool,
     run_started: Option<f64>,
     run_lines_shown: usize,
-    syntax: Rc<Cell<bool>>,
-    have_tabs: Rc<Cell<bool>>,
+    syntax: bool,
     theme_index: usize,
     git: GitStatus,
     dashboard: Dashboard,
@@ -440,91 +391,6 @@ impl IdeApp {
     /// A new IDE in the theme `theme_index` of [`Theme::all`].
     pub fn new(theme_index: usize) -> Self {
         let queue: Queue = Rc::default();
-        let running = Rc::new(Cell::new(false));
-        let have_tabs = Rc::new(Cell::new(false));
-        let syntax = Rc::new(Cell::new(true));
-        let read_only = Rc::new(Cell::new(false));
-        let cmd = |id, text, icon, description, command, enabled: Option<Rc<Cell<bool>>>| Cmd {
-            id,
-            text,
-            icon,
-            description,
-            command,
-            queue: queue.clone(),
-            enabled,
-        };
-        let mut group = DefaultActionGroup::new("Main Toolbar");
-        group.add(cmd(
-            "Run",
-            "Run",
-            Glyph::Run,
-            "Run the current configuration",
-            Command::Run,
-            None,
-        ));
-        group.add(cmd(
-            "Stop",
-            "Stop",
-            Glyph::Stop,
-            "Stop the running process",
-            Command::Stop,
-            Some(running.clone()),
-        ));
-        group.add_separator();
-        group.add(Toggle::new(SyntaxToggle(syntax.clone())));
-        group.add(Toggle::new(ReadOnlyToggle(read_only.clone())));
-        group.add(cmd(
-            "CloseActiveTab",
-            "Close Tab",
-            Glyph::Close,
-            "Close the active editor tab",
-            Command::CloseTab,
-            Some(have_tabs.clone()),
-        ));
-        group.add(cmd(
-            "GotoAction",
-            "Search Everywhere",
-            Glyph::Search,
-            "Search files and actions",
-            Command::SearchEverywhere,
-            None,
-        ));
-        group.add(cmd(
-            "NextTheme",
-            "Switch Theme",
-            Glyph::Sun,
-            "Switch to the next theme",
-            Command::NextTheme,
-            None,
-        ));
-        let mut more = DefaultActionGroup::popup("Tools");
-        more.add(cmd(
-            "NewFile",
-            "New File…",
-            Glyph::NewFile,
-            "Create a file",
-            Command::NewFile,
-            None,
-        ));
-        more.add(cmd(
-            "About",
-            "About",
-            Glyph::Info,
-            "About the terminal kit",
-            Command::About,
-            None,
-        ));
-        more.add_separator();
-        more.add(cmd(
-            "Exit",
-            "Exit",
-            Glyph::Close,
-            "Leave the IDE",
-            Command::Quit,
-            None,
-        ));
-        group.add_group(more);
-
         let mut run =
             ToolWindow::new("run", "Run", Glyph::Run, ToolWindowAnchor::Bottom).activate_number(4);
         run.contents
@@ -563,14 +429,7 @@ impl IdeApp {
             tab_state: TabsState::new(0),
             tab_control: TabsControl::new(TABS),
             docs: Vec::new(),
-            read_only,
-            toolbar: ActionToolbar::new(
-                TOOLBAR,
-                Rc::new(group),
-                Rc::new(DataContext::empty()),
-                ActionPlace::MAIN_TOOLBAR,
-            ),
-            toolbar_state: ToolbarState::default(),
+            read_only: false,
             status: StatusBarControl::new(STATUS)
                 .tooltip(
                     StatusSlot::Git,
@@ -584,21 +443,22 @@ impl IdeApp {
                 .tooltip(
                     StatusSlot::Lsp,
                     Tooltip::new("Language Server").description("rust-analyzer is running"),
+                )
+                .tooltip(
+                    StatusSlot::Run,
+                    Tooltip::new("Run Configuration")
+                        .description("Click to choose; Shift+F10 runs it")
+                        .shortcut("Alt+Shift+F10"),
                 ),
-            configs: vec![
-                "ide (example)".into(),
-                "gallery (example)".into(),
-                "cargo test".into(),
-            ],
-            config: ComboBoxState::new(0),
+            configs: vec!["ide".into(), "gallery".into(), "cargo test".into()],
+            config: 0,
             balloons,
             run_log: Vec::new(),
             run_list: JBList::single(),
-            running,
+            running: false,
             run_started: None,
             run_lines_shown: 0,
-            syntax,
-            have_tabs,
+            syntax: true,
             theme_index,
             git: GitStatus {
                 branch: "tui-interactive".into(),
@@ -645,7 +505,9 @@ impl IdeApp {
         let mut keymap = archipel_kit_tui::input::terminal_keymap(os);
         for (id, key) in [
             ("Run", "shift F10"),
+            ("Debug", "shift F9"),
             ("Stop", "ctrl F2"),
+            ("ChooseRunConfiguration", "alt shift F10"),
             ("NextTheme", "ctrl T"),
             ("Exit", "ctrl K > Q"),
             ("NewFile", "ctrl N"),
@@ -684,7 +546,6 @@ impl IdeApp {
             highlighter: CodeHighlighter::for_file(path),
         });
         self.tab_state.selected = self.open.len() - 1;
-        self.have_tabs.set(true);
     }
 
     fn close_tab(&mut self, index: usize) {
@@ -695,7 +556,6 @@ impl IdeApp {
         self.tabs.remove(index);
         self.docs.remove(index);
         self.tab_state.removed(index, self.tabs.len());
-        self.have_tabs.set(!self.tabs.is_empty());
     }
 
     fn notify(&mut self, status: Status, title: &str, body: &str) {
@@ -719,8 +579,12 @@ impl IdeApp {
         self.open.get(self.tab_state.selected).map(String::as_str)
     }
 
+    fn config_name(&self) -> &str {
+        self.configs.get(self.config).map_or("run", String::as_str)
+    }
+
     fn run(&mut self, rt: &Runtime) {
-        self.running.set(true);
+        self.running = true;
         self.run_started = Some(rt.now);
         self.run_lines_shown = 0;
         self.run_log.clear();
@@ -728,14 +592,11 @@ impl IdeApp {
     }
 
     fn finish_run(&mut self, ok: bool) {
-        self.running.set(false);
+        self.running = false;
         self.run_started = None;
         if ok {
-            self.notify(
-                Status::Success,
-                "Build succeeded",
-                "ide (example) finished with exit code 0.",
-            );
+            let body = format!("{} finished with exit code 0.", self.config_name());
+            self.notify(Status::Success, "Build succeeded", &body);
         } else {
             self.notify(Status::Warning, "Run stopped", "The process was stopped.");
         }
@@ -744,10 +605,28 @@ impl IdeApp {
     fn run_command(&mut self, rt: &mut Runtime, command: Command) {
         match command {
             Command::Run => self.run(rt),
+            Command::Debug => {
+                let body = format!("Debugging {}", self.config_name());
+                self.notify(Status::Info, "Debug", &body);
+                self.run(rt);
+            }
             Command::Stop => {
-                if self.running.get() {
+                if self.running {
                     self.finish_run(false);
                 }
+            }
+            Command::SelectConfig => self.select_config(rt),
+            Command::ToggleSyntax => self.syntax = !self.syntax,
+            Command::ToggleReadOnly => self.read_only = !self.read_only,
+            Command::HideWindow(id) => {
+                self.wb.hide(id);
+            }
+            Command::MaximizeWindow(id) => {
+                self.wb.activate(id);
+                self.wb.perform("MaximizeToolWindow");
+            }
+            Command::HideAllWindows => {
+                self.wb.perform("HideAllWindows");
             }
             Command::NextTheme => {
                 self.theme_index = (self.theme_index + 1) % Theme::all().len();
@@ -808,7 +687,7 @@ impl IdeApp {
 
     fn search(&mut self, rt: &mut Runtime) {
         let mut items = Vec::new();
-        let actions: [(&str, &str, Glyph, Command); 8] = [
+        let actions: Vec<(&str, &str, Glyph, Command)> = vec![
             (
                 "Run",
                 "Run the current configuration",
@@ -816,10 +695,22 @@ impl IdeApp {
                 Command::Run,
             ),
             (
+                "Debug",
+                "Debug the current configuration",
+                Glyph::Run,
+                Command::Debug,
+            ),
+            (
                 "Stop",
                 "Stop the running process",
                 Glyph::Stop,
                 Command::Stop,
+            ),
+            (
+                "Select Run Configuration…",
+                "Choose what Run starts",
+                Glyph::Settings,
+                Command::SelectConfig,
             ),
             ("Switch Theme", "Next theme", Glyph::Sun, Command::NextTheme),
             (
@@ -835,6 +726,18 @@ impl IdeApp {
                 Command::CloseTab,
             ),
             (
+                "Toggle Syntax Highlighting",
+                "Tint keywords, strings and comments",
+                Glyph::Code,
+                Command::ToggleSyntax,
+            ),
+            (
+                "Toggle Read-Only",
+                "Open files as viewers: no editing",
+                Glyph::Lock,
+                Command::ToggleReadOnly,
+            ),
+            (
                 "Toggle Project",
                 "Show or hide the Project window",
                 Glyph::Project,
@@ -847,6 +750,18 @@ impl IdeApp {
                 Command::ToggleWindow("run"),
             ),
             (
+                "Toggle Notifications",
+                "Show or hide the Notifications window",
+                Glyph::Bell,
+                Command::ToggleWindow("notifications"),
+            ),
+            (
+                "Hide All Tool Windows",
+                "Hide, or restore, every tool window",
+                Glyph::Minimize,
+                Command::HideAllWindows,
+            ),
+            (
                 "About",
                 "About the terminal kit",
                 Glyph::Info,
@@ -856,7 +771,10 @@ impl IdeApp {
         for (text, secondary, icon, command) in actions {
             let id = match &command {
                 Command::Run => "Run",
+                Command::Debug => "Debug",
                 Command::Stop => "Stop",
+                Command::SelectConfig => "ChooseRunConfiguration",
+                Command::HideAllWindows => "HideAllWindows",
                 Command::NextTheme => "NextTheme",
                 Command::NewFile => "NewFile",
                 Command::CloseTab => "CloseActiveTab",
@@ -896,6 +814,25 @@ impl IdeApp {
         self.layers.push(rt, overlay);
     }
 
+    /// The Telescope-style picker of the run configurations.
+    fn select_config(&mut self, rt: &mut Runtime) {
+        let step = archipel_kit::ui::popup::BaseListPopupStep::new(
+            "Run Configurations",
+            self.configs.clone(),
+        )
+        .icons(|_| Some(Glyph::Run.into()));
+        let mut host: ListPopup<String> = ListPopup::list(step).style(PopupStyle::Telescope);
+        host.open(rt, true);
+        let overlay = PopupOverlay::new(host, |source, state| match state {
+            PopupState::Chosen => source
+                .take_chosen()
+                .map(|c| vec![Msg::Confirmed(format!("config:{c}"), ExitCode::Primary)])
+                .unwrap_or_default(),
+            _ => Vec::new(),
+        });
+        self.layers.push(rt, overlay);
+    }
+
     fn menu(
         &mut self,
         rt: &mut Runtime,
@@ -925,7 +862,6 @@ impl IdeApp {
             description: "",
             command,
             queue: self.queue.clone(),
-            enabled: None,
         }
     }
 
@@ -962,6 +898,26 @@ impl IdeApp {
             Command::SearchEverywhere,
         ));
         g.add(self.cmd("Run", "Run", Glyph::Run, Command::Run));
+        g.add(self.cmd("Debug", "Debug", Glyph::Run, Command::Debug));
+        g.add(self.cmd(
+            "ChooseRunConfiguration",
+            "Select Run Configuration…",
+            Glyph::Settings,
+            Command::SelectConfig,
+        ));
+        g.add_separator();
+        g.add(self.cmd(
+            "ToggleSyntax",
+            "Toggle Syntax Highlighting",
+            Glyph::Code,
+            Command::ToggleSyntax,
+        ));
+        g.add(self.cmd(
+            "ToggleReadOnly",
+            "Toggle Read-Only",
+            Glyph::Lock,
+            Command::ToggleReadOnly,
+        ));
         g.add_separator();
         g.add(self.cmd(
             "CloseActiveTab",
@@ -1030,6 +986,10 @@ impl IdeApp {
                     }
                 } else if let Some(branch) = what.strip_prefix("branch:") {
                     self.git.branch = branch.to_owned();
+                } else if let Some(config) = what.strip_prefix("config:") {
+                    if let Some(i) = self.configs.iter().position(|c| c == config) {
+                        self.config = i;
+                    }
                 } else if code == ExitCode::Primary {
                     self.files.0.remove(&what);
                     if let Some(i) = self.open.iter().position(|p| *p == what) {
@@ -1039,7 +999,6 @@ impl IdeApp {
                     self.notify(Status::Info, "File deleted", &what);
                 }
             }
-            Msg::Config(i) => self.config.selected = i,
         }
     }
 
@@ -1082,17 +1041,30 @@ impl IdeApp {
         for e in events {
             match e {
                 WorkbenchEvent::StripeMenu(id, x, y) | WorkbenchEvent::HeaderMenu(id, x, y) => {
-                    let mut g = DefaultActionGroup::new("Tool Window");
-                    let toggle: &'static str = match id.as_str() {
+                    // The header actions of the GUI, as NvChad has them: a context menu.
+                    let id: &'static str = match id.as_str() {
                         "project" => "project",
                         "run" => "run",
                         _ => "notifications",
                     };
+                    let mut g = DefaultActionGroup::new("Tool Window");
                     g.add(self.cmd(
                         "HideActiveWindow",
                         "Hide",
                         Glyph::Minimize,
-                        Command::ToggleWindow(toggle),
+                        Command::HideWindow(id),
+                    ));
+                    g.add(self.cmd(
+                        "MaximizeToolWindow",
+                        "Maximize",
+                        Glyph::Fullscreen,
+                        Command::MaximizeWindow(id),
+                    ));
+                    g.add(self.cmd(
+                        "HideAllWindows",
+                        "Hide All Tool Windows",
+                        Glyph::Minimize,
+                        Command::HideAllWindows,
                     ));
                     self.menu(rt, g, ActionPlace::TOOLWINDOW_POPUP, x, y);
                 }
@@ -1167,7 +1139,7 @@ impl archipel_kit_tui::App for IdeApp {
                 self.run_log.push(row);
                 self.run_lines_shown += 1;
             }
-            if self.run_lines_shown >= RUN_OUTPUT.len() && self.running.get() {
+            if self.run_lines_shown >= RUN_OUTPUT.len() && self.running {
                 self.finish_run(true);
             }
         }
@@ -1200,46 +1172,11 @@ impl archipel_kit_tui::App for IdeApp {
         if area.height < 4 || area.width < 20 {
             return;
         }
-        // Row 0: the main toolbar.
-        let top = Rect::new(area.x, area.y, area.width, 1);
-        for x in 0..area.width {
-            if let Some(cell) = buf.cell_mut((area.x + x, area.y)) {
-                cell.set_symbol(" ").set_bg(p.black2);
-            }
-        }
-        let name = " kit ";
-        archipel_kit_tui::testing::put_text(
-            buf,
-            top,
-            1,
-            top.y,
-            name,
-            p.on(p.nord_blue),
-            p.nord_blue,
-        );
-        let toolbar_area = Rect::new(8, top.y, area.width.saturating_sub(40).min(60), 1);
-        self.toolbar
-            .show(rt, &self.toolbar_state, toolbar_area, buf);
-        let combo = ComboBoxControl::new(COMBO, &self.configs).width(22);
-        let cx = (area.width / 2)
-            .max(toolbar_area.right() + 1)
-            .min(area.width.saturating_sub(24));
-        combo.show(rt, &self.config, cx, top.y, buf);
-        let hint = rt.hint.clone();
-        if let Some(h) = hint {
-            archipel_kit_tui::testing::put_text(
-                buf,
-                top,
-                cx + 24,
-                top.y,
-                &h,
-                p.light_grey,
-                p.black2,
-            );
-        }
         // Status line and the workbench between.
         let status_row = Rect::new(area.x, area.bottom() - 1, area.width, 1);
-        let work = Rect::new(area.x, area.y + 1, area.width, area.height - 2);
+        // The workbench takes everything above the status line: its first row is the
+        // tabufline (the tree's title, then the buffers and buttons).
+        let work = Rect::new(area.x, area.y, area.width, area.height - 1);
         let areas = self.wb.draw(rt, work, buf);
         self.sync_focus(rt);
         // Project tree.
@@ -1259,7 +1196,7 @@ impl archipel_kit_tui::App for IdeApp {
                     Rect::new(body.x, body.y, body.width, body.height.saturating_sub(1));
                 self.run_list
                     .show(rt, RUN_LIST, list_area, &self.run_log, p.darker_black, buf);
-                if self.running.get() && body.height > 1 {
+                if self.running && body.height > 1 {
                     let fraction = self.run_lines_shown as f32 / RUN_OUTPUT.len() as f32;
                     ProgressBar::new(&look, fraction).on(p.darker_black).render(
                         Rect::new(
@@ -1326,7 +1263,10 @@ impl archipel_kit_tui::App for IdeApp {
             let bx = bar.right().saturating_sub(buttons_w);
             self.buttons_rect = Rect::new(bx, bar.y, buttons_w, 1);
             let theme_glyph = if p.dark { Glyph::Sun } else { Glyph::Moon };
-            for (i, glyph, color) in [(0u16, theme_glyph, p.yellow), (1, Glyph::Close, p.red)] {
+            for (i, glyph, color, tip, key) in [
+                (0u16, theme_glyph, p.yellow, "Switch Theme", Some("Ctrl+T")),
+                (1, Glyph::Close, p.red, "Close All Tabs", None),
+            ] {
                 let r = Rect::new(bx + i * 3 + 1, bar.y, 3, 1).intersection(bar);
                 archipel_kit_tui::testing::put_text(
                     buf,
@@ -1338,6 +1278,11 @@ impl archipel_kit_tui::App for IdeApp {
                     p.darker_black,
                 );
                 rt.clickable(TAB_BUTTONS.with(u64::from(i)), r);
+                let mut tooltip = Tooltip::new(tip);
+                if let Some(key) = key {
+                    tooltip = tooltip.shortcut(key);
+                }
+                rt.tooltip.offer(TAB_BUTTONS.with(u64::from(i)), r, tooltip);
             }
             let body = Rect::new(editor.x, editor.y + 1, editor.width, editor.height - 1);
             if self.tabs.is_empty() {
@@ -1346,8 +1291,8 @@ impl archipel_kit_tui::App for IdeApp {
                 let path = self.open[self.tab_state.selected.min(self.open.len() - 1)].clone();
                 let idx = self.tab_state.selected.min(self.open.len() - 1);
                 let _ = path;
-                let syntax = self.syntax.get();
-                let viewer = self.read_only.get();
+                let syntax = self.syntax;
+                let viewer = self.read_only;
                 let doc = &mut self.docs[idx];
                 let Doc {
                     editor,
@@ -1384,7 +1329,7 @@ impl archipel_kit_tui::App for IdeApp {
             }
             None => ("Ln -, Col -".to_owned(), None),
         };
-        let center = if self.running.get() {
+        let center = if self.running {
             format!(
                 "Running… {}%",
                 self.run_lines_shown * 100 / RUN_OUTPUT.len()
@@ -1406,7 +1351,7 @@ impl archipel_kit_tui::App for IdeApp {
         let mode = self.mode();
         // In the editor the mode block says whether the file can be edited.
         let (mode_label, mode_color) = if self.editor_focused() {
-            if self.read_only.get() {
+            if self.read_only {
                 ("VIEW", Mode::Normal.color(&p))
             } else {
                 ("EDIT", Mode::Insert.color(&p))
@@ -1414,6 +1359,7 @@ impl archipel_kit_tui::App for IdeApp {
         } else {
             (mode.label(), mode.color(&p))
         };
+        let config_name = self.config_name().to_owned();
         let mut bar = StatusBar::new(&look)
             .mode(mode_label, mode_color)
             .git(&self.git)
@@ -1425,6 +1371,7 @@ impl archipel_kit_tui::App for IdeApp {
                 info: 0,
             })
             .lsp("rust-analyzer")
+            .run(&config_name, self.running)
             .cwd("kit")
             .cursor(&pos);
         if let Some((icon, name)) = &file {
@@ -1457,7 +1404,7 @@ impl IdeApp {
 
     /// Whether a run is in progress.
     pub fn is_running(&self) -> bool {
-        self.running.get()
+        self.running
     }
 
     /// Whether the project has the file `path`.
@@ -1468,7 +1415,9 @@ impl IdeApp {
     fn perform_action(&mut self, rt: &mut Runtime, id: &str) -> bool {
         let command = match id {
             "Run" => Command::Run,
+            "Debug" => Command::Debug,
             "Stop" => Command::Stop,
+            "ChooseRunConfiguration" => Command::SelectConfig,
             "NextTheme" => Command::NextTheme,
             "GotoAction" => Command::SearchEverywhere,
             "CloseActiveTab" | "CloseContent" if self.wb.focused_tool().is_none() => {
@@ -1512,40 +1461,11 @@ impl IdeApp {
     }
 
     fn focus_is_control(&self, rt: &Runtime) -> bool {
-        [COMBO, TABS].iter().any(|id| rt.focused(*id))
+        rt.focused(TABS)
     }
 
     fn route(&mut self, rt: &mut Runtime, event: &Event) {
         self.sync_focus(rt);
-        // Toolbar and combo.
-        match self.toolbar.handle(rt, &mut self.toolbar_state, event) {
-            ToolbarEvent::OpenGroup { index, anchor } => {
-                if let Some(mut menu) = self.toolbar.popup_for(rt, index, anchor) {
-                    menu.open(rt, false);
-                    self.layers
-                        .push(rt, PopupOverlay::new(menu, |_, _| Vec::<Msg>::new()));
-                }
-            }
-            ToolbarEvent::OpenOverflow { anchor } => {
-                if let Some(mut menu) = self.toolbar.overflow_menu(rt, anchor) {
-                    menu.open(rt, false);
-                    self.layers
-                        .push(rt, PopupOverlay::new(menu, |_, _| Vec::<Msg>::new()));
-                }
-            }
-            _ => {}
-        }
-        let combo = ComboBoxControl::new(COMBO, &self.configs).width(22);
-        if combo.handle(rt, &mut self.config, event) == ComboEvent::OpenList {
-            let anchor = rt.hits.rect_of(COMBO).unwrap_or_default();
-            let mut list = combo.popup(&self.config, anchor);
-            list.open(rt, true);
-            let overlay = PopupOverlay::new(list, |source, state| match state {
-                PopupState::Chosen => source.take_chosen().map(Msg::Config).into_iter().collect(),
-                _ => Vec::new(),
-            });
-            self.layers.push(rt, overlay);
-        }
         // Status bar.
         match self.status.handle(rt, event) {
             StatusEvent::Clicked(StatusSlot::Cwd, _) => {
@@ -1567,6 +1487,7 @@ impl IdeApp {
                 );
             }
             StatusEvent::Clicked(StatusSlot::Mode, _) => self.run_command(rt, Command::NextTheme),
+            StatusEvent::Clicked(StatusSlot::Run, _) => self.select_config(rt),
             StatusEvent::ContextMenu(_, x, y) => self.status_menu(rt, x, y),
             _ => {}
         }
@@ -1635,7 +1556,7 @@ impl IdeApp {
             let idx = self.tab_state.selected.min(self.open.len() - 1);
             let path = self.open[idx].clone();
             let _ = path;
-            let viewer = self.read_only.get();
+            let viewer = self.read_only;
             let Doc {
                 editor,
                 state,
