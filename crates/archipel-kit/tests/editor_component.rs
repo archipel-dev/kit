@@ -1753,3 +1753,235 @@ fn each_arrow_press_moves_the_caret_once() {
     h.run_ok();
     assert_eq!(h.state().document.line_number(caret(&h)), 2);
 }
+
+// ---- robustness -----------------------------------------------------------------------
+
+fn egui_modifiers(m: archipel_kit::editor::model::KeyModifiers, os: Os) -> Modifiers {
+    Modifiers {
+        alt: m.alt,
+        ctrl: m.ctrl,
+        shift: m.shift,
+        mac_cmd: m.command,
+        command: match os {
+            Os::WindowsLinux => m.ctrl,
+            Os::MacOs => m.command,
+        },
+    }
+}
+
+#[test]
+fn every_binding_of_the_keymap_runs_in_every_caret_state_without_panicking() {
+    use archipel_kit::editor::model::default_bindings;
+    let text = "fn a() {\n    let é = \"ü\";\n\n\t{\n        x\n    }\n}\nlast line without break";
+    for os in [Os::WindowsLinux, Os::MacOs] {
+        for state in 0..4 {
+            let mut editor = Editor::new(text);
+            let doc = editor.document.clone();
+            editor.folding.add_region(&doc, 7, 48, "{...}", state == 3);
+            match state {
+                1 => editor.carets.set_selection(&doc, 5, 30),
+                2 => {
+                    editor.carets.set_caret(&doc, 12);
+                    editor.carets.add_caret(&doc, 40);
+                    editor.carets.add_caret_with_selection(&doc, 50, 55);
+                }
+                _ => editor.carets.set_caret(&doc, 0),
+            }
+            let mut h = testing::harness_state(Theme::dark(), editor, move |ui, e| {
+                EditorComponent::new(e)
+                    .label("Ed")
+                    .folding(true)
+                    .line_numbers(true)
+                    .keymap_os(os)
+                    .height(120.0)
+                    .show(ui);
+            });
+            h.get_by_label("Ed").focus();
+            h.run_ok();
+            for binding in default_bindings(os) {
+                h.input_mut().events.push(Event::Key {
+                    key: binding.key,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: egui_modifiers(binding.modifiers, os),
+                });
+                h.step();
+                let editor = h.state();
+                let len = editor.document.len();
+                for caret in editor.carets.carets() {
+                    assert!(caret.offset <= len && caret.anchor <= len, "{binding:?}");
+                    assert!(editor.document.text().is_char_boundary(caret.offset));
+                }
+            }
+            h.run_ok();
+        }
+    }
+}
+
+#[test]
+fn clicks_and_drags_anywhere_never_panic() {
+    let text = "ab\n\n\tcd é\nlast";
+    let mut editor = Editor::new(text);
+    let doc = editor.document.clone();
+    editor.folding.add_region(&doc, 1, 6, "...", false);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .line_numbers(true)
+            .folding(true)
+            .wrap(true)
+            .height(100.0)
+            .show(ui);
+    });
+    h.get_by_label("Ed").focus();
+    h.run_ok();
+    let rect = h.get_by_label("Ed").rect();
+    let points = [
+        pos2(rect.left() - 30.0, rect.top() + 5.0),
+        pos2(rect.left() + 1.0, rect.top() - 5.0),
+        pos2(rect.center().x, rect.bottom() + 50.0),
+        pos2(rect.right() + 50.0, rect.center().y),
+        pos2(rect.left() + 100.0, rect.top() + 30.0),
+        pos2(rect.left() + 9.0, rect.top() + 44.0),
+    ];
+    for modifiers in [
+        Modifiers::NONE,
+        Modifiers::ALT,
+        Modifiers::SHIFT,
+        Modifiers::ALT | Modifiers::SHIFT,
+        Modifiers::CTRL,
+    ] {
+        for button in [
+            PointerButton::Primary,
+            PointerButton::Middle,
+            PointerButton::Secondary,
+        ] {
+            for (i, from) in points.iter().enumerate() {
+                let to = points[(i + 2) % points.len()];
+                drag(&mut h, *from, to, modifiers, button);
+                click(&mut h, *from, modifiers);
+            }
+        }
+    }
+    let len = h.state().document.len();
+    assert!(h.state().carets.carets().iter().all(|c| c.offset <= len));
+}
+
+#[test]
+fn clicks_on_a_wrapped_line_map_to_its_second_row() {
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(&"x".repeat(400)), |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .wrap(true)
+            .height(200.0)
+            .show(ui);
+    });
+    h.get_by_label("Ed").focus();
+    h.run_ok();
+    let pos = at(&h, 1, 3.0);
+    click(&mut h, pos, Modifiers::NONE);
+    let offset = h.state().carets.primary().offset;
+    assert!(
+        (30..60).contains(&offset),
+        "the second row starts about column 40: {offset}"
+    );
+}
+
+#[test]
+fn the_placeholder_shows_in_an_empty_document_and_the_document_stays_empty() {
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(""), |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .placeholder("Type here")
+            .height(60.0)
+            .show(ui);
+    });
+    h.run_ok();
+    let rect = h.get_by_label("Ed").rect();
+    // Some pixel of the first row differs from the background: the hint was drawn.
+    let image = h.render().expect("renders");
+    let y = (rect.top() + 14.0) as u32;
+    let mut drawn = false;
+    for x in rect.left() as u32..rect.left() as u32 + 90 {
+        let p = image.get_pixel(x, y).0;
+        if !near(
+            egui::Color32::from_rgb(p[0], p[1], p[2]),
+            colors().caret_row,
+        ) && !near(
+            egui::Color32::from_rgb(p[0], p[1], p[2]),
+            colors().background,
+        ) {
+            drawn = true;
+        }
+    }
+    assert!(drawn, "the placeholder is painted");
+}
+
+#[test]
+fn the_cursor_is_an_arrow_over_a_selection_and_a_hand_over_a_fold_placeholder() {
+    let mut editor = folding_editor();
+    let doc = editor.document.clone();
+    editor.carets.set_selection(&doc, 0, 4);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .folding(true)
+            .height(160.0)
+            .show(ui);
+    });
+    h.run_ok();
+    let inside = at(&h, 0, 2.0);
+    h.hover_at(inside);
+    h.run_ok();
+    assert_eq!(
+        h.output().platform_output.cursor_icon,
+        egui::CursorIcon::Default,
+        "an arrow over the selection"
+    );
+    let outside = at(&h, 3, 2.0);
+    h.hover_at(outside);
+    h.run_ok();
+    assert_eq!(
+        h.output().platform_output.cursor_icon,
+        egui::CursorIcon::Text
+    );
+    h.state_mut().folding.set_expanded(0, false);
+    h.run_ok();
+    let placeholder = at(&h, 0, 9.0);
+    h.hover_at(placeholder);
+    h.run_ok();
+    assert_eq!(
+        h.output().platform_output.cursor_icon,
+        egui::CursorIcon::PointingHand
+    );
+}
+
+#[test]
+fn cmd_click_navigates_on_macos_and_ctrl_click_does_not() {
+    let slot = std::cell::Cell::new(None);
+    let mut h = testing::harness_state(Theme::dark(), Editor::new("foo bar"), |ui, e| {
+        slot.set(
+            EditorComponent::new(e)
+                .label("Ed")
+                .keymap_os(Os::MacOs)
+                .height(100.0)
+                .show(ui)
+                .navigation
+                .or(slot.get()),
+        );
+    });
+    h.get_by_label("Ed").focus();
+    h.run_ok();
+    let pos = at(&h, 0, 5.0);
+    click(&mut h, pos, Modifiers::CTRL);
+    assert_eq!(slot.get(), None, "Ctrl+click is a context click on macOS");
+    click(&mut h, pos, Modifiers::MAC_CMD | Modifiers::COMMAND);
+    assert_eq!(
+        slot.get(),
+        Some(NavigationRequest {
+            offset: 5,
+            kind: NavigationKind::Declaration
+        })
+    );
+}

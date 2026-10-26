@@ -866,17 +866,6 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             Sense::hover(),
         );
         let geo = Geo::new(area, viewport_rect.min.to_vec2(), cell, row_h, pad, ppp);
-        if editor.document.is_empty()
-            && let Some(placeholder) = &placeholder
-        {
-            ui.painter().text(
-                pos2(geo.x_of(0, 0), geo.row_top(0) + row_h / 2.0),
-                egui::Align2::LEFT_CENTER,
-                placeholder,
-                font.clone(),
-                Theme::colors(ui.ctx()).text_placeholder,
-            );
-        }
         let find_ranges: &[Range<usize>] = &found;
         paint_out = paint::paint(&paint::PaintInput {
             ui,
@@ -895,6 +884,17 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             brace,
             preedit: preedit.as_deref(),
         });
+        if editor.document.is_empty()
+            && let Some(placeholder) = &placeholder
+        {
+            ui.painter().text(
+                pos2(geo.x_of(0, 0), geo.row_top(0) + row_h / 2.0),
+                egui::Align2::LEFT_CENTER,
+                placeholder,
+                font.clone(),
+                Theme::colors(ui.ctx()).text_placeholder,
+            );
+        }
     });
     st.offset = area_out.state.offset;
     let geo_final = Geo::new(area, st.offset, cell, row_h, pad, ppp);

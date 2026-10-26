@@ -194,10 +194,20 @@ let target = scroll_to_caret(
 assert_eq!(target.first_line, 1.0); // one line of margin below the caret
 ```
 
+## The widget
+
+[`EditorComponent`](components/code.md) is the painter on top of this model: it borrows an
+`Editor`, turns keys into actions with `editor_action_for`, typed text, IME commits and the
+clipboard into `Type`, `Paste`, `Copy` and `Cut`, and the mouse into caret operations
+(`set_caret`, `set_selection`, `add_caret`, `start_block_selection`, `toggle_fold_region`), then
+follows the `ScrollRequest` of each outcome with `scroll_to_caret`. With `.viewer(true)` it
+leaves out the editing actions and nothing else.
+
 ## Differences from IntelliJ, forced by immediate mode or by the missing language services
 
-- **Pixels become columns.** The desired X of vertical motion is a visual column. Autoscroll,
-  mouse selection by word or line and drag and drop belong to the painter; the model offers
+- **Pixels become columns.** The desired X of vertical motion is a visual column. Autoscroll
+  and mouse selection by word or line are the component's (drag and drop of selected text is
+  not implemented); the model offers
   `CaretModel::click`, `extend_selection_to`, `add_caret`, `remove_caret_at` and the block
   selection helpers for it.
 - **Document model.** Line breaks are normalized to `\n` (`CRLF` and `CR` on load and on
@@ -210,7 +220,7 @@ assert_eq!(target.first_line, 1.0); // one line of margin below the caret
   paragraph, line, text), Move Statement is Move Line, Smart Enter is Start New Line, no
   re-indent on `}`, no syntax token boundaries for word stops.
 - **Set up by the caller:** the double-Ctrl gesture for clone caret and its "reverse arrow
-  removes the clone" rule, the sticky selection mode, soft wrap (visual rows), inlays,
+  removes the clone" rule, the sticky selection mode, soft wrap (visual rows: the component wraps the display, the model still moves by logical lines), inlays, sticky lines,
   paste history and the system clipboard itself.
 - **Open points to verify in the running IDE:** the line selected after Copy with an empty
   selection, where Ctrl+] puts the caret (the model puts it after the brace), the new line
