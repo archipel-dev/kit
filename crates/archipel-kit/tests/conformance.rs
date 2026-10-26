@@ -598,3 +598,57 @@ fn audit_still_catches_a_focusable_row_outside_any_collection() {
     let audit = testing::audit(&mut harness);
     assert_eq!(audit.of(Problem::Unreachable).len(), 1, "{audit:?}");
 }
+
+#[test]
+fn one_pixel_splitter_divider_conforms() {
+    use archipel_kit::openapi::ui::OnePixelSplitter;
+    let mut ratio = 0.5;
+    testing::conformance("Resize sidebar", move |ui, enabled| {
+        ui.allocate_ui(egui::vec2(320.0, 120.0), |ui| {
+            OnePixelSplitter::horizontal("conformance", &mut ratio)
+                .label("Resize sidebar")
+                .enabled(enabled)
+                .show(ui, |ui| ui.label("Sidebar"), |ui| ui.label("Request"))
+                .divider
+        })
+        .inner
+    })
+    .run();
+}
+
+#[test]
+fn jb_splitter_divider_conforms() {
+    use archipel_kit::host::InMemoryProperties;
+    use archipel_kit::openapi::ui::JBSplitter;
+    let mut ratio = 0.5;
+    let mut properties = InMemoryProperties::new();
+    testing::conformance("Resize sidebar", move |ui, enabled| {
+        ui.allocate_ui(egui::vec2(320.0, 120.0), |ui| {
+            JBSplitter::vertical(
+                "conformance",
+                &mut ratio,
+                "conformance.key",
+                &mut properties,
+            )
+            .label("Resize sidebar")
+            .enabled(enabled)
+            .show(ui, |ui| ui.label("Top"), |ui| ui.label("Bottom"))
+            .divider
+        })
+        .inner
+    })
+    .run();
+}
+
+#[test]
+fn icon_only_status_bar_widget_conforms() {
+    testing::conformance("Notifications", |ui, enabled| {
+        ui.add(
+            StatusBarWidget::new("")
+                .icon(Glyph::Bell)
+                .name("Notifications")
+                .enabled(enabled),
+        )
+    })
+    .run();
+}

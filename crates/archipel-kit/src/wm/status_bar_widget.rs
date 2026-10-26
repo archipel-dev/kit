@@ -40,6 +40,10 @@ pub struct StatusBarWidget<'a> {
     tone: Tone,
     enabled: bool,
     max_width: Option<f32>,
+    hover_effect: bool,
+    alignment: f32,
+    reserve: Option<String>,
+    name: Option<String>,
     behaviours: Behaviours<'a>,
 }
 
@@ -53,8 +57,43 @@ impl<'a> StatusBarWidget<'a> {
             tone: Tone::Default,
             enabled: true,
             max_width: None,
+            hover_effect: true,
+            alignment: 0.0,
+            reserve: None,
+            name: None,
             behaviours: Behaviours::default(),
         }
+    }
+
+    /// Whether hover and press fill the widget (default `true`). IntelliJ paints the effect
+    /// for the status bar's right panel only (spec section 9: arc 4, the hover color for
+    /// hover and press); widgets of the left and center panels have none and are drawn
+    /// without it.
+    pub fn hover_effect(mut self, hover_effect: bool) -> Self {
+        self.hover_effect = hover_effect;
+        self
+    }
+
+    /// Where the text sits in the width the widget has beyond it, from `0.0` (left, the
+    /// default) to `1.0` (right) (IntelliJ `TextPresentation.getAlignment`).
+    pub fn text_alignment(mut self, alignment: f32) -> Self {
+        self.alignment = alignment.clamp(0.0, 1.0);
+        self
+    }
+
+    /// Reserves the width of `prototype` for the text, so a value that changes (a line and
+    /// column) does not move the widgets beside it (IntelliJ
+    /// `TextPresentation.getMaxValue`).
+    pub fn reserve_width_of(mut self, prototype: impl Into<String>) -> Self {
+        self.reserve = Some(prototype.into());
+        self
+    }
+
+    /// The accessible name and tooltip when the text alone does not name it (an icon-only
+    /// widget).
+    pub fn name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
     }
 
     /// Icon before the text.
@@ -100,8 +139,21 @@ impl Widget for StatusBarWidget<'_> {
         let colors = Theme::colors(ui.ctx());
         let font = typography::body(typography::BODY);
         let text = common::galley(ui, self.text.as_str(), font.clone());
+        // The text's room: at least the prototype's, when there is one.
+        let text_room = match &self.reserve {
+            Some(prototype) => common::galley(ui, prototype.as_str(), font.clone())
+                .size()
+                .x
+                .max(text.size().x),
+            None => text.size().x,
+        };
+        let gap = if self.text.is_empty() {
+            0.0
+        } else {
+            size::ICON_TEXT_GAP
+        };
         let icon = if self.icon.is_some() {
-            size::ICON + size::ICON_TEXT_GAP
+            size::ICON + gap
         } else {
             0.0
         };
@@ -111,8 +163,8 @@ impl Widget for StatusBarWidget<'_> {
             .max_width
             .unwrap_or_else(|| ui.available_width())
             .max(extra);
-        let width = (text.size().x + extra).min(limit);
-        let elided = text.size().x + extra > limit;
+        let width = (text_room + extra).min(limit);
+        let elided = text_room + extra > limit && text.size().x + extra > limit;
         let sense = if self.enabled {
             Sense::click()
         } else {
@@ -120,16 +172,26 @@ impl Widget for StatusBarWidget<'_> {
         };
         let (rect, response) = ui.allocate_exact_size(vec2(width, size::STATUS_ITEM_HEIGHT), sense);
         crate::cursor::on_hover_action(&response);
-        response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, self.enabled, &self.text));
+        let name = self.name.as_deref().unwrap_or(&self.text);
+        response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, self.enabled, name));
         if ui.is_rect_visible(rect) {
-            let state = State::of(&response);
+            let mut state = State::of(&response);
+            if !self.hover_effect {
+                state.hovered = false;
+                state.pressed = false;
+            }
             let painter = ui.painter();
-            let fill = state.flat_fill(&colors);
+            // Hover and press share one fill (Islands: the same token for both).
+            let fill = if state.enabled && (state.hovered || state.pressed) {
+                colors.hover
+            } else {
+                egui::Color32::TRANSPARENT
+            };
             if fill != egui::Color32::TRANSPARENT {
                 painter.rect_filled(rect, CornerRadius::same(radius::CONTROL), fill);
             }
             if response.has_focus() {
-                common::focus_ring(painter, rect, radius::CONTROL, &colors);
+                common::focus_ring(painter, rect, radius::STATUS_FOCUS, &colors);
             }
             let mut x = rect.left() + size::STATUS_ITEM_PADDING;
             if let Some(icon) = self.icon {
@@ -143,7 +205,7 @@ impl Widget for StatusBarWidget<'_> {
                     self.tone
                 };
                 icons::paint(painter, icon_rect, icon, state.icon(tone, &colors));
-                x += size::ICON + size::ICON_TEXT_GAP;
+                x += size::ICON + gap;
             }
             let room = rect.right() - size::STATUS_ITEM_PADDING - chevron - x;
             let galley = if elided {
@@ -161,7 +223,9 @@ impl Widget for StatusBarWidget<'_> {
             } else {
                 state.text(self.tone, &colors)
             };
-            common::text_left(painter, rect, x, galley, color);
+            // Aligned in the room the widget has beyond the text.
+            let spare = (room - galley.size().x).max(0.0);
+            common::text_left(painter, rect, x + spare * self.alignment, galley, color);
             if self.chevron {
                 let chevron_rect = Rect::from_min_size(
                     pos2(
@@ -178,8 +242,12 @@ impl Widget for StatusBarWidget<'_> {
                 );
             }
         }
-        if elided && !self.behaviours.has_tooltip() {
-            HelpTooltip::new(self.text.clone()).show_for(&response);
+        if !self.behaviours.has_tooltip() {
+            if elided {
+                HelpTooltip::new(self.text.clone()).show_for(&response);
+            } else if let Some(name) = &self.name {
+                HelpTooltip::new(name.clone()).show_for(&response);
+            }
         }
         self.behaviours.attach(ui, response)
     }

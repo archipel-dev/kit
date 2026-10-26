@@ -181,6 +181,13 @@ pub mod size {
     pub const SPLIT_COLLAPSE: f32 = 40.0;
     /// Default minimum size of each side of a split pane.
     pub const SPLIT_MIN_PANE: f32 = 120.0;
+    /// Width of a classic `Splitter` divider (IntelliJ spec section 12: 7 px). The Islands
+    /// layout uses the 4 pt gap ([`SPLIT_DIVIDER`]) instead.
+    pub const SPLIT_CLASSIC_DIVIDER: f32 = 7.0;
+    /// Width of a one pixel splitter's visible line (IntelliJ spec section 12).
+    pub const SPLIT_ONE_PIXEL: f32 = 1.0;
+    /// Width of a one pixel splitter's hit zone (`ide.splitter.mouseZone`, spec section 12).
+    pub const SPLIT_MOUSE_ZONE: f32 = 6.0;
     /// Default height of a vertical histogram.
     pub const CHART_HEIGHT: f32 = 120.0;
     /// Height of a sparkline: it sits inline with text.
@@ -326,6 +333,14 @@ pub mod tab {
     /// Space between the thumb's track and the island's sides (it stays inside the
     /// island's rounded corners).
     pub const SCROLL_INSET: f32 = 5.0;
+    /// The widest a tab gets (`DEFAULT_MAX_TAB_WIDTH`, IntelliJ spec section 2.1); longer titles
+    /// are elided.
+    pub const MAX_WIDTH: f32 = 300.0;
+    /// How far the pointer must move from the press before a tab starts to drag (7 px,
+    /// `MouseDragHelper.DRAG_START_DEADZONE`, IntelliJ spec section 0.2).
+    pub const DRAG_DEADZONE: f32 = 7.0;
+    /// Space between a tab's action buttons (spec section 2.1: close, pin, ...).
+    pub const ACTION_GAP: f32 = 2.0;
 }
 
 /// Tool window stripes (the icon bars beside the islands), in points. Measured on Android
@@ -341,6 +356,9 @@ pub mod stripe {
     pub const PITCH: f32 = 40.0;
     /// Space above the first button (below the window toolbar).
     pub const PADDING: f32 = 3.0;
+    /// How far the pointer must move from the press before a stripe button drags (7 px,
+    /// IntelliJ spec section 8.2).
+    pub const DRAG_DEADZONE: f32 = 7.0;
 }
 
 /// The main window toolbar's controls, in points. Measured on Android Studio's Islands UI.
@@ -440,6 +458,10 @@ pub mod motion {
     /// One pass of an indeterminate progress bar's segment. Kept from the measurement of
     /// Android Studio (IntelliJ spec section 13.8 gives no period).
     pub const PROGRESS_INDETERMINATE_PERIOD: f32 = 1.0 / 0.6;
+
+    /// How long a tab's freshly shown close button ignores clicks (`TimedDeadzone.DEFAULT`
+    /// 150 ms, IntelliJ spec section 2.1), so a pointer landing on the tab does not close it.
+    pub const TAB_CLOSE_DEADZONE: f32 = 0.15;
 }
 
 /// Opacities, from 0 to 1.
@@ -491,6 +513,8 @@ pub mod radius {
     pub const CHART_BAR: u8 = 2;
     /// Row selection pills.
     pub const ROW: u8 = 4;
+    /// Focus ring of a status bar widget (arc 10, IntelliJ spec section 9).
+    pub const STATUS_FOCUS: u8 = 10;
     /// Fully rounded (pills, counters, toggles).
     pub const PILL: u8 = 255;
 }

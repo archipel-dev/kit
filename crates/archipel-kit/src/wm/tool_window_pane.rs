@@ -1,16 +1,17 @@
 //! A shared docked islands layout, independent of application content and policy.
 
 use crate::Icon;
-use crate::action_system::ActionButton;
+use crate::action_system::{ActionButton, ActionGroup, DataContext};
 use crate::behaviour::WidgetExt;
 use crate::ide::HelpTooltip;
 use crate::openapi::ui::{Side, Splitter};
 use crate::wm::{
-    IdeFrameDecorator, MainToolbar, SimpleToolWindowPanel, SquareStripeButton, ToolWindowToolbar,
+    ContentManager, IdeFrameDecorator, MainToolbar, SimpleToolWindowPanel, SquareStripeButton,
+    ToolWindow, ToolWindowEvent, ToolWindowToolbar,
 };
 use crate::{Glyph, Theme, egui, tokens};
 use egui::{Id, Response, Ui};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 /// A docked tool-window region that can occupy the entire work area.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -63,12 +64,66 @@ pub struct ToolWindowPaneState {
     /// The selected content tab of the left, right and bottom tool windows (see
     /// [`ToolWindowPane::tool_tabs`]).
     pub tool_tabs: [usize; 3],
+    /// What the tool windows reported since the application last called
+    /// [`take_events`](Self::take_events). Not part of the saved layout.
+    #[serde(skip)]
+    pub events: Vec<ToolWindowEvent>,
 }
 
 impl ToolWindowPaneState {
     /// The selected content tab of `region`'s tool window.
     pub fn tool_tab(&self, region: ToolWindowAnchor) -> usize {
         self.tool_tabs[region_index(region)]
+    }
+
+    /// Whether `region`'s tool window is shown (it may still be squeezed out of a small
+    /// window; see [`ToolWindowPane`]).
+    pub fn is_visible(&self, region: ToolWindowAnchor) -> bool {
+        !*self.hidden_flag(region)
+    }
+
+    /// Shows `region`'s tool window (IntelliJ `ToolWindow.show`). Hidden windows come back
+    /// from their stripe button too.
+    pub fn show(&mut self, region: ToolWindowAnchor) {
+        *self.hidden_flag_mut(region) = false;
+    }
+
+    /// Hides `region`'s tool window (IntelliJ `ToolWindow.hide`).
+    pub fn hide(&mut self, region: ToolWindowAnchor) {
+        *self.hidden_flag_mut(region) = true;
+        if self.maximized == Some(region) {
+            self.maximized = None;
+        }
+    }
+
+    /// Hides every tool window (IntelliJ `HideAllWindows`, `Ctrl+Shift+F12`).
+    pub fn hide_all(&mut self) {
+        self.left_hidden = true;
+        self.right_hidden = true;
+        self.bottom_hidden = true;
+        self.maximized = None;
+    }
+
+    /// Returns what the tool windows reported since the last call (activations, hides,
+    /// `Esc` to the editor, drops on another stripe, ...) and clears it.
+    pub fn take_events(&mut self) -> Vec<ToolWindowEvent> {
+        std::mem::take(&mut self.events)
+    }
+
+    fn hidden_flag(&self, region: ToolWindowAnchor) -> &bool {
+        match region {
+            ToolWindowAnchor::Left => &self.left_hidden,
+            ToolWindowAnchor::Right => &self.right_hidden,
+            ToolWindowAnchor::Bottom => &self.bottom_hidden,
+        }
+    }
+
+    fn hidden_flag_mut(&mut self, region: ToolWindowAnchor) -> &mut bool {
+        match region {
+            ToolWindowAnchor::Left => &mut self.left_hidden,
+            ToolWindowAnchor::Right => &mut self.right_hidden,
+            ToolWindowAnchor::Bottom => &mut self.bottom_hidden,
+        }
     }
 }
 
@@ -91,6 +146,7 @@ impl Default for ToolWindowPaneState {
             bottom_hidden: false,
             maximized: None,
             tool_tabs: [0; 3],
+            events: Vec::new(),
         }
     }
 }
@@ -104,6 +160,8 @@ struct Signals {
     maximize: Cell<Option<ToolWindowAnchor>>,
     tab: Cell<Option<(ToolWindowAnchor, usize)>>,
     tabs: [usize; 3],
+    /// Events the headers report, appended to the state's.
+    events: RefCell<Vec<ToolWindowEvent>>,
 }
 struct Region<'a> {
     title: String,
@@ -112,6 +170,10 @@ struct Region<'a> {
     tabs: Option<Vec<String>>,
     padded: bool,
     icon: Option<Icon>,
+    contents: Option<&'a mut ContentManager>,
+    activate_number: Option<u8>,
+    title_group: Option<(&'a dyn ActionGroup, &'a DataContext)>,
+    options: Option<&'a dyn ActionGroup>,
 }
 
 /// A reusable window shell: optional toolbar and status bar, a center island, and
@@ -271,6 +333,58 @@ impl<'a> ToolWindowPane<'a> {
         self
     }
 
+    /// Declares a tool window from a caller-owned [`ToolWindow`]: its anchor, title, icon
+    /// and `Alt+digit` shortcut, and its [`ContentManager`] as header tabs. A tab the user
+    /// selects becomes the manager's selection; a closed one is removed from it (and
+    /// reported as [`ToolWindowEvent::ContentCloseRequested`]). The content itself still
+    /// comes from [`show_with`](Self::show_with) as [`ToolWindowPlace::Tool`].
+    pub fn tool_window(mut self, window: &'a mut ToolWindow) -> Self {
+        let mut declared = Region::declared(window.title.clone());
+        declared.icon = Some(window.icon);
+        declared.activate_number = window.activate_number;
+        let anchor = window.anchor;
+        declared.contents = Some(&mut window.contents);
+        *self.slot(anchor) = Some(declared);
+        self
+    }
+
+    /// Binds `Alt+digit` (1 to 9, IntelliJ `ActivateXToolWindow`) to `region`'s tool window:
+    /// it opens a hidden one, hides the active one and activates a visible one (reported
+    /// as [`ToolWindowEvent`]s). The stripe button's tooltip shows the shortcut. Call it
+    /// after declaring the region.
+    pub fn activate_with(mut self, region: ToolWindowAnchor, digit: u8) -> Self {
+        if let Some(slot) = self.slot(region) {
+            slot.activate_number = Some(digit.clamp(1, 9));
+        }
+        self
+    }
+
+    /// The actions of `region`'s tool window header, from an [`ActionGroup`] (IntelliJ place
+    /// `TOOLWINDOW_TITLE`), drawn as buttons next to the Maximize and Hide buttons under the
+    /// header's show-on-hover rules. Call it after declaring the region.
+    pub fn header_actions(
+        mut self,
+        region: ToolWindowAnchor,
+        group: &'a dyn ActionGroup,
+        data_context: &'a DataContext,
+    ) -> Self {
+        if let Some(slot) = self.slot(region) {
+            slot.title_group = Some((group, data_context));
+        }
+        self
+    }
+
+    /// The options menu of `region`'s tool window (place `TOOLWINDOW_POPUP`): the gear
+    /// button of its header and a right click on the header open it. Without one, a right
+    /// click is reported as [`ToolWindowEvent::HeaderMenuRequested`]. The actions get the
+    /// data context given to [`header_actions`](Self::header_actions) (or an empty one).
+    pub fn options_menu(mut self, region: ToolWindowAnchor, group: &'a dyn ActionGroup) -> Self {
+        if let Some(slot) = self.slot(region) {
+            slot.options = Some(group);
+        }
+        self
+    }
+
     /// Declares the window toolbar; its content comes from [`show_with`](Self::show_with)
     /// as [`ToolWindowPlace::Toolbar`].
     pub fn with_toolbar(mut self, chrome: IdeFrameDecorator) -> Self {
@@ -369,6 +483,10 @@ impl<'a> ToolWindowPane<'a> {
                 tabs: r.tabs,
                 padded: r.padded,
                 icon: r.icon,
+                contents: r.contents,
+                activate_number: r.activate_number,
+                title_group: r.title_group,
+                options: r.options,
             })
         };
         ToolWindowPane {
@@ -464,7 +582,14 @@ impl<'a> ToolWindowPane<'a> {
             maximize: Cell::new(None),
             tab: Cell::new(None),
             tabs: state.tool_tabs,
+            events: RefCell::new(Vec::new()),
         };
+        let present = [left.is_some(), right.is_some(), bottom.is_some()];
+        let numbers = [
+            left.as_ref().and_then(|r| r.activate_number),
+            right.as_ref().and_then(|r| r.activate_number),
+            bottom.as_ref().and_then(|r| r.activate_number),
+        ];
         let full = ui.available_rect_before_wrap();
         if frame_background {
             ui.painter()
@@ -480,9 +605,13 @@ impl<'a> ToolWindowPane<'a> {
         let button = |region: &Option<Region<'_>>, kind: ToolWindowAnchor, hidden: bool| {
             region.as_ref().and_then(|r| {
                 r.icon.map(|icon| {
-                    SquareStripeButton::new(icon, r.title.clone())
+                    let mut button = SquareStripeButton::new(icon, r.title.clone())
                         .open(!hidden)
-                        .active(!hidden && region_active(&ctx, id, kind))
+                        .active(!hidden && region_active(&ctx, id, kind));
+                    if let Some(digit) = r.activate_number {
+                        button = button.shortcut(format!("Alt+{digit}"));
+                    }
+                    button
                 })
             })
         };
@@ -490,6 +619,8 @@ impl<'a> ToolWindowPane<'a> {
         let left_bottom = button(&bottom, ToolWindowAnchor::Bottom, state.bottom_hidden);
         let right_top = button(&right, ToolWindowAnchor::Right, state.right_hidden);
         let mut toggled = None;
+        let mut closed = None;
+        let mut events: Vec<ToolWindowEvent> = Vec::new();
         if left_top.is_some() || left_bottom.is_some() {
             let stripe = egui::Rect::from_min_max(
                 full.min,
@@ -505,11 +636,34 @@ impl<'a> ToolWindowPane<'a> {
             if let Some(b) = left_bottom {
                 bar = bar.bottom(b);
             }
-            toggled = match bar.show(&mut column) {
-                Some(0) if has_top => Some(ToolWindowAnchor::Left),
-                Some(_) => Some(ToolWindowAnchor::Bottom),
-                None => None,
+            let anchor_of = |index: usize| {
+                if index == 0 && has_top {
+                    ToolWindowAnchor::Left
+                } else {
+                    ToolWindowAnchor::Bottom
+                }
             };
+            let response = bar.show_with_events(&mut column);
+            toggled = response.clicked.map(anchor_of);
+            closed = response.close_clicked.map(anchor_of);
+            if let Some((index, pos)) = response.popup {
+                events.push(ToolWindowEvent::StripeMenuRequested(anchor_of(index), pos));
+            }
+            if let Some((index, pos)) = response.dropped {
+                // The top half of the left stripe is the Left group, the bottom half the
+                // Bottom group.
+                let to = if pos.y < response.rect.center().y {
+                    ToolWindowAnchor::Left
+                } else {
+                    ToolWindowAnchor::Bottom
+                };
+                if to != anchor_of(index) {
+                    events.push(ToolWindowEvent::MovedToAnchor {
+                        window: anchor_of(index),
+                        to,
+                    });
+                }
+            }
         }
         if let Some(b) = right_top {
             let stripe = egui::Rect::from_min_max(
@@ -518,24 +672,52 @@ impl<'a> ToolWindowPane<'a> {
             );
             rect.max.x = stripe.left() - tokens::size::ISLAND_GAP;
             let mut column = ui.new_child(egui::UiBuilder::new().max_rect(stripe));
-            if ToolWindowToolbar::new(id.with("right-stripe"))
+            let response = ToolWindowToolbar::new(id.with("right-stripe"))
                 .top(b)
-                .show(&mut column)
-                .is_some()
-            {
+                .show_with_events(&mut column);
+            if response.clicked.is_some() {
                 toggled = Some(ToolWindowAnchor::Right);
+            }
+            if response.close_clicked.is_some() {
+                closed = Some(ToolWindowAnchor::Right);
+            }
+            if let Some((_, pos)) = response.popup {
+                events.push(ToolWindowEvent::StripeMenuRequested(
+                    ToolWindowAnchor::Right,
+                    pos,
+                ));
+            }
+            if let Some((_, _)) = response.dropped {
+                // Only the left stripe has two groups: a drop on the left stripe moves it.
+                if let Some(pos) = ui.input(|i| i.pointer.latest_pos())
+                    && pos.x < full.center().x
+                {
+                    events.push(ToolWindowEvent::MovedToAnchor {
+                        window: ToolWindowAnchor::Right,
+                        to: if pos.y < full.center().y {
+                            ToolWindowAnchor::Left
+                        } else {
+                            ToolWindowAnchor::Bottom
+                        },
+                    });
+                }
             }
         }
         if let Some(region) = toggled {
-            let hidden = match region {
-                ToolWindowAnchor::Left => &mut state.left_hidden,
-                ToolWindowAnchor::Right => &mut state.right_hidden,
-                ToolWindowAnchor::Bottom => &mut state.bottom_hidden,
-            };
-            *hidden = !*hidden;
-            if *hidden && state.maximized == Some(region) {
-                state.maximized = None;
+            if state.is_visible(region) {
+                state.hide(region);
+                events.push(ToolWindowEvent::Hidden(region));
+            } else {
+                state.show(region);
+                events.push(ToolWindowEvent::Activated(region));
             }
+        }
+        // A close click (middle button, or Shift and left) on a stripe button hides.
+        if let Some(region) = closed
+            && state.is_visible(region)
+        {
+            state.hide(region);
+            events.push(ToolWindowEvent::Hidden(region));
         }
         let maximized = state.maximized;
         let response = ui
@@ -671,19 +853,22 @@ impl<'a> ToolWindowPane<'a> {
             state.tool_tabs[region_index(region)] = tab;
         }
         if let Some(region) = signals.hide.get() {
-            match region {
-                ToolWindowAnchor::Left => state.left_hidden = true,
-                ToolWindowAnchor::Right => state.right_hidden = true,
-                ToolWindowAnchor::Bottom => state.bottom_hidden = true,
-            }
-            state.maximized = None;
+            state.hide(region);
+            events.push(ToolWindowEvent::Hidden(region));
         } else if let Some(region) = signals.maximize.get() {
             state.maximized = if maximized == Some(region) {
                 None
             } else {
                 Some(region)
             };
+            events.push(ToolWindowEvent::MaximizeToggled(
+                region,
+                state.maximized == Some(region),
+            ));
         }
+        events.extend(signals.events.take());
+        handle_keys(&ctx, id, state, &Keys { present, numbers }, &mut events);
+        state.events.extend(events);
         response
     }
 }
@@ -697,6 +882,10 @@ impl<'a> Region<'a> {
             tabs: None,
             padded: false,
             icon: None,
+            contents: None,
+            activate_number: None,
+            title_group: None,
+            options: None,
         }
     }
 
@@ -708,6 +897,10 @@ impl<'a> Region<'a> {
             tabs: None,
             padded: false,
             icon: None,
+            contents: None,
+            activate_number: None,
+            title_group: None,
+            options: None,
         }
     }
 
@@ -727,19 +920,54 @@ impl<'a> Region<'a> {
         );
         // As in the IntelliJ Islands UI, the header actions fade in while the pointer is
         // anywhere over the tool window (or focus is inside it) and fade out when it leaves.
-        let mut selected = signals.tabs[region_index(region)];
+        let mut contents = self.contents;
+        let (tabs, mut selected, closable) = match contents.as_deref().filter(|c| !c.is_empty()) {
+            Some(manager) => manager.tabs(),
+            None => (
+                self.tabs.unwrap_or_default(),
+                signals.tabs[region_index(region)],
+                Vec::new(),
+            ),
+        };
         let before = selected;
-        let tabs = self.tabs.unwrap_or_default();
+        let managed = contents.as_deref().is_some_and(|c| !c.is_empty());
+        let closed_tab = Cell::new(None);
         // Every island header is separated from its content by a hairline (the suite's
         // choice; Android Studio draws it only under content tabs).
         let mut panel = SimpleToolWindowPanel::new(self.title).header_separator(true);
         if !tabs.is_empty() {
-            panel = panel.tabs(&tabs, &mut selected);
+            panel = panel.tabs(&tabs, &mut selected).tab_closable(&closable);
+        }
+        let empty_context = DataContext::empty();
+        let (title_group, data_context) = match self.title_group {
+            Some((group, context)) => (Some(group), context),
+            None => (None, &empty_context),
+        };
+        if let Some(group) = title_group {
+            panel = panel.title_actions(group);
+        }
+        if let Some(group) = self.options {
+            panel = panel.popup_group(group);
         }
         panel
+            .data_context(data_context)
             .hover_actions(true)
             .padded(self.padded)
             .on_hide(|| hide.set(Some(region)))
+            .on_activate(|| {
+                signals
+                    .events
+                    .borrow_mut()
+                    .push(ToolWindowEvent::Activated(region));
+            })
+            .on_toggle_maximize(|| maximize.set(Some(region)))
+            .on_popup(|pos| {
+                signals
+                    .events
+                    .borrow_mut()
+                    .push(ToolWindowEvent::HeaderMenuRequested(region, pos));
+            })
+            .on_close_tab(|index| closed_tab.set(Some(index)))
             .actions(|ui| {
                 let custom = self.actions;
                 let button = ActionButton::new(Glyph::Fullscreen, label).with(HelpTooltip::new(
@@ -763,7 +991,23 @@ impl<'a> Region<'a> {
                     });
             });
         if selected != before {
-            signals.tab.set(Some((region, selected)));
+            if managed {
+                if let Some(manager) = contents.as_deref_mut() {
+                    manager.select_index(selected);
+                }
+            } else {
+                signals.tab.set(Some((region, selected)));
+            }
+            ui.ctx().request_repaint();
+        }
+        if let Some(index) = closed_tab.get() {
+            signals
+                .events
+                .borrow_mut()
+                .push(ToolWindowEvent::ContentCloseRequested(region, index));
+            if let Some(manager) = contents {
+                manager.remove_content(index);
+            }
             ui.ctx().request_repaint();
         }
         // Where the island is, to tell next frame whether the focus is in it.
@@ -800,4 +1044,122 @@ fn center_island(ui: &mut Ui, padded: bool, content: impl FnOnce(&mut Ui)) {
         ui.set_min_size(ui.available_size());
         content(ui);
     });
+}
+
+/// What [`handle_keys`] needs to know about the tool windows of this frame.
+struct Keys {
+    /// Which of left, right and bottom are declared.
+    present: [bool; 3],
+    /// Their `Alt+digit` shortcuts.
+    numbers: [Option<u8>; 3],
+}
+
+const ANCHORS: [ToolWindowAnchor; 3] = [
+    ToolWindowAnchor::Left,
+    ToolWindowAnchor::Right,
+    ToolWindowAnchor::Bottom,
+];
+
+fn digit_key(digit: u8) -> Option<egui::Key> {
+    use egui::Key::*;
+    Some(match digit {
+        1 => Num1,
+        2 => Num2,
+        3 => Num3,
+        4 => Num4,
+        5 => Num5,
+        6 => Num6,
+        7 => Num7,
+        8 => Num8,
+        9 => Num9,
+        _ => return None,
+    })
+}
+
+/// The keyboard of the tool windows (IntelliJ spec section 8.3): `Alt+digit` activates,
+/// `Shift+Esc` hides the active tool window, `Ctrl+Shift+F12` hides all, `Ctrl+Shift+'`
+/// maximizes the active one, and `Esc` in a tool window whose content did not use it asks
+/// to return to the editor. The layout changes are applied to `state`; everything is also
+/// pushed to `events`.
+fn handle_keys(
+    ctx: &egui::Context,
+    id: Id,
+    state: &mut ToolWindowPaneState,
+    keys: &Keys,
+    events: &mut Vec<ToolWindowEvent>,
+) {
+    use egui::{Key, Modifiers};
+    // Which tool window has the focus. egui drops the focus at the start of the frame an Esc
+    // arrives in (Shift+Esc too), so that frame uses the window that had it in the last one.
+    let memo = id.with("kit-active-region");
+    let escape_now = ctx.input(|i| i.key_pressed(Key::Escape));
+    let current = ANCHORS
+        .into_iter()
+        .zip(keys.present)
+        .find(|&(anchor, present)| {
+            present && state.is_visible(anchor) && region_active(ctx, id, anchor)
+        })
+        .map(|(anchor, _)| anchor);
+    // A text field that has the focus uses Esc itself (it publishes its IME area while
+    // focused), so Esc does not leave the tool window; same rule for the Esc frame.
+    let text_key = id.with("kit-text-focus");
+    let text_focused = if escape_now {
+        ctx.data(|d| d.get_temp::<bool>(text_key)).unwrap_or(false)
+    } else {
+        let now = ctx.output(|o| o.ime.is_some());
+        ctx.data_mut(|d| d.insert_temp(text_key, now));
+        now
+    };
+    let active = if escape_now {
+        ctx.data(|d| d.get_temp::<Option<ToolWindowAnchor>>(memo))
+            .flatten()
+            .filter(|&anchor| state.is_visible(anchor))
+    } else {
+        ctx.data_mut(|d| d.insert_temp(memo, current));
+        current
+    };
+    let consume = |modifiers: Modifiers, key: Key| ctx.input_mut(|i| i.consume_key(modifiers, key));
+
+    if consume(Modifiers::COMMAND | Modifiers::SHIFT, Key::F12) {
+        state.hide_all();
+        events.push(ToolWindowEvent::AllHidden);
+        return;
+    }
+    for (anchor, number) in ANCHORS.into_iter().zip(keys.numbers) {
+        let Some(key) = number.and_then(digit_key) else {
+            continue;
+        };
+        if !consume(Modifiers::ALT, key) {
+            continue;
+        }
+        if !state.is_visible(anchor) {
+            state.show(anchor);
+            events.push(ToolWindowEvent::Activated(anchor));
+        } else if active == Some(anchor) {
+            state.hide(anchor);
+            events.push(ToolWindowEvent::Hidden(anchor));
+        } else {
+            events.push(ToolWindowEvent::Activated(anchor));
+        }
+        return;
+    }
+    let Some(active) = active else {
+        return;
+    };
+    if consume(Modifiers::SHIFT, Key::Escape) {
+        state.hide(active);
+        events.push(ToolWindowEvent::Hidden(active));
+    } else if consume(Modifiers::COMMAND | Modifiers::SHIFT, Key::Quote) {
+        state.maximized = if state.maximized == Some(active) {
+            None
+        } else {
+            Some(active)
+        };
+        events.push(ToolWindowEvent::MaximizeToggled(
+            active,
+            state.maximized == Some(active),
+        ));
+    } else if !text_focused && ctx.input(|i| i.key_pressed(Key::Escape)) {
+        events.push(ToolWindowEvent::FocusEditor(active));
+    }
 }

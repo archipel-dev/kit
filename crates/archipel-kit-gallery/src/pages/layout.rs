@@ -5,6 +5,14 @@ pub(super) struct State {
     last_action: String,
     splits: [f32; 3],
     sidebar_collapsed: bool,
+    /// The one pixel splitter demo: its share, its orientation (Ctrl-click flips it) and
+    /// where `JBSplitter` keeps the share.
+    one_pixel: f32,
+    one_pixel_vertical: bool,
+    properties: archipel_kit::host::InMemoryProperties,
+    /// The status bar demo: the encoding, and the last thing the bar reported.
+    encoding: usize,
+    status: String,
 }
 
 impl Default for State {
@@ -14,6 +22,11 @@ impl Default for State {
             last_action: String::new(),
             splits: [0.25, 0.5, 0.5],
             sidebar_collapsed: false,
+            one_pixel: 0.5,
+            one_pixel_vertical: false,
+            properties: archipel_kit::host::InMemoryProperties::new(),
+            encoding: 0,
+            status: "Press a widget on the right".into(),
         }
     }
 }
@@ -88,6 +101,79 @@ impl State {
                         .enabled(enabled),
                 );
             });
+        });
+        ui.add(TitledSeparator::new("Status bar (StatusBar)"));
+        Surface::Chrome.frame(ui.ctx()).show(ui, |ui| {
+            use archipel_kit::wm::{
+                IconPresentation, MultipleTextValuesPresentation, StatusBar, StatusBarAnchor,
+                StatusBarWidgetItem, TextPresentation,
+            };
+            let out = StatusBar::new("gallery-status")
+                .info(self.status.clone())
+                .left_widget(StatusBarWidgetItem::new(
+                    "vcs",
+                    TextPresentation::new("main"),
+                ))
+                .widget(
+                    StatusBarWidgetItem::new(
+                        "position",
+                        TextPresentation::new("12:8")
+                            .max_value("9999:99")
+                            .alignment(1.0)
+                            .tooltip("Line:Column"),
+                    )
+                    .enabled(enabled),
+                )
+                .widget(
+                    StatusBarWidgetItem::new(
+                        "encoding",
+                        MultipleTextValuesPresentation::new(
+                            vec!["UTF-8".into(), "UTF-16".into(), "ISO-8859-1".into()],
+                            self.encoding,
+                        ),
+                    )
+                    .enabled(enabled),
+                )
+                .widget(
+                    StatusBarWidgetItem::new(
+                        "bell",
+                        IconPresentation::new(Glyph::Bell, "Notifications"),
+                    )
+                    .anchor(StatusBarAnchor::Before("encoding".into()))
+                    .enabled(enabled),
+                )
+                .show(ui);
+            if let Some(id) = out.activated {
+                self.status = format!("Pressed {id}");
+            }
+            if let Some((_, index)) = out.selected_value {
+                self.encoding = index;
+            }
+            if out.widgets_menu.is_some() {
+                self.status = "Right click: show the widgets menu".into();
+            }
+        });
+        ui.add(TitledSeparator::new(
+            "One pixel splitter (Ctrl-click flips)",
+        ));
+        ui.allocate_ui(egui::vec2(ui.available_width(), 120.0), |ui| {
+            let mut splitter = archipel_kit::openapi::ui::JBSplitter::horizontal(
+                "gallery-one-pixel",
+                &mut self.one_pixel,
+                "gallery.one.pixel.proportion",
+                &mut self.properties,
+            );
+            if self.one_pixel_vertical {
+                splitter = splitter.orientation(archipel_kit::openapi::ui::Orientation::Vertical);
+            }
+            let out = splitter
+                .allow_switch_orientation_by_mouse_click(true)
+                .label("Resize one pixel split")
+                .enabled(enabled)
+                .show(ui, |ui| ui.label("First"), |ui| ui.label("Second"));
+            if out.flip_orientation {
+                self.one_pixel_vertical = !self.one_pixel_vertical;
+            }
         });
         ui.add(TitledSeparator::new("Context menu"));
         ui.add(Button::secondary("Right-click me"))

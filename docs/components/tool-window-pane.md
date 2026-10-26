@@ -56,6 +56,97 @@ kept with the layout, and the next frame shows it.
 
 `ToolWindowPlace` is `Center`, `Tool(region)`, `ToolActions(region)` (header buttons of that tool window, before Maximize and Hide), `Toolbar` or `Status`.
 
+## Tool windows, contents and events
+
+`ToolWindow` (id, title, icon, `ToolWindowAnchor`, `activate_number`) and its `ContentManager`
+of `Content`s (the header tabs) are caller-owned state, like IntelliJ's `ToolWindow` and
+`ContentManager`; whether a window is shown is in `ToolWindowPaneState`, which plays
+`ToolWindowManager` (`is_visible`, `show`, `hide`, `hide_all`).
+
+```rust
+use archipel_kit::wm::{
+    Content, ToolWindow, ToolWindowAnchor, ToolWindowEvent, ToolWindowPane, ToolWindowPaneState,
+    ToolWindowPlace,
+};
+use archipel_kit::{Glyph, egui};
+
+struct App { layout: ToolWindowPaneState, problems: ToolWindow }
+
+fn window(ctx: &egui::Context, app: &mut App) {
+    let App { layout, problems } = app;
+    ToolWindowPane::new("ide", layout)
+        .tool_window(problems) // anchor, title, icon, Alt+6 and the header tabs
+        .show_with(ctx, &mut (), |place, ui, _| match place {
+            ToolWindowPlace::Center => { ui.label("Editor"); }
+            ToolWindowPlace::Tool(ToolWindowAnchor::Bottom) => { ui.label("No problems"); }
+            _ => {}
+        });
+    for event in layout.take_events() {
+        match event {
+            ToolWindowEvent::FocusEditor(_) => { /* focus the editor */ }
+            ToolWindowEvent::Activated(_anchor) => { /* focus the tool window's content */ }
+            _ => {}
+        }
+    }
+}
+
+fn setup() -> App {
+    let mut problems =
+        ToolWindow::new("problems", "Problems", Glyph::Warning, ToolWindowAnchor::Bottom)
+            .activate_number(6);
+    problems.contents.add_content(Content::new("file", "File"));
+    problems.contents.add_content(Content::new("project", "Project Errors"));
+    App { layout: ToolWindowPaneState::default(), problems }
+}
+```
+
+| Builder | Effect |
+|---|---|
+| `.tool_window(&mut ToolWindow)` | Declares the region from the description; its contents become the header tabs; selecting writes `ContentManager::select_index`, closing a closeable tab removes it. |
+| `.activate_with(region, digit)` | `Alt+digit` (the stripe tooltip shows it). |
+| `.header_actions(region, &dyn ActionGroup, &DataContext)` | Header buttons from an action group (place `TOOLWINDOW_TITLE`). |
+| `.options_menu(region, &dyn ActionGroup)` | The gear and the right click menu (place `TOOLWINDOW_POPUP`). |
+
+For other layouts, `ToolWindowToolbar::show_with_events(ui)` returns a `StripeResponse`
+(`clicked`, `close_clicked`, `popup`, `dropped`, `rect`) instead of just the clicked index.
+
+### Events and keys (IntelliJ spec sections 8.1 to 8.3)
+
+`ToolWindowPaneState::take_events()` returns what happened since the last call as
+`ToolWindowEvent`s; the pane applies the layout changes itself.
+
+| Input | Layout | Event |
+|---|---|---|
+| Left click on a header | | `Activated(anchor)` |
+| Double click on a header | toggles maximize | `MaximizeToggled(anchor, now_maximized)` |
+| Middle click or Shift + click on a header or stripe button | hides | `Hidden(anchor)` |
+| Right click on a header (no options menu) | | `HeaderMenuRequested(anchor, pos)` |
+| Stripe button: left click | toggles shown/hidden | `Activated` when shown, `Hidden` when hidden |
+| Stripe button: right click | | `StripeMenuRequested(anchor, pos)` |
+| Stripe button: drag more than 7 pt, drop on another group, <kbd>Esc</kbd> cancels | | `MovedToAnchor { window, to }` (the app moves the window) |
+| <kbd>Alt</kbd>+digit | hidden: shows; active: hides; visible: nothing | `Activated` / `Hidden` / `Activated` |
+| <kbd>Shift</kbd>+<kbd>Esc</kbd> | hides the active tool window | `Hidden(anchor)` |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F12</kbd> | hides all | `AllHidden` |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>'</kbd> | maximizes or restores the active one | `MaximizeToggled` |
+| <kbd>Esc</kbd> with the focus in a tool window and no text field focused | | `FocusEditor(anchor)` |
+| Middle or Shift + click on a closeable content tab | removes the content | `ContentCloseRequested(anchor, index)` |
+
+The active tool window is the one that has the keyboard focus. A text field that has the
+focus keeps <kbd>Esc</kbd> (it clears itself first). egui drops the focus on <kbd>Esc</kbd>, so the pane
+remembers which window had it in the previous frame.
+
+![Stripe drag dark](img/stripe_drag.dark.png)
+![Stripe drag light](img/stripe_drag.light.png)
+
+While a stripe button is dragged, a ghost of it follows the pointer and the stripe under the
+pointer is highlighted as the drop target.
+
+Deferred (no counterpart in the kit yet): the 13 pt resize zone at the top of a bottom tool
+window's header (the 4 pt gap between islands is the divider and already resizes),
+`ResizeToolWindow*` keyboard resizing, `JumpToLastWindow` (<kbd>F12</kbd>), the stripe "More" overflow button,
+sliding (floating) tool windows. A stripe click on a visible but inactive window hides it
+(the spec's "activate if inactive" would hide the button's toggle; kept as measured).
+
 ## Islands behavior
 
 As in the IntelliJ / Android Studio Islands UI:

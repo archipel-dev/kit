@@ -103,6 +103,30 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Button | 30 pt, radius 6, 20 pt icon, 40 pt pitch; first button 3 pt below the island's top | `SquareStripeButton` |
 | States | Open: pressed fill (~16 % white); active (focus in the tool window): accent fill, white icon; hover: `hover` fill; tooltip beside it at once | `SquareStripeButton::open`, `active` |
 
+### Window family behavior (IntelliJ spec)
+
+Behavior and numbers from the IntelliJ UX specification (sections 2, 8, 9, 12, 15.1). Where the
+spec and a measurement above differ, the measured Android Studio value stays and the spec value
+is listed as the difference.
+
+| Situation | IntelliJ spec | Kit |
+|---|---|---|
+| Tab press (spec 2.1) | Left press without Ctrl/Alt selects at once and focuses; a press on a tab button selects nothing | `JBTabs`: selected on press |
+| Tab close click (spec 2.1) | Middle button, or Shift + left press, closes and does not select | `JBTabsResponse::closed` |
+| Close button dead zone (spec 2.1, `TimedDeadzone.DEFAULT`) | 150 ms after the pointer enters the tab | `motion::TAB_CLOSE_DEADZONE`; the selected tab's always-shown button has none |
+| Tab arrow keys (spec 2.2) | Left/Right select the previous/next enabled tab and move the focus to it | `JBTabs` |
+| Tab drag (spec 0.2, 2.1) | Dead zone 7 px; neighbors swap when the dragged tab's center crosses them; order committed on release | `tab::DRAG_DEADZONE`, `JBTabsResponse::moved` |
+| Tab width (spec 2.1) | At most 300 | `tab::MAX_WIDTH`, title cut with an ellipsis |
+| Tab height (spec 2.3, 15.1) | `TabbedPane.tabHeight` 40; Islands tab insets (-6, 8, -6, 8) | Header 40 (`size::HEADER_HEIGHT`), pills 28 pt with 8 pt padding: measured values kept |
+| Selected tab (spec 2.3) | Islands selected fill `#E3EBFE` / `#233558`, border `#A7C5FF` / `#2E4D89`, hover `#00000012` / `#FFFFFF17` | `Colors::tab_selected`, `tab_selected_border`, `hover` (already equal) |
+| Island geometry (spec 15.1) | `Island.arc` 20, `borderWidth` 6, `Component.arc` 8 | Radius 10 and a 4 pt gap: measured on Android Studio and kept |
+| Tool window header (spec 8.1) | Height 40/41; a click activates, a close click hides, a double click maximizes, a popup trigger opens the options menu; Esc/Alt+digit/Shift+Esc/Ctrl+Shift+F12 | `SimpleToolWindowPanel`, `ToolWindowPane`, `ToolWindowEvent` |
+| Stripe button (spec 8.2) | 37 x 40 (Islands), 20 px icon, left click toggles, middle/Shift hides, right click menu, drag 7 px between stripes with a ghost, Esc cancels | 30 pt button on a 40 pt pitch (measured, kept); the behavior is `ToolWindowToolbar::show_with_events` |
+| Stripe selected look (spec 8.2) | Selected `#3871E1` with a white icon, unselected icon `#5F6269` | Open: pressed fill; active: accent fill (measured, kept) |
+| Status bar widgets (spec 9) | Text insets (6, 8), hover/press arc 4 on the right panel only, one hover token for press, focus ring arc 10, press (not release) acts, Left/Right move focus, Esc leaves | `StatusBar`, `StatusBarWidget`, `radius::STATUS_FOCUS`; insets 6 pt and 21 pt height measured, kept |
+| Status bar edges (spec 9) | 10 pt outer padding | 8 pt from the window edge (measured), supplied by `ToolWindowPane::status` |
+| Splitter (spec 12) | `Splitter` divider 7; `OnePixelSplitter` 1 px with a 6 px hit zone; double click resets to 0.5; Ctrl/Cmd+click flips the orientation; `JBSplitter` persists by key | `DividerStyle`, `size::SPLIT_CLASSIC_DIVIDER`, `SPLIT_ONE_PIXEL`, `SPLIT_MOUSE_ZONE`, `JBSplitter`; the Islands gap stays 4 pt |
+
 ### Form controls (Settings dialog)
 
 | Situation | Android Studio | Kit |

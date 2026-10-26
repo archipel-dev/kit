@@ -6,7 +6,9 @@ use crate::ide::HelpTooltip;
 use crate::parts::Tone;
 use crate::theme::Theme;
 use crate::tokens::{radius, stripe};
-use egui::{Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2};
+use egui::{
+    Id, Order, Pos2, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
+};
 
 /// One button of a [`ToolWindowToolbar`]: a tool window's icon, name and shortcut.
 #[derive(Debug, Clone)]
@@ -110,14 +112,30 @@ impl ToolWindowToolbar {
     }
 
     /// Draws the stripe in the full height of `ui`, [`stripe::WIDTH`] wide. Returns the
-    /// index of the button clicked this frame (top group first, then bottom group).
+    /// index of the button clicked this frame (top group first, then bottom group). A close
+    /// click (middle button, or Shift and the left button) is not a click: see
+    /// [`show_with_events`](Self::show_with_events).
     pub fn show(self, ui: &mut Ui) -> Option<usize> {
+        self.show_with_events(ui).clicked
+    }
+
+    /// Like [`show`](Self::show), and reports everything the user did with the stripe's
+    /// buttons: the click that toggles, the close click that hides, the popup trigger and a
+    /// drag that was dropped (see [`StripeResponse`]).
+    pub fn show_with_events(self, ui: &mut Ui) -> StripeResponse {
+        let colors = Theme::colors(ui.ctx());
         let (rect, _) = ui.allocate_exact_size(
             vec2(stripe::WIDTH, ui.available_height().max(stripe::PITCH)),
             Sense::hover(),
         );
         let x = rect.center().x;
-        let mut clicked = None;
+        let mut out = StripeResponse {
+            rect,
+            clicked: None,
+            close_clicked: None,
+            popup: None,
+            dropped: None,
+        };
         let count_top = self.top.len();
         let bottom = self.bottom.len();
         let placed = self
@@ -136,17 +154,118 @@ impl ToolWindowToolbar {
                     + stripe::PADDING;
                 (count_top + index, rect.bottom() - from_bottom, button)
             }));
+        let modifiers = crate::wm::action_rows::pointer_event_modifiers(ui);
+        let dragging_any: bool = ui.ctx().data(|d| d.get_temp(drag_flag())).unwrap_or(false);
         for (index, y, button) in placed {
             let place = Rect::from_center_size(
                 pos2(x, y + stripe::BUTTON / 2.0),
                 vec2(stripe::BUTTON, stripe::BUTTON),
             );
-            if ui.put(place, button.id_salt(self.id.with(index))).clicked() {
-                clicked = Some(index);
+            let icon = button.icon;
+            let response = ui.put(place, button.id_salt(self.id.with(index)));
+            let pointer = ui.input(|i| i.pointer.latest_pos());
+            // Only the left button toggles; the close click (middle, or Shift and left)
+            // hides; the popup trigger asks for the button's menu.
+            if response.clicked() {
+                if modifiers.shift {
+                    out.close_clicked = Some(index);
+                } else {
+                    out.clicked = Some(index);
+                }
+            }
+            if response.middle_clicked() {
+                out.close_clicked = Some(index);
+            }
+            if response.secondary_clicked() {
+                out.popup = Some((index, pointer.unwrap_or(place.center())));
+            }
+            // A drag starts 7 px from the press; a ghost of the button follows the pointer;
+            // Esc cancels; a release drops it where the pointer is.
+            let cancelled_id = self.id.with(("drag-cancelled", index));
+            if response.dragged() {
+                let origin = ui.input(|i| i.pointer.press_origin());
+                let beyond = matches!((origin, pointer), (Some(a), Some(b)) if a.distance(b) > stripe::DRAG_DEADZONE);
+                let cancelled: bool = ui.data(|d| d.get_temp(cancelled_id)).unwrap_or(false);
+                if beyond && !cancelled {
+                    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        ui.data_mut(|d| d.insert_temp(cancelled_id, true));
+                        ui.ctx().data_mut(|d| d.insert_temp(drag_flag(), false));
+                    } else {
+                        ui.ctx().data_mut(|d| d.insert_temp(drag_flag(), true));
+                        ui.data_mut(|d| d.insert_temp(self.id.with(("dragging", index)), true));
+                        if let Some(pointer) = pointer {
+                            let painter = ui.ctx().layer_painter(egui::LayerId::new(
+                                Order::Tooltip,
+                                Id::new("archipel-stripe-ghost"),
+                            ));
+                            let ghost = Rect::from_center_size(
+                                pointer,
+                                vec2(stripe::BUTTON, stripe::BUTTON),
+                            );
+                            painter.rect_filled(
+                                ghost,
+                                radius::ICON_BUTTON,
+                                colors.accent.gamma_multiply(0.5),
+                            );
+                            icons::paint(
+                                &painter,
+                                Rect::from_center_size(pointer, vec2(stripe::ICON, stripe::ICON)),
+                                icon,
+                                colors.text_on_accent,
+                            );
+                        }
+                    }
+                }
+            }
+            if response.drag_stopped() {
+                let was_dragging: bool = ui
+                    .data(|d| d.get_temp(self.id.with(("dragging", index))))
+                    .unwrap_or(false);
+                // An Esc in the frame of the release cancels too.
+                let cancelled = ui.data(|d| d.get_temp(cancelled_id)).unwrap_or(false)
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape));
+                if was_dragging && !cancelled {
+                    out.dropped = Some((index, pointer.unwrap_or(place.center())));
+                }
+                ui.data_mut(|d| {
+                    d.remove::<bool>(self.id.with(("dragging", index)));
+                    d.remove::<bool>(cancelled_id);
+                });
+                ui.ctx().data_mut(|d| d.insert_temp(drag_flag(), false));
             }
         }
-        clicked
+        // While a button is dragged, the stripe under the pointer is the drop target.
+        if dragging_any && ui.rect_contains_pointer(rect) {
+            ui.painter().rect_filled(
+                rect.shrink2(vec2(2.0, 0.0)),
+                radius::ICON_BUTTON,
+                colors.accent.gamma_multiply(0.18),
+            );
+        }
+        out
     }
+}
+
+/// The id of the context-wide flag that says a stripe button is being dragged.
+fn drag_flag() -> Id {
+    Id::new("archipel-stripe-drag")
+}
+
+/// What the user did with a [`ToolWindowToolbar`]'s buttons this frame. Indices count the
+/// top group first, then the bottom group.
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct StripeResponse {
+    /// The stripe's area.
+    pub rect: Rect,
+    /// A button clicked with the left button: toggles its tool window.
+    pub clicked: Option<usize>,
+    /// A close click (middle button, or Shift and the left button): hides its tool window.
+    pub close_clicked: Option<usize>,
+    /// A popup trigger (right click) on a button, and where.
+    pub popup: Option<(usize, Pos2)>,
+    /// A button dragged more than 7 px and dropped, and where the pointer was.
+    pub dropped: Option<(usize, Pos2)>,
 }
 
 /// A stripe button on its own, [`stripe::BUTTON`] square, for a stripe laid out by the
@@ -154,13 +273,17 @@ impl ToolWindowToolbar {
 impl Widget for SquareStripeButton {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
+        // Click, and drag to another stripe group (reported by the `ToolWindowToolbar`).
         let (rect, response) = match self.id_salt {
             Some(id) => {
                 let rect = ui.available_rect_before_wrap();
                 let rect = Rect::from_min_size(rect.min, vec2(stripe::BUTTON, stripe::BUTTON));
-                (rect, ui.interact(rect, id, Sense::click()))
+                (rect, ui.interact(rect, id, Sense::click_and_drag()))
             }
-            None => ui.allocate_exact_size(vec2(stripe::BUTTON, stripe::BUTTON), Sense::click()),
+            None => ui.allocate_exact_size(
+                vec2(stripe::BUTTON, stripe::BUTTON),
+                Sense::click_and_drag(),
+            ),
         };
         let enabled = response.enabled();
         crate::cursor::on_hover_action(&response);

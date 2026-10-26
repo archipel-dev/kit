@@ -3,7 +3,8 @@
 //! | Item | Use it for |
 //! |---|---|
 //! | [`ComboBox`] | Picking one value from a list. |
-//! | [`Splitter`] ([`SplitterResponse`], [`Orientation`], [`Side`]) | Two panes with a draggable divider. |
+//! | [`Splitter`] ([`SplitterResponse`], [`Orientation`], [`Side`], [`DividerStyle`], [`LackOfSpaceStrategy`]) | Two panes with a draggable divider. |
+//! | [`OnePixelSplitter`], [`JBSplitter`] | A splitter with a 1 pt line (and one that remembers its share). |
 //! | [`DialogWrapper`] ([`ExitCode`], [`MessageIcon`]) | A modal dialog with its buttons. |
 //! | [`Messages`] | Ready-made info, error, OK/cancel and yes/no dialogs. |
 //! | [`ValidationInfo`] ([`DialogValidation`]) | What is wrong with a dialog's input, debounced. |
@@ -11,6 +12,7 @@
 mod combo_box;
 mod dialog_wrapper;
 mod messages;
+mod one_pixel_splitter;
 mod splitter;
 mod validation;
 
@@ -20,5 +22,8 @@ pub use dialog_wrapper::{
     OK_EXIT_CODE,
 };
 pub use messages::Messages;
-pub use splitter::{Orientation, Side, Splitter, SplitterResponse};
+pub use one_pixel_splitter::{JBSplitter, OnePixelSplitter};
+pub use splitter::{
+    DividerStyle, LackOfSpaceStrategy, Orientation, Side, Splitter, SplitterResponse,
+};
 pub use validation::{DialogValidation, ValidationInfo};
