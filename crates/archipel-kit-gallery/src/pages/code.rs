@@ -1,5 +1,5 @@
 use super::*;
-use archipel_kit::editor::model::Editor;
+use archipel_kit::editor::model::{Editor, SearchHistory};
 use archipel_kit::editor::{
     ChangeKind, ChangeMarker, GutterIcon, HighlightSeverity, JavaScript, RangeHighlight,
 };
@@ -29,6 +29,7 @@ pub(super) struct State {
     markers: Vec<ChangeMarker>,
     highlights: Vec<RangeHighlight>,
     clicked: String,
+    history: SearchHistory,
     url_bar: UrlBar,
     header: String,
 }
@@ -54,6 +55,7 @@ impl Default for State {
                 RangeHighlight::new(97..104, HighlightSeverity::Warning).message("Unused"),
             ],
             clicked: String::new(),
+            history: SearchHistory::new(),
             url_bar: UrlBar {
                 url: "{{base_url}}/users/{{user_id}}?key={{token}}&q={{missing}}".into(),
                 ..UrlBar::default()
@@ -80,7 +82,9 @@ impl State {
                 .enabled(enabled),
         );
         ui.add(TitledSeparator::new("Viewer"));
+        ui.label("Ctrl+F finds in the viewer (Enter and F3 step, Alt+C / Alt+W / Alt+X toggle Match Case, Words and Regex, Esc closes); the editor below also has Ctrl+R to replace.");
         EditorComponent::new(&mut self.viewer)
+            .search_history(&mut self.history)
             .label("Response body")
             .highlighter(&Json)
             .viewer(true)
@@ -111,6 +115,7 @@ impl State {
         ui.add(TitledSeparator::new("Editor"));
         ui.add(
             EditorComponent::new(&mut self.editor)
+                .search_history(&mut self.history)
                 .label("Request body")
                 .highlighter(&Json)
                 .line_numbers(true)

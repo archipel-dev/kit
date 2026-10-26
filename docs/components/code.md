@@ -165,7 +165,7 @@ hand over a fold placeholder.
 </picture>
 
 - **Highlights**: matched braces (the unmatched one in the invalid color), occurrences of a
-  selected single-line text elsewhere (at most 50), find matches (the current one stronger),
+  selected single-line text elsewhere (at most 50), find matches (the current one is the selection with a box),
   indent guides (the caret's block in a stronger color), the right margin line, whitespace.
 - **Fold placeholder**: the region's placeholder (`{...}`) on the folded background with a
   2 px border ring, full row height.
@@ -214,18 +214,78 @@ it. Resting the pointer on a range reports `hover` with the index of the highlig
 Indent guides, the right margin and whitespace are painted under the text: `.indent_guides(false)`,
 `.right_margin(false)` and `.show_whitespace(true)` switch them.
 
-### Find
+### Find and replace
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/code_view_find.dark.png">
-  <img alt="The find bar over a viewer, all matches highlighted and the current one stronger" src="img/code_view_find.light.png" width="360">
+  <img alt="The find bar docked above a viewer: the first match selected with a box, the others highlighted, the status 1/3" src="img/code_view_find.light.png" width="480">
 </picture>
 
-<kbd>Ctrl</kbd>+<kbd>F</kbd> opens a find bar built from kit components: a `JBTextField`, the match
-count and `ActionButton`s. All matches are highlighted, the current one stronger. <kbd>Enter</kbd>
-and <kbd>Shift</kbd>+<kbd>Enter</kbd> (or the arrows) step through the matches, scrolling and
-unfolding to show them; <kbd>Esc</kbd> closes the bar. Matching ignores ASCII case and stops at
-100 000 matches.
+The bar is a header docked at the top of the editor, full width, pushing the text down (IntelliJ
+`EditorSearchSession`, spec §7). It is built from kit components: a `JBTextField` for the query with
+the history button before it, the toggles **Cc** (Match Case), **W** (Words) and **.\*** (Regex),
+the status text, `ActionButton`s for Previous, Next and Close. <kbd>Ctrl</kbd>+<kbd>R</kbd> adds a
+second row with the replace field, **Replace**, **Replace All** and the **AB** (Preserve Case)
+toggle. A viewer has the find row only: find works, replace is hidden and its keys do nothing.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_find_replace.dark.png">
+  <img alt="The find bar with the replace row: query sum with Match Case on, replacement total, 3 matches with the first selected" src="img/editor_find_replace.light.png" width="480">
+</picture>
+
+**The current match is the editor's selection** (the Islands rounded selection plus a box in the
+caret color); the other matches have the search highlight color and a 2 px mark on the error
+stripe (`search_stripe`). There is no separate "current index": next and previous select the next
+match, so the carets, copy and Replace all work on it.
+
+| Key or action | Effect |
+|---|---|
+| <kbd>Ctrl</kbd>+<kbd>F</kbd> (<kbd>Alt</kbd>+<kbd>F3</kbd>), <kbd>Cmd</kbd>+<kbd>F</kbd> | Opens the bar (find row) and focuses the query field with its text selected. A single-line selection becomes the query; a multi-line selection becomes the **scope** ("Search in selection..."); otherwise the previous query stays. The word at the caret is not taken. While the bar is open in replace mode it switches to find mode. |
+| <kbd>Ctrl</kbd>+<kbd>R</kbd>, <kbd>Cmd</kbd>+<kbd>R</kbd> | Opens the bar with the replace row (find row only in a viewer). |
+| Typing in the query field, or a toggle | Results update live: the first match at or after the caret is selected and scrolled to (the view animates and unfolds as a find jump does); a query without a match puts the carets back where they were; clearing the query restores the original carets and scroll position. |
+| <kbd>Enter</kbd> / <kbd>Down</kbd>, <kbd>Shift</kbd>+<kbd>Enter</kbd> / <kbd>Up</kbd> in the query field | Next / previous match. Next on the last match shows the hint `"query" not found, press F3 to search from the top` in `EditorComponentResponse::hint`; the **second** press wraps to the first match. Previous says `Shift+F3` and `the bottom`. Moving the carets in between cancels the wrap. |
+| <kbd>F3</kbd> / <kbd>Shift</kbd>+<kbd>F3</kbd>, <kbd>Ctrl</kbd>+<kbd>L</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>, <kbd>Cmd</kbd>+<kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>G</kbd> | The same from the editor, with the bar closed too (the last query is used and the bar opens without taking the focus). The hint names the key of the platform. |
+| <kbd>Ctrl</kbd>+<kbd>F3</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F3</kbd> | Find the word at the caret, forward / backward (as whole word). |
+| <kbd>Ctrl</kbd>+<kbd>Enter</kbd> (<kbd>Cmd</kbd>+<kbd>Enter</kbd>) | Accepts the query: adds it to the history and moves the focus to the editor; with an empty query it closes the bar. |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> | Inserts a line break into the query; the field grows (up to 4 lines) and the match can span lines. |
+| <kbd>Alt</kbd>+<kbd>Enter</kbd> | **Select all occurrences**: one caret with a selection per match (at most the model's 1000 carets) and the focus goes to the editor, so typing edits all of them. |
+| <kbd>Alt</kbd>+<kbd>C</kbd>, <kbd>Alt</kbd>+<kbd>W</kbd>, <kbd>Alt</kbd>+<kbd>X</kbd> | Toggle Match Case, Words, Regex (in a field of the bar). |
+| <kbd>Alt</kbd>+<kbd>Down</kbd> or the history button | Opens the history popup (recent queries, newest first); <kbd>Up</kbd>/<kbd>Down</kbd> and <kbd>Enter</kbd> or a click choose, <kbd>Esc</kbd> closes only the popup. |
+| <kbd>Esc</kbd> or the close button | Closes the bar (the completion list closes first), remembers the query in the history and gives the focus back to the editor; the current match stays selected. |
+| <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | Between the query and the replace field. |
+| <kbd>Enter</kbd> in the replace field, **Replace** | Replaces the current match (when the selection is not a match the first press only selects the next one), then selects the next match, wrapping silently. Each replace is an undo step. |
+| <kbd>Alt</kbd>+<kbd>A</kbd>, **Replace All** | Replaces every match inside the scope as **one** undo step and reports `N occurrences replaced` as the hint. |
+| <kbd>Alt</kbd>+<kbd>P</kbd>, **AB** | Preserve Case: the replacement is upper case for an upper case match, lower case for a lower case one and capitalized for a capitalized one; other shapes keep it as written. |
+
+**Matching** (`model::search`): case-insensitive by default with Unicode case folding (`É` finds
+`é`); Match Case makes it exact. Words needs identifier boundaries before and after the match.
+Regex uses the Rust `regex` syntax (close to Java's; `^` and `$` match at line breaks); in the
+replacement `$1`, `${name}`, `\n`, `\t` and `\\` are expanded, with Regex off the replacement is
+literal. Empty matches are not shown. At most **10 000** matches are collected; the status then
+reads `1/10000+`.
+
+**Status text**: `n/m` when the selection is a match, `m results` / `1 result` / `0 results`
+otherwise, `Bad pattern` for a regular expression that does not compile and `Vague pattern` for
+one that matches the empty text (`|`). A bad pattern or no match turns the query field red.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_find_not_found.dark.png">
+  <img alt="The query field in the not-found state with the status Bad pattern" src="img/editor_find_not_found.light.png" width="480">
+</picture>
+
+**History** is the caller's: `EditorComponent::search_history(&mut SearchHistory)` (recent queries
+and replacements, 20 each, newest first, no duplicates); without it the component keeps one for
+the egui context. `SearchHistory::load` / `save` store it in any `host::PropertiesComponent`.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_find_history.dark.png">
+  <img alt="The history popup under the query field listing three recent queries" src="img/editor_find_history.light.png" width="480">
+</picture>
+
+Not implemented: the Exclude button and strike-through of excluded matches, the filter and More
+menus (scroll to results while typing is always on), the "Click to highlight" link past 10 000
+matches, empty-match boxes, and a 30 ms delay before a typed query is applied (results are
+cached per query and recomputed in the frame, so there is nothing to wait for).
 
 ### Folding
 
@@ -541,15 +601,17 @@ same wiring.
 - The text is a monospace grid: tabs expand to the model's tab size and every `char` takes one
   cell, so wide or combining characters are approximate.
 - Nothing is stored in the kit: the document, carets, folds and settings are the caller's
-  `Editor`; the scroll offset, the find bar and the blink live in the egui context, keyed by
+  `Editor`; the scroll offset, the find bar's state and the blink live in the egui context, keyed by
   the component's id.
 
 ## Accessibility
 
 A viewer is a `Document` and an editor a `TextInput`, both named by `.label(...)` with the
 text as their value (up to 64 KB). The fold chevrons and gutter icons are buttons ("Fold lines
-3 to 9", "Breakpoint on line 12"). The find bar's field is "Find"; its buttons are "Previous
-match", "Next match" and "Close find".
+3 to 9", "Breakpoint on line 12"). The find bar's fields are "Find" and "Replace with"; its buttons are "Search history",
+"Previous match", "Next match", "Close find", "Replace" and "Replace All", and its toggles
+"Match Case", "Words", "Regex" and "Preserve Case" report their state. The status text
+is a label.
 
 ## Testing
 

@@ -21,6 +21,9 @@ pub(crate) struct PaintOpts {
     pub indent_guides: bool,
     pub right_margin: bool,
     pub focused: bool,
+    /// The selection shows in its focused color without the text having the focus: the
+    /// find bar's field has it, and the current match is the selection.
+    pub selection_active: bool,
     pub enabled: bool,
     pub caret_visible: bool,
 }
@@ -217,12 +220,9 @@ pub(crate) fn paint(input: &PaintInput<'_>) -> PaintOut {
         colors.rename_occurrence,
         colors.rename_occurrence,
     );
-    paint_ranges(
-        input.find,
-        input.find_current,
-        colors.search_result,
-        colors.search_result_current,
-    );
+    // Every match has the search color; the current one is the selection and gets a box
+    // (painted after the selection).
+    paint_ranges(input.find, None, colors.search_result, colors.search_result);
     // Matched braces.
     if let Some(pair) = input.brace
         && pair.partner.is_some()
@@ -260,7 +260,7 @@ pub(crate) fn paint(input: &PaintInput<'_>) -> PaintOut {
     }
 
     // ---- selection --------------------------------------------------------------------
-    let fill = if opts.focused {
+    let fill = if opts.focused || opts.selection_active {
         colors.selection
     } else {
         colors.selection_inactive
@@ -325,6 +325,31 @@ pub(crate) fn paint(input: &PaintInput<'_>) -> PaintOut {
                 last_row = Some(r.row);
             }
             flush(&mut run, run_top);
+        }
+    }
+
+    // ---- the current search match: a rounded box in the caret color ------------------------
+    if let Some(m) = input.find_current.and_then(|i| input.find.get(i)) {
+        let box_radius = CornerRadius::same(
+            (crate::tokens::size::CODE_LINE_HEIGHT / metrics::SELECTION_RADIUS_DIVISOR).round()
+                as u8,
+        );
+        for r in &rows {
+            let layout = &lines[r.line];
+            let (lo, hi) = (layout.first_offset, layout.last_offset);
+            if m.end <= lo || m.start > hi {
+                continue;
+            }
+            let a = layout.col_of(m.start.max(lo)).max(r.c0);
+            let b = layout.col_of(m.end.min(hi)).min(r.c1);
+            if a < b {
+                painter.rect_stroke(
+                    row_rect(r, a, b),
+                    box_radius,
+                    Stroke::new(1.0_f32, colors.caret),
+                    egui::StrokeKind::Inside,
+                );
+            }
         }
     }
 

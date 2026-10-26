@@ -800,4 +800,23 @@ pub mod editor {
     /// Selection occurrences are highlighted only while there are at most this many
     /// (`editor.highlight.selected.text.max.occurrences.threshold`).
     pub const MAX_SELECTION_OCCURRENCES: usize = 50;
+    /// Height of one row of the find bar: the field (`CONTROL_HEIGHT`) and 4 above and below
+    /// (spec §7: the field inset of the new UI is 7,10,7,8; the kit's field already carries
+    /// its own focus inset, so the row adds 4).
+    pub const FIND_ROW_HEIGHT: f32 = 36.0;
+    /// Space left of the find bar's first control (spec §7 field inset, left 10).
+    pub const FIND_INSET_LEFT: f32 = 10.0;
+    /// Space right of the find bar's last control (spec §7 field inset, right 8).
+    pub const FIND_INSET_RIGHT: f32 = 8.0;
+    /// Width reserved for the status text ("1234/10000+", "Bad pattern").
+    pub const FIND_STATUS_WIDTH: f32 = 84.0;
+    /// The status text shrinks to this in a narrow bar.
+    pub const FIND_STATUS_MIN_WIDTH: f32 = 44.0;
+    /// Width of the controls around the status text and the field in the find bar's first
+    /// row: what is left of the row beyond it goes to the status text, up to its width.
+    pub const FIND_NARROW_RESERVE: f32 = 330.0;
+    /// The query field grows with its lines (Ctrl+Shift+Enter) up to this many.
+    pub const FIND_MAX_QUERY_ROWS: usize = 4;
+    /// Width of the history popup's rows when the field is narrower.
+    pub const FIND_HISTORY_MIN_WIDTH: f32 = 180.0;
 }

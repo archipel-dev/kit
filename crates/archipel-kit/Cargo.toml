@@ -19,6 +19,8 @@ archipel-icons = { path = "../archipel-icons", features = ["egui"] }
 egui = { workspace = true, features = ["accesskit"] }
 egui_kittest = { workspace = true, optional = true }
 serde = { version = "1", features = ["derive"] }
+# Find and replace: Unicode case folding and the regex option (JetBrains uses Java regex).
+regex = { version = "1", default-features = false, features = ["std", "unicode", "perf"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
