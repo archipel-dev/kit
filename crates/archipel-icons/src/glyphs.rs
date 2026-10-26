@@ -649,6 +649,88 @@ glyphs! {
         }
     }
 
+    Agents {
+        /// Robot head with an antenna: an AI agent (a worker, not a person).
+        Agent "agent" ["ai", "assistant", "worker", "bot", "robot"] {
+            ink(rect(2.5, 5.5, 13.5, 13.5, 2.5)),
+            ink(line(&[(8.0, 5.5), (8.0, 3.5)])),
+            dot(8.0, 2.5, 1.0),
+            dot(5.5, 9.5, 1.0),
+            dot(10.5, 9.5, 1.0),
+        }
+        /// Two agent heads, one behind the other: agents mode, several agents.
+        Agents "agents" ["agents mode", "orchestrator", "multi-agent", "team", "swarm"] {
+            ink(rect(2.5, 6.5, 10.5, 13.5, 2.0)),
+            ink(line(&[(5.5, 6.5), (5.5, 3.5), (6.5, 2.5), (12.5, 2.5), (13.5, 3.5), (13.5, 9.5), (12.5, 10.5), (10.5, 10.5)])),
+            dot(5.0, 10.0, 0.9),
+            dot(8.0, 10.0, 0.9),
+        }
+        /// Checklist with a done and an open item: task, to-do.
+        Task "task" ["todo", "to-do", "checklist", "plan", "step"] {
+            ink(line(&[(2.5, 4.5), (4.0, 6.0), (6.5, 2.5)])),
+            ink(line(&[(9.0, 4.5), (13.5, 4.5)])),
+            ink(rect(2.5, 9.5, 6.5, 13.5, 1.0)),
+            ink(line(&[(9.0, 11.5), (13.5, 11.5)])),
+        }
+        /// Branch nodes joined to a folder: a worktree, a branch with its own folder.
+        Worktree "worktree" ["git worktree", "checkout", "workspace", "branch folder"] {
+            ink(circle(3.5, 4.0, 1.75)),
+            ink(circle(3.5, 10.5, 1.75)),
+            ink(line(&[(3.5, 5.75), (3.5, 8.75)])),
+            ink(line(&[(5.25, 10.5), (7.5, 10.5)])),
+            ink(poly(&[(7.5, 6.5), (9.5, 6.5), (10.5, 7.5), (14.5, 7.5), (14.5, 13.5), (7.5, 13.5)])),
+        }
+        /// One node fanning out to three: one prompt sent to several agents.
+        FanOut "fan-out" ["broadcast", "parallel", "split", "dispatch", "best of n"] {
+            dot(3.5, 8.0, 2.0),
+            ink(line(&[(5.5, 8.0), (11.0, 8.0)])),
+            ink(line(&[(5.0, 6.75), (8.0, 3.5), (11.0, 3.5)])),
+            ink(line(&[(5.0, 9.25), (8.0, 12.5), (11.0, 12.5)])),
+            ink(circle(12.5, 3.5, 1.5)),
+            ink(circle(12.5, 8.0, 1.5)),
+            ink(circle(12.5, 12.5, 1.5)),
+        }
+        /// A node with a line to a smaller box below: a sub-agent spawned.
+        Spawn "spawn" ["sub-agent", "subagent", "child", "delegate", "launch agent"] {
+            ink(circle(3.5, 3.5, 1.75)),
+            ink(line(&[(3.5, 5.25), (3.5, 11.0), (4.5, 12.0), (9.5, 12.0)])),
+            ink(rect(9.5, 9.5, 14.5, 14.5, 1.5)),
+        }
+        /// Filled dot: unread, new activity.
+        Unread "unread" ["badge", "new", "dot", "notification"] {
+            fill(circle(8.0, 8.0, 3.5), Tone::Info),
+        }
+        /// Rounded bubble with dots and a trailing ring: thinking, reasoning.
+        Thinking "thinking" ["reasoning", "thought", "chain of thought", "reflect"] {
+            ink(rect(2.5, 2.5, 13.5, 9.5, 3.5)),
+            dot(5.5, 6.0, 0.75),
+            dot(8.0, 6.0, 0.75),
+            dot(10.5, 6.0, 0.75),
+            ink(circle(5.0, 12.0, 1.25)),
+        }
+        /// Wrench: a tool call.
+        Tool "tool" ["tool call", "wrench", "function call", "utility"] {
+            ink(arc(10.5, 5.5, 3.25, 350.0, 470.0)),
+            ink(arc(10.5, 5.5, 3.25, 160.0, 275.0)),
+            ink(line(&[(9.39, 8.55), (4.44, 13.5), (2.5, 11.56), (7.45, 6.61)])),
+        }
+        /// List with bullets: turn result, summary.
+        Summary "summary" ["result", "turn result", "recap", "list", "overview"] {
+            dot(3.0, 4.0, 0.9),
+            ink(line(&[(6.0, 4.0), (13.5, 4.0)])),
+            dot(3.0, 8.0, 0.9),
+            ink(line(&[(6.0, 8.0), (13.5, 8.0)])),
+            dot(3.0, 12.0, 0.9),
+            ink(line(&[(6.0, 12.0), (10.5, 12.0)])),
+        }
+        /// Coin with a T: tokens, usage, cost.
+        Tokens "tokens" ["cost", "usage", "context", "coin", "budget"] {
+            ink(circle(8.0, 8.0, 6.0)),
+            ink(line(&[(5.5, 5.5), (10.5, 5.5)])),
+            ink(line(&[(8.0, 5.5), (8.0, 10.75)])),
+        }
+    }
+
     Status {
         /// Red circle with an exclamation mark: error.
         Error "error" ["failure", "problem", "danger"] {
@@ -701,6 +783,11 @@ glyphs! {
         Clock "clock" ["time", "duration", "pending", "timer"] {
             ink(circle(8.0, 8.0, 6.0)),
             ink(line(&[(8.0, 4.5), (8.0, 8.5), (11.0, 10.5)])),
+        }
+        /// Circle with a slash: deny, blocked, not allowed.
+        Deny "deny" ["block", "blocked", "refuse", "reject", "forbidden"] {
+            ink(circle(8.0, 8.0, 6.0)),
+            ink(line(&[(3.76, 3.76), (12.24, 12.24)])),
         }
     }
 
@@ -779,6 +866,11 @@ glyphs! {
         Shield "shield" ["security", "auth", "authentication", "protected"] {
             ink(poly(&[(8.0, 1.5), (13.5, 3.5), (13.5, 8.0), (12.0, 11.0), (8.0, 14.5), (4.0, 11.0), (2.5, 8.0), (2.5, 3.5)])),
         }
+        /// Shield with a check: trusted, always allow.
+        ShieldCheck "shield-check" ["always allow", "trusted", "approved", "verified", "permission granted"] {
+            ink(poly(&[(8.0, 1.5), (13.5, 3.5), (13.5, 8.0), (12.0, 11.0), (8.0, 14.5), (4.0, 11.0), (2.5, 8.0), (2.5, 3.5)])),
+            ink(line(&[(5.5, 7.75), (7.25, 9.5), (10.5, 6.0)])),
+        }
         /// Person: user, account.
         User "user" ["account", "person", "profile"] {
             ink(circle(8.0, 4.5, 2.75)),
@@ -818,6 +910,20 @@ glyphs! {
             ink(line(&[(4.75, 4.75), (3.4, 3.4)])),
             ink(line(&[(4.75, 11.25), (3.4, 12.6)])),
             ink(line(&[(11.25, 4.75), (12.6, 3.4)])),
+        }
+        /// At sign: mention, attach a file or person with @.
+        Mention "mention" ["at", "@", "attachment", "attach file", "reference"] {
+            ink(circle(8.0, 8.0, 2.5)),
+            ink(arc(8.0, 8.0, 6.0, 50.0, 360.0)),
+            ink(line(&[(10.5, 5.5), (10.5, 9.5)])),
+            ink(line(&[(10.5, 9.5), (11.5, 10.5), (13.0, 10.5), (14.0, 8.0)])),
+        }
+        /// Hash sign: issue, number, channel.
+        Hash "hash" ["issue", "#", "number", "channel", "tag issue"] {
+            ink(line(&[(6.75, 2.5), (5.25, 13.5)])),
+            ink(line(&[(10.75, 2.5), (9.25, 13.5)])),
+            ink(line(&[(2.5, 6.0), (13.5, 6.0)])),
+            ink(line(&[(2.5, 10.0), (13.5, 10.0)])),
         }
         /// Crescent: dark theme.
         Moon "moon" ["dark theme", "night"] {

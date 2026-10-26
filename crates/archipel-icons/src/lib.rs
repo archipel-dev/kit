@@ -275,6 +275,8 @@ pub enum Category {
     Development,
     /// Version control.
     Vcs,
+    /// AI agents: sessions, sub-agents, transcripts and their tools.
+    Agents,
     /// Errors, warnings, notifications.
     Status,
     /// Databases, servers, networks, APIs and security.
@@ -285,12 +287,13 @@ pub enum Category {
 
 impl Category {
     /// Every category, in catalog order.
-    pub const ALL: [Category; 8] = [
+    pub const ALL: [Category; 9] = [
         Category::Navigation,
         Category::Actions,
         Category::Files,
         Category::Development,
         Category::Vcs,
+        Category::Agents,
         Category::Status,
         Category::Data,
         Category::General,
@@ -304,6 +307,7 @@ impl Category {
             Category::Files => "Files",
             Category::Development => "Development",
             Category::Vcs => "Version control",
+            Category::Agents => "Agents",
             Category::Status => "Status",
             Category::Data => "Data & network",
             Category::General => "General",

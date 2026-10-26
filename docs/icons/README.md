@@ -1,6 +1,6 @@
 # Archipel Icons
 
-A designed icon set for developer tools: 113 outline glyphs on a 16×16 grid, in eight
+A designed icon set for developer tools: 128 outline glyphs on a 16×16 grid, in nine
 categories, from chevrons to databases, and 78 language icons, one for every common
 programming language and file format. Icons are **data**, not pictures. The same
 definitions render crisply in egui at any size and export as SVG for websites, docs and
@@ -8,7 +8,7 @@ design tools.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/actual-size.dark.png">
-  <img alt="All 113 glyphs at their actual size of 16 pixels" src="img/actual-size.light.png" width="392">
+  <img alt="All 128 glyphs at their actual size of 16 pixels" src="img/actual-size.light.png" width="392">
 </picture>
 
 *Every glyph at 16 px, 1×: the size it is used at.*
@@ -16,6 +16,7 @@ design tools.
 - [Catalog](catalog.md): every glyph by category, with names and keywords.
 - [Language icons](languages.md): 78 languages and file formats, with their extensions.
 - [Symbol icons](symbols.md): classes, interfaces, methods, fields and their modifiers.
+- [Agent icons](agents.md): which glyph stands for each concept of an agent session and its transcript.
 - [Design rules](design.md): the grid, strokes and shapes every glyph follows.
 - [Review](review.md): how glyphs are reviewed, and the review log.
 - [`svg/`](svg/): one SVG per glyph (`currentColor`).

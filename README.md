@@ -11,7 +11,7 @@ the IDE, Nexus HTTP and Mongo Raabit, and their plugins.
 
 - **A complete set for developer tools**: buttons, inputs, choices, tabs, trees, banners,
   toasts, progress, badges, panels and menus.
-- **An icon kit** ([`archipel-icons`](docs/icons/README.md)): 113 designed glyphs and 78
+- **An icon kit** ([`archipel-icons`](docs/icons/README.md)): 128 designed glyphs and 78
   language icons stored as data, rendered with egui or exported as SVG, checked by design lints and reviewed at
   actual size.
 - **Dark and light themes** as plain data, per `egui::Context`, with shared size, radius and

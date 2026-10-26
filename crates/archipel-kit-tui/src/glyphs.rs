@@ -96,6 +96,17 @@ pub const fn nerd_font(glyph: Glyph) -> char {
         Glyph::Diff => '\u{eae1}',         // cod-diff
         Glyph::History => '\u{ea82}',      // cod-history
         Glyph::Tag => '\u{ea66}',          // cod-tag
+        Glyph::Agent => '\u{ec10}',        // cod-sparkle (no robot in the font; same as Sparkle)
+        Glyph::Agents => '\u{ebd2}',       // cod-layers
+        Glyph::Task => '\u{eab3}',         // cod-checklist
+        Glyph::Worktree => '\u{ec6f}',     // cod-git_branch
+        Glyph::FanOut => '\u{eafe}',       // cod-git_merge
+        Glyph::Spawn => '\u{ec6f}',        // cod-git_branch
+        Glyph::Unread => '\u{ea71}',       // cod-circle_filled
+        Glyph::Thinking => '\u{ea61}',     // cod-lightbulb
+        Glyph::Tool => '\u{eb6d}',         // cod-tools
+        Glyph::Summary => '\u{eb9d}',      // cod-output
+        Glyph::Tokens => '\u{eace}',       // cod-database
         Glyph::Error => '\u{ea87}',        // cod-error
         Glyph::Warning => '\u{ea6c}',      // cod-warning
         Glyph::WeakWarning => '\u{ea6c}',  // cod-warning
@@ -105,6 +116,7 @@ pub const fn nerd_font(glyph: Glyph) -> char {
         Glyph::Help => '\u{eb32}',         // cod-question
         Glyph::Bell => '\u{eaa2}',         // cod-bell
         Glyph::Clock => '\u{eb7c}',        // cod-watch
+        Glyph::Deny => '\u{ea87}',         // cod-error
         Glyph::Database => '\u{eace}',     // cod-database
         Glyph::Table => '\u{ebb7}',        // cod-table
         Glyph::Json => '\u{eb0f}',         // cod-json
@@ -114,10 +126,13 @@ pub const fn nerd_font(glyph: Glyph) -> char {
         Glyph::Globe => '\u{eb01}',        // cod-globe
         Glyph::Plug => '\u{eb2d}',         // cod-plug
         Glyph::Shield => '\u{eb53}',       // cod-shield
+        Glyph::ShieldCheck => '\u{eb53}',  // cod-shield
         Glyph::User => '\u{eb99}',         // cod-account
         Glyph::Lightning => '\u{f140c}',   // md-lightning_bolt_outline
         Glyph::Bookmark => '\u{eaa5}',     // cod-bookmark
         Glyph::Comment => '\u{ea6b}',      // cod-comment
+        Glyph::Mention => '\u{ea6b}',      // cod-comment
+        Glyph::Hash => '\u{ea6b}',         // cod-comment
         Glyph::Sun => '\u{eac6}',          // cod-color_mode
         Glyph::Moon => '\u{eac6}',         // cod-color_mode
     }

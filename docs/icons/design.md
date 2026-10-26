@@ -1,6 +1,6 @@
 # Icon design rules
 
-The rules make 113 glyphs drawn at different times look like one family. The **checked**
+The rules make 128 glyphs drawn at different times look like one family. The **checked**
 rules are enforced by `crates/archipel-icons/tests/lint.rs`; the rest are judged in review.
 
 ## Grid

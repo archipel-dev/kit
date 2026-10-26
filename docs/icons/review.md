@@ -91,3 +91,24 @@ touch the letter's corner at 16 px; accepted, as marks read as badges, like in o
 
 Open follow-ups: an outline/filled pair for toggles (star, pin, bookmark), and a 20 px
 optical size for dense toolbars on high-DPI screens.
+
+### 2026-10 · Agents mode glyphs (user request)
+
+Request: glyphs for the IDE's Agents mode (session chrome and transcript rows). Every
+concept was first mapped to an existing glyph ([agents](agents.md)); 15 new glyphs were
+drawn where nothing fit, in a new **Agents** category plus `shield-check`, `deny`,
+`mention` and `hash`. Review sheets (`REVIEW=1`) now render in dark and light.
+
+| Glyph | Finding | Pass | Resolution |
+|---|---|---|---|
+| `mention` | Stem on x = 10.25, off the half-unit grid | Lint | Inner ring 2.5, stem on 10.5. |
+| `tool` | First drawing, a ring with a gap and a stick, read as a magnifier or key | Geometry | Redrawn as an outlined wrench: two jaw arcs and a handle with sides, 45°. Reads as a wrench at 96 px and 16 px. |
+| `tool` | Second try, a closed polygon wrench, read as a screw | Geometry | Dropped in favour of the arcs and outline above. |
+| `agent` | Antenna dot touches the head's top edge at 16 px | Actual size | Accepted: it reads as one antenna, the dot stays 1 unit. |
+| `agents` | Two heads merge into one blob at 16 px | Actual size | Back head has chamfered corners and no eyes, so the front head stays legible. Accepted. |
+| `fan-out` | Filled source and three rings are close at 16 px | Actual size | Source filled (r 2) so the direction reads; targets r 1.5. Accepted. |
+| `worktree` | Branch nodes and folder side by side are dense | Actual size | Nodes kept at r 1.75 like `branch`; still readable as branch plus folder. Accepted. |
+| `thinking` | Ellipsis dots merge with the pill outline | Actual size | Dots r 0.75, centered at y 6 in a 7-unit pill. Reads as a bubble with dots. |
+| `unread` | Plain dot, no outline | Dark and light | Info tone (passes the 3:1 tone lint in dark and light), centered, r 3.5. |
+| `summary` | Could be confused with `menu` | Actual size | Bullets on the left tell it apart; the last line is shorter. |
+| `task`, `spawn`, `deny`, `tokens`, `shield-check`, `hash` | Stroke weight, keylines, corners | All | No change: match their neighbours in ink coverage. |
