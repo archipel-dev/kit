@@ -4,7 +4,9 @@
 //! and is rebuilt when the document changes.
 
 use crate::editor::highlight::{Span, SyntaxHighlighter};
-use crate::editor::model::{Document, FoldRegion};
+use crate::editor::model::{
+    Document, FoldRegion, MAX_SEARCH_RESULTS, SearchOptions, SearchResults, find_all,
+};
 use crate::tokens::editor::MAX_SELECTION_OCCURRENCES;
 use egui::{Context, Id};
 use std::collections::HashMap;
@@ -16,10 +18,10 @@ use std::sync::{Arc, Mutex};
 const LONG_LINE: usize = 4096;
 /// A highlighter state is remembered for every this many lines.
 const CHECKPOINT: usize = 256;
-/// Find stops collecting here; the count reads "100000+".
-pub(crate) const MAX_MATCHES: usize = 100_000;
-
 type Ranges = Arc<Vec<Range<usize>>>;
+
+/// What the cached find results were computed for.
+type FindKey = (String, SearchOptions, Option<Range<usize>>);
 
 #[derive(Default)]
 struct Inner {
@@ -27,7 +29,7 @@ struct Inner {
     long: HashMap<usize, (Arc<Vec<Span>>, u32)>,
     brackets: Option<Arc<Vec<BracketRegion>>>,
     widths: Option<Arc<Vec<u32>>>,
-    found: Option<(String, Arc<Vec<Range<usize>>>)>,
+    found: Option<(FindKey, Arc<SearchResults>)>,
     occurrences: Option<(Range<usize>, Ranges)>,
 }
 
@@ -249,17 +251,30 @@ impl DocCache {
         out
     }
 
-    /// Byte ranges of `query` in the document, ASCII case-insensitive (other characters match
-    /// exactly), cached for the last query.
-    pub fn find(&self, doc: &Document, query: &str) -> Arc<Vec<Range<usize>>> {
+    /// The matches of `query` in the document (at most `MAX_SEARCH_RESULTS`), cached for the
+    /// last query, options and scope.
+    pub fn find(
+        &self,
+        doc: &Document,
+        query: &str,
+        options: SearchOptions,
+        scope: Option<Range<usize>>,
+    ) -> Arc<SearchResults> {
         let mut inner = self.inner();
-        if let Some((q, found)) = &inner.found
-            && q == query
+        let key = (query.to_owned(), options, scope);
+        if let Some((k, found)) = &inner.found
+            && *k == key
         {
             return found.clone();
         }
-        let found = Arc::new(search(doc.text(), query));
-        inner.found = Some((query.to_owned(), found.clone()));
+        let found = Arc::new(find_all(
+            doc.text(),
+            query,
+            options,
+            key.2.clone(),
+            MAX_SEARCH_RESULTS,
+        ));
+        inner.found = Some((key, found.clone()));
         found
     }
 
@@ -319,45 +334,6 @@ fn tokenize(
     }
     inner.long.insert(line, (spans.clone(), *state));
     Some(spans)
-}
-
-/// Byte ranges of `query` in `text`: ASCII case-insensitive for ASCII queries, exact
-/// otherwise. At most [`MAX_MATCHES`].
-pub(crate) fn search(text: &str, query: &str) -> Vec<Range<usize>> {
-    let mut found = Vec::new();
-    if query.is_empty() {
-        return found;
-    }
-    if !query.is_ascii() {
-        found.extend(
-            text.match_indices(query)
-                .take(MAX_MATCHES)
-                .map(|(at, m)| at..at + m.len()),
-        );
-        return found;
-    }
-    let needle = query.to_ascii_lowercase().into_bytes();
-    let hay = text.as_bytes();
-    let (lower, upper) = (needle[0], needle[0].to_ascii_uppercase());
-    let mut at = 0;
-    while at + needle.len() <= hay.len() && found.len() < MAX_MATCHES {
-        match hay[at..hay.len() + 1 - needle.len()]
-            .iter()
-            .position(|&b| b == lower || b == upper)
-        {
-            None => break,
-            Some(offset) => {
-                let start = at + offset;
-                if hay[start..start + needle.len()].eq_ignore_ascii_case(&needle) {
-                    found.push(start..start + needle.len());
-                    at = start + needle.len();
-                } else {
-                    at = start + 1;
-                }
-            }
-        }
-    }
-    found
 }
 
 /// The fold regions for `brackets`, keeping the collapsed state of regions in `old` that
@@ -437,13 +413,6 @@ mod tests {
         );
         assert_eq!(again[0].placeholder, "{...}");
         assert_eq!(again[1].placeholder, "[...]");
-    }
-
-    #[test]
-    fn find_is_ascii_case_insensitive_and_exact_for_other_text() {
-        assert_eq!(search("Foo fOO bar", "foo"), vec![0..3, 4..7]);
-        assert_eq!(search("café CAFÉ", "café"), vec![0..5]);
-        assert!(search("abc", "").is_empty());
     }
 
     #[test]

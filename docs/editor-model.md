@@ -24,7 +24,8 @@ character boundary.
 | `FoldingModel` | `FoldingModel` | Fold regions, offset to visual line mapping. |
 | `scroll_to_caret` | `ScrollPositionCalculator` | Where the viewport must go, no animation. |
 | `editor_action_for` | the default keymaps | Key chord to action, Windows/Linux and macOS. |
-| `Editor` | `Editor` | All of the above in one struct, with undo recording. |
+| `SearchOptions`, `find_all`, `Searcher`, `SearchHistory` | `FindModel`, `FindManager` | Find and replace without a screen: Unicode case folding, Words, Regex with `$1`, the 10 000 result cap, replacement templates, Preserve Case, recent queries. |
+| `Editor` | `Editor` | All of the above in one struct, with undo recording; `replace_ranges` (Replace All as one undo step) and `select_ranges` (one caret per match). |
 
 ## Running actions
 
@@ -99,8 +100,10 @@ assert_eq!(select, Some(EditorAction::SelectNextOccurrence));
 ```
 
 `KeyModifiers: From<egui::Modifiers>` takes `mac_cmd` as Cmd, so the same conversion works
-on every platform. Chords of actions the model does not implement (Find, Go to line,
-completion) return `None`: the application handles them.
+on every platform. Chords of actions the model does not implement (Go to line,
+completion) return `None`: the application handles them. Find, Replace and Find Next are
+chords of the widget's find bar (see `docs/components/code.md`), which uses
+`model::search` for the matching.
 
 ## Defaults
 

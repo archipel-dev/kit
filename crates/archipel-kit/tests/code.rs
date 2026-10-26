@@ -77,6 +77,7 @@ fn view_find_snapshot() {
         "code_view_find",
         common::IMG,
         |ui| {
+            ui.set_min_width(480.0);
             EditorComponent::new(&mut viewer)
                 .label("Response body")
                 .highlighter(&Json)

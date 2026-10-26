@@ -9,18 +9,18 @@ mod paint;
 mod rows;
 mod state;
 
-pub(super) use self::cache::MAX_MATCHES;
 use self::cache::{DocCache, fold_regions};
 use self::gutter::{GutterCfg, GutterInput, GutterLayout};
+pub(super) use self::input::key_modifiers;
 use self::state::{Frame, Geo, ScrollAnim, ViewState};
 use super::decorations::{
     ChangeMarker, GutterClick, GutterIcon, HoverInfo, NavigationRequest, RangeHighlight,
 };
-use super::find::{self, FindState};
+use super::find::{self, ApplyEnv, FindState};
 use super::highlight::{PlainText, SyntaxHighlighter};
 use super::model::{
-    ContentSize, Editor, Language, Os, ScrollRequest, ScrollType, Viewport, clamp_first_line,
-    scroll_to_caret,
+    ContentSize, Editor, Language, Os, ScrollRequest, ScrollType, SearchHistory, SearchResults,
+    Viewport, clamp_first_line, match_at, scroll_to_caret,
 };
 use super::{A11Y_VALUE_LIMIT, code_font, paint_background, paint_border};
 use crate::parts::desktop;
@@ -92,6 +92,7 @@ pub struct EditorComponent<'a> {
     right_margin: bool,
     gutter_click_selects_line: bool,
     os: Option<Os>,
+    history: Option<&'a mut SearchHistory>,
 }
 
 /// What [`EditorComponent::show`] reports.
@@ -160,6 +161,7 @@ impl<'a> EditorComponent<'a> {
             right_margin: true,
             gutter_click_selects_line: false,
             os: None,
+            history: None,
         }
     }
 
@@ -326,6 +328,16 @@ impl<'a> EditorComponent<'a> {
         self
     }
 
+    /// The recent queries and replacements of the find bar, owned by the caller (so they
+    /// outlive the editor and can be shared between editors or saved with
+    /// [`SearchHistory::save`]). The history popup opens with the history button or Alt+Down;
+    /// Ctrl+Enter and closing the bar add the query. Without it the component keeps one
+    /// history for all editors of the context.
+    pub fn search_history(mut self, history: &'a mut SearchHistory) -> Self {
+        self.history = Some(history);
+        self
+    }
+
     /// Draws the component.
     pub fn show(self, ui: &mut Ui) -> EditorComponentResponse {
         run(self, ui)
@@ -410,6 +422,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         right_margin,
         gutter_click_selects_line,
         os,
+        history,
     } = spec;
     let id = id.unwrap_or_else(|| ui.next_auto_id());
     ui.skip_ahead_auto_ids(1);
@@ -434,6 +447,53 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         }
     };
 
+    // The find bar's state and keys come first: it is docked above the text, so whether it is
+    // open decides the layout.
+    let history_key = Id::new("archipel-find-history");
+    let own_history = history.is_none();
+    let mut owned_history;
+    let history: &mut SearchHistory = match history {
+        Some(history) => history,
+        None => {
+            owned_history = ctx
+                .data(|d| d.get_temp::<SearchHistory>(history_key))
+                .unwrap_or_default();
+            &mut owned_history
+        }
+    };
+    let focus_before = ctx.memory(|m| m.has_focus(id));
+    let focused = enabled && focus_before;
+    let mut find = FindState::load(&ctx, id);
+    // A press on the find bar's buttons must not take the focus out of the bar or the text:
+    // egui drops it a frame or two later, so the previous holder asks for it back.
+    if let Some(rect) = st.overlay
+        && ui.input(|i| {
+            i.events.iter().any(|e| {
+                matches!(e, egui::Event::PointerButton { pos, pressed: true, .. } if rect.contains(*pos))
+            })
+        })
+    {
+        st.restore_focus = 3;
+    }
+    if st.restore_focus > 0 {
+        st.restore_focus -= 1;
+        if ctx.memory(|m| m.focused().is_none()) {
+            // The field is gone when the bar was closed: the text takes the focus.
+            let target = match st.last_focus {
+                Some(field) if field != id && find.open => field,
+                _ => id,
+            };
+            ctx.memory_mut(|m| m.request_focus(target));
+            st.restore_focus = 0;
+        }
+    }
+    let find_keys = find.keys(ui, os, focused, viewer, editor, history.queries());
+    if find_keys.closed {
+        ctx.memory_mut(|m| m.request_focus(id));
+    }
+    let find_was_open = find.open;
+    let bar_height = find.height(viewer);
+
     // The frame: background, border, gutter and text area.
     let height = height.unwrap_or_else(|| {
         let h = ui.available_height();
@@ -448,9 +508,14 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     let (outer, _) = ui.allocate_exact_size(frame_size, Sense::hover());
     paint_background(ui, outer);
     let inner = outer.shrink(1.0);
+    let bar_area = Rect::from_min_max(
+        inner.min,
+        pos2(inner.max.x, (inner.min.y + bar_height).min(inner.max.y)),
+    );
+    let inner = Rect::from_min_max(pos2(inner.min.x, bar_area.max.y), inner.max);
     let tab = editor.settings.tab_size;
 
-    let stripe_w = if highlights.is_empty() {
+    let stripe_w = if highlights.is_empty() && !(find.open && !find.query.is_empty()) {
         0.0
     } else {
         metrics::STRIPE_WIDTH
@@ -508,38 +573,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             },
         )
     });
-    let focus_before = ctx.memory(|m| m.has_focus(id));
-    let focused = enabled && focus_before;
-
-    // Find and the completion list take their keys first.
-    let mut find = FindState::load(&ctx, id);
-    // A press on the find bar's buttons must not take the focus out of the bar or the text:
-    // egui drops it a frame or two later, so the previous holder asks for it back.
-    if let Some(rect) = st.overlay
-        && ui.input(|i| {
-            i.events.iter().any(|e| {
-                matches!(e, egui::Event::PointerButton { pos, pressed: true, .. } if rect.contains(*pos))
-            })
-        })
-    {
-        st.restore_focus = 3;
-    }
-    if st.restore_focus > 0 {
-        st.restore_focus -= 1;
-        if ctx.memory(|m| m.focused().is_none()) {
-            // The field is gone when the bar was closed: the text takes the focus.
-            let target = match st.last_focus {
-                Some(field) if field != id && find.open => field,
-                _ => id,
-            };
-            ctx.memory_mut(|m| m.request_focus(target));
-            st.restore_focus = 0;
-        }
-    }
-    let closed_by_escape = find.keys(ui, focused);
-    if closed_by_escape {
-        ctx.memory_mut(|m| m.request_focus(id));
-    }
+    // The completion list takes its keys after find.
     let (list, _list_keys) =
         crate::ui::completion::List::begin(ui, id, focused && completer.is_some() && !viewer);
     let list_open = list.is_open();
@@ -633,23 +667,66 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     if dirty {
         frame = build_frame(&ctx, id, editor, highlighter, wrap_cols);
     }
-    let cache = frame.cache.clone();
+    let mut cache = frame.cache.clone();
 
-    // Find results.
-    let found = if find.open {
-        cache.find(&editor.document, &find.query)
+    // Find: the live update and the commands run on the model (the current match is the
+    // selection), then the results are read again for the text as it is now.
+    let empty_results = std::sync::Arc::new(SearchResults::default());
+    let mut found = if find.open {
+        cache.find(
+            &editor.document,
+            &find.query,
+            find.options,
+            find.scope.clone(),
+        )
     } else {
-        std::sync::Arc::new(Vec::new())
+        empty_results.clone()
     };
-    if !found.is_empty() {
-        find.current = find.current.min(found.len() - 1);
+    let stamp_find = editor.document.modification_stamp();
+    let applied = find.apply(
+        editor,
+        &found,
+        &ApplyEnv {
+            os,
+            viewer,
+            editor_focused: focused_now,
+            scroll: st.offset,
+        },
+        history,
+    );
+    text_changed |= applied.text_changed;
+    if applied.hint.is_some() {
+        hint = applied.hint.clone();
     }
+    if applied.focus_editor {
+        ctx.memory_mut(|m| m.request_focus(id));
+    }
+    if editor.document.modification_stamp() != stamp_find {
+        frame = build_frame(&ctx, id, editor, highlighter, wrap_cols);
+        cache = frame.cache.clone();
+        found = if find.open {
+            cache.find(
+                &editor.document,
+                &find.query,
+                find.options,
+                find.scope.clone(),
+            )
+        } else {
+            empty_results.clone()
+        };
+    }
+    let current_match = find.open.then(|| {
+        let primary = editor.carets.primary();
+        match_at(
+            &found.ranges,
+            &(primary.selection_start()..primary.selection_end()),
+        )
+    });
+    let current_match = current_match.flatten();
     let mut jump_to: Option<usize> = None;
-    if find.jump
-        && let Some(m) = found.get(find.current)
-    {
+    if let Some(offset) = applied.jump {
         let mut unfolded = false;
-        while let Some(region) = editor.folding.collapsed_region_hiding(m.start) {
+        while let Some(region) = editor.folding.collapsed_region_hiding(offset) {
             let start = region.start;
             if let Some(index) = editor
                 .folding
@@ -666,8 +743,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         if unfolded {
             frame = build_frame(&ctx, id, editor, highlighter, wrap_cols);
         }
-        jump_to = Some(m.start);
-        find.jump = false;
+        jump_to = Some(offset);
     }
 
     // Activity: caret moves and edits restart the blink.
@@ -771,6 +847,10 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             target.first_line as f32 * row_h,
         ));
     }
+    if let Some(scroll) = applied.restore_scroll {
+        target_offset = Some(scroll);
+        animate_ms = 0.0;
+    }
     if let Some(line) = scroll_to_line {
         let line = line.min(editor.document.line_count() - 1);
         let row = frame.map.first_row(frame.map.logical_to_visual(line));
@@ -840,6 +920,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         indent_guides,
         right_margin,
         focused: focused_now,
+        selection_active: find.field_focused(&ctx),
         enabled,
         caret_visible,
     };
@@ -866,7 +947,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             Sense::hover(),
         );
         let geo = Geo::new(area, viewport_rect.min.to_vec2(), cell, row_h, pad, ppp);
-        let find_ranges: &[Range<usize>] = &found;
+        let find_ranges: &[Range<usize>] = &found.ranges;
         paint_out = paint::paint(&paint::PaintInput {
             ui,
             painter: ui.painter().clone(),
@@ -878,7 +959,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             highlighter,
             opts,
             find: find_ranges,
-            find_current: find.open.then_some(find.current),
+            find_current: current_match,
             occurrences: &occurrences,
             highlights,
             brace,
@@ -941,7 +1022,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             &colors,
             stripe_rect,
             highlights,
-            found.as_slice(),
+            &found.ranges,
             content_h,
             row_h,
             enabled,
@@ -1011,25 +1092,35 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         st.fold_rest = None;
     }
 
-    // Find bar over the top right corner.
+    // The find bar, docked above the text.
     st.overlay = None;
     if find.open {
-        let events = find::bar(ui, area, &mut find, found.len());
-        st.overlay = events.rect;
-        if events.query_changed || events.step != 0 {
-            ctx.request_repaint();
-        }
+        let problem = found.problem.is_some();
+        let view = find::BarView {
+            status: found.status(find.query.is_empty(), current_match),
+            not_found: problem || (found.ranges.is_empty() && !find.query.is_empty()),
+            viewer,
+            history: history.queries(),
+        };
+        st.overlay = Some(find::bar(ui, bar_area, &mut find, &view));
     }
     let mut response = resp_text;
-    if !find.open && find.field_focused(&ctx) {
+    if find_was_open && !find.open && !find_keys.closed {
+        // Closed with the button: the text takes the focus back.
         response.request_focus();
     }
-    let match_count = found.len();
+    let match_count = found.ranges.len();
     let find_open = find.open;
     if ctx.memory(|m| m.has_focus(id)) {
         st.last_focus = Some(id);
-    } else if let Some(field) = find.field.filter(|f| ctx.memory(|m| m.has_focus(*f))) {
-        st.last_focus = Some(field);
+    } else if find.query_focused(&ctx) {
+        st.last_focus = Some(find.field());
+    } else if find.field_focused(&ctx) {
+        st.last_focus = Some(find.replace_field());
+    }
+    if own_history {
+        let kept = history.clone();
+        ctx.data_mut(|d| d.insert_temp(history_key, kept));
     }
     find.store(&ctx, id);
 

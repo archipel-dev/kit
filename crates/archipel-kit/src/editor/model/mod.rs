@@ -16,6 +16,7 @@ mod lines;
 mod motion;
 mod position;
 mod scrolling;
+mod search;
 mod select;
 mod settings;
 mod typing;
@@ -36,6 +37,10 @@ pub use position::{
 pub use scrolling::{
     ContentSize, MAX_ANIMATION_MS, ScrollTarget, ScrollType, Viewport, clamp_first_line,
     horizontal_target, max_first_column, max_first_line, scroll_to_caret, vertical_target,
+};
+pub use search::{
+    MAX_SEARCH_HISTORY, MAX_SEARCH_RESULTS, PatternProblem, SearchHistory, SearchOptions,
+    SearchResults, Searcher, find_all, match_at, next_match,
 };
 pub use settings::{
     CaretStopOptions, EditorSettings, Language, LineStop, ReformatOnPaste, SmartBackspace, WordStop,
