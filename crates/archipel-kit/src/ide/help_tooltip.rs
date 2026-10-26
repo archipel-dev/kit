@@ -1,15 +1,27 @@
 //! The help tooltip.
 
 use crate::common;
+use crate::icons::{self, Glyph};
 use crate::parts::Surface;
 use crate::theme::Theme;
-use crate::tokens::{size, typography};
-use egui::{Response, Sense, Ui, vec2};
+use crate::tokens::{motion, size, typography};
+use egui::{Id, Rect, Response, Sense, Ui, vec2};
 
-/// A tooltip: a label, an optional shortcut after it, and an optional hint below, on the
-/// tooltip color. Attach it with [`HelpTooltipExt::tooltip`] or [`HelpTooltipExt::tooltip_with`];
-/// it shows after the hover delay, also over disabled widgets (to say why they are
+/// A tooltip: a title, an optional shortcut after it, an optional description below and an
+/// optional link. Attach it with [`HelpTooltipExt::tooltip`] or
+/// [`HelpTooltipExt::tooltip_with`]; also over disabled widgets (to say why they are
 /// disabled).
+///
+/// It follows IntelliJ's `HelpTooltip` (IntelliJ spec section 11.1):
+///
+/// - it shows [500 ms](motion::HELP_TOOLTIP_SHOW_DELAY) after the pointer comes to rest on
+///   its owner (moving the pointer starts the wait over) and hides
+///   [150 ms](motion::HELP_TOOLTIP_HIDE_DELAY) after the pointer leaves;
+/// - while the pointer is over the tooltip itself it stays, so its link can be clicked;
+/// - it hides by itself after 10 s, or 30 s when it has a description or a link
+///   ([`HelpTooltip::never_hide_on_timeout`] keeps it);
+/// - pressing the owner hides it until the pointer has left and come back;
+/// - the text is at most 250 pt wide.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -25,8 +37,36 @@ pub struct HelpTooltip {
     label: String,
     shortcut: Option<String>,
     hint: Option<String>,
+    link: Option<(String, bool)>,
     align: Option<egui::RectAlign>,
     immediate: bool,
+    never_hide: bool,
+    show_delay: Option<f32>,
+    hide_delay: Option<f32>,
+}
+
+/// What a [`HelpTooltip`] did this frame.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct HelpTooltipResponse {
+    /// The tooltip is on screen.
+    pub visible: bool,
+    /// The user clicked the tooltip's link.
+    pub link_clicked: bool,
+}
+
+/// Where a tooltip is in its life, kept in the context under the owner's id.
+#[derive(Debug, Clone, Copy, Default)]
+struct State {
+    /// When the pointer came to rest on the owner, while the tooltip is not shown.
+    waiting_since: Option<f64>,
+    /// When the tooltip appeared.
+    shown_since: Option<f64>,
+    /// When the pointer left both the owner and the tooltip.
+    left_since: Option<f64>,
+    /// Hidden by a press or the timeout until the pointer leaves.
+    suppressed: bool,
+    /// Where the tooltip was last frame.
+    popup: Option<Rect>,
 }
 
 impl HelpTooltip {
@@ -36,8 +76,12 @@ impl HelpTooltip {
             label: label.into(),
             shortcut: None,
             hint: None,
+            link: None,
             align: None,
             immediate: false,
+            never_hide: false,
+            show_delay: None,
+            hide_delay: None,
         }
     }
 
@@ -62,10 +106,56 @@ impl HelpTooltip {
         self
     }
 
-    /// A longer explanation below the label, wrapped.
+    /// A longer explanation below the label, wrapped (IntelliJ `setDescription`).
     pub fn hint(mut self, hint: impl Into<String>) -> Self {
         self.hint = Some(hint.into());
         self
+    }
+
+    /// A link below the description (IntelliJ `setLink`). Its click is reported by
+    /// [`HelpTooltipResponse::link_clicked`]. With `external` the link has the external
+    /// icon, for a link that leaves the application.
+    pub fn link(mut self, text: impl Into<String>, external: bool) -> Self {
+        self.link = Some((text.into(), external));
+        self
+    }
+
+    /// Keeps the tooltip on screen as long as the pointer is over its owner, without the
+    /// 10 s / 30 s timeout (IntelliJ `setNeverHideOnTimeout`).
+    pub fn never_hide_on_timeout(mut self, never: bool) -> Self {
+        self.never_hide = never;
+        self
+    }
+
+    /// Seconds the pointer must rest on the owner before the tooltip shows (default
+    /// [`motion::HELP_TOOLTIP_SHOW_DELAY`]; IntelliJ `setInitialDelay`).
+    pub fn show_delay(mut self, seconds: f32) -> Self {
+        self.show_delay = Some(seconds);
+        self
+    }
+
+    /// Seconds the tooltip stays after the pointer left (default
+    /// [`motion::HELP_TOOLTIP_HIDE_DELAY`]; IntelliJ `setHideDelay`).
+    pub fn hide_delay(mut self, seconds: f32) -> Self {
+        self.hide_delay = Some(seconds);
+        self
+    }
+
+    /// Whether the tooltip has more than a line: a description or a link. Such a tooltip
+    /// stays 30 s instead of 10.
+    pub fn is_multiline(&self) -> bool {
+        self.hint.is_some() || self.link.is_some()
+    }
+
+    /// Seconds after which the tooltip hides by itself, `None` when it never does.
+    pub fn dismiss_delay(&self) -> Option<f32> {
+        if self.never_hide {
+            None
+        } else if self.is_multiline() {
+            Some(motion::HELP_TOOLTIP_DISMISS_MULTI_LINE)
+        } else {
+            Some(motion::HELP_TOOLTIP_DISMISS_SINGLE_LINE)
+        }
     }
 
     /// The tooltip frame: the tooltip color, popup border and radius.
@@ -73,12 +163,14 @@ impl HelpTooltip {
         Surface::Tooltip.frame(ctx)
     }
 
-    /// Draws the content (without the frame) into `ui`. Use it to show a tooltip outside
-    /// of hover, e.g. in a snapshot or an onboarding hint.
-    pub fn content(&self, ui: &mut Ui) {
+    /// Draws the content (without the frame) into `ui`: the title and the shortcut in a
+    /// row, the description, the link. Use it to show a tooltip outside of hover, e.g. in a
+    /// snapshot or an onboarding hint. Returns whether the link was clicked.
+    pub fn content(&self, ui: &mut Ui) -> bool {
         let colors = Theme::colors(ui.ctx());
         let font = typography::body(typography::BODY);
-        ui.spacing_mut().item_spacing = vec2(size::TOOLTIP_SHORTCUT_GAP, 3.0);
+        let mut link_clicked = false;
+        ui.spacing_mut().item_spacing = vec2(size::TOOLTIP_SHORTCUT_GAP, size::HELP_TOOLTIP_GAP);
         // One text line high, not a row of controls.
         ui.spacing_mut().interact_size.y = ui.text_style_height(&egui::TextStyle::Body);
         ui.horizontal(|ui| {
@@ -95,7 +187,7 @@ impl HelpTooltip {
             }
         });
         if let Some(hint) = &self.hint {
-            ui.set_max_width(280.0);
+            ui.set_max_width(size::HELP_TOOLTIP_MAX_WIDTH);
             ui.add(
                 egui::Label::new(
                     egui::RichText::new(hint)
@@ -105,25 +197,120 @@ impl HelpTooltip {
                 .wrap(),
             );
         }
+        if let Some((text, external)) = &self.link {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = size::ICON_TEXT_GAP;
+                link_clicked = ui.add(crate::ui::ActionLink::new(text.as_str())).clicked();
+                if *external {
+                    icons::show(
+                        ui,
+                        Glyph::ExternalLink,
+                        size::HELP_TOOLTIP_LINK_ICON,
+                        colors.link,
+                    );
+                }
+            });
+        }
+        link_clicked
     }
 
-    /// Shows the tooltip for `response` when it is hovered long enough.
-    pub fn show_for(&self, response: &Response) {
-        let mut tooltip = if self.immediate {
-            let mut tooltip = egui::Tooltip::for_widget(response);
-            let dragging = response.ctx.dragged_id().is_some();
-            tooltip.popup = tooltip.popup.open(response.hovered() && !dragging);
-            tooltip
-        } else if response.enabled() {
-            egui::Tooltip::for_enabled(response)
-        } else {
-            egui::Tooltip::for_disabled(response)
-        };
-        tooltip.popup = tooltip.popup.frame(Self::frame(&response.ctx));
-        if let Some(align) = self.align {
-            tooltip.popup = tooltip.popup.align(align).gap(size::POPUP_PADDING);
+    /// Shows the tooltip for `response` when it is due, and reports it.
+    ///
+    /// Call it every frame with the owner's response: the delays are counted from the
+    /// frames it sees.
+    pub fn show_for(&self, response: &Response) -> HelpTooltipResponse {
+        let ctx = &response.ctx;
+        let key = Id::new(("archipel-help-tooltip", response.id));
+        let mut state = ctx.data(|d| d.get_temp::<State>(key)).unwrap_or_default();
+        let now = ctx.input(|i| i.time);
+        let (pointer, pressed, moved) = ctx.input(|i| {
+            (
+                i.pointer.hover_pos(),
+                i.pointer.any_pressed(),
+                i.pointer.delta() != egui::Vec2::ZERO,
+            )
+        });
+        let dragging = ctx.dragged_id().is_some();
+        let over_owner = response.contains_pointer() && !dragging;
+        let over_popup = state
+            .popup
+            .zip(pointer)
+            .is_some_and(|(popup, pointer)| popup.contains(pointer));
+        let show_delay = f64::from(self.show_delay.unwrap_or(motion::HELP_TOOLTIP_SHOW_DELAY));
+        let hide_delay = f64::from(self.hide_delay.unwrap_or(motion::HELP_TOOLTIP_HIDE_DELAY));
+        let dismiss = self.dismiss_delay().map(f64::from);
+
+        if over_owner && pressed {
+            // A press on the owner ends the tooltip until the pointer comes back.
+            state.shown_since = None;
+            state.waiting_since = None;
+            state.suppressed = true;
         }
-        tooltip.show(|ui| self.content(ui));
+        if over_owner || over_popup {
+            state.left_since = None;
+            if over_owner && state.shown_since.is_none() && !state.suppressed {
+                // Moving the pointer starts the wait over: it has to come to rest.
+                if state.waiting_since.is_none() || moved {
+                    state.waiting_since = Some(now);
+                }
+                if self.immediate || state.waiting_since.is_some_and(|t| now - t >= show_delay) {
+                    state.shown_since = Some(now);
+                    state.waiting_since = None;
+                }
+            }
+            if let (Some(since), Some(dismiss)) = (state.shown_since, dismiss)
+                && now - since >= dismiss
+            {
+                state.shown_since = None;
+                state.suppressed = true;
+            }
+        } else {
+            state.waiting_since = None;
+            state.suppressed = false;
+            if state.shown_since.is_some() {
+                let since = *state.left_since.get_or_insert(now);
+                if now - since >= hide_delay {
+                    state.shown_since = None;
+                    state.left_since = None;
+                }
+            }
+        }
+
+        let mut out = HelpTooltipResponse::default();
+        let open = state.shown_since.is_some();
+        let mut tooltip = egui::Tooltip::for_widget(response);
+        tooltip.popup = tooltip
+            .popup
+            .open(open)
+            .frame(Self::frame(ctx))
+            .gap(size::POPUP_PADDING);
+        if let Some(align) = self.align {
+            tooltip.popup = tooltip.popup.align(align);
+        }
+        state.popup = tooltip.show(|ui| self.content(ui)).map(|shown| {
+            out.link_clicked = shown.inner;
+            shown.response.rect
+        });
+        out.visible = open;
+
+        // Wake up when the next delay runs out.
+        let mut wake = f64::INFINITY;
+        if let Some(since) = state.waiting_since {
+            wake = wake.min(show_delay - (now - since));
+        }
+        if let Some(since) = state.shown_since {
+            if let Some(dismiss) = dismiss {
+                wake = wake.min(dismiss - (now - since));
+            }
+            if let Some(left) = state.left_since {
+                wake = wake.min(hide_delay - (now - left));
+            }
+        }
+        if wake.is_finite() {
+            ctx.request_repaint_after_secs(wake.max(0.0) as f32);
+        }
+        ctx.data_mut(|d| d.insert_temp(key, state));
+        out
     }
 }
 
@@ -133,6 +320,11 @@ pub trait HelpTooltipExt {
     fn tooltip(self, label: impl Into<String>) -> Self;
     /// A tooltip with a shortcut or hint.
     fn tooltip_with(self, tooltip: HelpTooltip) -> Self;
+    /// Like [`HelpTooltipExt::tooltip_with`], also telling what the tooltip did (whether
+    /// it is visible, whether its link was clicked).
+    fn tooltip_with_response(self, tooltip: HelpTooltip) -> (Self, HelpTooltipResponse)
+    where
+        Self: Sized;
 }
 
 impl HelpTooltipExt for Response {
@@ -143,5 +335,10 @@ impl HelpTooltipExt for Response {
     fn tooltip_with(self, tooltip: HelpTooltip) -> Self {
         tooltip.show_for(&self);
         self
+    }
+
+    fn tooltip_with_response(self, tooltip: HelpTooltip) -> (Self, HelpTooltipResponse) {
+        let shown = tooltip.show_for(&self);
+        (self, shown)
     }
 }

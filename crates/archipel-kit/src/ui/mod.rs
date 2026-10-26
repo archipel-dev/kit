@@ -8,7 +8,7 @@
 //! | Choices | [`JBCheckBox`], [`JBRadioButton`], [`OnOffButton`], [`SegmentedButton`] |
 //! | Lists and tables | [`JBList`], [`Tree`] ([`TreeNode`]), [`JBTable`] ([`ColumnInfo`], [`Cell`], [`SortOrder`]), [`TreeTable`], [`CollectionResponse`], [`CellEdit`] |
 //! | Rows | [`ColoredListCellRenderer`] ([`CellRendererResponse`]), [`KeyValueTable`] ([`KeyValueRow`], [`KeyValueEntry`], [`Change`], [`ValueCell`], [`KeyValueTableResponse`]), [`PropertyGrid`] |
-//! | Feedback | [`InlineBanner`] ([`Status`], [`MessageResponse`]), [`AsyncProcessIcon`], [`ProgressBar`], [`StatusText`] |
+//! | Feedback | [`InlineBanner`] ([`Status`], [`MessageResponse`]), [`EditorNotificationPanel`], [`AsyncProcessIcon`], [`ProgressBar`] ([`ProgressState`]), [`StatusText`] |
 //! | Navigation | [`BreadcrumbsComponent`] ([`BreadcrumbsComponentResponse`]); [`tabs`]: [`JBTabs`](tabs::JBTabs) |
 //! | Data | [`Counter`], [`Tag`], [`Kbd`], [`Avatar`], [`Histogram`], [`Sparkline`], [`Bucket`], [`ChartColor`] |
 //! | Layout | [`Form`] ([`FormUi`], [`FieldLabel`]), [`TitledSeparator`], [`SeparatorComponent`], [`DropZone`] |
@@ -22,6 +22,7 @@ mod choice;
 mod collections;
 pub(crate) mod completion;
 mod drag;
+mod editor_notification_panel;
 mod feedback;
 mod form;
 mod key_value;
@@ -48,6 +49,7 @@ pub use collections::{
 };
 pub use completion::{Completer, Completion, Completions};
 pub use drag::{DropZone, DropZoneResponse};
+pub use editor_notification_panel::EditorNotificationPanel;
 pub use feedback::{InlineBanner, MessageResponse, Status};
 pub use form::{FieldLabel, Form, FormUi};
 pub use key_value::{
@@ -56,7 +58,7 @@ pub use key_value::{
 pub use link::ActionLink;
 pub use list::{CellRendererResponse, ColoredListCellRenderer};
 pub use number_field::{Integer, JBIntSpinner};
-pub use progress::{AsyncProcessIcon, ProgressBar};
+pub use progress::{AsyncProcessIcon, ProgressBar, ProgressState};
 pub use property_grid::PropertyGrid;
 pub use segmented::SegmentedButton;
 pub use separator::{SeparatorComponent, TitledSeparator};

@@ -212,6 +212,12 @@ pub struct Colors {
     /// Sequential ramp from "little" to "much" (heatmaps, histograms). Luminance moves away
     /// from `island` as the value grows. Use [`Colors::ramp`] to sample it.
     pub sequential: [Color32; 5],
+
+    // Got-it tooltips (IntelliJ spec section 11.2, Islands `got-it-bg` and `got-it-border`).
+    /// Fill of a got-it tooltip: white on light, `#2E4D89` on dark.
+    pub got_it: Color32,
+    /// Outline of a got-it tooltip (`feedback-border`).
+    pub got_it_border: Color32,
 }
 
 /// Code editor colors.
@@ -411,6 +417,9 @@ impl Theme {
                     rgb(0x78B0EE),
                     rgb(0xBFDDFF),
                 ],
+                // IntelliJ spec section 15.2: got-it-bg #2E4D89, feedback-border #33353B.
+                got_it: rgb(0x2E4D89),
+                got_it_border: rgb(0x33353B),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
@@ -553,6 +562,9 @@ impl Theme {
                     rgb(0x2A63C2),
                     rgb(0x0F3A82),
                 ],
+                // IntelliJ spec section 15.2: got-it-bg #FFFFFF, feedback-border #D1D3D9.
+                got_it: rgb(0xFFFFFF),
+                got_it_border: rgb(0xD1D3D9),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,

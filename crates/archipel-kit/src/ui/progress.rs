@@ -1,7 +1,7 @@
 //! Progress indicators.
 
 use crate::theme::Theme;
-use crate::tokens::radius;
+use crate::tokens::{motion, radius, size};
 use egui::{
     CornerRadius, Rect, Response, Sense, Stroke, Ui, Widget, WidgetInfo, WidgetType, pos2, vec2,
 };
@@ -29,6 +29,15 @@ impl Default for AsyncProcessIcon {
 }
 
 impl AsyncProcessIcon {
+    /// The frame shown `time` seconds after the start: the spinner advances one eighth of a
+    /// turn every [`motion::ASYNC_PROCESS_FRAME`] (125 ms, IntelliJ `AnimatedIcon.Default`),
+    /// it does not turn smoothly.
+    pub fn frame_at(time: f64) -> u32 {
+        let frames = f64::from(motion::ASYNC_PROCESS_FRAMES);
+        let frame = (time.max(0.0) / f64::from(motion::ASYNC_PROCESS_FRAME)).floor();
+        (frame % frames) as u32
+    }
+
     /// A 16 pt spinner.
     pub fn new() -> Self {
         Self {
@@ -57,8 +66,12 @@ impl Widget for AsyncProcessIcon {
         response
             .widget_info(|| WidgetInfo::labeled(WidgetType::ProgressIndicator, true, &self.label));
         if ui.is_rect_visible(rect) {
-            ui.ctx().request_repaint();
-            let time = ui.input(|input| input.time) as f32;
+            let time = ui.input(|input| input.time);
+            // Wake up when the next frame is due, not on every frame.
+            let into_frame = time.rem_euclid(f64::from(motion::ASYNC_PROCESS_FRAME));
+            ui.ctx().request_repaint_after_secs(
+                (f64::from(motion::ASYNC_PROCESS_FRAME) - into_frame) as f32,
+            );
             let radius = self.size / 2.0 - 1.5;
             let stroke = Stroke::new((self.size / 8.0).max(1.5), colors.text_secondary);
             ui.painter().circle_stroke(
@@ -66,7 +79,7 @@ impl Widget for AsyncProcessIcon {
                 radius,
                 Stroke::new(stroke.width, colors.progress_track),
             );
-            let start = time * TAU * 0.8;
+            let start = Self::frame_at(time) as f32 * TAU / motion::ASYNC_PROCESS_FRAMES as f32;
             let points: Vec<_> = (0..=24)
                 .map(|i| {
                     let angle = start + i as f32 / 24.0 * TAU * 0.28;
@@ -77,6 +90,21 @@ impl Widget for AsyncProcessIcon {
         }
         response
     }
+}
+
+/// How a [`ProgressBar`] reads: IntelliJ's `ProgressBar.progressColor` and its passed,
+/// warning and failed variants.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ProgressState {
+    /// Work in progress: the accent color.
+    #[default]
+    Normal,
+    /// Finished well.
+    Passed,
+    /// Needs attention.
+    Warning,
+    /// Failed.
+    Failed,
 }
 
 /// A thin horizontal bar: determinate (`fraction`) or indeterminate (a sliding segment).
@@ -94,6 +122,7 @@ pub struct ProgressBar {
     fraction: Option<f32>,
     label: String,
     width: Option<f32>,
+    state: ProgressState,
 }
 
 impl ProgressBar {
@@ -103,7 +132,25 @@ impl ProgressBar {
             fraction: fraction.map(|f| f.clamp(0.0, 1.0)),
             label: "Progress".into(),
             width: None,
+            state: ProgressState::Normal,
         }
+    }
+
+    /// The segment of an indeterminate bar of `width` at `time` seconds, as `start..end`
+    /// from the track's left edge. It slides in from the left, crosses and leaves on the
+    /// right, once every [`motion::PROGRESS_INDETERMINATE_PERIOD`].
+    pub fn indeterminate_segment(width: f32, time: f64) -> (f32, f32) {
+        let period = f64::from(motion::PROGRESS_INDETERMINATE_PERIOD);
+        let t = (time.max(0.0) / period).fract() as f32;
+        let segment = width * 0.3;
+        let left = -segment + t * (width + segment);
+        (left.max(0.0), (left + segment).min(width))
+    }
+
+    /// Colors the fill as passed, warning or failed.
+    pub fn state(mut self, state: ProgressState) -> Self {
+        self.state = state;
+        self
     }
 
     /// Accessible name (default "Progress").
@@ -123,31 +170,38 @@ impl Widget for ProgressBar {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
         let width = self.width.unwrap_or_else(|| ui.available_width());
-        let (outer, response) = ui.allocate_exact_size(vec2(width, 8.0), Sense::hover());
+        let (outer, response) =
+            ui.allocate_exact_size(vec2(width, size::PROGRESS_BAR_ROW), Sense::hover());
         response.widget_info(|| {
             let mut info = WidgetInfo::labeled(WidgetType::ProgressIndicator, true, &self.label);
             info.value = self.fraction.map(|f| (f * 100.0).round() as f64);
             info
         });
-        let track = Rect::from_center_size(outer.center(), vec2(width, 4.0));
+        let track = Rect::from_center_size(outer.center(), vec2(width, size::PROGRESS_BAR_HEIGHT));
         let corner = CornerRadius::same(radius::PILL);
         ui.painter()
             .rect_filled(track, corner, colors.progress_track);
         let bar = match self.fraction {
-            Some(fraction) => Rect::from_min_size(track.min, vec2(width * fraction, 4.0)),
+            Some(fraction) => {
+                Rect::from_min_size(track.min, vec2(width * fraction, size::PROGRESS_BAR_HEIGHT))
+            }
             None => {
                 ui.ctx().request_repaint();
-                let t = (ui.input(|input| input.time) as f32 * 0.6).fract();
-                let segment = width * 0.3;
-                let left = track.left() - segment + t * (width + segment);
+                let (start, end) = Self::indeterminate_segment(width, ui.input(|i| i.time));
                 Rect::from_min_max(
-                    pos2(left.max(track.left()), track.top()),
-                    pos2((left + segment).min(track.right()), track.bottom()),
+                    pos2(track.left() + start, track.top()),
+                    pos2(track.left() + end, track.bottom()),
                 )
             }
         };
         if bar.width() > 0.0 {
-            ui.painter().rect_filled(bar, corner, colors.accent);
+            let fill = match self.state {
+                ProgressState::Normal => colors.accent,
+                ProgressState::Passed => colors.success,
+                ProgressState::Warning => colors.warning,
+                ProgressState::Failed => colors.error,
+            };
+            ui.painter().rect_filled(bar, corner, fill);
         }
         response
     }

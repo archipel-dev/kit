@@ -911,6 +911,7 @@ impl Widget for InlineBanner<'_> {
         let look = self.look;
         let (tint, glyph) = match self.severity {
             Status::Info => (c.banner_info, Glyph::Info),
+            Status::Promo => (c.banner_info, Glyph::Sparkle),
             Status::Success => (c.banner_success, Glyph::Success),
             Status::Warning => (c.banner_warning, Glyph::Warning),
             Status::Error => (c.banner_error, Glyph::Error),

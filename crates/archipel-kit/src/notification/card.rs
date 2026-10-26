@@ -1,5 +1,6 @@
 //! Notification cards.
 
+use super::{NotificationAction, NotificationGroup};
 use crate::action_system::ActionButton;
 use crate::icons::{self, Glyph};
 use crate::theme::Theme;
@@ -20,18 +21,22 @@ use egui::{CornerRadius, Stroke, Ui, vec2};
 ///     .show(ui);
 /// # });
 /// ```
+#[derive(Debug, Clone)]
 pub struct Notification {
+    group: NotificationGroup,
     severity: Status,
     title: String,
     body: Option<String>,
-    actions: Vec<String>,
+    actions: Vec<NotificationAction>,
 }
 
 impl Notification {
-    /// A toast of `severity` titled `title`.
-    pub fn new(severity: Status, title: impl Into<String>) -> Self {
+    /// A notification of `severity` (a [`Status`] or a
+    /// [`NotificationType`](super::NotificationType)) titled `title`.
+    pub fn new(severity: impl Into<Status>, title: impl Into<String>) -> Self {
         Self {
-            severity,
+            group: NotificationGroup::default(),
+            severity: severity.into(),
             title: title.into(),
             body: None,
             actions: Vec::new(),
@@ -46,12 +51,51 @@ impl Notification {
 
     /// Adds a link-style action; [`MessageResponse::action`] reports its index.
     pub fn action(mut self, label: impl Into<String>) -> Self {
-        self.actions.push(label.into());
+        self.actions.push(NotificationAction::new(label));
         self
     }
 
-    /// Draws the card at the current position (width 320).
+    /// Adds a [`NotificationAction`], e.g. one that keeps the notification open.
+    pub fn notification_action(mut self, action: NotificationAction) -> Self {
+        self.actions.push(action);
+        self
+    }
+
+    /// The group the notification belongs to; it decides how it is shown (default: a
+    /// balloon group with no name).
+    pub fn group(mut self, group: NotificationGroup) -> Self {
+        self.group = group;
+        self
+    }
+
+    /// The group of the notification.
+    pub fn notification_group(&self) -> &NotificationGroup {
+        &self.group
+    }
+
+    /// The title.
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    /// The severity as a [`Status`].
+    pub fn status(&self) -> Status {
+        self.severity
+    }
+
+    /// The actions in the order they were added.
+    pub fn actions(&self) -> &[NotificationAction] {
+        &self.actions
+    }
+
+    /// Draws the card at the current position (width 360).
     pub fn show(self, ui: &mut Ui) -> MessageResponse {
+        self.show_limited(ui, None)
+    }
+
+    /// Like [`Notification::show`]; with `max_height` the text and body scroll when the
+    /// card would grow taller.
+    pub(crate) fn show_limited(self, ui: &mut Ui, max_height: Option<f32>) -> MessageResponse {
         let colors = Theme::colors(ui.ctx());
         let mut out = MessageResponse::default();
         let padding = size::NOTIFICATION_PADDING;
@@ -83,29 +127,45 @@ impl Notification {
                         ui.spacing_mut().item_spacing.y = 4.0;
                         // Leave room for the dismiss button over the title's end.
                         ui.set_max_width(ui.available_width() - size::ICON_BUTTON_SMALL);
-                        ui.add(
-                            egui::Label::new(
-                                egui::RichText::new(&self.title)
-                                    .font(typography::semibold(ui.ctx(), typography::BODY))
-                                    .color(colors.text_strong),
-                            )
-                            .wrap(),
-                        );
-                        if let Some(body) = &self.body {
+                        // Beyond the maximum height the title and body scroll; the
+                        // actions stay (IntelliJ spec section 10.1).
+                        let text = |ui: &mut Ui| {
                             ui.add(
-                                egui::Label::new(egui::RichText::new(body).color(colors.text))
-                                    .wrap(),
+                                egui::Label::new(
+                                    egui::RichText::new(&self.title)
+                                        .font(typography::semibold(ui.ctx(), typography::BODY))
+                                        .color(colors.text_strong),
+                                )
+                                .wrap(),
                             );
+                            if let Some(body) = &self.body {
+                                ui.add(
+                                    egui::Label::new(egui::RichText::new(body).color(colors.text))
+                                        .wrap(),
+                                );
+                            }
+                        };
+                        match max_height {
+                            Some(height) => {
+                                crate::parts::scroll_vertical()
+                                    .id_salt("archipel-notification-text")
+                                    .max_height(height)
+                                    .auto_shrink([false, true])
+                                    .show(ui, text);
+                            }
+                            None => text(ui),
                         }
                         if !self.actions.is_empty() {
                             ui.add_space(4.0);
                             ui.horizontal(|ui| {
                                 ui.spacing_mut().item_spacing.x = 12.0;
-                                for (index, label) in self.actions.iter().enumerate() {
-                                    if ui.add(crate::ui::ActionLink::new(label.as_str())).clicked()
-                                    {
+                                for (index, action) in self.actions.iter().enumerate() {
+                                    let link =
+                                        ui.add(crate::ui::ActionLink::new(action.text.as_str()));
+                                    if link.clicked() {
                                         out.action = Some(index);
                                     }
+                                    out.focused |= link.has_focus();
                                 }
                             });
                         }
@@ -129,12 +189,9 @@ impl Notification {
         if !(ui.rect_contains_pointer(card) || focused) {
             close.multiply_opacity(0.0);
         }
-        if close
-            .add(ActionButton::new(Glyph::Close, "Dismiss").small(true))
-            .clicked()
-        {
-            out.dismissed = true;
-        }
+        let close = close.add(ActionButton::new(Glyph::Close, "Dismiss").small(true));
+        out.dismissed |= close.clicked();
+        out.focused |= close.has_focus();
         out
     }
 

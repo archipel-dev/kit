@@ -1,16 +1,21 @@
 use super::*;
+use archipel_kit::ide::{GotItPosition, GotItTooltip};
+use archipel_kit::openapi::ui::{DialogValidation, Messages, ValidationInfo};
 
 enum GalleryDialog {
     Delete,
     NewBranch,
+    YesNo,
 }
 
 pub(super) struct State {
     query: String,
     dialog: Option<GalleryDialog>,
     branch: String,
+    validation: DialogValidation,
     busy: bool,
     last_action: String,
+    got_it: bool,
 }
 
 impl Default for State {
@@ -19,8 +24,10 @@ impl Default for State {
             query: String::new(),
             dialog: None,
             branch: "feature/islands".into(),
+            validation: DialogValidation::new(),
             busy: false,
             last_action: String::new(),
+            got_it: false,
         }
     }
 }
@@ -38,6 +45,29 @@ impl State {
             );
             ui.add(Button::primary("Deploy").enabled(false))
                 .tooltip("Connect a cluster first");
+            ui.add(Button::secondary("With link")).tooltip_with(
+                HelpTooltip::new("Hot Reload")
+                    .shortcut("Ctrl+F10")
+                    .hint("Applies code changes to the running application without a restart.")
+                    .link("Learn more", true),
+            );
+        });
+        ui.add(TitledSeparator::new("Got it tooltip"));
+        ui.horizontal(|ui| {
+            let target = ui.add(Button::secondary("Run configuration")).rect;
+            if ui.add(Button::secondary("Show the tip")).clicked() {
+                self.got_it = true;
+            }
+            if self.got_it {
+                let tip =
+                    GotItTooltip::new("gallery.run.config", "Pick the configuration to run here.")
+                        .header("Run configurations")
+                        .step(1)
+                        .position(GotItPosition::TopMiddle);
+                if tip.show(ui.ctx(), target, true).dismissed.is_some() {
+                    self.got_it = false;
+                }
+            }
         });
         ui.add(TitledSeparator::new("Dialogs"));
         ui.horizontal(|ui| {
@@ -46,6 +76,9 @@ impl State {
             }
             if ui.add(Button::secondary("New branch…")).clicked() {
                 self.dialog = Some(GalleryDialog::NewBranch);
+            }
+            if ui.add(Button::secondary("Yes / No…")).clicked() {
+                self.dialog = Some(GalleryDialog::YesNo);
             }
         });
         if !self.last_action.is_empty() {
@@ -87,23 +120,40 @@ impl State {
                 .danger(true)
                 .secondary("Cancel")
                 .show(ctx),
+            Some(GalleryDialog::YesNo) => {
+                Messages::yes_no_dialog("Delete branch?", "The branch has unmerged commits.")
+                    .show(ctx)
+            }
             Some(GalleryDialog::NewBranch) => {
-                let valid = !self.branch.trim().is_empty();
+                // Validated 300 ms after typing stops; OK is off while an error shows.
                 let branch = &mut self.branch;
+                self.validation.update(ctx, &*branch, || {
+                    if branch.trim().is_empty() {
+                        vec![ValidationInfo::error("Enter a branch name")]
+                    } else if branch.contains(' ') {
+                        vec![ValidationInfo::warning(
+                            "Spaces in a branch name are unusual",
+                        )]
+                    } else {
+                        vec![]
+                    }
+                });
                 DialogWrapper::new("New Branch")
                     .content(|ui| {
                         ui.add(JBTextField::new(branch).label("Branch name"));
                     })
                     .primary("Create")
-                    .primary_enabled(valid)
                     .secondary("Cancel")
+                    .validation(&self.validation)
                     .width(360.0)
                     .show(ctx)
             }
         };
         if let Some(action) = action {
-            self.last_action = format!("{action:?}");
+            self.last_action = format!("{action:?} (exit code {})", action.code());
             self.dialog = None;
+            // The next dialog validates from scratch.
+            self.validation = DialogValidation::new();
         }
     }
 }
