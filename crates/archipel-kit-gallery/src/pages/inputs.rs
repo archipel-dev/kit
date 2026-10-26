@@ -8,6 +8,10 @@ pub(super) struct State {
     body: String,
     params: Vec<KeyValueEntry>,
     method: &'static str,
+    history: SearchHistory,
+    find: String,
+    path: String,
+    limit: u32,
 }
 
 impl Default for State {
@@ -27,6 +31,15 @@ impl Default for State {
                 },
             ],
             method: "GET",
+            history: {
+                let mut history = SearchHistory::new();
+                history.add("TextField");
+                history.add("ComboBox");
+                history
+            },
+            find: String::new(),
+            path: "~/code/archipel".into(),
+            limit: 50,
         }
     }
 }
@@ -44,6 +57,27 @@ impl State {
                 .id(egui::Id::new("gallery-search"))
                 .enabled(enabled),
         );
+        let find = SearchTextField::new(&mut self.find)
+            .history(&mut self.history)
+            .name("Find in history")
+            .enabled(enabled)
+            .show(ui);
+        let _ = find;
+        let browse = JBTextField::new(&mut self.path)
+            .name("Location")
+            .extension(Extension::new(Glyph::Folder, "Browse").tooltip("Browse"))
+            .enabled(enabled)
+            .show(ui);
+        let _ = browse;
+        ui.horizontal(|ui| {
+            ui.label("Limit");
+            ui.add(
+                JBIntSpinner::new(&mut self.limit)
+                    .name("Limit")
+                    .range(1..=1000)
+                    .enabled(enabled),
+            );
+        });
         let error = self
             .port
             .parse::<u16>()

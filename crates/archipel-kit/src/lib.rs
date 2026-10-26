@@ -99,6 +99,7 @@ mod docs {
         Button = "components/button.md";
         Chart = "components/chart.md";
         Choice = "components/choice.md";
+        Dsl = "components/dsl.md";
         Code = "components/code.md";
         ComboBox = "components/combo-box.md";
         StatusText = "components/status-text.md";

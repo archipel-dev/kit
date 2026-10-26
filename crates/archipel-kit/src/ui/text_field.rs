@@ -1,12 +1,15 @@
 //! Themed single-line and multi-line text inputs.
 
 use super::completion::Completer;
+use super::popup::{Options, Placement, PopupChain, RowSpec, drive};
+use super::text_extensions::{Extension, SearchHistory, extension_button};
 use crate::common;
 use crate::editor::{Highlighter, Span, TemplateAt, TokenKind, template_at};
 use crate::editor::{styled_job, token_format};
 use crate::icons::{self, Glyph, Icon};
+use crate::openapi::ui::ValidationInfo;
 use crate::theme::Theme;
-use crate::tokens::{radius, size, typography};
+use crate::tokens::{motion, radius, size, typography};
 use egui::text::{CCursor, CCursorRange};
 use egui::{Color32, CornerRadius, Id, Rect, Response, Stroke, Ui, Widget, pos2, vec2};
 use std::cell::RefCell;
@@ -51,8 +54,13 @@ pub struct JBTextField<'t> {
     rows: usize,
     placeholder: Option<String>,
     error: Option<String>,
+    warning: bool,
     leading: Option<Icon>,
     clearable: bool,
+    clear_on_escape: bool,
+    spinner: bool,
+    extensions: Vec<Extension>,
+    history: Option<&'t mut SearchHistory>,
     password: bool,
     enabled: bool,
     monospace: bool,
@@ -79,6 +87,14 @@ pub struct JBTextFieldOutput {
     /// click on a suggestion (which moves the focus first) can still complete the token.
     /// Open the list only while `response.has_focus()`.
     pub template: Option<TemplateAt>,
+    /// The [extension](JBTextField::extension) (index in the order added) that was activated
+    /// this frame by a click, or by <kbd>Space</kbd>/<kbd>Enter</kbd> on it.
+    pub extension_clicked: Option<usize>,
+    /// The field's frame, including the room of its icons and buttons.
+    pub frame: Rect,
+    /// Steps the spinner arrows asked for this frame (positive: up). Zero unless the field is
+    /// a spinner.
+    pub(crate) spin: i32,
 }
 
 impl JBTextFieldOutput {
@@ -115,8 +131,13 @@ impl<'t> JBTextField<'t> {
             rows: 1,
             placeholder: None,
             error: None,
+            warning: false,
             leading: None,
             clearable: false,
+            clear_on_escape: false,
+            spinner: false,
+            extensions: Vec::new(),
+            history: None,
             password: false,
             enabled: true,
             monospace: false,
@@ -154,6 +175,7 @@ impl<'t> JBTextField<'t> {
             .leading_icon(Glyph::Search)
             .placeholder("Search")
             .clearable(true)
+            .clear_on_escape(true)
     }
 
     /// A visible label above the input; it is also the input's accessible name.
@@ -186,6 +208,45 @@ impl<'t> JBTextField<'t> {
     /// clears it, so `.error(validate(&text))` works directly.
     pub fn error(mut self, error: Option<impl Into<String>>) -> Self {
         self.error = error.map(Into::into);
+        self
+    }
+
+    /// Like [`error`](Self::error) for a [`ValidationInfo`]: an error gets the red outline, a
+    /// [warning](ValidationInfo::warning) the yellow one (IntelliJ `ComponentValidator`).
+    /// The message is shown under the field and as its tooltip. `None` clears it.
+    pub fn validation(mut self, info: Option<&ValidationInfo>) -> Self {
+        self.warning = info.is_some_and(|info| info.warning);
+        self.error = info.map(|info| info.message.clone());
+        self
+    }
+
+    /// Adds an icon button inside the field (IntelliJ `ExtendableTextField.Extension`).
+    /// See [`Extension`]. Extensions are numbered in the order they are added.
+    pub fn extension(mut self, extension: Extension) -> Self {
+        self.extensions.push(extension);
+        self
+    }
+
+    /// <kbd>Esc</kbd> clears the text while the field has any, instead of leaving it
+    /// (IntelliJ `toClearTextOnEscape`). Default off; search fields turn it on.
+    pub fn clear_on_escape(mut self, clear: bool) -> Self {
+        self.clear_on_escape = clear;
+        self
+    }
+
+    /// Gives the field a search history: the leading icon opens it (click, or
+    /// <kbd>Alt</kbd>+<kbd>Down</kbd>), <kbd>Alt</kbd>+<kbd>Up</kbd> cycles to the previous
+    /// entry, and a submitted text (<kbd>Enter</kbd>) is remembered. Used by
+    /// [`SearchTextField`](crate::ui::SearchTextField).
+    pub fn history(mut self, history: &'t mut SearchHistory) -> Self {
+        self.history = Some(history);
+        self
+    }
+
+    /// Draws stacked up and down arrows at the right edge: the field of a
+    /// [`JBIntSpinner`](crate::ui::JBIntSpinner).
+    pub(crate) fn spinner(mut self, spinner: bool) -> Self {
+        self.spinner = spinner;
         self
     }
 
@@ -252,10 +313,22 @@ impl Widget for JBTextField<'_> {
 impl JBTextField<'_> {
     /// Adds the field and reports the caret, the `{{variable}}` at it and whether
     /// <kbd>Enter</kbd> submitted it, besides the response.
-    pub fn show(self, ui: &mut Ui) -> JBTextFieldOutput {
+    pub fn show(mut self, ui: &mut Ui) -> JBTextFieldOutput {
         let colors = Theme::colors(ui.ctx());
         // A layout that has run out of room must not make egui allocate a negative size.
-        let width = self.width.unwrap_or_else(|| ui.available_width()).max(0.0);
+        // Never narrower than `TextField.minimumSize`, nor than its icons need.
+        let icons_width = self.extensions.len() as f32 * (size::ICON + size::EXTENSION_GAP)
+            + if self.leading.is_some() {
+                size::ICON + size::ICON_TEXT_GAP
+            } else {
+                0.0
+            };
+        let min_width =
+            size::TEXT_FIELD_MIN_WIDTH.max(2.0 * size::CODE_PADDING + icons_width + size::ICON);
+        let width = self
+            .width
+            .unwrap_or_else(|| ui.available_width())
+            .max(min_width);
         // Exactly `width` wide, wherever the layout puts it (a right-to-left row too).
         let column = vec2(width, ui.available_height().max(0.0));
         let layout = egui::Layout::top_down(egui::Align::Min);
@@ -301,6 +374,103 @@ impl JBTextField<'_> {
                     list.open();
                 }
             }
+            // The edit's id is known up front, so keys meant for the field can be taken before
+            // the edit sees them.
+            let edit_id = self
+                .id
+                .unwrap_or_else(|| frame_response.id.with("archipel-edit"));
+            let focused_before = self.enabled && ui.memory(|m| m.has_focus(edit_id));
+            let history_id = frame_response.id.with("archipel-history");
+            let mut history_chain: PopupChain =
+                ui.data(|d| d.get_temp(history_id)).unwrap_or_default();
+            let entries: Vec<String> = self
+                .history
+                .as_deref()
+                .map(|history| history.entries().to_vec())
+                .unwrap_or_default();
+            let now = ui.input(|i| i.time);
+            let mut replaced = false;
+            if self.clear_on_escape
+                && focused_before
+                && !history_chain.is_open()
+                && !list.is_open()
+                && !self.text.is_empty()
+                && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+            {
+                self.text.clear();
+                replaced = true;
+            }
+            if focused_before && !entries.is_empty() {
+                let (down, up) = ui.input_mut(|i| {
+                    (
+                        i.consume_key(egui::Modifiers::ALT, egui::Key::ArrowDown),
+                        i.consume_key(egui::Modifiers::ALT, egui::Key::ArrowUp),
+                    )
+                });
+                if down && !history_chain.is_open() {
+                    history_chain.open(now, true);
+                    ui.ctx().request_repaint();
+                } else if down || up {
+                    // Alt+Down / Alt+Up step through the entries, wrapping around.
+                    let at = entries.iter().position(|e| e == self.text.as_str());
+                    let len = entries.len();
+                    let next = match (at, down) {
+                        (None, true) => 0,
+                        (None, false) => len - 1,
+                        (Some(i), true) => (i + 1) % len,
+                        (Some(i), false) => (i + len - 1) % len,
+                    };
+                    *self.text = entries[next].clone();
+                    replaced = true;
+                }
+            }
+            if history_chain.is_open() {
+                let mut source = super::popup_rows::ListRows {
+                    rows: entries
+                        .iter()
+                        .map(|entry| RowSpec {
+                            text: entry.clone(),
+                            selectable: true,
+                            ..RowSpec::default()
+                        })
+                        .collect(),
+                    default: entries
+                        .iter()
+                        .position(|e| e == self.text.as_str())
+                        .unwrap_or(0),
+                    speed_search: false,
+                    chosen: None,
+                };
+                let output = drive(
+                    ui.ctx(),
+                    history_id,
+                    Placement::Combo {
+                        anchor: rect,
+                        max_rows: size::COMBO_MAX_ROWS,
+                    },
+                    Options {
+                        show_submenu_on_hover: false,
+                        cancel_on_click_outside: true,
+                    },
+                    &mut history_chain,
+                    &mut source,
+                );
+                if let Some(entry) = source
+                    .chosen
+                    .filter(|_| output.chosen.is_some())
+                    .and_then(|row| entries.get(row))
+                {
+                    *self.text = entry.clone();
+                    replaced = true;
+                    if let Some(history) = self.history.as_deref_mut() {
+                        history.add(entry.clone());
+                    }
+                    ui.memory_mut(|m| m.request_focus(edit_id));
+                }
+                if output.cancelled {
+                    ui.memory_mut(|m| m.request_focus(edit_id));
+                }
+            }
             let mut content = ui.new_child(
                 egui::UiBuilder::new()
                     .max_rect(rect.shrink2(vec2(
@@ -310,9 +480,23 @@ impl JBTextField<'_> {
                     .layout(egui::Layout::left_to_right(egui::Align::Center)),
             );
             content.spacing_mut().item_spacing.x = size::ICON_TEXT_GAP;
+            let mut leading_rect = None;
             if let Some(icon) = self.leading {
-                icons::show(&mut content, icon, size::ICON, colors.text_placeholder);
+                let (icon_rect, _) =
+                    content.allocate_exact_size(vec2(size::ICON, size::ICON), egui::Sense::hover());
+                icons::paint(content.painter(), icon_rect, icon, colors.text_placeholder);
+                leading_rect = Some(icon_rect);
             }
+            // Extensions before the text sit after the leading icon.
+            let mut before_rects = Vec::new();
+            for (index, extension) in self.extensions.iter().enumerate() {
+                if extension.before_text {
+                    let (icon_rect, _) = content
+                        .allocate_exact_size(vec2(size::ICON, size::ICON), egui::Sense::hover());
+                    before_rects.push((index, icon_rect));
+                }
+            }
+            let after_count = self.extensions.iter().filter(|e| !e.before_text).count();
             let show_clear =
                 self.clearable && !self.text.is_empty() && self.enabled && suggestions.is_none();
             // The clear button or chevron sits at a fixed distance from the field's right
@@ -325,7 +509,12 @@ impl JBTextField<'_> {
                     + size::ICON_TEXT_GAP
             } else {
                 0.0
-            };
+            } + after_count as f32 * (size::ICON + size::EXTENSION_GAP)
+                + if self.spinner {
+                    size::SPINNER_ARROW_AREA - size::CODE_PADDING + size::ICON_TEXT_GAP
+                } else {
+                    0.0
+                };
             let mut edit = if multiline {
                 egui::TextEdit::multiline(self.text).desired_rows(self.rows)
             } else {
@@ -337,9 +526,7 @@ impl JBTextField<'_> {
             .text_color(common::enabled_text(self.enabled, colors.text, &colors))
             .desired_width(content.available_width() - clear_width)
             .margin(vec2(0.0, 0.0));
-            if let Some(id) = self.id {
-                edit = edit.id(id);
-            }
+            edit = edit.id(edit_id);
             let font = if self.monospace {
                 edit = edit.font(egui::TextStyle::Monospace);
                 egui::TextStyle::Monospace.resolve(content.style())
@@ -415,6 +602,21 @@ impl JBTextField<'_> {
                 content.data(|d| d.get_temp::<CCursorRange>(caret_key))
             };
             let mut edited = shown.response;
+            if self.clear_on_escape && edited.has_focus() && !self.text.is_empty() {
+                // egui drops the focus on Escape; here it clears the text instead. The edit
+                // sets its own filter while it shows, so this one goes after it.
+                ui.memory_mut(|m| {
+                    m.set_focus_lock_filter(
+                        edited.id,
+                        egui::EventFilter {
+                            horizontal_arrows: true,
+                            vertical_arrows: true,
+                            escape: true,
+                            ..Default::default()
+                        },
+                    )
+                });
+            }
             if let Some(id) = label_id {
                 edited = edited.labelled_by(id);
             }
@@ -427,11 +629,107 @@ impl JBTextField<'_> {
                 ui.ctx()
                     .accesskit_node_builder(edited.id, |node| node.set_label(name.as_str()));
             }
-            if show_clear && clear_button(&content, rect, edited.id).clicked() {
-                self.text.clear();
+            let mut over_button = false;
+            let mut extension_clicked = None;
+            if replaced {
                 edited.mark_changed();
-                edited.request_focus();
             }
+            if show_clear {
+                let clear = clear_button(&content, rect, edited.id);
+                over_button |= clear.hovered();
+                if clear.clicked() {
+                    self.text.clear();
+                    edited.mark_changed();
+                    edited.request_focus();
+                }
+            }
+            // Extensions after the text, right to left from the clear button or the edge.
+            let mut right = if show_clear {
+                rect.right()
+                    - size::CLEAR_BUTTON_INSET
+                    - size::CLEAR_BUTTON / 2.0
+                    - size::EXTENSION_GAP
+            } else if suggestions.is_some() {
+                rect.right() - size::COMBO_CHEVRON_INSET - size::ICON / 2.0 - size::EXTENSION_GAP
+            } else {
+                rect.right() - size::CODE_PADDING
+            };
+            let mut slots: Vec<(usize, Rect)> = before_rects;
+            for (index, extension) in self.extensions.iter().enumerate().rev() {
+                if !extension.before_text {
+                    slots.push((
+                        index,
+                        Rect::from_center_size(
+                            pos2(right - size::ICON / 2.0, rect.center().y),
+                            vec2(size::ICON, size::ICON),
+                        ),
+                    ));
+                    right -= size::ICON + size::EXTENSION_GAP;
+                }
+            }
+            for (index, slot) in slots {
+                let response = extension_button(
+                    &content,
+                    slot,
+                    edited.id.with(("extension", index)),
+                    &self.extensions[index],
+                    self.enabled,
+                );
+                over_button |= response.hovered();
+                if response.clicked() {
+                    extension_clicked = Some(index);
+                }
+            }
+            let mut spin = 0;
+            if self.spinner {
+                let area = Rect::from_min_max(
+                    pos2(rect.right() - size::SPINNER_ARROW_AREA, rect.top()),
+                    rect.right_bottom(),
+                );
+                let sense = if self.enabled {
+                    egui::Sense::CLICK
+                } else {
+                    egui::Sense::hover()
+                };
+                let arrows = content.interact(area, edited.id.with("spin"), sense);
+                arrows.widget_info(|| {
+                    egui::WidgetInfo::labeled(
+                        egui::WidgetType::Button,
+                        self.enabled,
+                        "Increment or decrement",
+                    )
+                });
+                crate::cursor::on_hover_action(&arrows);
+                over_button |= arrows.hovered();
+                spin = spinner_steps(&content, &arrows, area);
+                spinner_arrows(&content, area, &arrows, self.enabled);
+            }
+            // The leading icon of a field with a history opens it.
+            if leading_rect.is_some() && self.history.is_some() {
+                let area = Rect::from_min_max(
+                    pos2(rect.left(), rect.top()),
+                    pos2(rect.left() + size::SEARCH_ICON_AREA, rect.bottom()),
+                );
+                let sense = if self.enabled {
+                    egui::Sense::click()
+                } else {
+                    egui::Sense::hover()
+                };
+                let button = content.interact(area, edited.id.with("history-button"), sense);
+                button.widget_info(|| {
+                    egui::WidgetInfo::labeled(
+                        egui::WidgetType::Button,
+                        self.enabled,
+                        "Search history",
+                    )
+                });
+                crate::cursor::on_hover_action(&button);
+                over_button |= button.hovered();
+                if button.clicked() && !entries.is_empty() && history_chain.open(now, true) {
+                    ui.ctx().request_repaint();
+                }
+            }
+            ui.data_mut(|d| d.insert_temp(history_id, history_chain));
             if suggestions.is_some() && chevron(&content, rect, edited.id, self.enabled).clicked() {
                 if list.is_open() {
                     list.close();
@@ -491,11 +789,17 @@ impl JBTextField<'_> {
                 && !keys.accepted()
                 && edited.lost_focus()
                 && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            if submitted && let Some(history) = self.history.as_deref_mut() {
+                // A committed search is remembered (IntelliJ `addCurrentTextToHistory`).
+                history.add(self.text.clone());
+            }
+            let problem = if self.warning {
+                colors.warning
+            } else {
+                colors.error
+            };
             let stroke = if self.error.is_some() {
-                Stroke::new(
-                    if focused { size::FOCUS_RING } else { 1.0_f32 },
-                    colors.error,
-                )
+                Stroke::new(if focused { size::FOCUS_RING } else { 1.0_f32 }, problem)
             } else if focused {
                 Stroke::new(size::FOCUS_RING, colors.focus_ring)
             } else if self.enabled {
@@ -524,7 +828,7 @@ impl JBTextField<'_> {
                     egui::StrokeKind::Inside,
                 ),
             );
-            if self.enabled && frame_response.hovered() {
+            if self.enabled && frame_response.hovered() && !over_button {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
             }
             if let Some(error) = &self.error {
@@ -532,7 +836,7 @@ impl JBTextField<'_> {
                 ui.add(
                     egui::Label::new(
                         egui::RichText::new(error)
-                            .color(colors.error)
+                            .color(problem)
                             .font(typography::body(typography::SMALL + 1.0)),
                     )
                     .extend(),
@@ -544,9 +848,92 @@ impl JBTextField<'_> {
                 submitted,
                 caret_rect,
                 template,
+                extension_clicked,
+                frame: rect,
+                spin,
             }
         })
         .inner
+    }
+}
+
+/// How many steps the spinner arrows in `area` ask for this frame: one when pressed, then
+/// more while held, after [`motion::SPINNER_REPEAT_DELAY`] every
+/// [`motion::SPINNER_REPEAT_INTERVAL`] (Swing's spinner timer, IntelliJ spec section 13.4).
+/// The upper half of the area steps up, the lower half down; the sign says which.
+fn spinner_steps(ui: &Ui, arrows: &Response, area: Rect) -> i32 {
+    let key = arrows.id.with("hold");
+    let now = ui.input(|i| i.time);
+    let pressed = arrows.contains_pointer()
+        && ui.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary));
+    let direction = |ui: &Ui| {
+        let y = ui.input(|i| i.pointer.interact_pos()).map_or(0.0, |p| p.y);
+        if y < area.center().y { 1 } else { -1 }
+    };
+    if pressed {
+        let dir = direction(ui);
+        ui.data_mut(|d| d.insert_temp(key, (now, now, dir)));
+        return dir;
+    }
+    if !arrows.is_pointer_button_down_on() {
+        ui.data_mut(|d| d.remove_temp::<(f64, f64, i32)>(key));
+        return 0;
+    }
+    let Some((start, last, dir)) = ui.data(|d| d.get_temp::<(f64, f64, i32)>(key)) else {
+        return 0;
+    };
+    let delay = f64::from(motion::SPINNER_REPEAT_DELAY);
+    let interval = f64::from(motion::SPINNER_REPEAT_INTERVAL);
+    let due = if now - start >= delay {
+        (last + interval).max(start + delay)
+    } else {
+        start + delay
+    };
+    if now >= due {
+        ui.data_mut(|d| d.insert_temp(key, (start, now, dir)));
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_secs_f64(interval));
+        return dir;
+    }
+    ui.ctx()
+        .request_repaint_after(std::time::Duration::from_secs_f64(due - now));
+    0
+}
+
+/// The stacked arrows of a spinner: the half under the pointer is pressed-dark while held.
+fn spinner_arrows(ui: &Ui, area: Rect, arrows: &Response, enabled: bool) {
+    let colors = Theme::colors(ui.ctx());
+    let color = if enabled {
+        colors.combo_arrow
+    } else {
+        colors.text_disabled
+    };
+    let half = area.height() / 2.0;
+    for (glyph, top) in [
+        (Glyph::ChevronUp, area.top()),
+        (Glyph::ChevronDown, area.top() + half),
+    ] {
+        let band = Rect::from_min_size(pos2(area.left(), top), vec2(area.width(), half));
+        if arrows.is_pointer_button_down_on()
+            && ui
+                .input(|i| i.pointer.interact_pos())
+                .is_some_and(|p| band.contains(p))
+        {
+            ui.painter().circle_filled(
+                band.center(),
+                size::SPINNER_ARROW_GLYPH / 2.0 + 2.0,
+                colors.clear_hover,
+            );
+        }
+        icons::paint(
+            ui.painter(),
+            Rect::from_center_size(
+                band.center(),
+                vec2(size::SPINNER_ARROW_GLYPH, size::SPINNER_ARROW_GLYPH),
+            ),
+            glyph,
+            color,
+        );
     }
 }
 

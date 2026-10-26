@@ -62,6 +62,8 @@ pub struct ActionMenuItem<'a> {
     mnemonic: Option<char>,
     /// Managed: the width the list gives every row.
     fixed_width: Option<f32>,
+    /// The label's tone (a combo box colors HTTP methods by it).
+    label_tone: Tone,
 }
 
 /// The content of a submenu.
@@ -85,6 +87,7 @@ impl<'a> ActionMenuItem<'a> {
             mnemonic_column: 0.0,
             mnemonic: None,
             fixed_width: None,
+            label_tone: Tone::Default,
         }
     }
 
@@ -203,6 +206,12 @@ impl<'a> ActionMenuItem<'a> {
         self
     }
 
+    /// Colors the label by meaning (managed rows of a combo box popup).
+    pub(crate) fn label_tone(mut self, tone: Tone) -> Self {
+        self.label_tone = tone;
+        self
+    }
+
     /// A check mark in the icon column (for toggle items).
     pub fn checked(mut self, checked: bool) -> Self {
         self.checked = Some(checked);
@@ -230,7 +239,7 @@ impl Widget for ActionMenuItem<'_> {
             icon_tone,
             reserve_icon: !two_line && reserve_icons,
             label: &self.label,
-            label_tone: Tone::Default,
+            label_tone: self.label_tone,
             secondary: None,
             trailing: self.shortcut.as_deref().filter(|_| !has_arrow),
             ..SimpleColoredComponent::default()

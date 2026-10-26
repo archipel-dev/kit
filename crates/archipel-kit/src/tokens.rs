@@ -58,6 +58,45 @@ pub mod size {
     pub const CLEAR_GLYPH: f32 = 13.0;
     /// Gap between toolbar items.
     pub const TOOLBAR_GAP: f32 = 4.0;
+    /// Smallest width of a push button (`Button.minimumSize` 72 x 28, IntelliJ spec section
+    /// 13.2).
+    pub const BUTTON_MIN_WIDTH: f32 = 72.0;
+    /// How much a pressed push button is darkened (Swing's pressed button model, IntelliJ spec
+    /// section 13.2; the amount is the kit's own choice, not specified).
+    pub const BUTTON_PRESSED_DARKEN: f32 = 0.12;
+    /// Smallest width of a combo box (`ComboBox.minimumSize` 49 x 28, IntelliJ spec section 4).
+    pub const COMBO_MIN_WIDTH: f32 = 49.0;
+    /// Space between a combo box's left edge and its text (`ComboBox.padding` left 9).
+    pub const COMBO_PADDING_LEFT: f32 = 9.0;
+    /// Rows a combo box's list shows before it scrolls (`getMaximumRowCount`, IntelliJ spec
+    /// section 4).
+    pub const COMBO_MAX_ROWS: usize = 10;
+    /// Width of a spinner's arrow area at the right edge of its field.
+    pub const SPINNER_ARROW_AREA: f32 = 20.0;
+    /// Edge of a spinner arrow's glyph.
+    pub const SPINNER_ARROW_GLYPH: f32 = 12.0;
+    /// UI DSL `verticalSmallGap` (`Gap::Small`, IntelliJ UI DSL spacing).
+    pub const DSL_GAP_SMALL: f32 = 8.0;
+    /// UI DSL `verticalMediumGap` (`Gap::Medium`); also the measured space above a group title.
+    pub const DSL_GAP_MEDIUM: f32 = 20.0;
+    /// UI DSL `horizontalColumnsGap` (`RightGap::Columns`).
+    pub const DSL_COLUMNS_GAP: f32 = 60.0;
+    /// UI DSL `buttonGroupHeaderBottomGap`: space under the title of a buttons group.
+    pub const DSL_BUTTONS_GROUP_HEADER_GAP: f32 = 2.0;
+    /// Segments a segmented button shows before it becomes a combo box
+    /// (`DEFAULT_MAX_BUTTONS_COUNT`; the value is not in the spec notes, IntelliJ's is 6).
+    pub const SEGMENTED_MAX_BUTTONS: usize = 6;
+    /// Smallest width of a text field (`TextField.minimumSize` 49 x 28, IntelliJ spec section 6).
+    pub const TEXT_FIELD_MIN_WIDTH: f32 = 49.0;
+    /// Width of a search field's leading icon area: a click inside it opens the history (IntelliJ
+    /// spec section 6: the first 28 px).
+    pub const SEARCH_ICON_AREA: f32 = 28.0;
+    /// Entries a search field's history keeps (`SearchTextField` history length, IntelliJ spec
+    /// section 6: 5).
+    pub const SEARCH_HISTORY_LENGTH: usize = 5;
+    /// Gap between the icons of a text field's extensions (`getIconGap`; the spec gives no
+    /// default, the kit uses the checkbox label gap).
+    pub const EXTENSION_GAP: f32 = 6.0;
     /// Height of buttons, text fields and combo boxes.
     pub const CONTROL_HEIGHT: f32 = 28.0;
     /// Height of small (compact) buttons.
@@ -90,9 +129,9 @@ pub mod size {
     pub const DROP_ZONE_PADDING: f32 = 8.0;
     /// Smallest height of a [`DropZone`](crate::ui::DropZone): room for its hint.
     pub const DROP_ZONE_MIN_HEIGHT: f32 = 40.0;
-    /// Default width of a [`JBIntSpinner`](crate::ui::JBIntSpinner): room for six
-    /// digits, as Android Studio's integer fields.
-    pub const NUMBER_FIELD_WIDTH: f32 = 64.0;
+    /// Default width of a [`JBIntSpinner`](crate::ui::JBIntSpinner): `Spinner.minimumSize`
+    /// 72 x 28 (IntelliJ spec section 13.4), room for five digits besides the arrows.
+    pub const NUMBER_FIELD_WIDTH: f32 = 72.0;
     /// Gap between a group title and its line.
     pub const GROUP_LINE_GAP: f32 = 6.0;
     /// Gap between a checkbox or radio and its label.
@@ -511,6 +550,16 @@ pub mod motion {
     /// How long a tab's freshly shown close button ignores clicks (`TimedDeadzone.DEFAULT`
     /// 150 ms, IntelliJ spec section 2.1), so a pointer landing on the tab does not close it.
     pub const TAB_CLOSE_DEADZONE: f32 = 0.15;
+
+    /// How long a spinner's arrow must be held before it repeats (Swing's spinner timer; IntelliJ
+    /// spec section 13.4 says only that a press repeats, so the delay is marked S).
+    pub const SPINNER_REPEAT_DELAY: f32 = 0.3;
+    /// Time between the repeated steps of a held spinner arrow (S, like the delay).
+    pub const SPINNER_REPEAT_INTERVAL: f32 = 0.06;
+
+    /// How long a combo box remembers the letters typed on it, to select by a longer prefix
+    /// (Swing's key selection manager, `timeFactor` 1000 ms; IntelliJ spec section 4, marked S).
+    pub const COMBO_TYPE_AHEAD_RESET: f32 = 1.0;
 
     /// How long the pointer rests on a popup row that opens a submenu before it opens
     /// (IntelliJ spec §5.2, a 250 ms timer in `ListPopupImpl`).

@@ -9,7 +9,7 @@ the names, then fix the imports with the paths).
 
 | Module | Contents |
 |---|---|
-| `ui` | Button, ActionLink, JBTextField, JBIntSpinner, JBCheckBox, JBRadioButton, OnOffButton, SegmentedButton, JBList, Tree, JBTable, TreeTable, ColoredListCellRenderer, TitledSeparator, SeparatorComponent, InlineBanner, Status, AsyncProcessIcon, ProgressBar, StatusText, BreadcrumbsComponent, KeyValueTable, badges, charts, PropertyGrid, DropZone, Form, completion |
+| `ui` | Button, ActionLink, JBTextField, JBIntSpinner, JBCheckBox, JBRadioButton, OnOffButton, SegmentedButton, JBList, Tree, JBTable, TreeTable, ColoredListCellRenderer, TitledSeparator, SeparatorComponent, InlineBanner, Status, AsyncProcessIcon, ProgressBar, StatusText, BreadcrumbsComponent, KeyValueTable, badges, charts, PropertyGrid, DropZone, `dsl` (panel, Row, Cell), SearchTextField, completion |
 | `ui::tabs` | JBTabs, TabInfo, JBTabsResponse |
 | `ui::popup` | JBPopup, ListSeparator |
 | `openapi::ui` | ComboBox, Splitter, SplitterResponse, Orientation, Side, DialogWrapper, ExitCode |
@@ -114,9 +114,6 @@ These types keep their names; only the module changed (`archipel_kit::components
 | `DropZone` | `archipel_kit::ui::DropZone` |
 | `DropZoneResponse` | `archipel_kit::ui::DropZoneResponse` |
 | `MessageResponse` | `archipel_kit::ui::MessageResponse` |
-| `Form` | `archipel_kit::ui::Form` |
-| `FormUi` | `archipel_kit::ui::FormUi` |
-| `FieldLabel` | `archipel_kit::ui::FieldLabel` |
 | `Completer` | `archipel_kit::ui::Completer` |
 | `Completion` | `archipel_kit::ui::Completion` |
 | `Completions` | `archipel_kit::ui::Completions` |
@@ -141,6 +138,29 @@ These types keep their names; only the module changed (`archipel_kit::components
 | `TemplateToken` | `archipel_kit::editor::TemplateToken` |
 | `TemplateAt` | `archipel_kit::editor::TemplateAt` |
 | `template_at` | `archipel_kit::editor::template_at` |
+
+## Removed in the inputs family (hard cut, no aliases)
+
+`Form`, `FormUi` and `FieldLabel` are replaced by the IntelliJ-style UI DSL in `archipel_kit::ui::dsl`
+(see [the DSL page](../components/dsl.md)). A cell borrows its value until its row is laid out, and
+its options chain after it.
+
+| Old | New |
+|---|---|
+| `Form::new().show(ui, \|form\| ..)` | `dsl::panel(ui, \|p\| ..)` |
+| `form.add(JBCheckBox::new(&mut on, "Label").comment("..."))` | `p.unlabeled_row(\|r\| { r.check_box(&mut on, "Label").comment("..."); })` (or `r.cell(widget)` for any widget) |
+| `form.row("Label:", \|ui\| ui.add(JBTextField::new(&mut s)))` | `p.row("Label:", \|r\| { r.text_field(&mut s); })` |
+| `form.fields(\|ui\| ..)` | `p.unlabeled_row(\|r\| ..)`; `ui.add_space(FORM_CONTROL_SPACE)` is the default `RightGap::Default`, and `ui.add(FieldLabel::new("Size:"))` is `r.label("Size:")` |
+| `form.radios("Open in", \|ui\| ..)` | `p.row("Open in", \|r\| { r.radio_button(&group, 0, "A"); .. })` with `RadioGroup::new(&mut value)` |
+| `form.group(title, ..)`, `form.collapsible(title, &mut open, ..)`, `form.indent(..)`, `form.space()`, `form.ui()` | `p.group(title, ..)`, `p.collapsible_group(title, &mut open, ..)`, `p.indent(..)`, `p.gap(Gap::Small)`, `p.ui()` |
+| `form.comment(text)` | `r.row_comment(text)` inside the row, or `.comment(text)` on a cell |
+
+Other changes: `ComboBox` draws its list with the kit's popup engine instead of egui's combo box
+(`ComboBox::leading` still takes a `Slot`; the list shows icon slots only), `ComboBox::unselectable`,
+`max_rows` and `speed_search` are new, and `JBTextFieldOutput` gained `extension_clicked` and `frame`.
+New: `SearchTextField`, `SearchHistory`, `Extension`, `ThreeStateCheckBox`, `ThreeState`, `Button::mnemonic`,
+`JBTextField::validation`. Checkboxes, radios and toggles no longer toggle on <kbd>Enter</kbd> (Space
+on release; Enter belongs to a dialog's default button), and push buttons click with Space on release.
 
 ## Other identifiers
 

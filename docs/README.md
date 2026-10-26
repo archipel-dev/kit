@@ -25,7 +25,7 @@
 | [ActionToolbar](components/action-toolbar.md) | <img src="components/img/action_toolbar.dark.png" width="160"> | An action group as a toolbar, with drop-downs and overflow. |
 | [ListPopup, PopupStep](components/list-popup.md) | <img src="components/img/list_popup.dark.png" width="140"> | Choosing a value from a list, with sub-steps. |
 | [ActionPopupMenu](components/action-popup-menu.md) | <img src="components/img/action_popup_menu.dark.png" width="160"> | Context menus and drop-downs of actions. |
-| [JBTextField](components/jb-text-field.md) | <img src="components/img/jb_text_field.dark.png" width="160"> | Text input, search, validation. |
+| [JBTextField, SearchTextField, JBIntSpinner](components/jb-text-field.md) | <img src="components/img/jb_text_field.dark.png" width="160"> | Text input, search with history, extensions, validation, integers. |
 | [JBCheckBox, JBRadioButton, OnOffButton](components/choice.md) | <img src="components/img/choice.dark.png" width="160"> | Booleans and one-of-many choices. |
 | [ComboBox](components/combo-box.md) | <img src="components/img/combo_box.dark.png" width="100"> | Picking one value from a long list. |
 | [SegmentedButton](components/segmented-button.md) | <img src="components/img/segmented_button.dark.png" width="140"> | Switching views. |
@@ -44,7 +44,7 @@
 | [StatusText](components/status-text.md) | <img src="components/img/status_text.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Histogram, Sparkline](components/chart.md) | <img src="components/img/chart.dark.png" width="160"> | Value distributions, top-N counts, inline trends. |
-| [Form, FieldLabel](components/form.md) | <img src="components/img/form.dark.png" width="160"> | Settings pages: rows, comments, groups. |
+| [UI DSL: panel, Row, Cell](components/dsl.md) | <img src="components/img/dsl.dark.png" width="160"> | Settings pages and dialogs: rows, comments, groups, validation. |
 | [SimpleToolWindowPanel, TitledSeparator, PropertyGrid](components/simple-tool-window-panel.md) | <img src="components/img/simple_tool_window_panel.dark.png" width="160"> | Workbench layout and details. |
 | [StatusBarWidget](components/status-bar-widget.md) | <img src="components/img/status_bar_widget.dark.png" width="160"> | Status bar and toolbar widgets. |
 | [Splitter](components/splitter.md) | <img src="components/img/splitter.dark.png" width="140"> | Resizable panes, side by side or stacked. |

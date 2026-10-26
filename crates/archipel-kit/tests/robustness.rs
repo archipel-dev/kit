@@ -5,7 +5,7 @@ use archipel_kit::{Theme, egui};
 use archipel_kit::{
     editor::CodeEditor,
     openapi::ui::ComboBox,
-    ui::{Button, Form, JBCheckBox, JBTextField, KeyValueEntry, KeyValueTable},
+    ui::{Button, JBTextField, KeyValueEntry, KeyValueTable, dsl::panel},
 };
 
 #[test]
@@ -24,9 +24,15 @@ fn negative_widths_and_tiny_areas_do_not_panic() {
             ui.add(ComboBox::new("m", method, ["GET", "POST"]).width(-25.0));
             ui.add(Button::primary("Send").min_width(-10.0));
             KeyValueTable::new("kv", rows).show(ui);
-            Form::new().show(ui, |form| {
-                form.add(JBCheckBox::new(on, "A long label").comment("And a comment that wraps"));
-                form.row("Label:", |ui| ui.add(JBTextField::new(text)));
+            let mut other = String::new();
+            panel(ui, |p| {
+                p.unlabeled_row(|r| {
+                    r.check_box(on, "A long label")
+                        .comment("And a comment that wraps");
+                });
+                p.row("Label:", |r| {
+                    r.text_field(&mut other);
+                });
             });
             ui.add(CodeEditor::new(text).height(-5.0));
         },

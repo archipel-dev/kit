@@ -1,12 +1,29 @@
 # ComboBox
 
-Open with Enter/Space or Down. While open, Up/Down, Home/End and Page Up/Down move the
-highlight without changing the value. Enter commits; Escape cancels and returns focus
-to the button.
+The list is the kit's popup engine ([`ListPopup`](list-popup.md)): below the combo box (above
+when there is no room), as wide as it, ten rows before it scrolls, the value the combo holds
+highlighted. The highlight moves without changing the value; the value changes when a row is
+chosen. IntelliJ spec section 4 (`ComboBox`, `DarculaComboBoxUI`, `ComboBoxPopup`):
+
+| Input | Closed | Open |
+|---|---|---|
+| <kbd>Alt</kbd>+<kbd>Down</kbd>, <kbd>F4</kbd> | Opens the list | |
+| <kbd>Enter</kbd> (press), <kbd>Space</kbd> (release) | Opens the list | <kbd>Enter</kbd> chooses the highlighted row |
+| <kbd>Up</kbd> / <kbd>Down</kbd> | Previous / next value, stopping at the ends | Move the highlight, wrapping; unselectable rows are skipped |
+| <kbd>Home</kbd> <kbd>End</kbd> <kbd>PgUp</kbd> <kbd>PgDn</kbd> | | First, last, a page up or down |
+| letters | Select the next value starting with the typed prefix; the same letter again cycles; a pause of 1 s starts over | Filter, with `.speed_search(true)` |
+| <kbd>Esc</kbd> | Not used (a dialog sees it) | Closes the list, the value stays, focus returns to the combo |
+| click | Opens the list | On the combo: closes it (a second click does not reopen it, `POPUP_REOPEN_GUARD`); on a row: chooses; outside: closes |
+
+Size: at least 49 x 28 (`ComboBox.minimumSize`), text 9 pt from the left (`ComboBox.padding`),
+the chevron centered 16 pt from the right edge (the spec's arrow area is 28 wide, centered at 14;
+the measured 16 is kept), corner arc 8 (radius 4), focus ring 2 pt with one outside. A disabled
+combo has no fill, `border_disabled` and dimmed text. The editable combo box is
+[`JBTextField::suggestions`](jb-text-field.md#combo-box).
 
 Use `.leading(|value| Slot::icon(...))` for a per-option icon, or a decorative
-`Slot::ui_width` for a themed color dot. The same factory draws the selected value and
-each popup option; each option keeps its text as its accessible name.
+`Slot::ui_width` for a themed color dot. The same factory draws the selected value; the list
+shows icon slots only. Each option keeps its text as its accessible name.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/combo_box_leading.dark.png">
@@ -55,7 +72,11 @@ impl.
 |---|---|
 | `ComboBox::new(id_salt, &mut T, options)` | `id_salt` must be unique among dropdowns in the same `Ui`. |
 | `.label(str)` | Accessible name (default: the selected value). |
-| `.width(f32)` | Width, 160 pt by default. |
+| `.width(f32)` | Width, 160 pt by default, at least 49. |
+| `.max_rows(n)` | Rows before the list scrolls (10). |
+| `.unselectable([index])` | Listed, but cannot be chosen; the arrow keys skip them. |
+| `.separators([index])`, `.tone(fn)`, `.leading(fn)` | Lines before options, colored options, leading slots. |
+| `.speed_search(bool)` | Typing in the open list filters it. |
 | `.enabled(bool)` | Disabled dropdowns are dimmed and cannot open. |
 
 ## Behavior
@@ -63,6 +84,11 @@ impl.
 <kbd>Escape</kbd> closes the popup without picking anything and returns the focus to the
 dropdown button. The key is used up: in a [dialog](dialog-wrapper.md) the first <kbd>Escape</kbd>
 only closes the popup, the next one dismisses the dialog.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/combo_box_list.dark.png">
+  <img alt="An open combo box: Beta highlighted, a separator before Gamma, Delta unselectable" src="img/combo_box_list.light.png" width="140">
+</picture>
 
 ## Accessibility
 
@@ -90,7 +116,7 @@ assert_eq!(*harness.state(), "PUT");
 ```
 
 Source: [`openapi/ui/combo_box.rs`](../../crates/archipel-kit/src/openapi/ui/combo_box.rs) ·
-Tests: [`tests/menus.rs`](../../crates/archipel-kit/tests/menus.rs)
+Tests: [`tests/combo_box.rs`](../../crates/archipel-kit/tests/combo_box.rs), [`tests/inputs_behavior.rs`](../../crates/archipel-kit/tests/inputs_behavior.rs)
 
 ## Groups
 
