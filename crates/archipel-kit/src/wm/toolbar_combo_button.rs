@@ -81,7 +81,8 @@ impl<'a> ToolbarComboButton<'a> {
     /// Draws the button.
     pub fn show(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
-        let galley = common::galley(ui, self.label.as_str(), typography::body(typography::BODY));
+        let font = typography::body(typography::BODY);
+        let natural = common::galley(ui, self.label.as_str(), font.clone());
         let leading_width = match (&self.leading, self.icon) {
             (Some(slot), _) => Some(slot.width(ui)),
             (None, Some(_)) => Some(toolbar::ICON),
@@ -95,6 +96,14 @@ impl<'a> ToolbarComboButton<'a> {
             toolbar::CHEVRON_GAP + size::ICON + toolbar::ICON_PADDING
         } else {
             toolbar::PADDING
+        };
+        // Drop-down buttons grow to at most 350 pt (`MainToolbar.Dropdown.maxWidth`); longer
+        // text is elided.
+        let room = (toolbar::DROPDOWN_MAX_WIDTH - start - end).max(0.0);
+        let galley = if natural.size().x > room {
+            common::galley_elided(ui, self.label.as_str(), font, room)
+        } else {
+            natural
         };
         let width = start + galley.size().x + end;
         let sense = if self.enabled {

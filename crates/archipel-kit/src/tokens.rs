@@ -225,6 +225,21 @@ pub mod popup {
     pub const LARGE_ICON: f32 = 20.0;
     /// Height of the description line under a two-line item's label.
     pub const DESCRIPTION_HEIGHT: f32 = 24.0;
+    /// Narrowest a popup list is (kept from the measured menus; IntelliJ spec §5.3 names 170
+    /// for hint popups).
+    pub const MIN_WIDTH: f32 = 180.0;
+    /// Width of the chevron zone at a row's right end: a press there opens the sub-step
+    /// without choosing the row (IntelliJ spec §5.2).
+    pub const CHEVRON_HIT: f32 = 24.0;
+    /// Space between a row's mnemonic hint and its icon column (IntelliJ spec §5.3,
+    /// `ActionsList` mnemonic gaps; not measured on Android Studio).
+    pub const MNEMONIC_GAP: f32 = 8.0;
+    /// Distance the pointer may move horizontally away from an open submenu before the
+    /// "moving to the submenu" guard ends (IntelliJ spec §5.3, `ActionMenu`).
+    pub const SUBMENU_AWAY: f32 = 16.0;
+    /// Height of the speed search line at the top of a popup list that is being filtered
+    /// (kit: one row; IntelliJ draws a small search field above the list).
+    pub const SEARCH_HEIGHT: f32 = 24.0;
 }
 
 /// Editor tabs, in points. Measured on Android Studio's Islands UI.
@@ -308,6 +323,40 @@ pub mod toolbar {
     /// Space between the window's edges and the toolbar's first and last controls: the
     /// main menu button sits right above the stripe buttons.
     pub const WINDOW_PADDING: f32 = 6.0;
+    /// Edge of a title pane button (minimize, maximize, close): 40 pt, `TitlePane.Button.preferredSize`
+    /// in IntelliJ spec §14 (30 pt high when compact).
+    pub const TITLE_BUTTON: f32 = 40.0;
+    /// Widest a main toolbar drop-down button grows; longer text is elided
+    /// (`MainToolbar.Dropdown.maxWidth`, IntelliJ spec §14).
+    pub const DROPDOWN_MAX_WIDTH: f32 = 350.0;
+    /// Width of a split button's chevron part: the 20 pt arrow icon's room plus its margins
+    /// (`MainToolbar.SplitDropdown.rightPartMargin` 3, IntelliJ spec §14).
+    pub const SPLIT_ARROW_WIDTH: f32 = 26.0;
+    /// Space either side of the line between a split button's two parts
+    /// (`MainToolbar.SplitDropdown.separatorMargin` (5,3), IntelliJ spec §14).
+    pub const SPLIT_SEPARATOR_MARGIN: f32 = 3.0;
+    /// Length of a split button's separator line: its height less the margin of 5 above and
+    /// below.
+    pub const SPLIT_SEPARATOR_LENGTH: f32 = 20.0;
+}
+
+/// Action toolbars and action buttons, in points (IntelliJ spec §1.4, §1.5).
+pub mod action_toolbar {
+    /// Width of the drop-down arrow an action button with a popup group paints after its
+    /// icon (IntelliJ draws a small arrow; the size is not specified, so this is the kit's).
+    pub const ARROW_WIDTH: f32 = 10.0;
+    /// Edge of that arrow.
+    pub const ARROW_ICON: f32 = 12.0;
+    /// Inset of a plain (non-decorated) toolbar's border: `empty(2)`.
+    pub const INSET: f32 = 2.0;
+    /// Vertical inset of a decorated toolbar (`ToolBar.verticalToolbarInsets` (5,7)).
+    pub const DECORATED_INSET_Y: f32 = 5.0;
+    /// Horizontal inset of a decorated toolbar.
+    pub const DECORATED_INSET_X: f32 = 7.0;
+    /// Space either side of a separator line.
+    pub const SEPARATOR_GAP: f32 = 4.0;
+    /// Length of a separator line in a toolbar.
+    pub const SEPARATOR_LENGTH: f32 = 20.0;
 }
 
 /// The project color's glow on the window frame, in points from the window's top-left
@@ -353,6 +402,16 @@ pub mod motion {
     pub const TAB_SCROLL_HIDE_DELAY: f32 = 0.2;
     /// The fade-out of the tab strip's scroll bar once the hide delay has passed.
     pub const TAB_SCROLL_FADE_OUT: f32 = 0.1;
+    /// How long the pointer rests on a popup row that opens a submenu before it opens
+    /// (IntelliJ spec §5.2, a 250 ms timer in `ListPopupImpl`).
+    pub const POPUP_SUBMENU_DELAY: f32 = 0.25;
+    /// How long a popup with auto-selection waits, idle, before it chooses the selected row
+    /// (`ide.popup.auto.delay`, IntelliJ spec §0.3).
+    pub const POPUP_AUTO_SELECTION_DELAY: f32 = 0.5;
+    /// How long after a popup closed it refuses to open again, so the click that closed it
+    /// by pressing its owner button does not reopen it on release
+    /// (`ide.popup.hide.show.threshold`, IntelliJ spec §0.3).
+    pub const POPUP_REOPEN_GUARD: f32 = 0.2;
 }
 
 /// Opacities, from 0 to 1.

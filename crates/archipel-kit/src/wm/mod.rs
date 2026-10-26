@@ -8,12 +8,14 @@
 //! | [`StatusBarWidget`] | A status bar item. |
 //! | [`MainToolbar`], [`IdeFrameDecorator`] | The main toolbar and the window frame. |
 //! | [`ToolbarComboButton`] | A main toolbar control that opens a list. |
+//! | [`ToolbarSplitButton`] | The run widget: an action and a list in one button. |
 
 mod simple_tool_window_panel;
 mod status_bar_widget;
 mod stripe;
 mod tool_window_pane;
 mod toolbar_combo_button;
+mod toolbar_split_button;
 mod window;
 
 pub use simple_tool_window_panel::SimpleToolWindowPanel;
@@ -23,4 +25,5 @@ pub use tool_window_pane::{
     ToolWindowAnchor, ToolWindowPane, ToolWindowPaneState, ToolWindowPlace,
 };
 pub use toolbar_combo_button::ToolbarComboButton;
+pub use toolbar_split_button::{ToolbarSplitButton, ToolbarSplitResponse};
 pub use window::{IdeFrameDecorator, MainToolbar};

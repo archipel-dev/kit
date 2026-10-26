@@ -186,6 +186,21 @@ assert_eq!(
 `Ctrl+Shift+A` and `Ctrl+K, Ctrl+C` on Windows and Linux, `⇧⌘A` on macOS (modifiers in the
 order `⌃⌥⇧⌘`).
 
+## Renderers
+
+Four widgets draw the model, and all of them perform the action themselves (with `perform`, so
+a disabled or hidden action never runs) and report what they did as data:
+
+| Widget | Draws | Reports |
+|---|---|---|
+| [`ActionButton::for_action`](components/action-button.md) | One action as an icon button | `ActionButtonResponse::performed` |
+| [`ActionToolbar`](components/action-toolbar.md) | A group as a toolbar, drop-downs, overflow | `ActionToolbarResponse::invoked` (the id) |
+| [`ActionPopupMenu`](components/action-popup-menu.md) | A group as a popup menu with submenus | `ActionPopupMenuResponse::performed` (the id) |
+| `PopupHandler::for_group` | The same menu as a context menu on any widget | performs only |
+
+Menus and [list popups](components/list-popup.md) share one engine (keys, pointer rules and
+timings of IntelliJ's `ListPopup`); the caller owns the open state (`PopupChain`).
+
 ## Differences from IntelliJ
 
 Immediate mode changes four things, all for the same reason: the kit keeps no state.

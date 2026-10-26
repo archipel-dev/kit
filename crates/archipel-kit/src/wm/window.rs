@@ -153,20 +153,99 @@ impl IdeFrameDecorator {
 /// # });
 /// ```
 #[must_use = "show the toolbar with .show(ctx, content)"]
-pub struct MainToolbar {
+pub struct MainToolbar<'a> {
     id: Id,
     chrome: IdeFrameDecorator,
     project_color: Option<egui::Color32>,
+    menu: Option<(
+        &'a dyn crate::action_system::ActionGroup,
+        &'a crate::action_system::DataContext,
+        crate::action_system::ActionPlace,
+    )>,
 }
 
-impl MainToolbar {
+impl<'a> MainToolbar<'a> {
     /// A toolbar with a stable identity. Defaults to normal native chrome.
     pub fn new(id_salt: impl std::hash::Hash) -> Self {
         Self {
             id: Id::new(id_salt),
             chrome: IdeFrameDecorator::Native,
             project_color: None,
+            menu: None,
         }
+    }
+
+    /// The context menu of the toolbar's empty background, opened with a right click
+    /// (IntelliJ's "Customize Toolbar" menu). `group` is shown as an
+    /// [`ActionPopupMenu`](crate::action_system::ActionPopupMenu) for the
+    /// [`MAIN_TOOLBAR`](crate::action_system::ActionPlace::MAIN_TOOLBAR) place.
+    pub fn context_menu(
+        mut self,
+        group: &'a dyn crate::action_system::ActionGroup,
+        context: &'a crate::action_system::DataContext,
+    ) -> Self {
+        self.menu = Some((
+            group,
+            context,
+            crate::action_system::ActionPlace::MAIN_TOOLBAR,
+        ));
+        self
+    }
+
+    /// Draws the toolbar in IntelliJ's three zones: `left` (main menu button, project and
+    /// version control widgets), `center` (the run widget, centered in the window) and
+    /// `right` (search everywhere, settings, account; right-aligned). Each closure lays its
+    /// widgets out left to right.
+    pub fn show_zones(
+        self,
+        ctx: &egui::Context,
+        left: impl FnOnce(&mut Ui),
+        center: impl FnOnce(&mut Ui),
+        right: impl FnOnce(&mut Ui),
+    ) -> InnerResponse<()> {
+        let id = self.id.with("center-width");
+        self.show(ctx, |ui| {
+            let area = ui.max_rect();
+            left(ui);
+            let width: f32 = ctx.data(|d| d.get_temp(id)).unwrap_or(0.0);
+            let window = ctx.content_rect();
+            let center_rect = egui::Rect::from_center_size(
+                egui::pos2(window.center().x, area.center().y),
+                egui::vec2(width.max(1.0), area.height()),
+            );
+            let mut middle = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(center_rect)
+                    .layout(Layout::left_to_right(Align::Center)),
+            );
+            middle.spacing_mut().item_spacing.x = tokens::toolbar::GAP;
+            center(&mut middle);
+            let used = middle.min_rect().width();
+            if (used - width).abs() > 0.5 {
+                ctx.data_mut(|d| d.insert_temp(id, used));
+                ctx.request_repaint();
+            }
+            // Like the center zone, the right one is as wide as it was last frame, so it
+            // can end at the right edge while its widgets read left to right.
+            let end_id = id.with("right");
+            let end_width: f32 = ctx.data(|d| d.get_temp(end_id)).unwrap_or(0.0);
+            let end_rect = egui::Rect::from_min_max(
+                egui::pos2((area.right() - end_width).max(area.left()), area.top()),
+                area.right_bottom(),
+            );
+            let mut end = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(end_rect)
+                    .layout(Layout::left_to_right(Align::Center)),
+            );
+            end.spacing_mut().item_spacing.x = tokens::toolbar::GAP;
+            right(&mut end);
+            let used = end.min_rect().width();
+            if (used - end_width).abs() > 0.5 {
+                ctx.data_mut(|d| d.insert_temp(end_id, used));
+                ctx.request_repaint();
+            }
+        })
     }
 
     /// Tints the toolbar with a soft glow of the project's color behind the project widget,
@@ -228,14 +307,28 @@ impl MainToolbar {
                 drag.widget_info(|| {
                     egui::WidgetInfo::labeled(egui::WidgetType::Window, true, "Window toolbar")
                 });
+                let drag = match self.menu {
+                    Some((group, context, place)) => {
+                        use crate::behaviour::Behaviour;
+                        crate::behaviour::PopupHandler::for_group(group, context, place)
+                            .attach(ui, drag)
+                    }
+                    None => drag,
+                };
                 let controls = self.chrome == IdeFrameDecorator::Borderless;
                 let control_width = if controls {
-                    3.0 * tokens::size::ICON_BUTTON + 2.0 * tokens::size::TOOLBAR_GAP
+                    3.0 * tokens::toolbar::TITLE_BUTTON
                 } else {
                     0.0
                 };
                 let left = (rect.left() + self.chrome.left_clearance()).min(rect.right());
-                let right = (rect.right()
+                // The window controls reach the window's edge, past the toolbar's padding.
+                let edge = if controls {
+                    tokens::toolbar::WINDOW_PADDING
+                } else {
+                    0.0
+                };
+                let right = (rect.right() + edge
                     - control_width
                     - if controls {
                         tokens::size::TOOLBAR_GAP
@@ -255,39 +348,60 @@ impl MainToolbar {
                 child.set_clip_rect(content_rect.intersect(ui.clip_rect()));
                 child.spacing_mut().item_spacing.x = tokens::toolbar::GAP;
                 let result = content(&mut child);
+                // With focus on one of the toolbar's controls (IntelliJ's `FocusMainToolbar`),
+                // Left and Right move it to the neighbor. Text fields keep their arrows.
+                if !ctx.wants_keyboard_input()
+                    && let Some(focused) = ctx.memory(|m| m.focused())
+                    && ctx
+                        .read_response(focused)
+                        .is_some_and(|r| rect.contains(r.rect.center()))
+                {
+                    let right = ctx
+                        .input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowRight));
+                    let left = ctx
+                        .input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowLeft));
+                    if right {
+                        ctx.memory_mut(|m| m.move_focus(egui::FocusDirection::Next));
+                    } else if left {
+                        ctx.memory_mut(|m| m.move_focus(egui::FocusDirection::Previous));
+                    }
+                }
                 if controls {
                     let control_rect = egui::Rect::from_min_max(
-                        egui::pos2(rect.right() - control_width, rect.top()),
-                        rect.right_bottom(),
+                        egui::pos2(rect.right() + edge - control_width, rect.top()),
+                        egui::pos2(rect.right() + edge, rect.bottom()),
                     );
                     let mut buttons = ui.new_child(
                         UiBuilder::new()
                             .max_rect(control_rect)
                             .layout(Layout::left_to_right(Align::Center)),
                     );
-                    buttons.spacing_mut().item_spacing.x = tokens::size::TOOLBAR_GAP;
+                    buttons.spacing_mut().item_spacing.x = 0.0;
                     if buttons
-                        .add(ActionButton::new(Glyph::Minimize, "Minimize window"))
+                        .add(ActionButton::new(Glyph::Minimize, "Minimize window").title_pane(true))
                         .clicked()
                     {
                         ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
                     }
                     let maximized = ctx.input(|i| i.viewport().maximized.unwrap_or(false));
                     if buttons
-                        .add(ActionButton::new(
-                            Glyph::Fullscreen,
-                            if maximized {
-                                "Restore window"
-                            } else {
-                                "Maximize window"
-                            },
-                        ))
+                        .add(
+                            ActionButton::new(
+                                Glyph::Fullscreen,
+                                if maximized {
+                                    "Restore window"
+                                } else {
+                                    "Maximize window"
+                                },
+                            )
+                            .title_pane(true),
+                        )
                         .clicked()
                     {
                         ctx.send_viewport_cmd(ViewportCommand::Maximized(!maximized));
                     }
                     if buttons
-                        .add(ActionButton::new(Glyph::Close, "Close window"))
+                        .add(ActionButton::new(Glyph::Close, "Close window").title_pane(true))
                         .clicked()
                     {
                         ctx.send_viewport_cmd(ViewportCommand::Close);

@@ -66,6 +66,14 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Two-line item | 20 pt icon, label, path below in `#73767C`, 48 pt | `ActionMenuItem::description` |
 | Icon column | Reserved only when an item of the menu has an icon or a check | `ActionMenuItem` |
 | Pointer and keys | One highlight, shared; the first pointer move after opening is ignored; it stays on the last item when the pointer leaves; arrows continue from it and skip headers and separators | `ActionMenuItem` |
+| List popup keys | Up/Down skip separators and disabled rows and wrap; Home/End, PageUp/PageDown; Enter chooses (opens a sub-step instead when the row has one); Right opens, Left goes back; Esc goes back one level (clears speed search first); Shift+Esc closes the chain; mnemonics choose; typing filters | IntelliJ spec §5.1; `ListPopup`, `ActionPopupMenu`, tests/list_popup.rs |
+| List popup pointer | Hover selects (first move after opening ignored); submenu after 250 ms on hover; auto-selection after 500 ms idle; click chooses on release; chevron press opens without choosing; press outside closes and the popup cannot reopen for 200 ms; moving toward an open submenu does not retarget | IntelliJ spec §5.2; `tokens::motion::POPUP_*` |
+| List popup values kept from the measurement | Selection pill radius 4 (spec `Popup.Selection.arc` 8), minimum width 180 (spec 170), 24 pt rows, 8 pt padding, 9 pt separator rows | `tokens::popup` |
+| Mnemonic hint | `Popup.mnemonicForeground` Gray.x78 dark / Gray.x99 light, before the icon column (not measured on Android Studio) | `Colors::popup_mnemonic` |
+| Action button | 22×22, fires on release inside (primary only), hover suppressed while a press started elsewhere, not in the Tab order without a screen reader, toggled = pressed fill (`#FFFFFF29` / `#00000020`), hover `#FFFFFF17` / `#00000012`; radius stays 4 (6 at 30 pt) rather than `Button.arc` 8 | IntelliJ spec §1; `ActionButton` |
+| Action toolbar | 22 pt buttons 4 pt apart, 2 pt border (5, 7 decorated), separators 1 pt × 20 pt, drop-downs open list popups with the first row selected, overflow in a "More actions" menu | IntelliJ spec §1.4, §1.5; `ActionToolbar`, `tokens::action_toolbar` |
+| Main toolbar | Zones left / center (centered in the window) / right; 30 pt buttons with 20 pt icons; split run button: 26 pt arrow part, 3 pt separator margins, 20 pt line; drop-downs at most 350 pt; 40 pt title pane buttons; right click opens the customize menu; arrows move focus | IntelliJ spec §14; `MainToolbar::show_zones`, `ToolbarSplitButton` |
+| Action link | Link color, underline on hover only, hand cursor, Enter/Space, focus ring, external-link icon, drop-down variant; one blue for hover/pressed/visited (the spec gives no other values) | IntelliJ spec §13.6; `ActionLink` |
 
 ### Editor tabs and headers
 

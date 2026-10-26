@@ -24,10 +24,10 @@
 //! |---|---|
 //! | [`ui`] | Buttons, text fields, choices, lists, trees, tables, banners, progress, charts, forms. |
 //! | [`ui::tabs`] | [`JBTabs`](ui::tabs::JBTabs), [`TabInfo`](ui::tabs::TabInfo). |
-//! | [`ui::popup`] | [`JBPopup`](ui::popup::JBPopup), [`ListSeparator`](ui::popup::ListSeparator). |
+//! | [`ui::popup`] | [`JBPopup`](ui::popup::JBPopup), [`ListPopup`](ui::popup::ListPopup), [`ListSeparator`](ui::popup::ListSeparator). |
 //! | [`openapi::ui`] | [`ComboBox`](openapi::ui::ComboBox), [`Splitter`](openapi::ui::Splitter), [`DialogWrapper`](openapi::ui::DialogWrapper). |
 //! | [`ide`] | [`HelpTooltip`](ide::HelpTooltip). |
-//! | [`action_system`] | [`ActionButton`](action_system::ActionButton), [`ActionMenuItem`](action_system::ActionMenuItem). |
+//! | [`action_system`] | [`ActionButton`](action_system::ActionButton), [`ActionMenuItem`](action_system::ActionMenuItem), [`ActionToolbar`](action_system::ActionToolbar), [`ActionPopupMenu`](action_system::ActionPopupMenu). |
 //! | [`wm`] | The tool window shell: [`ToolWindowPane`](wm::ToolWindowPane), panels, stripes, status bar, main toolbar. |
 //! | [`notification`] | [`Notification`](notification::Notification). |
 //! | [`editor`] | [`CodeView`](editor::CodeView), [`CodeEditor`](editor::CodeEditor) and the highlighters. |
@@ -102,6 +102,9 @@ mod docs {
         ComboBox = "components/combo-box.md";
         StatusText = "components/status-text.md";
         ActionButton = "components/action-button.md";
+        ActionToolbar = "components/action-toolbar.md";
+        ListPopup = "components/list-popup.md";
+        ActionPopupMenu = "components/action-popup-menu.md";
         KeyValueTable = "components/key-value-table.md";
         Icons = "components/icons.md";
         ColoredListCellRenderer = "components/colored-list-cell-renderer.md";

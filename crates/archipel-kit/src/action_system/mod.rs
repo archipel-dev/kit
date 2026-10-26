@@ -8,10 +8,14 @@
 //! |---|---|
 //! | [`ActionButton`] | The flat icon-only button of toolbars and headers. |
 //! | [`ActionMenuItem`] | A row of a menu or popup list (check, icon, shortcut, submenu). |
+//! | [`ActionToolbar`] | An action group as a toolbar: toggles, drop-downs, overflow. |
+//! | [`ActionPopupMenu`] | An action group as a popup menu (context menus, drop-downs). |
 
 mod action;
 mod action_button;
 mod action_menu_item;
+mod action_popup_menu;
+mod action_toolbar;
 mod data_context;
 mod group;
 mod keymap;
@@ -22,8 +26,10 @@ pub use action::{
     ActionUiKind, AnAction, AnActionEvent, InputKind, Toggle, ToggleAction, perform,
     perform_with_modifiers, update_presentation,
 };
-pub use action_button::ActionButton;
+pub use action_button::{ActionButton, ActionButtonResponse, ButtonLook};
 pub use action_menu_item::ActionMenuItem;
+pub use action_popup_menu::{ActionPopupMenu, ActionPopupMenuResponse};
+pub use action_toolbar::{ActionToolbar, ActionToolbarResponse, ToolbarOrientation};
 pub use data_context::{CommonDataKeys, DataContext, DataContextBuilder, DataKey};
 pub use group::{
     ActionGroup, ActionItem, ActionRow, DefaultActionGroup, MAX_GROUP_DEPTH, Separator, flatten,

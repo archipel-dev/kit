@@ -42,6 +42,13 @@ impl ListSeparator {
     }
 }
 
+impl ListSeparator {
+    /// The group title, if any (IntelliJ `ListSeparator.getText`).
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
+    }
+}
+
 impl Widget for ListSeparator {
     fn ui(self, ui: &mut Ui) -> Response {
         let colors = Theme::colors(ui.ctx());
