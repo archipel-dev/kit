@@ -7,7 +7,7 @@ use archipel_kit::testing::{self, Problem, Queryable};
 use archipel_kit::{Glyph, Theme};
 use archipel_kit::{
     action_system::{ActionButton, ActionMenuItem},
-    editor::{CodeEditor, CodeView},
+    editor::{EditorComponent, model::Editor},
     openapi::ui::ComboBox,
     ui::tabs::{JBTabs, TabInfo},
     ui::{
@@ -273,11 +273,11 @@ fn jb_int_spinner_conforms() {
 }
 
 #[test]
-fn code_editor_conforms() {
-    let mut text = String::from("let a = 1;");
+fn editor_component_conforms() {
+    let mut editor = Editor::new("let a = 1;");
     testing::conformance("Script", move |ui, enabled| {
         ui.add(
-            CodeEditor::new(&mut text)
+            EditorComponent::new(&mut editor)
                 .label("Script")
                 .enabled(enabled)
                 .height(80.0),
@@ -289,17 +289,36 @@ fn code_editor_conforms() {
 }
 
 #[test]
-fn code_view_and_editor_compose_audit_clean() {
-    let mut text = String::from("{\n  \"a\": 1\n}");
+fn editor_component_viewer_conforms() {
+    let mut editor = Editor::new("let a = 1;");
+    testing::conformance("Response", move |ui, enabled| {
+        ui.add(
+            EditorComponent::new(&mut editor)
+                .label("Response")
+                .viewer(true)
+                .enabled(enabled)
+                .height(80.0),
+        )
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+#[test]
+fn viewer_and_editor_compose_audit_clean() {
+    let mut viewer = Editor::new("{\n  \"a\": 1\n}");
+    let mut editor = Editor::new("{\n  \"a\": 1\n}");
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        CodeView::new("{\n  \"a\": 1\n}")
+        EditorComponent::new(&mut viewer)
             .label("Response")
+            .viewer(true)
             .line_numbers(true)
-            .folding(true)
+            .bracket_folding(true)
             .height(80.0)
             .show(ui);
         ui.add(
-            CodeEditor::new(&mut text)
+            EditorComponent::new(&mut editor)
                 .label("Request")
                 .line_numbers(true)
                 .height(80.0),

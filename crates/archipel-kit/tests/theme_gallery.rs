@@ -4,7 +4,8 @@
 
 mod common;
 
-use archipel_kit::editor::{CodeView, JavaScript};
+use archipel_kit::editor::model::Editor;
+use archipel_kit::editor::{EditorComponent, JavaScript};
 use archipel_kit::testing::{self, Harness, SnapshotOptions, SnapshotResults};
 use archipel_kit::ui::{
     Button, ColoredListCellRenderer, Counter, InlineBanner, JBCheckBox, JBTextField, OnOffButton,
@@ -76,7 +77,9 @@ fn page(ctx: &egui::Context) {
         .show(ctx, |ui| {
             SimpleToolWindowPanel::new("theme.rs").show(ui, |ui| {
                 ui.set_min_height(ui.available_height());
-                CodeView::new(CODE)
+                let mut editor = Editor::new(CODE);
+                EditorComponent::new(&mut editor)
+                    .viewer(true)
                     .label("Editor")
                     .highlighter(&JavaScript)
                     .line_numbers(true)

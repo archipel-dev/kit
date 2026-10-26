@@ -166,10 +166,10 @@ fn fields(text: &str, caret: usize) -> Option<Completions> {
 
 #[test]
 fn code_editor_completes_and_places_the_caret_inside() {
-    use archipel_kit::editor::CodeEditor;
-    let mut h = testing::harness_state(Theme::dark(), String::from("query {\n  "), |ui, text| {
+    use archipel_kit::editor::{EditorComponent, model::Editor};
+    let mut h = testing::harness_state(Theme::dark(), Editor::new("query {\n  "), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Query")
                 .height(160.0)
                 .completer(&fields),
@@ -184,19 +184,19 @@ fn code_editor_completes_and_places_the_caret_inside() {
     assert!(h.query_by_label_contains("users").is_some(), "list is open");
     h.key_press(Key::Enter);
     h.run();
-    assert_eq!(h.state(), "query {\n  user(id: )");
+    assert_eq!(h.state().document.text(), "query {\n  user(id: )");
     // The caret is between the parentheses.
     h.get_by_label("Query").type_text("7");
     h.run();
-    assert_eq!(h.state(), "query {\n  user(id: 7)");
+    assert_eq!(h.state().document.text(), "query {\n  user(id: 7)");
 }
 
 #[test]
 fn ctrl_space_opens_the_list_in_a_code_editor() {
-    use archipel_kit::editor::CodeEditor;
-    let mut h = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
+    use archipel_kit::editor::{EditorComponent, model::Editor};
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(""), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Query")
                 .height(160.0)
                 .completer(&fields),
@@ -236,10 +236,10 @@ impl archipel_kit::ui::Completer for Patient {
 
 #[test]
 fn a_patient_completer_opens_on_request_only() {
-    use archipel_kit::editor::CodeEditor;
-    let mut h = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
+    use archipel_kit::editor::{EditorComponent, model::Editor};
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(""), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Query")
                 .height(160.0)
                 .completer(&Patient),

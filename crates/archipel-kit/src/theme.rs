@@ -316,6 +316,32 @@ pub struct EditorColors {
     pub invalid: Color32,
     /// The current find match, stronger than `search_result`.
     pub search_result_current: Color32,
+
+    // Editor component (IntelliJ editor spec §4.4, §5, §6, §8.1).
+    /// Text selection while the editor does not have the focus (`SELECTION_BACKGROUND_INACTIVE`).
+    pub selection_inactive: Color32,
+    /// Text of a collapsed fold region (`FOLDED_TEXT_ATTRIBUTES`).
+    pub folded_text: Color32,
+    /// Background of a collapsed fold region.
+    pub folded_background: Color32,
+    /// The 2 px ring inside a collapsed fold region (`FOLDED_TEXT_BORDER_COLOR`).
+    pub folded_border: Color32,
+    /// The right margin guide (`RIGHT_MARGIN_COLOR`).
+    pub right_margin: Color32,
+    /// The indent guide of the caret's block (`SELECTED_INDENT_GUIDE`).
+    pub indent_guide_selected: Color32,
+    /// Dots and lines that show whitespace (`WHITESPACES`).
+    pub whitespace: Color32,
+    /// Fold chevrons in the gutter.
+    pub fold_marker: Color32,
+    /// Text-search marks in the error stripe (`ERROR_STRIPE_COLOR` of text search results).
+    pub search_stripe: Color32,
+    /// Gutter change marker: added lines.
+    pub change_added: Color32,
+    /// Gutter change marker: modified lines.
+    pub change_modified: Color32,
+    /// Gutter change marker: deleted lines.
+    pub change_deleted: Color32,
 }
 
 impl Colors {
@@ -493,6 +519,18 @@ impl Theme {
                 variable: rgb(0x56A8F5),
                 invalid: rgb(0xFA6675),
                 search_result_current: rgb(0x1F7C94),
+                selection_inactive: rgb(0x4C4F56),
+                folded_text: rgb(0x868991),
+                folded_background: rgb(0x393B40),
+                folded_border: rgb(0x2B2D30),
+                right_margin: rgb(0x323438),
+                indent_guide_selected: rgb(0x4E5157),
+                whitespace: rgb(0x6F737A),
+                fold_marker: rgb(0x6F737A),
+                search_stripe: rgb(0x72D6D6),
+                change_added: rgb(0x549159),
+                change_modified: rgb(0x375FAD),
+                change_deleted: rgb(0x868A91),
             },
         }
     }
@@ -645,6 +683,18 @@ impl Theme {
                 variable: rgb(0x00627A),
                 invalid: rgb(0xF50000),
                 search_result_current: rgb(0xF2A33A),
+                selection_inactive: rgb(0xB5B7BD),
+                folded_text: rgb(0x414D41),
+                folded_background: rgb(0xE9F5E6),
+                folded_border: rgb(0xADD9C7),
+                right_margin: rgb(0xEBECF0),
+                indent_guide_selected: rgb(0xAEB3C2),
+                whitespace: rgb(0xADADAD),
+                fold_marker: rgb(0xA8ADBD),
+                search_stripe: rgb(0xC47233),
+                change_added: rgb(0x7FC784),
+                change_modified: rgb(0x88ADF7),
+                change_deleted: rgb(0x767A8A),
             },
         }
     }

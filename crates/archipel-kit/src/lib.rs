@@ -30,7 +30,7 @@
 //! | [`action_system`] | [`ActionButton`](action_system::ActionButton), [`ActionMenuItem`](action_system::ActionMenuItem), [`ActionToolbar`](action_system::ActionToolbar), [`ActionPopupMenu`](action_system::ActionPopupMenu). |
 //! | [`wm`] | The tool window shell: [`ToolWindowPane`](wm::ToolWindowPane), panels, stripes, status bar, main toolbar. |
 //! | [`notification`] | [`Notification`](notification::Notification). |
-//! | [`editor`] | [`CodeView`](editor::CodeView), [`CodeEditor`](editor::CodeEditor) and the highlighters. |
+//! | [`editor`] | [`EditorComponent`](editor::EditorComponent), the editor [`model`](editor::model) and the highlighters. |
 //!
 //! - [`parts`]: the building blocks of the components, for building your own.
 //! - [`behaviour`]: tooltips, context menus, cursors and drag and drop on any widget, with

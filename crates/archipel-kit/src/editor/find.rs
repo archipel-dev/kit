@@ -1,5 +1,5 @@
-//! The find bar shared by [`CodeView`](crate::editor::CodeView) and [`CodeEditor`](crate::editor::CodeEditor),
-//! built from kit components.
+//! The find bar of the [`EditorComponent`](crate::editor::EditorComponent), built from kit
+//! components.
 
 use crate::Glyph;
 use crate::theme::Theme;
@@ -81,6 +81,8 @@ const BAR_WIDTH: f32 = 290.0;
 pub(super) struct BarEvents {
     pub query_changed: bool,
     pub step: isize,
+    /// Where the bar was drawn.
+    pub rect: Option<Rect>,
 }
 
 /// Draws the find bar in the top right corner of `area` and applies its events to `state`.
@@ -95,7 +97,7 @@ pub(super) fn bar(ui: &mut Ui, area: Rect, state: &mut FindState, count: usize) 
         pos2(area.right() - inset - width, area.top() + inset),
         vec2(width, area.height() - inset),
     )));
-    let more_than = if count >= super::text::MAX_MATCHES {
+    let more_than = if count >= super::editor_component::MAX_MATCHES {
         "+"
     } else {
         ""
@@ -107,7 +109,7 @@ pub(super) fn bar(ui: &mut Ui, area: Rect, state: &mut FindState, count: usize) 
     } else {
         format!("{} of {count}{more_than}", state.current.min(count - 1) + 1)
     };
-    egui::Frame::new()
+    let shown = egui::Frame::new()
         .fill(editor.background_panel)
         .stroke(Stroke::new(1.0_f32, colors.border))
         .corner_radius(radius::CONTROL)
@@ -183,6 +185,7 @@ pub(super) fn bar(ui: &mut Ui, area: Rect, state: &mut FindState, count: usize) 
                 }
             });
         });
+    events.rect = Some(shown.response.rect);
     if events.step != 0 {
         state.step(events.step, count);
     }

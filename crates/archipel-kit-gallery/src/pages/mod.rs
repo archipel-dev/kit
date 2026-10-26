@@ -7,7 +7,7 @@ use archipel_kit::ui::popup::JBPopup;
 use archipel_kit::{Glyph, Icon, Theme, Tone, ValueKind, cursor, egui, tokens};
 use archipel_kit::{
     action_system::{ActionButton, ActionMenuItem},
-    editor::{CodeEditor, CodeView},
+    editor::EditorComponent,
     ide::{HelpTooltip, HelpTooltipExt},
     notification::Notification,
     openapi::ui::{ComboBox, DialogWrapper, Side, Splitter},

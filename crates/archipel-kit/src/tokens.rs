@@ -522,6 +522,28 @@ pub mod motion {
     /// by pressing its owner button does not reopen it on release
     /// (`ide.popup.hide.show.threshold`, IntelliJ spec §0.3).
     pub const POPUP_REOPEN_GUARD: f32 = 0.2;
+
+    /// The editor caret blink period: shown for this long, then hidden for this long, counted
+    /// from the last caret activity (IntelliJ editor spec §0, §1.9).
+    pub const CARET_BLINK: f32 = 0.5;
+    /// The longest animated jump of the editor viewport to the caret (spec §4.1).
+    pub const EDITOR_SCROLL_JUMP: f32 = 0.1;
+    /// How long the pointer rests on text before the editor reports a hover (spec §8.1,
+    /// `TOOLTIPS_DELAY_MS`).
+    pub const EDITOR_TOOLTIP_DELAY: f32 = 0.5;
+    /// How long the pointer rests on a fold placeholder before the preview is reported
+    /// (spec §6, `FoldingPopupManager.TOOLTIP_DELAY_MS`).
+    pub const FOLD_PREVIEW_DELAY: f32 = 0.3;
+    /// Fade-in of the gutter's fold chevrons when the pointer enters the gutter (spec §5).
+    pub const FOLD_CHEVRON_FADE_IN: f32 = 0.13;
+    /// Delay before the fold chevrons start to fade out after the pointer left the gutter.
+    pub const FOLD_CHEVRON_FADE_OUT_DELAY: f32 = 0.14;
+    /// Fade-out of the fold chevrons.
+    pub const FOLD_CHEVRON_FADE_OUT: f32 = 0.15;
+    /// Tick of the drag autoscroll timer (spec §2.3, `editor.scrolling.animation.interval.ms`).
+    pub const EDITOR_AUTOSCROLL_TICK: f32 = 0.1;
+    /// Two presses closer than this in time and space count as a double (triple) click.
+    pub const MULTI_CLICK_INTERVAL: f32 = 0.5;
 }
 
 /// Opacities, from 0 to 1.
@@ -671,4 +693,62 @@ pub mod empty_text {
     pub const DEFAULT: &str = "Nothing to show";
     /// Space between two lines of a [`StatusText`](crate::ui::StatusText) block.
     pub const LINE_GAP: f32 = 2.0;
+}
+
+/// Editor metrics (the editor component, IntelliJ editor spec §0, §1.9, §4.1, §5, §6).
+pub mod editor {
+    /// Width of the insert-mode caret bar (`editor.caret.width`).
+    pub const CARET_WIDTH: f32 = 2.0;
+    /// Corner radius of the caret bar in the Islands theme (`min(width / 2, 3)`).
+    pub const CARET_RADIUS: u8 = 1;
+    /// The selection's corner radius is the line height divided by this (Islands selection
+    /// painter, spec §8.1).
+    pub const SELECTION_RADIUS_DIVISOR: f32 = 6.0;
+    /// Corner radius of the highlights behind text (search results, occurrences, braces).
+    pub const HIGHLIGHT_RADIUS: u8 = 2;
+    /// Points of the arc of one rounded selection corner.
+    pub const SELECTION_ARC_STEPS: usize = 5;
+    /// Space before the gutter's line numbers (`emptyAnnotationAreaWidth`).
+    pub const GUTTER_ANNOTATION: f32 = 4.0;
+    /// Space before and after the line numbers (`gapAfterVcsMarkersWidth`,
+    /// `gapAfterLineNumbersWidth`).
+    pub const GUTTER_GAP: f32 = 4.0;
+    /// Width of the strip of version control change markers (`FREE_PAINTERS_LEFT_AREA_WIDTH`).
+    pub const CHANGE_MARKER_AREA: f32 = 8.0;
+    /// Width of the colored change marker inside that strip.
+    pub const CHANGE_MARKER: f32 = 3.0;
+    /// Width of one lane of gutter icons (`START_ICON_AREA_WIDTH`).
+    pub const GUTTER_LANE: f32 = 17.0;
+    /// Edge of a gutter icon.
+    pub const GUTTER_ICON: f32 = 16.0;
+    /// Space after the icon lanes (`gapAfterIconsWidth`).
+    pub const GUTTER_AFTER_ICONS: f32 = 4.0;
+    /// Edge of the fold chevron icon.
+    pub const FOLD_ICON: f32 = 9.0;
+    /// Width of the fold column: the chevron and its click target (the kit's measured 16).
+    pub const FOLD_COLUMN: f32 = 16.0;
+    /// Thickness of the ring inside a fold placeholder (`FOLDED_TEXT_BORDER_COLOR`).
+    pub const FOLD_BORDER: f32 = 2.0;
+    /// The line numbers' font is the editor font reduced by this
+    /// (`editor.gutter.linenumber.font.size.delta`).
+    pub const NUMBER_FONT_DELTA: f32 = -1.0;
+    /// Width of the error stripe column next to the scroll bar (`SCROLLBAR_WIDTH`).
+    pub const STRIPE_WIDTH: f32 = 14.0;
+    /// Least height of one stripe mark (`errorStripeMarkMinHeight`).
+    pub const STRIPE_MARK_MIN: f32 = 2.0;
+    /// Pixels a press in the gutter must move before it starts a line selection
+    /// (`editor.drag.sensitivity`).
+    pub const DRAG_SENSITIVITY: f32 = 5.0;
+    /// Autoscroll: the distance beyond the viewport edge in pixels that adds one line per step
+    /// (spec §2.3: a step every `20 / d + 1` ticks, `1 + d / 20` lines each).
+    pub const AUTOSCROLL_DISTANCE: f32 = 20.0;
+    /// Diameter of the dot that shows a space when whitespace is shown.
+    pub const WHITESPACE_DOT: f32 = 1.0;
+    /// Height of the wave of an error squiggle.
+    pub const SQUIGGLE_HEIGHT: f32 = 2.0;
+    /// Half the period of the wave of an error squiggle.
+    pub const SQUIGGLE_HALF_PERIOD: f32 = 2.0;
+    /// Selection occurrences are highlighted only while there are at most this many
+    /// (`editor.highlight.selected.text.max.occurrences.threshold`).
+    pub const MAX_SELECTION_OCCURRENCES: usize = 50;
 }

@@ -191,8 +191,7 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("ButtonVariant", "enum"),
     ("CellEdit", "table edit state"),
     ("ChartColor", "enum"),
-    ("CodeEditorOutput", "response"),
-    ("CodeViewResponse", "response"),
+    ("EditorComponentResponse", "response"),
     ("CollectionResponse", "response"),
     (
         "Completer",
@@ -383,7 +382,7 @@ const WIDGET_MODULES: &[(&str, &str)] = &[
     ("action_system/mod.rs", "pub use action_"),
     ("wm/mod.rs", "pub use "),
     ("notification/mod.rs", "pub use "),
-    ("editor/mod.rs", "pub use code_"),
+    ("editor/mod.rs", "pub use editor_component"),
 ];
 
 /// The uppercase names of the `pub use` statements of `module` that start with `prefix`.

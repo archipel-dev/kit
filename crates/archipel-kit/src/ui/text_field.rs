@@ -2,7 +2,7 @@
 
 use super::completion::Completer;
 use crate::common;
-use crate::editor::{Highlighter, Span, TemplateAt, TokenKind, template_at};
+use crate::editor::{Span, SyntaxHighlighter, TemplateAt, TextAttributesKey, template_at};
 use crate::editor::{styled_job, token_format};
 use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
@@ -38,7 +38,7 @@ use std::sync::Arc;
 /// # Highlighting and `{{variables}}`
 ///
 /// [`highlighter`](JBTextField::highlighter) colors the text with any
-/// [`Highlighter`], keeping everything else of the field: height, focus ring, placeholder,
+/// [`SyntaxHighlighter`], keeping everything else of the field: height, focus ring, placeholder,
 /// clear button. With a [`TemplateHighlighter`](crate::editor::TemplateHighlighter) it
 /// is the URL bar and header value input of an HTTP client; [`show`](JBTextField::show)
 /// then also reports the caret and the `{{variable}}` at it, to anchor an autocomplete. See
@@ -58,7 +58,7 @@ pub struct JBTextField<'t> {
     monospace: bool,
     width: Option<f32>,
     id: Option<Id>,
-    highlighter: Option<&'t dyn Highlighter>,
+    highlighter: Option<&'t dyn SyntaxHighlighter>,
     completer: Option<&'t dyn Completer>,
     suggestions: Option<&'t [String]>,
 }
@@ -231,7 +231,7 @@ impl<'t> JBTextField<'t> {
     /// [`TemplateHighlighter`](crate::editor::TemplateHighlighter)). Ignored for
     /// [`password`](Self::password) fields. In single-line mode <kbd>Enter</kbd> submits;
     /// multi-line fields wrap the highlighted text and insert newlines.
-    pub fn highlighter(mut self, highlighter: &'t dyn Highlighter) -> Self {
+    pub fn highlighter(mut self, highlighter: &'t dyn SyntaxHighlighter) -> Self {
         self.highlighter = Some(highlighter);
         self
     }
@@ -367,7 +367,7 @@ impl JBTextField<'_> {
                         |kind| {
                             let mut format =
                                 token_format(kind, &font, &theme.editor, None, enabled);
-                            if kind == TokenKind::Plain {
+                            if kind == TextAttributesKey::Plain {
                                 format.color = common::enabled_text(enabled, colors.text, &colors);
                             }
                             format

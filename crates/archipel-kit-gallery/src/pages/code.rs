@@ -1,4 +1,8 @@
 use super::*;
+use archipel_kit::editor::model::Editor;
+use archipel_kit::editor::{
+    ChangeKind, ChangeMarker, GutterIcon, HighlightSeverity, JavaScript, RangeHighlight,
+};
 
 /// The JSON of the Code page.
 const CODE_SAMPLE: &str = r#"{
@@ -13,9 +17,18 @@ const CODE_SAMPLE: &str = r#"{
   "score": 4.5e2
 }"#;
 
+/// A script for the gutter demo.
+const SCRIPT_SAMPLE: &str = "function total(items) {\n  let sum = 0;\n  for (const item of items) {\n    sum += item.price * item.qty;\n  }\n  // TODO: tax\n  return sum;\n}\n";
+
 pub(super) struct State {
     last_action: String,
-    code: String,
+    viewer: Editor,
+    editor: Editor,
+    script: Editor,
+    icons: Vec<GutterIcon>,
+    markers: Vec<ChangeMarker>,
+    highlights: Vec<RangeHighlight>,
+    clicked: String,
     url_bar: UrlBar,
     header: String,
 }
@@ -24,7 +37,23 @@ impl Default for State {
     fn default() -> Self {
         Self {
             last_action: String::new(),
-            code: CODE_SAMPLE.into(),
+            viewer: Editor::new(CODE_SAMPLE),
+            editor: Editor::new(CODE_SAMPLE),
+            script: Editor::new(SCRIPT_SAMPLE),
+            icons: vec![
+                GutterIcon::new(1, Glyph::Breakpoint, "Breakpoint on line 2").tone(Tone::Error),
+                GutterIcon::new(5, Glyph::Bookmark, "Bookmark on line 6").lane(1),
+            ],
+            markers: vec![
+                ChangeMarker::new(1..3, ChangeKind::Added),
+                ChangeMarker::new(4..5, ChangeKind::Modified),
+            ],
+            highlights: vec![
+                RangeHighlight::new(44..47, HighlightSeverity::Error)
+                    .message("Unresolved variable"),
+                RangeHighlight::new(97..104, HighlightSeverity::Warning).message("Unused"),
+            ],
+            clicked: String::new(),
             url_bar: UrlBar {
                 url: "{{base_url}}/users/{{user_id}}?key={{token}}&q={{missing}}".into(),
                 ..UrlBar::default()
@@ -50,17 +79,38 @@ impl State {
                 .clearable(true)
                 .enabled(enabled),
         );
-        ui.add(TitledSeparator::new("Code view"));
-        CodeView::new(CODE_SAMPLE)
+        ui.add(TitledSeparator::new("Viewer"));
+        EditorComponent::new(&mut self.viewer)
             .label("Response body")
             .highlighter(&Json)
+            .viewer(true)
             .line_numbers(true)
-            .folding(true)
+            .bracket_folding(true)
             .height(236.0)
             .show(ui);
-        ui.add(TitledSeparator::new("Code editor"));
+        ui.add(TitledSeparator::new("Gutter, markers and folding"));
+        ui.label("Hover the gutter for fold chevrons; Alt+drag selects a column, Alt+Shift+click adds a caret.");
+        let out = EditorComponent::new(&mut self.script)
+            .label("Script")
+            .highlighter(&JavaScript)
+            .viewer(true)
+            .line_numbers(true)
+            .bracket_folding(true)
+            .gutter_icons(&self.icons)
+            .change_markers(&self.markers)
+            .highlights(&self.highlights)
+            .enabled(enabled)
+            .height(200.0)
+            .show(ui);
+        if let Some(click) = out.gutter_clicks.first() {
+            self.clicked = format!("Gutter click on line {} ({:?})", click.line + 1, click.area);
+        }
+        if !self.clicked.is_empty() {
+            ui.label(&self.clicked);
+        }
+        ui.add(TitledSeparator::new("Editor"));
         ui.add(
-            CodeEditor::new(&mut self.code)
+            EditorComponent::new(&mut self.editor)
                 .label("Request body")
                 .highlighter(&Json)
                 .line_numbers(true)

@@ -87,6 +87,15 @@ impl FoldingModel {
         Some(index)
     }
 
+    /// Replaces all regions by `regions`, which must be sorted by start (outer regions before
+    /// the regions nested in them) and nest or be disjoint, as a folding provider's output is.
+    /// Unlike [`FoldingModel::add_region`] it does not check them against each other, so it
+    /// stays linear for thousands of regions. Regions that are empty are dropped.
+    pub fn replace_regions(&mut self, mut regions: Vec<FoldRegion>) {
+        regions.retain(|region| region.start < region.end);
+        self.regions = regions;
+    }
+
     /// Removes all regions.
     pub fn clear(&mut self) {
         self.regions.clear();

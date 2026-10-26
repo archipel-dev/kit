@@ -1,6 +1,6 @@
 //! The completion list of text inputs: suggestions under the caret, operated by the keyboard
-//! and the pointer. [`JBTextField`](crate::ui::JBTextField) and [`CodeEditor`](crate::editor::CodeEditor)
-//! share it.
+//! and the pointer. [`JBTextField`](crate::ui::JBTextField) and
+//! [`EditorComponent`](crate::editor::EditorComponent) share it.
 
 use crate::tokens::size;
 use egui::text::{CCursor, CCursorRange};
@@ -57,7 +57,7 @@ pub struct Completions {
 }
 
 /// Suggests completions for a [`JBTextField`](crate::ui::JBTextField) or a
-/// [`CodeEditor`](crate::editor::CodeEditor): `{{variables}}` in a URL, fields in a query. Given the
+/// [`EditorComponent`](crate::editor::EditorComponent): `{{variables}}` in a URL, fields in a query. Given the
 /// text and the caret (a char index), it returns what to offer, or `None` when nothing
 /// completes there. Any `Fn(&str, usize) -> Option<Completions>` is one.
 pub trait Completer {
@@ -210,13 +210,30 @@ impl List {
     /// input's response (marked changed when a suggestion is inserted), `caret` the caret
     /// (chars) and where it is on screen.
     pub(crate) fn end(
-        mut self,
+        self,
         ui: &Ui,
         completer: &dyn Completer,
         text: &mut String,
         edited: &mut Response,
         caret: Option<(usize, Rect)>,
     ) {
+        let chosen = self.end_with(ui, completer, text.as_str(), edited, caret);
+        if let Some((start, end, item)) = chosen {
+            apply(ui.ctx(), edited.id, text, start, end, &item);
+        }
+    }
+
+    /// Like [`end`](Self::end) for an input that is not a `String` with an egui caret (the
+    /// code editor): returns the accepted suggestion with the char range it replaces instead
+    /// of applying it.
+    pub(crate) fn end_with(
+        mut self,
+        ui: &Ui,
+        completer: &dyn Completer,
+        text: &str,
+        edited: &mut Response,
+        caret: Option<(usize, Rect)>,
+    ) -> Option<(usize, usize, Completion)> {
         let keys = self.keys;
         let caret_rect = caret.map(|c| c.1);
         let caret = caret.map(|c| c.0);
@@ -229,7 +246,7 @@ impl List {
         let Some(caret) = caret else {
             self.state.open = false;
             self.store(ui);
-            return;
+            return None;
         };
         let asked = keys.explicit || self.state.open;
         let found = if asked {
@@ -292,19 +309,14 @@ impl List {
                 self.state.open &= open;
             }
         }
+        let mut result = None;
         if let (Some(item), Some(found)) = (chosen, &found) {
-            apply(
-                ui.ctx(),
-                edited.id,
-                text,
-                found.start,
-                found.end.max(found.start),
-                &item,
-            );
+            result = Some((found.start, found.end.max(found.start), item));
             edited.mark_changed();
             self.state.open = false;
         }
         self.store(ui);
+        result
     }
 
     fn store(&self, ui: &Ui) {
