@@ -1,5 +1,5 @@
-//! [`TextArea`]: a read-only text view for the editor area, as a placeholder until the
-//! terminal editor component (which will use the kit's `editor::model::Editor`) exists.
+//! [`TextArea`]: a light read-only text view over lines the caller owns. For code, use the
+//! [`EditorComponent`](crate::editor::EditorComponent), which runs on the kit's editor model.
 //!
 //! It draws like Neovim: a number column in grey with the current line bright, the cursor
 //! line on `black2`, thin indent guides in the `line` color and a light syntax tint. It moves

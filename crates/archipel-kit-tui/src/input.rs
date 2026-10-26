@@ -343,6 +343,13 @@ pub fn terminal_keymap(os: Os) -> Keymap {
     add("CloseActiveTab", &format!("{LEADER_GENERAL} > W"));
     add("ShowIntentionActions", &format!("{LEADER_GENERAL} > Enter"));
     add("Exit", &format!("{LEADER_GENERAL} > Q"));
+    // The editor's fallbacks for combos a legacy terminal cannot send.
+    for chord in crate::editor::chords() {
+        add(
+            (chord.action)().id(),
+            &format!("{LEADER_GENERAL} > {}", chord.keys),
+        );
+    }
     keymap
 }
 

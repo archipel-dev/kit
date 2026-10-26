@@ -18,6 +18,11 @@
 //! | Ctrl+T | next theme |
 //! | Ctrl+K then Q | quit |
 //! | Ctrl+N | New File dialog |
+//! | Ctrl+S | save the file (clears the modified dot) |
+//!
+//! The editor is the kit's terminal `EditorComponent`: every key of the GUI editor works
+//! (Ctrl+F find, Ctrl+R replace, Alt+J, Ctrl+D, Alt+Shift+Up …), with `Ctrl+K` chords for
+//! the combos a legacy terminal cannot send (Ctrl+K then ? shows them).
 //!
 //! The mouse works everywhere: click, double click, drag splitters and tabs, wheel, right
 //! click for context menus, middle click on a tab to close it.
@@ -28,6 +33,8 @@ use archipel_kit::action_system::{
     ActionPlace, AnAction, AnActionEvent, DataContext, DefaultActionGroup, Presentation, Shortcut,
     Toggle, ToggleAction,
 };
+use archipel_kit::editor::PlainText;
+use archipel_kit::editor::model::Editor;
 use archipel_kit::notification::{Notification, NotificationGroup};
 use archipel_kit::openapi::ui::{ExitCode, ValidationInfo};
 use archipel_kit::ui::Status;
@@ -42,6 +49,7 @@ use archipel_kit_tui::components::{
 use archipel_kit_tui::controls::{FieldEvent, TextFieldControl, TextFieldState};
 use archipel_kit_tui::dashboard::{Dashboard, DashboardButton};
 use archipel_kit_tui::dialog::{Dialog, DialogContent, Messages};
+use archipel_kit_tui::editor::{CodeHighlighter, EditorComponent, EditorState, cursor_position};
 use archipel_kit_tui::hit::Id;
 use archipel_kit_tui::input::Event;
 use archipel_kit_tui::overlay::{Handled, Layers, Overlay, PopupOverlay, draw_which_key};
@@ -50,7 +58,6 @@ use archipel_kit_tui::popup::{
 };
 use archipel_kit_tui::statusbar::{StatusBarControl, StatusEvent};
 use archipel_kit_tui::tabs::{TabsControl, TabsEvent, TabsState};
-use archipel_kit_tui::textarea::{TextArea, TextAreaState, TextLanguage};
 use archipel_kit_tui::toolbar::{ActionToolbar, ToolbarEvent, ToolbarState};
 use archipel_kit_tui::tooltip::Tooltip;
 use archipel_kit_tui::workbench::{Workbench, WorkbenchEvent, WorkbenchFocus};
@@ -123,6 +130,36 @@ impl AnAction for Cmd {
     fn action_performed(&self, _e: &AnActionEvent<'_>) {
         self.queue.borrow_mut().push(self.command.clone());
     }
+}
+
+struct ReadOnlyToggle(Rc<Cell<bool>>);
+
+impl ToggleAction for ReadOnlyToggle {
+    fn id(&self) -> &str {
+        "ToggleReadOnly"
+    }
+
+    fn template_presentation(&self) -> Presentation {
+        Presentation::new("Read-Only")
+            .icon(Glyph::Lock)
+            .description("Open files as viewers: move, select, copy and find, no editing")
+    }
+
+    fn is_selected(&self, _e: &AnActionEvent<'_>) -> bool {
+        self.0.get()
+    }
+
+    fn set_selected(&self, _e: &AnActionEvent<'_>, selected: bool) {
+        self.0.set(selected);
+    }
+}
+
+/// An open file: the model, the view state and the text as saved.
+struct Doc {
+    editor: Editor,
+    state: EditorState,
+    saved: String,
+    highlighter: CodeHighlighter,
 }
 
 struct SyntaxToggle(Rc<Cell<bool>>);
@@ -364,8 +401,8 @@ pub struct IdeApp {
     tabs: Vec<TabInfo>,
     tab_state: TabsState,
     tab_control: TabsControl,
-    areas: Vec<TextAreaState>,
-    lines: HashMap<String, Vec<String>>,
+    docs: Vec<Doc>,
+    read_only: Rc<Cell<bool>>,
     toolbar: ActionToolbar,
     toolbar_state: ToolbarState,
     status: StatusBarControl,
@@ -386,6 +423,7 @@ pub struct IdeApp {
     buttons_rect: Rect,
     search_items: Vec<SearchItem>,
     now: f64,
+    notify_hint: Option<String>,
 }
 
 const RUN_OUTPUT: [&str; 7] = [
@@ -405,6 +443,7 @@ impl IdeApp {
         let running = Rc::new(Cell::new(false));
         let have_tabs = Rc::new(Cell::new(false));
         let syntax = Rc::new(Cell::new(true));
+        let read_only = Rc::new(Cell::new(false));
         let cmd = |id, text, icon, description, command, enabled: Option<Rc<Cell<bool>>>| Cmd {
             id,
             text,
@@ -433,6 +472,7 @@ impl IdeApp {
         ));
         group.add_separator();
         group.add(Toggle::new(SyntaxToggle(syntax.clone())));
+        group.add(Toggle::new(ReadOnlyToggle(read_only.clone())));
         group.add(cmd(
             "CloseActiveTab",
             "Close Tab",
@@ -522,8 +562,8 @@ impl IdeApp {
             tabs: Vec::new(),
             tab_state: TabsState::new(0),
             tab_control: TabsControl::new(TABS),
-            areas: Vec::new(),
-            lines: HashMap::new(),
+            docs: Vec::new(),
+            read_only,
             toolbar: ActionToolbar::new(
                 TOOLBAR,
                 Rc::new(group),
@@ -586,6 +626,7 @@ impl IdeApp {
             buttons_rect: Rect::default(),
             search_items: Vec::new(),
             now: 0.0,
+            notify_hint: None,
         };
         app.open_file("README.md");
         app.wb.state.hide_all();
@@ -609,6 +650,7 @@ impl IdeApp {
             ("Exit", "ctrl K > Q"),
             ("NewFile", "ctrl N"),
             ("About", "F1"),
+            ("SaveAll", "ctrl S"),
         ] {
             if let Some(shortcut) = Shortcut::parse(key) {
                 keymap.add_shortcut(id, shortcut);
@@ -625,8 +667,7 @@ impl IdeApp {
         let Some(text) = self.files.0.get(path) else {
             return;
         };
-        self.lines
-            .insert(path.to_owned(), text.lines().map(str::to_owned).collect());
+        let text = text.clone();
         let name = path.rsplit('/').next().unwrap_or(path);
         let mut tab = TabInfo::new(name);
         tab.icon = match language_of(path) {
@@ -635,7 +676,13 @@ impl IdeApp {
         };
         self.tabs.push(tab);
         self.open.push(path.to_owned());
-        self.areas.push(TextAreaState::new());
+        let editor = Editor::new(&text);
+        self.docs.push(Doc {
+            saved: editor.document.text().to_owned(),
+            editor,
+            state: EditorState::new(),
+            highlighter: CodeHighlighter::for_file(path),
+        });
         self.tab_state.selected = self.open.len() - 1;
         self.have_tabs.set(true);
     }
@@ -644,10 +691,9 @@ impl IdeApp {
         if index >= self.tabs.len() {
             return;
         }
-        let path = self.open.remove(index);
-        self.lines.remove(&path);
+        self.open.remove(index);
         self.tabs.remove(index);
-        self.areas.remove(index);
+        self.docs.remove(index);
         self.tab_state.removed(index, self.tabs.len());
         self.have_tabs.set(!self.tabs.is_empty());
     }
@@ -1009,6 +1055,18 @@ impl IdeApp {
         }
     }
 
+    /// The open document in the selected tab.
+    fn current_doc(&self) -> Option<usize> {
+        (!self.docs.is_empty()).then(|| self.tab_state.selected.min(self.docs.len() - 1))
+    }
+
+    /// Whether the editor has the keyboard focus (no popup, no tool window).
+    fn editor_focused(&self) -> bool {
+        self.layers.is_empty()
+            && matches!(self.wb.focus, WorkbenchFocus::Editor)
+            && !self.docs.is_empty()
+    }
+
     fn mode(&self) -> Mode {
         if !self.layers.is_empty() {
             return Mode::Command;
@@ -1095,6 +1153,11 @@ impl archipel_kit_tui::App for IdeApp {
         for m in messages {
             self.apply(rt, m);
         }
+        // The editor's autoscroll while a drag rests beyond its edge.
+        if let Some(idx) = self.current_doc() {
+            let Doc { editor, state, .. } = &mut self.docs[idx];
+            let _ = EditorComponent::new(EDITOR, editor).tick(rt, state);
+        }
         if let Some(started) = self.run_started {
             let due = ((rt.now - started) / 0.25) as usize;
             while self.run_lines_shown < due.min(RUN_OUTPUT.len()) {
@@ -1118,6 +1181,12 @@ impl archipel_kit_tui::App for IdeApp {
             consider(started + (self.run_lines_shown as f64 + 1.0) * 0.25);
         }
         if let Some(t) = rt.tooltip.deadline() {
+            consider(t);
+        }
+        if let Some(t) = self
+            .current_doc()
+            .and_then(|i| self.docs[i].state.deadline())
+        {
             consider(t);
         }
         next
@@ -1276,10 +1345,25 @@ impl archipel_kit_tui::App for IdeApp {
             } else {
                 let path = self.open[self.tab_state.selected.min(self.open.len() - 1)].clone();
                 let idx = self.tab_state.selected.min(self.open.len() - 1);
-                let lines = self.lines.get(&path).cloned().unwrap_or_default();
-                let mut view = TextArea::new(EDITOR).language(TextLanguage::of_file(&path));
-                view.syntax = self.syntax.get();
-                view.show(rt, &mut self.areas[idx], &lines, body, buf);
+                let _ = path;
+                let syntax = self.syntax.get();
+                let viewer = self.read_only.get();
+                let doc = &mut self.docs[idx];
+                let Doc {
+                    editor,
+                    state,
+                    highlighter,
+                    saved,
+                } = doc;
+                let modified = editor.document.text() != saved.as_str();
+                let component = EditorComponent::new(EDITOR, editor).viewer(viewer);
+                let component = if syntax {
+                    component.highlighter(highlighter)
+                } else {
+                    component.highlighter(&PlainText)
+                };
+                component.show(rt, state, body, buf);
+                self.tabs[idx].modified = modified;
             }
         }
         // Status line.
@@ -1288,10 +1372,10 @@ impl archipel_kit_tui::App for IdeApp {
                 let idx = self
                     .tab_state
                     .selected
-                    .min(self.areas.len().saturating_sub(1));
-                let a = &self.areas[idx];
+                    .min(self.docs.len().saturating_sub(1));
+                let (line, col) = cursor_position(&self.docs[idx].editor);
                 (
-                    format!("Ln {}, Col {}", a.line + 1, a.col + 1),
+                    format!("Ln {line}, Col {col}"),
                     Some((
                         language_of(path),
                         path.rsplit('/').next().unwrap_or(path).to_owned(),
@@ -1306,11 +1390,32 @@ impl archipel_kit_tui::App for IdeApp {
                 self.run_lines_shown * 100 / RUN_OUTPUT.len()
             )
         } else {
-            rt.hint.clone().unwrap_or_default()
+            rt.hint
+                .clone()
+                .or_else(|| {
+                    let idx = self
+                        .tab_state
+                        .selected
+                        .min(self.docs.len().saturating_sub(1));
+                    self.docs
+                        .get(idx)
+                        .and_then(|d| d.state.hint(rt.now).map(str::to_owned))
+                })
+                .unwrap_or_default()
         };
         let mode = self.mode();
+        // In the editor the mode block says whether the file can be edited.
+        let (mode_label, mode_color) = if self.editor_focused() {
+            if self.read_only.get() {
+                ("VIEW", Mode::Normal.color(&p))
+            } else {
+                ("EDIT", Mode::Insert.color(&p))
+            }
+        } else {
+            (mode.label(), mode.color(&p))
+        };
         let mut bar = StatusBar::new(&look)
-            .mode(mode.label(), mode.color(&p))
+            .mode(mode_label, mode_color)
             .git(&self.git)
             .center(&center)
             .diagnostics(Diagnostics {
@@ -1333,6 +1438,13 @@ impl archipel_kit_tui::App for IdeApp {
 }
 
 impl IdeApp {
+    /// Whether the file in tab `index` differs from what was saved.
+    pub fn is_modified(&self, index: usize) -> bool {
+        self.docs
+            .get(index)
+            .is_some_and(|d| d.editor.document.text() != d.saved)
+    }
+
     /// The id of the focused tool window, if a tool window has focus.
     pub fn workbench_focus_tool(&self) -> Option<String> {
         self.wb.focused_tool().map(str::to_owned)
@@ -1364,6 +1476,12 @@ impl IdeApp {
             }
             "NewFile" => Command::NewFile,
             "About" => Command::About,
+            "SaveAll" => {
+                for doc in &mut self.docs {
+                    doc.saved = doc.editor.document.text().to_owned();
+                }
+                return true;
+            }
             "Exit" => Command::Quit,
             "NextTab" | "PreviousTab" if self.wb.focused_tool().is_none() => {
                 let delta = if id == "NextTab" { 1 } else { -1 };
@@ -1477,7 +1595,7 @@ impl IdeApp {
             }
             TabsEvent::Reordered { from, to } => {
                 self.open.swap(from, to);
-                self.areas.swap(from, to);
+                self.docs.swap(from, to);
             }
             _ => {}
         }
@@ -1516,15 +1634,23 @@ impl IdeApp {
         if !self.tabs.is_empty() {
             let idx = self.tab_state.selected.min(self.open.len() - 1);
             let path = self.open[idx].clone();
-            let lines = self.lines.get(&path).cloned().unwrap_or_default();
-            let view = TextArea::new(EDITOR);
-            view.handle(rt, &mut self.areas[idx], &lines, event);
-            if let Event::Mouse(_) = event
-                && let Some(p) = rt.pointer().copied()
-                && p.right_press()
-                && p.over(EDITOR)
-            {
-                self.editor_menu(rt, p.x, p.y);
+            let _ = path;
+            let viewer = self.read_only.get();
+            let Doc {
+                editor,
+                state,
+                highlighter,
+                ..
+            } = &mut self.docs[idx];
+            let out = EditorComponent::new(EDITOR, editor)
+                .highlighter(highlighter)
+                .viewer(viewer)
+                .handle(rt, state, event);
+            if let Some(hint) = out.hint {
+                self.notify_hint = Some(hint);
+            }
+            if let Some((x, y)) = out.context_menu {
+                self.editor_menu(rt, x, y);
             }
         }
     }
