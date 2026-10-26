@@ -1,254 +1,121 @@
-//! The TUI gallery: every component in a terminal.
+//! The TUI gallery: the interactive controls on one page.
 //!
 //! `cargo run -p archipel-kit-tui --example gallery`
 //!
-//! Keys: `←`/`→` or `h`/`l` pages, `↑`/`↓` or `j`/`k` move, `space` toggles,
-//! `t` dark/light, `q` quits. Use a Nerd Font in the terminal (JetBrainsMono Nerd Font).
+//! Tab and Shift+Tab move focus, Space and Enter press, arrows change a radio group or the
+//! segmented button, `t` (outside a text field) switches the theme, Ctrl+K then Q quits. The
+//! mouse works too. Use a Nerd Font in the terminal (JetBrainsMono Nerd Font).
+
+#![allow(missing_docs)]
 
 use archipel_kit::ui::Status;
-use archipel_kit_tui::components::*;
+use archipel_kit_tui::components::{Pane, PaneKind, ProgressBar};
+use archipel_kit_tui::controls::{
+    BannerControl, ButtonControl, ButtonState, CheckBoxControl, CheckState, FieldEvent,
+    OnOffControl, RadioGroupControl, SegmentedControl, TextFieldControl, TextFieldState,
+};
+use archipel_kit_tui::input::{Event, KeyCode};
 use archipel_kit_tui::ratatui::buffer::Buffer;
-use archipel_kit_tui::ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use archipel_kit_tui::ratatui::layout::Rect;
 use archipel_kit_tui::ratatui::widgets::Widget;
-use archipel_kit_tui::{Glyph, Language, Look, Symbol, SymbolKind};
+use archipel_kit_tui::{Glyph, Id, Look, Runtime, Theme, runtime};
 
-const PAGES: [&str; 4] = ["Controls", "Lists", "Feedback", "Icons"];
+const OK: Id = Id::new("g.ok");
+const CHECK: Id = Id::new("g.check");
+const RADIO: Id = Id::new("g.radio");
+const SWITCH: Id = Id::new("g.switch");
+const SEG: Id = Id::new("g.seg");
+const NAME: Id = Id::new("g.name");
+const BANNER: Id = Id::new("g.banner");
 
-struct App {
-    look: Look,
-    page: usize,
-    row: usize,
-    checks: [bool; 3],
-    toggle: bool,
+struct Gallery {
+    button: ButtonState,
+    clicks: u32,
+    check: CheckState,
     radio: usize,
+    switch: bool,
+    seg: usize,
+    name: TextFieldState,
+    theme: usize,
 }
 
-impl App {
-    fn draw(&self, area: Rect, buf: &mut Buffer) {
-        let look = &self.look;
-        Frame::new(look).render(area, buf);
-        if area.width < 20 || area.height < 8 {
+const RADIOS: [&str; 3] = ["Spaces", "Tabs", "Mixed"];
+const SEGS: [&str; 3] = ["Tree", "List", "Graph"];
+
+impl archipel_kit_tui::App for Gallery {
+    fn event(&mut self, rt: &mut Runtime, event: &Event) {
+        if ButtonControl::new(OK, "Apply")
+            .primary()
+            .handle(rt, &mut self.button, event)
+        {
+            self.clicks += 1;
+        }
+        CheckBoxControl::new(CHECK, "Format on save").handle(rt, &mut self.check, event);
+        RadioGroupControl::new(RADIO, &RADIOS).handle(rt, &mut self.radio, event);
+        if OnOffControl::new(SWITCH, "Soft wrap").handle(rt, event) {
+            self.switch = !self.switch;
+        }
+        SegmentedControl::new(SEG, &SEGS).handle(rt, &mut self.seg, event);
+        let r = TextFieldControl::new(NAME)
+            .label("Name")
+            .handle(rt, &mut self.name, event);
+        if let Event::Key(k) = event {
+            match k.code {
+                KeyCode::Tab => rt.focus.next(),
+                KeyCode::BackTab => rt.focus.previous(),
+                KeyCode::Char('t') if r == FieldEvent::Ignored && !rt.focused(NAME) => {
+                    self.theme = (self.theme + 1) % Theme::all().len();
+                    rt.look = Look::new((Theme::all()[self.theme].constructor)());
+                }
+                _ => {}
+            }
+        }
+        if rt.is_action("Exit") {
+            rt.quit = true;
+        }
+        BannerControl::new(BANNER, Status::Info, "Press Tab to move focus", &["Got it"])
+            .handle(rt, event);
+    }
+
+    fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) {
+        Pane::new(&rt.look).kind(PaneKind::Editor).render(area, buf);
+        if area.height < 18 || area.width < 50 {
             return;
         }
-        // One focused panel with the page switcher on top, the status bar below.
-        let body = Rect::new(0, 0, area.width, area.height - 1);
-        let island = Island::new(look).title("Archipel Kit").focused(true);
-        let inner = island.inner(body);
-        island.render(body, buf);
-        SegmentedButton::new(look, &PAGES, self.page)
-            .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
-        let hints = [
-            ("←→", "page"),
-            ("↑↓", "move"),
-            ("space", "toggle"),
-            ("t", "theme"),
-            ("q", "quit"),
-        ];
-        StatusBar::new(look, &hints)
-            .mode(PAGES[self.page])
-            .right(&look.theme.name)
-            .render(Rect::new(0, area.height - 1, area.width, 1), buf);
-        let inner = Rect::new(
-            inner.x,
-            inner.y + 2,
-            inner.width,
-            inner.height.saturating_sub(2),
+        ButtonControl::new(OK, "Apply")
+            .primary()
+            .icon(Glyph::Success)
+            .show(rt, &self.button, 2, 1, buf);
+        CheckBoxControl::new(CHECK, "Format on save").show(rt, self.check, 2, 3, buf);
+        RadioGroupControl::new(RADIO, &RADIOS).show(rt, self.radio, 2, 5, buf);
+        OnOffControl::new(SWITCH, "Soft wrap").show(rt, self.switch, 2, 9, buf);
+        SegmentedControl::new(SEG, &SEGS).show(rt, self.seg, 2, 11, buf);
+        TextFieldControl::new(NAME)
+            .label("Name")
+            .placeholder("project name")
+            .show(rt, &self.name, Rect::new(2, 13, 40, 1), buf);
+        ProgressBar::new(&rt.look, 0.6).render(Rect::new(2, 15, 40, 1), buf);
+        BannerControl::new(BANNER, Status::Info, "Press Tab to move focus", &["Got it"]).show(
+            rt,
+            Rect::new(0, area.bottom() - 1, area.width, 1),
+            buf,
         );
-        let row = |n: u16| Rect::new(inner.x, inner.y + n, inner.width, 1);
-        match self.page {
-            0 => {
-                let mut x = inner.x;
-                for button in [
-                    Button::primary(look, "Run").icon(Glyph::Run),
-                    Button::secondary(look, "Cancel"),
-                    Button::ghost(look, "Details"),
-                    Button::danger(look, "Delete"),
-                    Button::primary(look, "Disabled").enabled(false),
-                ] {
-                    let width = button.width();
-                    button.render(Rect::new(x, inner.y, width, 1), buf);
-                    x += width;
-                }
-                let labels = ["Format on save", "Optimize imports", "Mixed"];
-                for (i, label) in labels.iter().enumerate() {
-                    JBCheckBox::new(look, self.checks[i], label)
-                        .mixed(i == 2 && !self.checks[2])
-                        .focused(self.row == i)
-                        .render(row(2 + i as u16), buf);
-                }
-                for (i, label) in ["Spaces", "Tabs"].iter().enumerate() {
-                    JBRadioButton::new(look, self.radio == i, label).render(row(6 + i as u16), buf);
-                }
-                OnOffButton::new(look, self.toggle, "Power save mode")
-                    .focused(self.row == 3)
-                    .render(row(9), buf);
-                let field = |y: u16| Rect::new(inner.x, inner.y + y, inner.width.min(40), 3);
-                JBTextField::new(look, "")
-                    .placeholder("Search everywhere")
-                    .render(field(11), buf);
-                JBTextField::new(look, "8o80")
-                    .label("Port")
-                    .error(Some("Must be a number"))
-                    .render(field(14), buf);
-            }
-            1 => {
-                let tabs = [
-                    (Some(Language::Rust.into()), "main.rs", false),
-                    (Some(Language::Toml.into()), "Cargo.toml", true),
-                    (Some(Glyph::FileText.into()), "README.md", false),
-                ];
-                JBTabs::new(look, &tabs, self.row % 3)
-                    .render(Rect::new(inner.x, inner.y, inner.width, 2), buf);
-                let rows: [(&str, u16, Option<bool>, RowIcon); 8] = [
-                    ("kit", 0, Some(true), Glyph::Folder.into()),
-                    ("src", 1, Some(true), Glyph::Folder.into()),
-                    ("main.rs", 2, None, Language::Rust.into()),
-                    ("theme.py", 2, None, Language::Python.into()),
-                    ("Cargo.toml", 1, None, Language::Toml.into()),
-                    (
-                        "Theme",
-                        0,
-                        Some(true),
-                        Symbol::new(SymbolKind::Class).into(),
-                    ),
-                    (
-                        "apply(ctx)",
-                        1,
-                        None,
-                        Symbol::new(SymbolKind::Method).into(),
-                    ),
-                    ("colors", 1, None, Symbol::new(SymbolKind::Field).into()),
-                ];
-                for (i, (label, depth, expanded, icon)) in rows.into_iter().enumerate() {
-                    ColoredListCellRenderer::new(look, label)
-                        .depth(depth)
-                        .expanded(expanded)
-                        .icon(icon)
-                        .selected(self.row % rows_len() == i)
-                        .render(
-                            Rect::new(body.x, inner.y + 3 + i as u16, body.width, 1),
-                            buf,
-                        );
-                }
-            }
-            2 => {
-                let severities = [
-                    (Status::Info, "Indexing finished"),
-                    (Status::Success, "Build succeeded"),
-                    (Status::Warning, "Low disk space"),
-                    (Status::Error, "Connection lost"),
-                ];
-                for (i, (severity, text)) in severities.into_iter().enumerate() {
-                    InlineBanner::new(look, severity, text, &["Retry", "Dismiss"])
-                        .render(row(2 * i as u16), buf);
-                }
-                ProgressBar::new(look, 0.6).render(row(9), buf);
-                let mut x = inner.x;
-                for chip in [Chip::tag(look, "draft"), Chip::counter(look, "12", true)] {
-                    chip.render(Rect::new(x, inner.y + 11, 10, 1), buf);
-                    x += 9;
-                }
-            }
-            _ => {
-                let mut x = inner.x;
-                let mut y = inner.y;
-                for language in Language::ALL.iter().copied() {
-                    if x + 2 > inner.right() {
-                        x = inner.x;
-                        y += 1;
-                    }
-                    LanguageIcon::new(look, language).render(Rect::new(x, y, 3, 1), buf);
-                    x += 3;
-                }
-                let mut x = inner.x;
-                y += 2;
-                for kind in SymbolKind::ALL {
-                    SymbolIcon::new(look, Symbol::new(kind)).render(Rect::new(x, y, 3, 1), buf);
-                    x += 3;
-                }
-                let (mut x, mut y) = (inner.x, y + 2);
-                for glyph in Glyph::ALL.iter().copied() {
-                    if x + 2 > inner.right() {
-                        x = inner.x;
-                        y += 1;
-                    }
-                    buf.set_string(
-                        x,
-                        y,
-                        look.glyph(glyph),
-                        look.body().fg(look.glyph_color(glyph)),
-                    );
-                    x += 3;
-                }
-            }
-        }
     }
-
-    fn key(&mut self, code: KeyCode) -> bool {
-        match code {
-            KeyCode::Char('q') | KeyCode::Esc => return false,
-            KeyCode::Right | KeyCode::Char('l') | KeyCode::Tab => {
-                self.page = (self.page + 1) % PAGES.len();
-                self.row = 0;
-            }
-            KeyCode::Left | KeyCode::Char('h') | KeyCode::BackTab => {
-                self.page = (self.page + PAGES.len() - 1) % PAGES.len();
-                self.row = 0;
-            }
-            KeyCode::Down | KeyCode::Char('j') => self.row += 1,
-            KeyCode::Up | KeyCode::Char('k') => self.row = self.row.saturating_sub(1),
-            KeyCode::Char(' ') | KeyCode::Enter if self.page == 0 => {
-                if let Some(check) = self.checks.get_mut(self.row) {
-                    *check = !*check;
-                } else {
-                    self.toggle = !self.toggle;
-                    self.radio = 1 - self.radio;
-                }
-            }
-            KeyCode::Char('t') => {
-                // Cycles through every bundled theme (`Theme::all()`).
-                let themes = archipel_kit_tui::Theme::all();
-                let at = themes
-                    .iter()
-                    .position(|info| info.name == self.look.theme.name)
-                    .unwrap_or(0);
-                self.look = Look::new((themes[(at + 1) % themes.len()].constructor)());
-            }
-            _ => {}
-        }
-        true
-    }
-}
-
-fn rows_len() -> usize {
-    8
 }
 
 fn main() -> std::io::Result<()> {
-    let mut app = App {
-        look: Look::dark(),
-        page: 0,
-        row: 0,
-        checks: [true, false, false],
-        toggle: true,
+    let mut app = Gallery {
+        button: ButtonState::default(),
+        clicks: 0,
+        check: CheckState::Checked,
         radio: 0,
+        switch: false,
+        seg: 0,
+        name: TextFieldState::new(),
+        theme: 0,
     };
-    let mut terminal = archipel_kit_tui::ratatui::init();
-    let result = loop {
-        if let Err(error) = terminal.draw(|frame| app.draw(frame.area(), frame.buffer_mut())) {
-            break Err(error);
-        }
-        match event::read() {
-            Ok(Event::Key(key)) if key.kind == KeyEventKind::Press => {
-                if !app.key(key.code) {
-                    break Ok(());
-                }
-            }
-            Ok(_) => {}
-            Err(error) => break Err(error),
-        }
-    };
-    archipel_kit_tui::ratatui::restore();
-    result
+    let look = Look::new((Theme::all()[0].constructor)());
+    runtime::run_app_with_keymap(look, &mut app, runtime::RunOptions::default(), |os| {
+        archipel_kit_tui::input::terminal_keymap(os)
+    })
 }

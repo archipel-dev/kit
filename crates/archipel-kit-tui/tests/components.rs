@@ -1,4 +1,5 @@
-//! Behavior and SVG snapshot tests. The snapshots in `docs/tui/img/` are the docs images.
+//! Behavior and SVG snapshot tests of the render-only widgets. The snapshots in
+//! `docs/tui/img/` are the docs images.
 
 use archipel_kit::ui::Status;
 use archipel_kit_tui::components::*;
@@ -6,19 +7,18 @@ use archipel_kit_tui::ratatui::buffer::Buffer;
 use archipel_kit_tui::ratatui::layout::Rect;
 use archipel_kit_tui::ratatui::widgets::Widget;
 use archipel_kit_tui::testing::{lines, render, snapshot};
-use archipel_kit_tui::{Glyph, Language, Look, Symbol, SymbolKind, glyphs};
+use archipel_kit_tui::{Glyph, Language, Look, Mode, Symbol, SymbolKind, Theme, glyphs};
 
 fn looks() -> [(&'static str, Look); 2] {
     [("dark", Look::dark()), ("light", Look::light())]
 }
 
-/// Renders `draw` in a panel in both themes and checks the snapshots `<name>.<theme>`.
+/// Renders `draw` on an editor pane in both themes and checks the snapshots `<name>.<theme>`.
 fn sheet(name: &str, width: u16, height: u16, draw: impl Fn(&Look, Rect, &mut Buffer)) {
     for (theme, look) in looks() {
         let buf = render(width, height, |area, buf| {
-            let island = Island::new(&look);
-            let inner = island.inner(area);
-            island.render(area, buf);
+            Pane::new(&look).render(area, buf);
+            let inner = Rect::new(area.x + 1, area.y + 1, area.width - 2, area.height - 2);
             draw(&look, inner, buf);
         });
         snapshot(&format!("{name}.{theme}"), &buf);
@@ -41,7 +41,7 @@ fn button_row(area: Rect, y: u16, buttons: Vec<Button>, buf: &mut Buffer) {
 
 #[test]
 fn buttons() {
-    sheet("button", 64, 5, |look, area, buf| {
+    sheet("button", 64, 6, |look, area, buf| {
         let buttons = vec![
             Button::primary(look, "Run").icon(Glyph::Run).key('r'),
             Button::secondary(look, "Cancel").key('c'),
@@ -73,7 +73,7 @@ fn button_width_and_focus_markers() {
 
 #[test]
 fn choices() {
-    sheet("choice", 48, 8, |look, area, buf| {
+    sheet("choice", 48, 9, |look, area, buf| {
         JBCheckBox::new(look, true, "Checked").render(row(area, 0), buf);
         JBCheckBox::new(look, false, "Unchecked")
             .focused(true)
@@ -113,7 +113,7 @@ fn checkbox_marks() {
 
 #[test]
 fn text_fields() {
-    sheet("text-field", 44, 9, |look, area, buf| {
+    sheet("text-field", 46, 10, |look, area, buf| {
         let field = |n: u16, h: u16| Rect::new(area.x, area.y + n, area.width, h);
         JBTextField::new(look, "")
             .placeholder("Search everywhere")
@@ -121,11 +121,16 @@ fn text_fields() {
         JBTextField::new(look, "archipel")
             .label("Name")
             .focused(true)
+            .caret(4)
+            .selection(Some(5..8))
             .render(field(2, 1), buf);
         JBTextField::new(look, "8o80")
             .label("Port")
             .error(Some("Must be a number"))
             .render(field(4, 2), buf);
+        JBTextField::new(look, "find me")
+            .clear_button(true)
+            .render(field(7, 1), buf);
     });
 }
 
@@ -144,56 +149,85 @@ fn text_field_shows_label_value_and_error() {
 
 #[test]
 fn list_rows() {
-    sheet("list-row", 40, 9, |look, area, buf| {
-        let full = Rect::new(area.x - 1, area.y, area.width + 2, area.height);
-        ColoredListCellRenderer::new(look, "kit")
-            .icon(Glyph::Folder)
-            .expanded(Some(true))
-            .secondary("~/archipel")
-            .render(row(full, 0), buf);
-        ColoredListCellRenderer::new(look, "src")
-            .icon(Glyph::Folder)
-            .depth(1)
-            .expanded(Some(true))
-            .render(row(full, 1), buf);
-        ColoredListCellRenderer::new(look, "main.rs")
-            .icon(Language::Rust)
-            .depth(2)
-            .selected(true)
-            .render(row(full, 2), buf);
-        ColoredListCellRenderer::new(look, "theme.py")
-            .icon(Language::Python)
-            .depth(2)
-            .render(row(full, 3), buf);
-        ColoredListCellRenderer::new(look, "tests")
-            .icon(Glyph::Folder)
-            .depth(1)
-            .expanded(Some(false))
-            .render(row(full, 4), buf);
-        ColoredListCellRenderer::new(look, "Theme")
-            .icon(Symbol::new(SymbolKind::Class))
-            .render(row(full, 5), buf);
-        ColoredListCellRenderer::new(look, "apply(ctx)")
-            .icon(Symbol::new(SymbolKind::Method))
-            .depth(1)
-            .render(row(full, 6), buf);
-    });
+    for (theme, look) in looks() {
+        let buf = render(40, 9, |area, buf| {
+            Pane::new(&look).kind(PaneKind::Sidebar).render(area, buf);
+            let bg = look.palette.darker_black;
+            let rows: [(&str, u16, Option<bool>, RowIcon, bool); 7] = [
+                ("kit", 0, Some(true), RowIcon::Folder(true), false),
+                ("src", 1, Some(true), RowIcon::Folder(true), false),
+                ("main.rs", 2, None, Language::Rust.into(), true),
+                ("theme.py", 2, None, Language::Python.into(), false),
+                ("tests", 1, Some(false), RowIcon::Folder(false), false),
+                (
+                    "Theme",
+                    0,
+                    None,
+                    Symbol::new(SymbolKind::Class).into(),
+                    false,
+                ),
+                (
+                    "apply(ctx)",
+                    1,
+                    None,
+                    Symbol::new(SymbolKind::Method).into(),
+                    false,
+                ),
+            ];
+            for (i, (label, depth, expanded, icon, selected)) in rows.into_iter().enumerate() {
+                let mut cell = ColoredListCellRenderer::new(&look, label)
+                    .icon(icon)
+                    .depth(depth)
+                    .expanded(expanded)
+                    .selected(selected)
+                    .guides(true)
+                    .on(bg);
+                if i == 0 {
+                    cell = cell.secondary("~/archipel");
+                }
+                cell.render(row(area, i as u16), buf);
+            }
+            ColoredListCellRenderer::new(&look, "apply(ctx)")
+                .highlights(&[0..2, 3..4])
+                .on(bg)
+                .render(row(area, 8), buf);
+        });
+        snapshot(&format!("list-row.{theme}"), &buf);
+    }
+}
+
+fn tabs() -> Vec<TabInfo> {
+    vec![
+        TabInfo::new("main.rs").icon(Language::Rust),
+        TabInfo::new("Cargo.toml")
+            .icon(Language::Toml)
+            .modified(true),
+        TabInfo::new("README.md").icon(Glyph::FileText),
+    ]
 }
 
 #[test]
 fn tab_bars() {
-    let tabs = [
-        (Some(Language::Rust.into()), "main.rs", false),
-        (Some(Language::Toml.into()), "Cargo.toml", true),
-        (Some(Glyph::FileText.into()), "README.md", false),
-    ];
     for (theme, look) in looks() {
+        let tabs = tabs();
         let buf = render(60, 3, |area, buf| {
-            Island::new(&look).render(area, buf);
+            Pane::new(&look).render(area, buf);
             JBTabs::new(&look, &tabs, 0).render(Rect::new(0, 0, 60, 1), buf);
         });
         snapshot(&format!("tab-bar.{theme}"), &buf);
     }
+}
+
+#[test]
+fn tabs_layout_covers_tabs_and_close_icons() {
+    let look = Look::dark();
+    let tabs = tabs();
+    let layout = JBTabs::new(&look, &tabs, 0).layout(Rect::new(0, 0, 80, 1));
+    assert_eq!(layout.tabs.len(), 3);
+    assert_eq!(layout.closes.len(), 3);
+    assert!(!layout.clipped_right);
+    let narrow = JBTabs::new(&look, &tabs, 0).layout(Rect::new(0, 0, 30, 1));
+    assert!(narrow.clipped_right);
 }
 
 #[test]
@@ -232,13 +266,34 @@ fn misc() {
     });
 }
 
+fn git() -> GitStatus {
+    GitStatus {
+        branch: "main".into(),
+        added: 3,
+        changed: 2,
+        removed: 1,
+    }
+}
+
 #[test]
 fn status_bars() {
     for (theme, look) in looks() {
-        let buf = render(72, 1, |area, buf| {
-            StatusBar::new(&look, &[("⏎", "open"), ("/", "search"), ("q", "quit")])
-                .mode("NORMAL")
-                .right("main  Ln 12, Col 4  UTF-8")
+        let git = git();
+        let buf = render(110, 1, |area, buf| {
+            StatusBar::new(&look)
+                .mode(Mode::Normal.label(), Mode::Normal.color(&look.palette))
+                .file(Language::Rust, "components.rs")
+                .git(&git)
+                .center("indexing 62%")
+                .diagnostics(Diagnostics {
+                    errors: 1,
+                    warnings: 2,
+                    hints: 0,
+                    info: 3,
+                })
+                .lsp("rust-analyzer")
+                .cwd("kit")
+                .cursor("Ln 12, Col 8")
                 .render(area, buf);
         });
         snapshot(&format!("status-bar.{theme}"), &buf);
@@ -246,8 +301,128 @@ fn status_bars() {
 }
 
 #[test]
+fn a_narrow_status_bar_drops_the_least_important_slots_first() {
+    use archipel_kit_tui::components::StatusSlot::{
+        self, Center, Cursor, Cwd, File, Git, Lsp, Mode,
+    };
+    let look = Look::dark();
+    let branch = git();
+    let slots_at = |width: u16| -> Vec<_> {
+        StatusBar::new(&look)
+            .mode("NORMAL", look.palette.nord_blue)
+            .file(Language::Rust, "components.rs")
+            .git(&branch)
+            .center("indexing 62%")
+            .diagnostics(Diagnostics::default())
+            .lsp("rust-analyzer")
+            .cwd("kit")
+            .cursor("Ln 12, Col 8")
+            .slots(Rect::new(0, 0, width, 1))
+            .into_iter()
+            .map(|(slot, _)| slot)
+            .collect()
+    };
+    let wide = slots_at(160);
+    for slot in [
+        Mode,
+        File,
+        Git,
+        Center,
+        StatusSlot::Diagnostics,
+        Lsp,
+        Cwd,
+        Cursor,
+    ] {
+        assert!(wide.contains(&slot), "{slot:?} at 160");
+    }
+    // Medium: the message and the language server go first.
+    let medium = slots_at(95);
+    assert!(!medium.contains(&Lsp), "{medium:?}");
+    for slot in [Mode, File, Cursor, Cwd] {
+        assert!(medium.contains(&slot), "{slot:?} stays at 95: {medium:?}");
+    }
+    // Narrow: only the mode block and the position remain.
+    let narrow = slots_at(34);
+    assert!(
+        narrow.contains(&Mode) && narrow.contains(&Cursor),
+        "{narrow:?}"
+    );
+    assert!(!narrow.contains(&File) || narrow.len() <= 3, "{narrow:?}");
+    // No width makes the language server text run into its neighbor.
+    for width in 1..=140u16 {
+        let buf = render(width, 1, |area, buf| {
+            StatusBar::new(&look)
+                .mode("NORMAL", look.palette.nord_blue)
+                .file(Language::Rust, "components.rs")
+                .git(&branch)
+                .center("indexing 62%")
+                .diagnostics(Diagnostics::default())
+                .lsp("rust-analyzer")
+                .cwd("kit")
+                .cursor("Ln 12, Col 8")
+                .render(area, buf);
+        });
+        let text = lines(&buf).join("");
+        assert!(
+            !text.contains("rust-analyze ") && !text.contains("rust-analyz "),
+            "{width}: {text}"
+        );
+    }
+}
+
+#[test]
+fn status_bar_segments_keep_a_blank_cell_before_the_next_separator() {
+    use archipel_kit_tui::components::StatusSlot;
+    let look = Look::dark();
+    let branch = git();
+    for width in [80u16, 100, 120, 140] {
+        let build = || {
+            StatusBar::new(&look)
+                .mode("NORMAL", look.palette.nord_blue)
+                .file(Language::Rust, "components.rs")
+                .git(&branch)
+                .center("indexing")
+                .diagnostics(Diagnostics::default())
+                .lsp("rust-analyzer")
+                .cwd("kit")
+                .cursor("Ln 12, Col 8")
+        };
+        let area = Rect::new(0, 0, width, 1);
+        let buf = render(width, 1, |area, buf| build().render(area, buf));
+        for (slot, rect) in build().slots(area) {
+            if matches!(slot, StatusSlot::Mode | StatusSlot::File) || rect.x == 0 {
+                continue;
+            }
+            let before = buf[(rect.x - 1, 0)].symbol().to_owned();
+            assert_eq!(before, " ", "{slot:?} at {width}: {:?}", lines(&buf));
+        }
+    }
+}
+
+#[test]
+fn status_bar_slots_do_not_overlap() {
+    let look = Look::dark();
+    let git = git();
+    for width in [1u16, 10, 20, 40, 80, 120] {
+        let bar = StatusBar::new(&look)
+            .mode("NORMAL", look.palette.nord_blue)
+            .file(Language::Rust, "a.rs")
+            .git(&git)
+            .center("msg")
+            .cursor("1:1");
+        let area = Rect::new(0, 0, width, 1);
+        let slots = bar.slots(area);
+        for (i, (_, a)) in slots.iter().enumerate() {
+            for (_, b) in &slots[i + 1..] {
+                assert!(a.intersection(*b).is_empty(), "{slots:?} at {width}");
+            }
+        }
+    }
+}
+
+#[test]
 fn icons() {
-    sheet("icons", 72, 9, |look, area, buf| {
+    sheet("icons", 72, 10, |look, area, buf| {
         let (mut x, mut y) = (area.x, area.y);
         for language in Language::ALL.iter().copied().take(44) {
             if x + 2 > area.right() {
@@ -288,7 +463,7 @@ fn every_icon_is_a_nerd_font_character() {
 #[test]
 fn dark_language_colors_stay_readable() {
     let look = Look::dark();
-    // Navy on the dark island is lifted toward the text color.
+    // Navy on the dark editor is lifted toward the text color.
     assert_ne!(
         look.readable(Language::Lua.color()),
         Look::rgb(Language::Lua.color())
@@ -298,125 +473,53 @@ fn dark_language_colors_stay_readable() {
 }
 
 #[test]
+fn palette_has_distinct_surfaces_in_every_theme() {
+    for info in Theme::all() {
+        let look = Look::new((info.constructor)());
+        let p = &look.palette;
+        let surfaces = [p.black, p.black2, p.one_bg, p.one_bg2, p.one_bg3];
+        for (i, a) in surfaces.iter().enumerate() {
+            for b in &surfaces[i + 1..] {
+                assert_ne!(a, b, "{}: surfaces collide: {surfaces:?}", info.id);
+            }
+        }
+    }
+}
+
+#[test]
 fn widgets_clip_to_tiny_areas() {
     let look = Look::dark();
+    let tabs = tabs();
+    let git = git();
     for (w, h) in [(0, 0), (1, 1), (3, 1), (5, 2)] {
         render(w.max(1), h.max(1), |_, buf| {
             let area = Rect::new(0, 0, w, h);
-            Island::new(&look).title("A long title").render(area, buf);
+            Pane::new(&look).title("A long title").render(area, buf);
+            Separator::vertical(&look).render(area, buf);
             Button::primary(&look, "A long label").render(area, buf);
             JBTextField::new(&look, "value")
                 .label("Label")
                 .error(Some("error"))
+                .focused(true)
+                .clear_button(true)
                 .render(area, buf);
             InlineBanner::new(&look, Status::Error, "text", &["Action"]).render(area, buf);
             ProgressBar::new(&look, 0.5).render(area, buf);
-            StatusBar::new(&look, &[("q", "quit")])
-                .mode("N")
-                .right("r")
+            JBTabs::new(&look, &tabs, 1).render(area, buf);
+            StatusBar::new(&look)
+                .mode("N", look.palette.nord_blue)
+                .file(Language::Rust, "file.rs")
+                .git(&git)
+                .diagnostics(Diagnostics::default())
+                .lsp("x")
+                .cwd("y")
+                .cursor("z")
                 .render(area, buf);
             ColoredListCellRenderer::new(&look, "row")
                 .depth(9)
                 .icon(Language::Rust)
                 .render(area, buf);
         });
-    }
-}
-
-/// An IDE screen built from the components: the docs hero image.
-#[test]
-fn ide_screen() {
-    for (theme, look) in looks() {
-        let buf = render(100, 26, |area, buf| {
-            Frame::new(&look).render(area, buf);
-            let c = &look.theme.colors;
-            // Project tree, focused.
-            let project = Rect::new(0, 0, 30, 25);
-            let island = Island::new(&look).title("Project").focused(true);
-            let inner = island.inner(project);
-            island.render(project, buf);
-            let rows: [(&str, u16, Option<bool>, RowIcon); 9] = [
-                ("kit", 0, Some(true), Glyph::Folder.into()),
-                ("crates", 1, Some(true), Glyph::Folder.into()),
-                ("archipel-kit", 2, Some(false), Glyph::Folder.into()),
-                ("archipel-kit-tui", 2, Some(true), Glyph::Folder.into()),
-                ("components.rs", 3, None, Language::Rust.into()),
-                ("lib.rs", 3, None, Language::Rust.into()),
-                ("Cargo.toml", 1, None, Language::Toml.into()),
-                ("README.md", 1, None, Language::Markdown.into()),
-                ("flake.nix", 1, None, Language::Nix.into()),
-            ];
-            for (i, (label, depth, expanded, icon)) in rows.into_iter().enumerate() {
-                ColoredListCellRenderer::new(&look, label)
-                    .depth(depth)
-                    .expanded(expanded)
-                    .icon(icon)
-                    .selected(i == 5)
-                    .render(
-                        Rect::new(project.x, inner.y + i as u16, project.width, 1),
-                        buf,
-                    );
-            }
-            // Tab line and editor.
-            let tabs = [
-                (Some(Language::Rust.into()), "lib.rs", false),
-                (Some(Language::Rust.into()), "components.rs", true),
-                (Some(Language::Toml.into()), "Cargo.toml", false),
-            ];
-            JBTabs::new(&look, &tabs, 0).render(Rect::new(31, 0, 69, 1), buf);
-            let editor = Rect::new(31, 1, 69, 15);
-            Island::new(&look).render(editor, buf);
-            let code = [
-                ("pub struct ", "Look", " {"),
-                ("    pub ", "theme", ": Theme,"),
-                ("}", "", ""),
-                ("", "", ""),
-                ("impl ", "Look", " {"),
-                ("    pub fn ", "dark", "() -> Self {"),
-                ("        Self::new(Theme::dark())", "", ""),
-                ("    }", "", ""),
-                ("}", "", ""),
-            ];
-            for (i, (a, b, d)) in code.iter().enumerate() {
-                let y = 2 + i as u16;
-                let number = format!("{:>3}", i + 1);
-                buf.set_string(32, y, number, look.text(c.text_placeholder));
-                let x = 37;
-                buf.set_string(x, y, *a, look.text(c.text));
-                buf.set_string(x + a.len() as u16, y, *b, look.strong());
-                buf.set_string(x + (a.len() + b.len()) as u16, y, *d, look.text(c.text));
-            }
-            InlineBanner::new(&look, Status::Info, "Index ready", &["Open log"])
-                .render(Rect::new(32, 14, 67, 1), buf);
-            // Run tool window.
-            let run = Rect::new(31, 17, 69, 8);
-            let island = Island::new(&look).title("Run");
-            let inner = island.inner(run);
-            island.render(run, buf);
-            let buttons = vec![
-                Button::primary(&look, "Rerun").icon(Glyph::Run).key('r'),
-                Button::secondary(&look, "Stop").icon(Glyph::Stop).key('s'),
-            ];
-            button_row(inner, 0, buttons, buf);
-            ProgressBar::new(&look, 0.7)
-                .render(Rect::new(inner.x + 22, inner.y, inner.width - 22, 1), buf);
-            for (i, line) in [
-                "   Compiling archipel-kit-tui v0.1.0",
-                "    Finished `dev` profile in 2.41s",
-                "     Running `target/debug/examples/gallery`",
-            ]
-            .iter()
-            .enumerate()
-            {
-                let color = if i == 1 { c.success } else { c.text_secondary };
-                buf.set_string(inner.x, inner.y + 2 + i as u16, *line, look.text(color));
-            }
-            StatusBar::new(&look, &[("⏎", "open"), ("/", "search"), ("?", "help")])
-                .mode("PROJECT")
-                .right("main  12:4  UTF-8")
-                .render(Rect::new(0, 25, 100, 1), buf);
-        });
-        snapshot(&format!("ide.{theme}"), &buf);
     }
 }
 

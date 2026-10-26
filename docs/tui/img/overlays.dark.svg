@@ -1,0 +1,346 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840.0" height="468.0" viewBox="0 0 840.0 468.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="18.0" width="445.2" height="18" fill="#191A1C"/>
+<rect x="445.2" y="18.0" width="386.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="18.0" width="8.4" height="18" fill="#191A1C"/>
+<path d="M453.6 27.0H453.6A4.2 4.2 0 0 0 449.4 31.2V36.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M453.6 27.0H462.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M462.0 27.0H470.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M470.4 27.0H478.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M478.8 27.0H487.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M487.2 27.0H495.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M495.6 27.0H504.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M504.0 27.0H512.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M512.4 27.0H520.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M520.8 27.0H529.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M529.2 27.0H537.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M537.6 27.0H546.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M546.0 27.0H554.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M554.4 27.0H562.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M562.8 27.0H571.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M571.2 27.0H579.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M579.6 27.0H588.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M588.0 27.0H596.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M596.4 27.0H604.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M604.8 27.0H613.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M613.2 27.0H621.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M621.6 27.0H630.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M630.0 27.0H638.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M638.4 27.0H646.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M646.8 27.0H655.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M655.2 27.0H663.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M663.6 27.0H672.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M672.0 27.0H680.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M680.4 27.0H688.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M688.8 27.0H697.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M697.2 27.0H705.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M705.6 27.0H714.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M714.0 27.0H722.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M722.4 27.0H730.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M730.8 27.0H739.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M739.2 27.0H747.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M747.6 27.0H756.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M756.0 27.0H764.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M764.4 27.0H772.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M772.8 27.0H781.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M781.2 27.0H789.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M789.6 27.0H798.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M798.0 27.0H806.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M806.4 27.0H814.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M814.8 27.0H823.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M823.2 27.0H823.2A4.2 4.2 0 0 1 827.4 31.2V36.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="36.0" width="445.2" height="18" fill="#191A1C"/>
+<rect x="445.2" y="36.0" width="386.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="36.0" width="8.4" height="18" fill="#191A1C"/>
+<path d="M449.4 36.0V54.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<svg x="462.5" y="38.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5" fill="#71A1FE"/><polyline points="8 7.25 8 11.5" fill="none" stroke="#27282A" stroke-width="1.5"/><circle cx="8" cy="4.75" r="1" fill="#27282A"/></svg>
+<text x="478.8" y="49.5" fill="#BCBEC4" font-weight="bold">I</text>
+<text x="487.2" y="49.5" fill="#BCBEC4" font-weight="bold">n</text>
+<text x="495.6" y="49.5" fill="#BCBEC4" font-weight="bold">d</text>
+<text x="504.0" y="49.5" fill="#BCBEC4" font-weight="bold">e</text>
+<text x="512.4" y="49.5" fill="#BCBEC4" font-weight="bold">x</text>
+<text x="520.8" y="49.5" fill="#BCBEC4" font-weight="bold">i</text>
+<text x="529.2" y="49.5" fill="#BCBEC4" font-weight="bold">n</text>
+<text x="537.6" y="49.5" fill="#BCBEC4" font-weight="bold">g</text>
+<text x="554.4" y="49.5" fill="#BCBEC4" font-weight="bold">f</text>
+<text x="562.8" y="49.5" fill="#BCBEC4" font-weight="bold">i</text>
+<text x="571.2" y="49.5" fill="#BCBEC4" font-weight="bold">n</text>
+<text x="579.6" y="49.5" fill="#BCBEC4" font-weight="bold">i</text>
+<text x="588.0" y="49.5" fill="#BCBEC4" font-weight="bold">s</text>
+<text x="596.4" y="49.5" fill="#BCBEC4" font-weight="bold">h</text>
+<text x="604.8" y="49.5" fill="#BCBEC4" font-weight="bold">e</text>
+<text x="613.2" y="49.5" fill="#BCBEC4" font-weight="bold">d</text>
+<svg x="798.5" y="38.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#737478" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#737478" stroke-width="1"/></svg>
+<path d="M827.4 36.0V54.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="54.0" width="445.2" height="18" fill="#191A1C"/>
+<rect x="445.2" y="54.0" width="386.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="54.0" width="8.4" height="18" fill="#191A1C"/>
+<path d="M449.4 54.0V72.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="462.0" y="67.5" fill="#737478">S</text>
+<text x="470.4" y="67.5" fill="#737478">o</text>
+<text x="478.8" y="67.5" fill="#737478">m</text>
+<text x="487.2" y="67.5" fill="#737478">e</text>
+<text x="495.6" y="67.5" fill="#737478">t</text>
+<text x="504.0" y="67.5" fill="#737478">h</text>
+<text x="512.4" y="67.5" fill="#737478">i</text>
+<text x="520.8" y="67.5" fill="#737478">n</text>
+<text x="529.2" y="67.5" fill="#737478">g</text>
+<text x="546.0" y="67.5" fill="#737478">h</text>
+<text x="554.4" y="67.5" fill="#737478">a</text>
+<text x="562.8" y="67.5" fill="#737478">p</text>
+<text x="571.2" y="67.5" fill="#737478">p</text>
+<text x="579.6" y="67.5" fill="#737478">e</text>
+<text x="588.0" y="67.5" fill="#737478">n</text>
+<text x="596.4" y="67.5" fill="#737478">e</text>
+<text x="604.8" y="67.5" fill="#737478">d</text>
+<text x="613.2" y="67.5" fill="#737478">.</text>
+<path d="M827.4 54.0V72.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="72.0" width="445.2" height="18" fill="#191A1C"/>
+<rect x="445.2" y="72.0" width="386.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="72.0" width="8.4" height="18" fill="#191A1C"/>
+<path d="M449.4 72.0V90.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="462.0" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">O</text>
+<text x="470.4" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">p</text>
+<text x="478.8" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">e</text>
+<text x="487.2" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">n</text>
+<text x="512.4" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">K</text>
+<text x="520.8" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">e</text>
+<text x="529.2" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">e</text>
+<text x="537.6" y="85.5" fill="#71A1FE" font-weight="bold" text-decoration="underline">p</text>
+<path d="M827.4 72.0V90.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="90.0" width="445.2" height="18" fill="#191A1C"/>
+<rect x="445.2" y="90.0" width="386.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="90.0" width="8.4" height="18" fill="#191A1C"/>
+<path d="M449.4 90.0V94.8A4.2 4.2 0 0 0 453.6 99.0H453.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M453.6 99.0H462.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M462.0 99.0H470.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M470.4 99.0H478.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M478.8 99.0H487.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M487.2 99.0H495.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M495.6 99.0H504.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M504.0 99.0H512.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M512.4 99.0H520.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M520.8 99.0H529.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M529.2 99.0H537.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M537.6 99.0H546.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M546.0 99.0H554.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M554.4 99.0H562.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M562.8 99.0H571.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M571.2 99.0H579.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M579.6 99.0H588.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M588.0 99.0H596.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M596.4 99.0H604.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M604.8 99.0H613.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M613.2 99.0H621.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M621.6 99.0H630.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M630.0 99.0H638.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M638.4 99.0H646.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M646.8 99.0H655.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M655.2 99.0H663.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M663.6 99.0H672.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M672.0 99.0H680.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M680.4 99.0H688.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M688.8 99.0H697.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M697.2 99.0H705.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M705.6 99.0H714.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M714.0 99.0H722.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M722.4 99.0H730.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M730.8 99.0H739.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M739.2 99.0H747.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M747.6 99.0H756.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M756.0 99.0H764.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M764.4 99.0H772.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M772.8 99.0H781.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M781.2 99.0H789.6" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M789.6 99.0H798.0" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M798.0 99.0H806.4" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M806.4 99.0H814.8" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M814.8 99.0H823.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M827.4 90.0V94.8A4.2 4.2 0 0 1 823.2 99.0H823.2" fill="none" stroke="#71A1FE" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="108.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="108.0" width="8.4" height="18" fill="#141416"/>
+<rect x="193.2" y="108.0" width="67.2" height="18" fill="#3871E1"/>
+<rect x="260.4" y="108.0" width="394.8" height="18" fill="#141416"/>
+<rect x="655.2" y="108.0" width="176.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="108.0" width="8.4" height="18" fill="#191A1C"/>
+<text x="201.6" y="121.5" fill="#191A1C" font-weight="bold">R</text>
+<text x="210.0" y="121.5" fill="#191A1C" font-weight="bold">e</text>
+<text x="218.4" y="121.5" fill="#191A1C" font-weight="bold">n</text>
+<text x="226.8" y="121.5" fill="#191A1C" font-weight="bold">a</text>
+<text x="235.2" y="121.5" fill="#191A1C" font-weight="bold">m</text>
+<text x="243.6" y="121.5" fill="#191A1C" font-weight="bold">e</text>
+<path d="M655.2 117.0H663.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M663.6 117.0H672.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M672.0 117.0H680.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M680.4 117.0H688.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M688.8 117.0H697.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M697.2 117.0H705.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M705.6 117.0H714.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M714.0 117.0H722.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M722.4 117.0H730.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M730.8 117.0H739.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M739.2 117.0H747.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M747.6 117.0H756.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M756.0 117.0H764.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M764.4 117.0H772.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M772.8 117.0H781.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M781.2 117.0H789.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M789.6 117.0H798.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M798.0 117.0H806.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M806.4 117.0H814.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M814.8 117.0H823.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M823.2 117.0H823.2A4.2 4.2 0 0 1 827.4 121.2V126.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="126.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="126.0" width="470.4" height="18" fill="#141416"/>
+<rect x="655.2" y="126.0" width="176.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="126.0" width="8.4" height="18" fill="#191A1C"/>
+<svg x="798.5" y="128.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#737478" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#737478" stroke-width="1"/></svg>
+<path d="M827.4 126.0V144.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="144.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="144.0" width="470.4" height="18" fill="#141416"/>
+<rect x="655.2" y="144.0" width="176.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="144.0" width="8.4" height="18" fill="#191A1C"/>
+<text x="201.6" y="157.5" fill="#BCBEC4">E</text>
+<text x="210.0" y="157.5" fill="#BCBEC4">n</text>
+<text x="218.4" y="157.5" fill="#BCBEC4">t</text>
+<text x="226.8" y="157.5" fill="#BCBEC4">e</text>
+<text x="235.2" y="157.5" fill="#BCBEC4">r</text>
+<text x="252.0" y="157.5" fill="#BCBEC4">a</text>
+<text x="268.8" y="157.5" fill="#BCBEC4">n</text>
+<text x="277.2" y="157.5" fill="#BCBEC4">e</text>
+<text x="285.6" y="157.5" fill="#BCBEC4">w</text>
+<text x="302.4" y="157.5" fill="#BCBEC4">n</text>
+<text x="310.8" y="157.5" fill="#BCBEC4">a</text>
+<text x="319.2" y="157.5" fill="#BCBEC4">m</text>
+<text x="327.6" y="157.5" fill="#BCBEC4">e</text>
+<text x="344.4" y="157.5" fill="#BCBEC4">f</text>
+<text x="352.8" y="157.5" fill="#BCBEC4">o</text>
+<text x="361.2" y="157.5" fill="#BCBEC4">r</text>
+<text x="378.0" y="157.5" fill="#BCBEC4">m</text>
+<text x="386.4" y="157.5" fill="#BCBEC4">a</text>
+<text x="394.8" y="157.5" fill="#BCBEC4">i</text>
+<text x="403.2" y="157.5" fill="#BCBEC4">n</text>
+<text x="411.6" y="157.5" fill="#BCBEC4">.</text>
+<text x="420.0" y="157.5" fill="#BCBEC4">r</text>
+<text x="428.4" y="157.5" fill="#BCBEC4">s</text>
+<text x="655.2" y="157.5" fill="#737478">t</text>
+<text x="663.6" y="157.5" fill="#737478">-</text>
+<text x="672.0" y="157.5" fill="#737478">t</text>
+<text x="680.4" y="157.5" fill="#737478">u</text>
+<text x="688.8" y="157.5" fill="#737478">i</text>
+<text x="697.2" y="157.5" fill="#737478">.</text>
+<path d="M827.4 144.0V162.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="162.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="162.0" width="470.4" height="18" fill="#141416"/>
+<rect x="655.2" y="162.0" width="176.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="162.0" width="8.4" height="18" fill="#191A1C"/>
+<path d="M827.4 162.0V180.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="180.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="180.0" width="16.8" height="18" fill="#141416"/>
+<rect x="201.6" y="180.0" width="8.4" height="18" fill="#222325"/>
+<rect x="210.0" y="180.0" width="50.4" height="18" fill="#3871E1"/>
+<rect x="260.4" y="180.0" width="58.8" height="18" fill="#222325"/>
+<rect x="319.2" y="180.0" width="8.4" height="18" fill="#BCBEC4"/>
+<rect x="327.6" y="180.0" width="310.8" height="18" fill="#222325"/>
+<rect x="638.4" y="180.0" width="16.8" height="18" fill="#141416"/>
+<rect x="655.2" y="180.0" width="176.4" height="18" fill="#27282A"/>
+<rect x="831.6" y="180.0" width="8.4" height="18" fill="#191A1C"/>
+<text x="218.4" y="193.5" fill="#191A1C" font-weight="bold">N</text>
+<text x="226.8" y="193.5" fill="#191A1C" font-weight="bold">a</text>
+<text x="235.2" y="193.5" fill="#191A1C" font-weight="bold">m</text>
+<text x="243.6" y="193.5" fill="#191A1C" font-weight="bold">e</text>
+<text x="268.8" y="193.5" fill="#BCBEC4">l</text>
+<text x="277.2" y="193.5" fill="#BCBEC4">i</text>
+<text x="285.6" y="193.5" fill="#BCBEC4">b</text>
+<text x="294.0" y="193.5" fill="#BCBEC4">.</text>
+<text x="302.4" y="193.5" fill="#BCBEC4">r</text>
+<text x="310.8" y="193.5" fill="#BCBEC4">s</text>
+<path d="M655.2 189.0H663.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M663.6 189.0H672.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M672.0 189.0H680.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M680.4 189.0H688.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M688.8 189.0H697.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M697.2 189.0H705.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M705.6 189.0H714.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M714.0 189.0H722.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M722.4 189.0H730.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M730.8 189.0H739.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M739.2 189.0H747.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M747.6 189.0H756.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M756.0 189.0H764.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M764.4 189.0H772.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M772.8 189.0H781.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M781.2 189.0H789.6" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M789.6 189.0H798.0" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M798.0 189.0H806.4" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M806.4 189.0H814.8" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M814.8 189.0H823.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M827.4 180.0V184.8A4.2 4.2 0 0 1 823.2 189.0H823.2" fill="none" stroke="#F57E84" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="198.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="198.0" width="470.4" height="18" fill="#141416"/>
+<rect x="655.2" y="198.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="0.0" y="216.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="216.0" width="277.2" height="18" fill="#141416"/>
+<rect x="462.0" y="216.0" width="67.2" height="18" fill="#313335"/>
+<rect x="529.2" y="216.0" width="33.6" height="18" fill="#141416"/>
+<rect x="562.8" y="216.0" width="67.2" height="18" fill="#3871E1"/>
+<rect x="630.0" y="216.0" width="25.2" height="18" fill="#141416"/>
+<rect x="655.2" y="216.0" width="184.8" height="18" fill="#191A1C"/>
+<text x="470.4" y="229.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">C</text>
+<text x="478.8" y="229.5" fill="#BCBEC4">a</text>
+<text x="487.2" y="229.5" fill="#BCBEC4">n</text>
+<text x="495.6" y="229.5" fill="#BCBEC4">c</text>
+<text x="504.0" y="229.5" fill="#BCBEC4">e</text>
+<text x="512.4" y="229.5" fill="#BCBEC4">l</text>
+<text x="571.2" y="229.5" fill="#191A1C" font-weight="bold" text-decoration="underline">R</text>
+<text x="579.6" y="229.5" fill="#191A1C">e</text>
+<text x="588.0" y="229.5" fill="#191A1C">n</text>
+<text x="596.4" y="229.5" fill="#191A1C">a</text>
+<text x="604.8" y="229.5" fill="#191A1C">m</text>
+<text x="613.2" y="229.5" fill="#191A1C">e</text>
+<rect x="0.0" y="234.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="184.8" y="234.0" width="470.4" height="18" fill="#141416"/>
+<rect x="655.2" y="234.0" width="184.8" height="18" fill="#191A1C"/>
+<rect x="0.0" y="252.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="270.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="288.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="306.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="324.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="342.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="360.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="378.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="396.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="414.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="432.0" width="840.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="450.0" width="84.0" height="18" fill="#3871E1"/>
+<rect x="84.0" y="450.0" width="621.6" height="18" fill="#242528"/>
+<rect x="705.6" y="450.0" width="16.8" height="18" fill="#3871E1"/>
+<rect x="722.4" y="450.0" width="109.2" height="18" fill="#2E2F32"/>
+<rect x="831.6" y="450.0" width="8.4" height="18" fill="#242528"/>
+<svg x="8.9" y="452.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="#191A1C" stroke-width="1"/><polyline points="4.5 6 6.5 8 4.5 10" fill="none" stroke="#191A1C" stroke-width="1"/><polyline points="8.5 10.5 11.5 10.5" fill="none" stroke="#191A1C" stroke-width="1"/></svg>
+<text x="25.2" y="463.5" fill="#191A1C" font-weight="bold">N</text>
+<text x="33.6" y="463.5" fill="#191A1C" font-weight="bold">O</text>
+<text x="42.0" y="463.5" fill="#191A1C" font-weight="bold">R</text>
+<text x="50.4" y="463.5" fill="#191A1C" font-weight="bold">M</text>
+<text x="58.8" y="463.5" fill="#191A1C" font-weight="bold">A</text>
+<text x="67.2" y="463.5" fill="#191A1C" font-weight="bold">L</text>
+<g shape-rendering="geometricPrecision"><path d="M83.7 450.0 A8.4 9.0 0 0 1 83.7 468.0 Z" fill="#3871E1"/></g>
+<svg x="538.1" y="452.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="8 5 8 9" fill="none" stroke="#5D5F63" stroke-width="1"/><circle cx="8" cy="11.25" r="0.9" fill="#5D5F63"/></svg>
+<text x="554.4" y="463.5" fill="#5D5F63">0</text>
+<svg x="580.1" y="452.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="8 1.5 15 14 1 14" fill="#D59637"/><polyline points="8 5.75 8 9.5" fill="none" stroke="#242528" stroke-width="1.5"/><circle cx="8" cy="11.75" r="0.9" fill="#242528"/></svg>
+<text x="596.4" y="463.5" fill="#5D5F63">0</text>
+<svg x="622.1" y="452.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="8 1.5 15 14 1 14" fill="#D59637"/><polyline points="8 5.75 8 9.5" fill="none" stroke="#242528" stroke-width="1.5"/><circle cx="8" cy="11.75" r="0.9" fill="#242528"/></svg>
+<text x="638.4" y="463.5" fill="#5D5F63">0</text>
+<svg x="664.1" y="452.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5" fill="#71A1FE"/><polyline points="8 7.25 8 11.5" fill="none" stroke="#242528" stroke-width="1.5"/><circle cx="8" cy="4.75" r="1" fill="#242528"/></svg>
+<text x="680.4" y="463.5" fill="#5D5F63">0</text>
+<g shape-rendering="geometricPrecision"><path d="M705.9 450.0 A8.4 9.0 0 0 0 705.9 468.0 Z" fill="#3871E1"/></g>
+<svg x="706.1" y="452.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 4.5 1.5 8 5 11.5" fill="none" stroke="#191A1C" stroke-width="1"/><polyline points="11 4.5 14.5 8 11 11.5" fill="none" stroke="#191A1C" stroke-width="1"/><polyline points="9.5 3.5 6.5 12.5" fill="none" stroke="#191A1C" stroke-width="1"/></svg>
+<text x="730.8" y="463.5" fill="#BCBEC4">L</text>
+<text x="739.2" y="463.5" fill="#BCBEC4">n</text>
+<text x="756.0" y="463.5" fill="#BCBEC4">1</text>
+<text x="764.4" y="463.5" fill="#BCBEC4">,</text>
+<text x="781.2" y="463.5" fill="#BCBEC4">C</text>
+<text x="789.6" y="463.5" fill="#BCBEC4">o</text>
+<text x="798.0" y="463.5" fill="#BCBEC4">l</text>
+<text x="814.8" y="463.5" fill="#BCBEC4">1</text>
+</svg>
