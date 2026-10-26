@@ -365,7 +365,7 @@ impl JBTextField<'_> {
                     | ui.data(|d| d.get_temp::<bool>(frame_response.id.with("archipel-focused")))
                         .unwrap_or(false);
             let (mut list, keys) =
-                super::completion::List::begin(ui, frame_response.id, field_focused);
+                super::completion::List::begin(ui, frame_response.id, field_focused, completer);
             if suggestions.is_some() {
                 list.below(rect);
                 if field_focused

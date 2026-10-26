@@ -196,6 +196,15 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ),
     ("Completion", "data"),
     ("Completions", "data"),
+    ("LookupElement", "data (alias of Completion)"),
+    ("LookupElementPresentation", "data"),
+    ("LookupStats", "caller-owned statistics"),
+    ("MatchKind", "enum"),
+    ("PrefixMatch", "data"),
+    (
+        "PrefixMatcher",
+        "pure matching logic, tested in tests/lookup.rs",
+    ),
     ("Counter", "display only"),
     (
         "DialogWrapper",

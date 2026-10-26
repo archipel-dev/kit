@@ -31,6 +31,7 @@ mod key_value;
 mod link;
 mod list;
 mod loading_panel;
+mod lookup;
 mod number_field;
 pub mod popup;
 pub(crate) mod popup_rows;
@@ -56,7 +57,7 @@ pub use collections::{
     Cell, CellEdit, CollectionResponse, ColumnInfo, JBList, JBTable, SelectionTarget, SortOrder,
     Tree, TreeNode, TreeTable,
 };
-pub use completion::{Completer, Completion, Completions};
+pub use completion::{Completer, Completion, Completions, LookupElement};
 pub use drag::{DropZone, DropZoneResponse};
 pub use editor_notification_panel::EditorNotificationPanel;
 pub use feedback::{InlineBanner, MessageResponse, Status};
@@ -66,6 +67,8 @@ pub use key_value::{
 pub use link::ActionLink;
 pub use list::{CellRendererResponse, ColoredListCellRenderer};
 pub use loading_panel::JBLoadingPanel;
+pub(crate) use lookup::is_identifier_char;
+pub use lookup::{LookupElementPresentation, LookupStats, MatchKind, PrefixMatch, PrefixMatcher};
 pub use number_field::{Integer, JBIntSpinner};
 pub use progress::{AsyncProcessIcon, ProgressBar, ProgressState};
 pub use property_grid::PropertyGrid;

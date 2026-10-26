@@ -14,6 +14,7 @@ mod decorations;
 mod editor_component;
 mod find;
 mod highlight;
+mod lookup;
 pub mod model;
 mod selection_shape;
 mod template;
