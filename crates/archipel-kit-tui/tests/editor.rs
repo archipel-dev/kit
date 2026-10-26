@@ -1052,17 +1052,25 @@ fn typing_opens_the_completion_menu_and_the_lookup_keys_work() {
     assert_eq!(text(&h), "prpush");
     key(&mut h, KeyCode::Tab, KeyModifiers::NONE);
     assert_eq!(text(&h), "println");
-    // Escape closes; Ctrl+Space asks again.
+    // Backspace only narrows an open list; it does not open one. Escape closes a list;
+    // Ctrl+Space asks again, and a lone answer goes in at once as one undo step.
     key(&mut h, KeyCode::Backspace, KeyModifiers::NONE);
+    assert!(!h.app.state.completion_open());
+    key(&mut h, KeyCode::Char(' '), KeyModifiers::CONTROL);
+    assert_eq!(text(&h), "println");
+    h.ctrl('z');
+    assert_eq!(text(&h), "printl");
+    h.press(KeyCode::End);
+    for _ in 0..3 {
+        key(&mut h, KeyCode::Backspace, KeyModifiers::NONE);
+    }
+    h.type_text("n");
+    assert_eq!(text(&h), "prin");
     assert!(h.app.state.completion_open());
     key(&mut h, KeyCode::Esc, KeyModifiers::NONE);
     assert!(!h.app.state.completion_open());
     key(&mut h, KeyCode::Char(' '), KeyModifiers::CONTROL);
-    assert!(h.app.state.completion_open());
-    // A completion is one undo step.
-    key(&mut h, KeyCode::Enter, KeyModifiers::NONE);
-    h.ctrl('z');
-    assert_eq!(text(&h), "printl");
+    assert!(h.app.state.completion_open(), "Ctrl+Space asks again");
 }
 
 #[test]

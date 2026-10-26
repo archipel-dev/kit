@@ -382,6 +382,23 @@ mod tests {
     }
 
     #[test]
+    fn doc_comments_are_comments_to_the_end_of_the_line() {
+        for line in [
+            "//! The crate docs",
+            "/// A point `x` with \"quotes\" and 42",
+            "    /// Indented, with a // inside",
+            "//// four slashes",
+            "///",
+            "//!",
+        ] {
+            let s = spans(CodeLanguage::Rust, line);
+            assert_eq!(s.len(), 1, "{line}: {s:?}");
+            assert_eq!(s[0].0, line.trim_start(), "{line}");
+            assert_eq!(s[0].1, TextAttributesKey::Comment, "{line}");
+        }
+    }
+
+    #[test]
     fn a_block_comment_carries_its_state_to_the_next_line() {
         let mut state = 0;
         let mut out = Vec::new();

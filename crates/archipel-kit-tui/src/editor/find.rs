@@ -14,15 +14,17 @@ use crate::controls::{FieldEvent, TextFieldState};
 use crate::input::{KeyCode, KeyEvent, KeyModifiers};
 use crate::runtime::{CursorShape, Runtime};
 use crate::{Glyph, Look};
+use archipel_kit::editor::logic::find::{FindEnv, FindSession, current_match as match_index};
 use archipel_kit::editor::model::{
-    CaretSnapshot, Editor, MAX_SEARCH_RESULTS, Os, SearchOptions, SearchResults, Searcher,
-    find_all, match_at, next_match, word_range_at,
+    Editor, MAX_SEARCH_RESULTS, Os, SearchOptions, SearchResults, find_all,
 };
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use std::ops::Range;
 use std::rc::Rc;
+
+pub(crate) use archipel_kit::editor::logic::find::FindCmd as Cmd;
 
 /// Which part of the editor has the keyboard focus.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -54,34 +56,10 @@ pub(crate) enum BarHit {
     HistoryItem(usize),
 }
 
-#[derive(Clone, Debug)]
-struct Origin {
-    carets: CaretSnapshot,
-    scroll: (usize, usize),
-}
-
-/// The first Next past the last match shows a hint and waits for a second press.
-#[derive(Clone, Debug)]
-struct PendingWrap {
-    forward: bool,
-    carets: CaretSnapshot,
-}
-
 type Applied = (String, SearchOptions, Option<Range<usize>>);
 
-/// What a key or button asks the bar to do.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Cmd {
-    Next,
-    Previous,
-    Replace,
-    ReplaceAll,
-    SelectAll,
-    Accept,
-    WordAtCaret(bool),
-}
-
-/// The find bar of one editor.
+/// The find bar of one editor: the fields the user types in, and the shared
+/// [`FindSession`] that searches (the GUI bar runs the same one).
 #[derive(Default)]
 pub(crate) struct FindState {
     pub open: bool,
@@ -89,15 +67,9 @@ pub(crate) struct FindState {
     pub replace: bool,
     pub query: TextFieldState,
     pub replacement: TextFieldState,
-    pub options: SearchOptions,
-    /// Find in selection: matches are searched in this range only.
-    pub scope: Option<Range<usize>>,
+    /// The search: options, scope, where it started, the pending wrap.
+    pub core: FindSession<(usize, usize)>,
     pub focus: FindFocus,
-    origin: Option<Origin>,
-    search_from: usize,
-    applied: Option<Applied>,
-    wrap: Option<PendingWrap>,
-    synced: CaretSnapshot,
     pub history_open: bool,
     pub history_pick: usize,
     results: Option<(u64, Applied, Rc<SearchResults>)>,
@@ -119,11 +91,28 @@ impl FindState {
         }
     }
 
+    /// The session's query and replacement are the fields' text.
+    fn sync_fields(&mut self) {
+        if self.core.query != self.query.text() {
+            self.core.query = self.query.text().to_owned();
+        }
+        if self.core.replacement != self.replacement.text() {
+            self.core.replacement = self.replacement.text().to_owned();
+        }
+    }
+
+    /// The fields show what the session says (the word at the caret became the query).
+    fn sync_back(&mut self) {
+        if self.query.text() != self.core.query {
+            self.query.set_text(&self.core.query);
+        }
+    }
+
     fn key(&self) -> Applied {
         (
             self.query.text().to_owned(),
-            self.options,
-            self.scope.clone(),
+            self.core.options,
+            self.core.scope.clone(),
         )
     }
 
@@ -149,8 +138,8 @@ impl FindState {
         find_all(
             editor.document.text(),
             self.query.text(),
-            self.options,
-            self.scope.clone(),
+            self.core.options,
+            self.core.scope.clone(),
             MAX_SEARCH_RESULTS,
         )
     }
@@ -158,8 +147,7 @@ impl FindState {
     fn close(&mut self) {
         self.open = false;
         self.history_open = false;
-        self.origin = None;
-        self.wrap = None;
+        self.core.close();
         self.focus = FindFocus::Editor;
         self.hits.clear();
     }
@@ -167,11 +155,7 @@ impl FindState {
 
 /// The current match of the open bar, as an index into the results.
 pub(crate) fn current_match(editor: &Editor, results: &SearchResults) -> Option<usize> {
-    let primary = editor.carets.primary();
-    match_at(
-        &results.ranges,
-        &(primary.selection_start()..primary.selection_end()),
-    )
+    match_index(editor, results)
 }
 
 /// Opens the bar (Ctrl+F, Ctrl+R, F3): a single-line selection becomes the query, a
@@ -184,30 +168,13 @@ pub(crate) fn open_with(
     seed: bool,
     focus: bool,
 ) {
-    let was_open = st.find.open;
     let find = &mut st.find;
-    if !find.open {
-        find.origin = None;
-        find.wrap = None;
-    }
+    let was_open = find.open;
+    find.sync_fields();
     find.open = true;
     find.replace = replace;
-    if seed {
-        let primary = editor.carets.primary();
-        if primary.has_selection() {
-            let (s, e) = (primary.selection_start(), primary.selection_end());
-            let text = editor.document.slice(s, e);
-            if text.contains('\n') {
-                find.scope = Some(s..e);
-            } else {
-                find.query.set_text(text);
-                find.scope = None;
-            }
-        } else {
-            find.scope = None;
-        }
-        find.search_from = primary.selection_start();
-    }
+    find.core.open(editor, was_open, seed);
+    find.sync_back();
     if focus {
         find.focus = if replace && was_open && find.focus == FindFocus::Query {
             FindFocus::Replace
@@ -220,215 +187,72 @@ pub(crate) fn open_with(
         }
     }
     find.history_open = false;
-    find.synced = editor.carets.snapshot();
-    // Opening alone does not move the selection: only edits of the query do.
-    find.applied = Some(find.key());
 }
 
 /// A caret move of the user (not the bar): the search starts from there now.
 pub(crate) fn after_user_move(editor: &Editor, st: &mut EditorState) {
-    let find = &mut st.find;
-    if !find.open {
+    if !st.find.open {
         return;
     }
-    let snapshot = editor.carets.snapshot();
-    if snapshot != find.synced {
-        find.origin = Some(Origin {
-            carets: snapshot.clone(),
-            scroll: (st.first_row, st.first_col),
-        });
-        find.search_from = editor.carets.primary().selection_start();
-        find.wrap = None;
-        find.synced = snapshot;
+    let scroll = (st.first_row, st.first_col);
+    st.find.core.user_moved(editor, scroll);
+}
+
+/// Runs a frame of the shared session: the live selection of an edited query or option, and
+/// the commands the keys and buttons queued; then what the view must do about the result.
+fn run_session(
+    editor: &mut Editor,
+    st: &mut EditorState,
+    opts: &Opts<'_>,
+    now: f64,
+    out: &mut EditorOutput,
+) {
+    if !st.find.open {
+        st.find.core.cmds.clear();
+        return;
     }
+    st.find.sync_fields();
+    let results = st.find.results(editor);
+    let env = FindEnv {
+        os: opts.os,
+        viewer: opts.viewer,
+        // Moves of the carets by the user are reported by `after_user_move`.
+        editor_focused: false,
+        scroll: (st.first_row, st.first_col),
+    };
+    let done = st.find.core.apply(editor, &results, &env, &mut st.history);
+    st.find.sync_back();
+    if let Some((row, col)) = done.restore_scroll {
+        st.first_row = row;
+        st.first_col = col;
+    }
+    if let Some(offset) = done.jump {
+        reveal(editor, st, offset);
+    }
+    out.text_changed |= done.text_changed;
+    if let Some(hint) = done.hint {
+        st.set_hint(hint.clone(), now);
+        out.hint = Some(hint);
+    }
+    if done.focus_editor {
+        st.find.focus = FindFocus::Editor;
+    }
+    if done.close {
+        st.find.close();
+    }
+    out.consumed = true;
 }
 
 /// Typing or a changed option selects the first match from the caret; clearing the query puts
 /// the carets and the view back.
-fn live_update(editor: &mut Editor, st: &mut EditorState, out: &mut EditorOutput) {
-    let key = st.find.key();
-    if st.find.applied.as_ref() == Some(&key) {
-        return;
-    }
-    st.find.applied = Some(key);
-    st.find.wrap = None;
-    if st.find.origin.is_none() {
-        st.find.origin = Some(Origin {
-            carets: editor.carets.snapshot(),
-            scroll: (st.first_row, st.first_col),
-        });
-    }
-    let results = st.find.search(editor);
-    if st.find.query.is_empty() || results.ranges.is_empty() {
-        if let Some(origin) = st.find.origin.clone() {
-            editor.carets.restore(&editor.document, &origin.carets);
-            st.first_row = origin.scroll.0;
-            st.first_col = origin.scroll.1;
-        }
-    } else {
-        let at = next_match(&results.ranges, st.find.search_from, true).unwrap_or(0);
-        select(editor, st, results.ranges[at].clone());
-    }
-    sync(editor, st);
-    out.consumed = true;
-}
-
-/// Records where the bar left the carets, so that moving them is not a user move.
-fn sync(editor: &mut Editor, st: &mut EditorState) {
-    let snapshot = editor.carets.snapshot();
-    if snapshot != st.find.synced {
-        // Moving to a match is not a caret-only step for undo: the next Ctrl+Z undoes the last
-        // edit.
-        editor.undo.set_baseline(&editor.carets);
-    }
-    st.find.synced = snapshot;
-}
-
-/// Makes `range` the editor's selection: the current match.
-fn select(editor: &mut Editor, st: &mut EditorState, range: Range<usize>) {
-    editor
-        .carets
-        .set_selection(&editor.document, range.start, range.end);
-    st.find.search_from = range.start;
-    reveal(editor, st, range.start);
-}
-
-fn short(query: &str) -> String {
-    let line = query.lines().next().unwrap_or("");
-    if line.chars().count() > 40 || query.contains('\n') {
-        format!("{}...", line.chars().take(40).collect::<String>())
-    } else {
-        line.to_owned()
-    }
-}
-
-/// Next or previous match from the selection; past the last one the first press only shows a
-/// hint, the second wraps.
-fn step(
+fn live_update(
     editor: &mut Editor,
     st: &mut EditorState,
-    results: &SearchResults,
-    forward: bool,
-    os: Os,
+    opts: &Opts<'_>,
+    now: f64,
     out: &mut EditorOutput,
 ) {
-    let query = st.find.query.text().to_owned();
-    if results.ranges.is_empty() {
-        out.hint = Some(format!("\"{}\" not found", short(&query)));
-        return;
-    }
-    let primary = editor.carets.primary();
-    let from = match (primary.has_selection(), forward) {
-        (true, true) => primary.selection_end(),
-        (true, false) => primary.selection_start(),
-        (false, _) => primary.offset,
-    };
-    let snapshot = editor.carets.snapshot();
-    let found = next_match(&results.ranges, from, forward);
-    let wrapped = st
-        .find
-        .wrap
-        .take()
-        .is_some_and(|w| w.forward == forward && w.carets == snapshot);
-    match (found, wrapped) {
-        (Some(i), _) => select(editor, st, results.ranges[i].clone()),
-        (None, true) => {
-            let i = if forward { 0 } else { results.ranges.len() - 1 };
-            select(editor, st, results.ranges[i].clone());
-        }
-        (None, false) => {
-            st.find.wrap = Some(PendingWrap {
-                forward,
-                carets: snapshot,
-            });
-            let (key, edge) = match (os, forward) {
-                (Os::WindowsLinux, true) => ("F3", "the top"),
-                (Os::WindowsLinux, false) => ("Shift+F3", "the bottom"),
-                (Os::MacOs, true) => ("Cmd+G", "the top"),
-                (Os::MacOs, false) => ("Shift+Cmd+G", "the bottom"),
-            };
-            out.hint = Some(format!(
-                "\"{}\" not found, press {key} to search from {edge}",
-                short(&query)
-            ));
-        }
-    }
-}
-
-fn replace_current(editor: &mut Editor, st: &mut EditorState, os: Os, out: &mut EditorOutput) {
-    let results = st.find.search(editor);
-    let primary = editor.carets.primary();
-    let selection = primary.selection_start()..primary.selection_end();
-    if match_at(&results.ranges, &selection).is_none() {
-        // Nothing selected to replace: the first press only finds the next match.
-        step(editor, st, &results, true, os, out);
-        return;
-    }
-    let Ok(searcher) = Searcher::new(st.find.query.text(), st.find.options) else {
-        return;
-    };
-    let replacement = st.find.replacement.text().to_owned();
-    let text = searcher.replacement(editor.document.text(), selection.clone(), &replacement);
-    st.history.add_replacement(&replacement);
-    let old_len = selection.len();
-    editor.replace_range(selection.start, selection.end, &text);
-    out.text_changed = true;
-    let end = selection.start + text.len();
-    editor.carets.set_caret(&editor.document, end);
-    if let Some(scope) = &mut st.find.scope {
-        scope.end = (scope.end + text.len()).saturating_sub(old_len);
-    }
-    // After a replace the caret moves to the next match, wrapping silently.
-    let found = st.find.search(editor);
-    let at = next_match(&found.ranges, end, true).or(if found.ranges.is_empty() {
-        None
-    } else {
-        Some(0)
-    });
-    if let Some(i) = at {
-        select(editor, st, found.ranges[i].clone());
-    } else {
-        st.find.search_from = end;
-    }
-}
-
-fn replace_all(editor: &mut Editor, st: &mut EditorState, out: &mut EditorOutput) {
-    let Ok(searcher) = Searcher::new(st.find.query.text(), st.find.options) else {
-        return;
-    };
-    if st.find.query.is_empty() {
-        return;
-    }
-    let (ranges, _) = searcher.find_all(editor.document.text(), st.find.scope.clone(), usize::MAX);
-    if ranges.is_empty() {
-        return;
-    }
-    let replacement = st.find.replacement.text().to_owned();
-    let text = editor.document.text();
-    let replacements: Vec<(Range<usize>, String)> = ranges
-        .iter()
-        .map(|r| {
-            (
-                r.clone(),
-                searcher.replacement(text, r.clone(), &replacement),
-            )
-        })
-        .collect();
-    st.history.add_replacement(&replacement);
-    if let Some(scope) = &mut st.find.scope {
-        let removed: usize = replacements.iter().map(|(r, _)| r.len()).sum();
-        let inserted: usize = replacements.iter().map(|(_, t)| t.len()).sum();
-        scope.end = (scope.end + inserted).saturating_sub(removed);
-    }
-    let count = replacements.len();
-    editor.replace_ranges(&replacements);
-    out.text_changed = true;
-    out.hint = Some(format!(
-        "{count} occurrence{} replaced",
-        if count == 1 { "" } else { "s" }
-    ));
-    st.find.wrap = None;
-    st.find.search_from = editor.carets.primary().offset;
+    run_session(editor, st, opts, now, out);
 }
 
 fn run_cmd(
@@ -439,55 +263,8 @@ fn run_cmd(
     now: f64,
     out: &mut EditorOutput,
 ) {
-    let carets_before = editor.carets.snapshot();
-    let results = st.find.search(editor);
-    match cmd {
-        Cmd::Next | Cmd::Previous => step(editor, st, &results, cmd == Cmd::Next, opts.os, out),
-        Cmd::WordAtCaret(forward) => {
-            let caret = editor.carets.primary().offset;
-            if let Some((s, e)) = word_range_at(&editor.document, caret, false) {
-                st.find.query.set_text(editor.document.slice(s, e));
-                st.find.options.regex = false;
-                st.find.options.whole_words = true;
-                st.find.scope = None;
-                st.find.applied = Some(st.find.key());
-                let found = st.find.search(editor);
-                st.find.search_from = editor.carets.primary().selection_start();
-                step(editor, st, &found, forward, opts.os, out);
-            }
-        }
-        Cmd::Accept => {
-            let query = st.find.query.text().to_owned();
-            st.history.add_query(&query);
-            let replacement = st.find.replacement.text().to_owned();
-            if !replacement.is_empty() {
-                st.history.add_replacement(&replacement);
-            }
-            if query.is_empty() {
-                st.find.close();
-            }
-            st.find.focus = FindFocus::Editor;
-        }
-        Cmd::SelectAll => {
-            if !results.ranges.is_empty() {
-                if !editor.select_ranges(&results.ranges) {
-                    out.hint = Some("Too many carets".to_owned());
-                }
-                st.find.search_from = results.ranges[0].start;
-                reveal(editor, st, results.ranges[0].start);
-                st.find.focus = FindFocus::Editor;
-            }
-        }
-        Cmd::Replace if !opts.viewer => replace_current(editor, st, opts.os, out),
-        Cmd::ReplaceAll if !opts.viewer => replace_all(editor, st, out),
-        Cmd::Replace | Cmd::ReplaceAll => {}
-    }
-    sync(editor, st);
-    let _ = carets_before;
-    if let Some(hint) = &out.hint {
-        st.set_hint(hint.clone(), now);
-    }
-    out.consumed = true;
+    st.find.core.cmds.push(cmd);
+    run_session(editor, st, opts, now, out);
 }
 
 fn close(editor: &mut Editor, st: &mut EditorState) {
@@ -616,7 +393,7 @@ pub(crate) fn key(
             KeyCode::Enter => {
                 if let Some(entry) = st.history.queries().get(st.find.history_pick).cloned() {
                     st.find.query.set_text(entry);
-                    live_update(editor, st, out);
+                    live_update(editor, st, opts, rt.now, out);
                 }
                 st.find.history_open = false;
             }
@@ -676,23 +453,23 @@ pub(crate) fn key(
             return true;
         }
         KeyCode::Char(_) if alt && !ctrl => {
-            let before = st.find.options;
+            let before = st.find.core.options;
             if ch('c') {
-                st.find.options.match_case ^= true;
+                st.find.core.options.match_case ^= true;
             } else if ch('w') {
-                st.find.options.whole_words ^= true;
+                st.find.core.options.whole_words ^= true;
             } else if ch('x') {
-                st.find.options.regex ^= true;
+                st.find.core.options.regex ^= true;
             } else if ch('p') && st.find.replace && !opts.viewer {
-                st.find.options.preserve_case ^= true;
+                st.find.core.options.preserve_case ^= true;
             } else if ch('a') && st.find.replace && !opts.viewer {
                 run_cmd(editor, st, Cmd::ReplaceAll, opts, rt.now, out);
                 return true;
             } else {
                 return false;
             }
-            if st.find.options != before {
-                live_update(editor, st, out);
+            if st.find.core.options != before {
+                live_update(editor, st, opts, rt.now, out);
             }
             return true;
         }
@@ -707,7 +484,7 @@ pub(crate) fn key(
         FieldEvent::Ignored => false,
         FieldEvent::Changed => {
             if in_query {
-                live_update(editor, st, out);
+                live_update(editor, st, opts, rt.now, out);
             }
             true
         }
@@ -717,9 +494,10 @@ pub(crate) fn key(
 
 /// A bracketed paste into the focused field. Returns whether a field took it.
 pub(crate) fn paste(
-    _opts: &Opts<'_>,
+    opts: &Opts<'_>,
     editor: &mut Editor,
     st: &mut EditorState,
+    now: f64,
     text: &str,
     out: &mut EditorOutput,
 ) -> bool {
@@ -727,7 +505,7 @@ pub(crate) fn paste(
         FindFocus::Editor => false,
         FindFocus::Query => {
             st.find.query.insert(text);
-            live_update(editor, st, out);
+            live_update(editor, st, opts, now, out);
             true
         }
         FindFocus::Replace => {
@@ -758,7 +536,7 @@ pub(crate) fn click(
         return;
     };
     out.consumed = true;
-    let options = st.find.options;
+    let options = st.find.core.options;
     match hit {
         BarHit::Query | BarHit::Replace => {
             let query = hit == BarHit::Query;
@@ -789,10 +567,10 @@ pub(crate) fn click(
             }
             field.move_to(index, false);
         }
-        BarHit::MatchCase => st.find.options.match_case ^= true,
-        BarHit::Words => st.find.options.whole_words ^= true,
-        BarHit::Regex => st.find.options.regex ^= true,
-        BarHit::Preserve => st.find.options.preserve_case ^= true,
+        BarHit::MatchCase => st.find.core.options.match_case ^= true,
+        BarHit::Words => st.find.core.options.whole_words ^= true,
+        BarHit::Regex => st.find.core.options.regex ^= true,
+        BarHit::Preserve => st.find.core.options.preserve_case ^= true,
         BarHit::Previous => run_cmd(editor, st, Cmd::Previous, opts, rt.now, out),
         BarHit::Next => run_cmd(editor, st, Cmd::Next, opts, rt.now, out),
         BarHit::ReplaceOne => run_cmd(editor, st, Cmd::Replace, opts, rt.now, out),
@@ -805,13 +583,13 @@ pub(crate) fn click(
         BarHit::HistoryItem(i) => {
             if let Some(entry) = st.history.queries().get(i).cloned() {
                 st.find.query.set_text(entry);
-                live_update(editor, st, out);
+                live_update(editor, st, opts, rt.now, out);
             }
             st.find.history_open = false;
         }
     }
-    if st.find.options != options {
-        live_update(editor, st, out);
+    if st.find.core.options != options {
+        live_update(editor, st, opts, rt.now, out);
     }
 }
 
@@ -866,17 +644,17 @@ pub(crate) fn draw(
         Chip {
             text: " Cc ",
             hit: BarHit::MatchCase,
-            active: st.find.options.match_case,
+            active: st.find.core.options.match_case,
         },
         Chip {
             text: " W ",
             hit: BarHit::Words,
-            active: st.find.options.whole_words,
+            active: st.find.core.options.whole_words,
         },
         Chip {
             text: " .* ",
             hit: BarHit::Regex,
-            active: st.find.options.regex,
+            active: st.find.core.options.regex,
         },
     ];
     let close_icon = format!("{} ", look.glyph(Glyph::Close));
@@ -1000,7 +778,7 @@ pub(crate) fn draw(
         rx = rx.saturating_sub(1);
         put_row(buf, &mut rx, " Replace ", BarHit::ReplaceOne, button);
         rx = rx.saturating_sub(1);
-        let pc = if st.find.options.preserve_case {
+        let pc = if st.find.core.options.preserve_case {
             Style::default()
                 .fg(p.on(p.nord_blue))
                 .bg(p.nord_blue)

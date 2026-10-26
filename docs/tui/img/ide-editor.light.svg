@@ -822,7 +822,7 @@
 <rect x="0.0" y="270.0" width="252.0" height="18" fill="#F4F4F4"/>
 <rect x="252.0" y="270.0" width="8.4" height="18" fill="#FFFFFF"/>
 <rect x="260.4" y="270.0" width="126.0" height="18" fill="#F1F1F1"/>
-<rect x="386.4" y="270.0" width="33.6" height="18" fill="#F2A33A"/>
+<rect x="386.4" y="270.0" width="33.6" height="18" fill="#000000"/>
 <rect x="420.0" y="270.0" width="25.2" height="18" fill="#F1F1F1"/>
 <rect x="445.2" y="270.0" width="33.6" height="18" fill="#FCD47E"/>
 <rect x="478.8" y="270.0" width="579.6" height="18" fill="#F1F1F1"/>
@@ -837,10 +837,10 @@
 <text x="352.8" y="283.5" fill="#7C7F8A">l</text>
 <text x="361.2" y="283.5" fill="#7C7F8A">e</text>
 <text x="369.6" y="283.5" fill="#7C7F8A">t</text>
-<text x="386.4" y="283.5" fill="#7C7F8A">l</text>
-<text x="394.8" y="283.5" fill="#7C7F8A">o</text>
-<text x="403.2" y="283.5" fill="#7C7F8A">o</text>
-<text x="411.6" y="283.5" fill="#7C7F8A">k</text>
+<text x="386.4" y="283.5" fill="#FFFFFF" font-weight="bold">l</text>
+<text x="394.8" y="283.5" fill="#FFFFFF" font-weight="bold">o</text>
+<text x="403.2" y="283.5" fill="#FFFFFF" font-weight="bold">o</text>
+<text x="411.6" y="283.5" fill="#FFFFFF" font-weight="bold">k</text>
 <text x="428.4" y="283.5" fill="#7C7F8A">=</text>
 <text x="445.2" y="283.5" fill="#7C7F8A">L</text>
 <text x="453.6" y="283.5" fill="#7C7F8A">o</text>
