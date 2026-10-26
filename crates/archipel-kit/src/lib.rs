@@ -65,7 +65,7 @@ pub use egui;
 pub use icons::{Glyph, Icon};
 pub use parts::{Tone, ValueKind};
 pub use style::install;
-pub use theme::Theme;
+pub use theme::{EditorScheme, Theme};
 
 /// The code blocks of the guides and component pages in `docs/`, compiled and run as
 /// doctests so the documentation cannot drift from the API.

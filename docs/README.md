@@ -2,6 +2,7 @@
 
 - [Getting started](getting-started.md): add the crate, install the theme, build a panel.
 - [Theming](theming.md): colors, tokens, dark and light, custom themes.
+- [Theme mapping](theme-mapping.md): which IntelliJ key fills which kit color in every bundled theme (generated).
 - [Testing](testing.md): behavior, accessibility and snapshot tests for your own UI.
 - [Cursors](cursors.md): which cursor shows where, and how parents override it.
 - [Icon kit](icons/README.md): 113 designed glyphs, [78 language icons](icons/languages.md), [code symbols](icons/symbols.md), their [catalog](icons/catalog.md), [design rules](icons/design.md) and [review](icons/review.md).

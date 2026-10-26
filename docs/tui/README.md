@@ -55,7 +55,8 @@ The colors and icons come straight from the GUI. The shapes follow terminal conv
 | Glyphs, language and symbol icons | Nerd Font codicons and logos in the same colors (language colors lifted to 3:1 contrast) |
 
 The kit `Theme` is the single source: `Look::new(theme)` turns any GUI theme, including a
-custom one, into a terminal look.
+custom one, into a terminal look. Every bundled theme works: `Look::new(Theme::darcula())`, or
+pick from `Theme::all()` (the gallery example's `t` key cycles through them).
 
 ## Getting started
 

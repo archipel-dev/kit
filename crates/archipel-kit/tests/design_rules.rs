@@ -33,6 +33,11 @@ const RULES: &[Rule] = &[
         allowed: &[
             ("theme.rs", "the themes define the colors"),
             (
+                "theme/catalog.rs",
+                "turns the packed color tables generated from IntelliJ's theme files into \
+                 `Color32` (the generated files hold numbers, not `Color32` literals)",
+            ),
+            (
                 "icons.rs",
                 "the icon artwork's colors are data, like the glyphs",
             ),
