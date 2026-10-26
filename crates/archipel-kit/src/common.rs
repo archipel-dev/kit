@@ -61,8 +61,6 @@ pub(crate) fn flat_fill(response: &egui::Response, colors: &Colors) -> Color32 {
     }
 }
 
-pub(crate) use crate::parts::row_pill;
-
 /// `text` if `enabled`, else the disabled text color.
 pub(crate) fn enabled_text(enabled: bool, color: Color32, colors: &Colors) -> Color32 {
     if enabled { color } else { colors.text_disabled }

@@ -29,10 +29,13 @@
 | [CodeView, CodeEditor](components/code.md) | <img src="components/img/code_view.dark.png" width="160"> | Read-only and editable code with highlighting and find. |
 | [JBList, Tree, JBTable](components/collections.md) | <img src="components/img/jb_table.dark.png" width="160"> | Large lists, trees and tables, virtualized. |
 | [TreeTable](components/tree-table.md) | <img src="components/img/tree_table.dark.png" width="160"> | A tree whose rows have columns, with inline cell editing. |
+| [SpeedSearch](components/speed-search.md) | <img src="components/img/speed_search.dark.png" width="160"> | Type to jump to or filter rows of lists, trees and tables. |
 | [ColoredListCellRenderer](components/colored-list-cell-renderer.md) | <img src="components/img/colored_list_cell_renderer.dark.png" width="160"> | Lists and trees. |
 | [InlineBanner](components/inline-banner.md) | <img src="components/img/inline_banner.dark.png" width="160"> | Inline messages with actions. |
 | [Notification](components/notification.md) | <img src="components/img/notification.dark.png" width="160"> | Notifications. |
 | [AsyncProcessIcon, ProgressBar](components/progress.md) | <img src="components/img/progress.dark.png" width="160"> | Work in progress. |
+| [JBLoadingPanel](components/loading-panel.md) | <img src="components/img/loading_panel.dark.png" width="160"> | Content that is loading, behind a veil after a start delay. |
+| [CollapsiblePanel](components/collapsible-panel.md) | <img src="components/img/collapsible_panel.dark.png" width="160"> | A titled group that shows and hides its content. |
 | [StatusText](components/status-text.md) | <img src="components/img/status_text.dark.png" width="140"> | Nothing to show yet. |
 | [Counter, Tag, Kbd, Avatar](components/badges.md) | <img src="components/img/badges.dark.png" width="140"> | Inline labels. |
 | [Histogram, Sparkline](components/chart.md) | <img src="components/img/chart.dark.png" width="160"> | Value distributions, top-N counts, inline trends. |

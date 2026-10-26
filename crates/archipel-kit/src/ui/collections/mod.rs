@@ -1,27 +1,32 @@
 //! Virtualized collections: lists, trees and tables that draw only the visible rows, so they
 //! stay fast with hundreds of thousands of items.
 //!
-//! All three share one model: the caller owns the data and the selection
-//! (`&mut Option<usize>`), the widget draws the visible rows, moves the selection with the
-//! keyboard and reports what happened in a [`CollectionResponse`].
+//! All of them share one model: the caller owns the data and the selection (a
+//! `&mut Option<usize>`, or a [`ListSelectionModel`](crate::ui::ListSelectionModel) for
+//! several rows), the widget draws the visible rows, moves the selection with the keyboard
+//! and the mouse, searches as the user types ([`SpeedSearch`]) and reports what happened in a
+//! [`CollectionResponse`].
 
 mod edit;
+mod engine;
 mod tree_table;
 
 pub use edit::CellEdit;
+pub use engine::SelectionTarget;
 pub use tree_table::TreeTable;
 
 use crate::behaviour::{Behaviour, DragSource, DropTarget};
 use crate::common;
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::{Tone, ValueKind};
+use crate::parts::{SimpleTextAttributes, Tone, ValueKind};
 use crate::theme::Theme;
 use crate::tokens::{radius, size, typography};
-use crate::ui::ColoredListCellRenderer;
+use crate::ui::{ColoredListCellRenderer, SpeedSearch, SpeedSearchComparator, StatusText};
 use egui::{
-    Align, CornerRadius, CursorIcon, Id, Key, Rect, Response, Sense, Stroke, Ui, WidgetInfo,
-    WidgetType, pos2, vec2,
+    Align, CornerRadius, CursorIcon, Id, Rect, Response, Sense, Stroke, Ui, WidgetInfo, WidgetType,
+    pos2, vec2,
 };
+use engine::{DrawnRow, RowCtx, Rows, Spec, TreeMove, collection};
 
 /// What happened in a [`JBList`], [`Tree`], [`JBTable`] or [`TreeTable`] this frame.
 #[derive(Debug)]
@@ -33,7 +38,7 @@ pub struct CollectionResponse {
     /// A row was opened: double-click or <kbd>Enter</kbd>.
     pub activated: Option<usize>,
     /// A tree row asked to expand or collapse: chevron, double-click on a parent,
-    /// <kbd>→</kbd>/<kbd>←</kbd>.
+    /// <kbd>Enter</kbd> on a parent, <kbd>→</kbd>/<kbd>←</kbd>.
     pub toggled: Option<usize>,
     /// A table header was clicked to sort by that column.
     pub sort_clicked: Option<usize>,
@@ -44,202 +49,36 @@ pub struct CollectionResponse {
     /// column order as indices into the columns you passed (`order[new_position] =
     /// old_index`). Reorder your columns with it; the table never does.
     pub column_order: Option<Vec<usize>>,
-}
-
-/// One drawn row: its response and whether its chevron asked to toggle.
-struct DrawnRow {
-    response: Response,
-    toggled: bool,
-    /// The row consumed its double-click itself (it started an edit): don't activate.
-    handled: bool,
-}
-
-/// Keys the engine saw while the collection had focus, for the widgets that react to them.
-#[derive(Default)]
-struct Keys {
-    /// <kbd>←</kbd> or <kbd>→</kbd> (trees).
-    horizontal: Option<Key>,
-    /// <kbd>Enter</kbd> was pressed (it also reports `activated`).
-    enter: bool,
-    /// <kbd>F2</kbd> was pressed.
-    f2: bool,
-}
-
-/// Scroll position and viewport height from the last frame.
-#[derive(Clone, Copy)]
-struct Viewport {
-    offset: f32,
-    height: f32,
-}
-
-/// What a collection is: identity, size and accessible role.
-struct Spec<'a> {
-    id: Id,
-    len: usize,
-    height: f32,
-    role: egui::accesskit::Role,
-    name: &'a str,
-}
-
-/// The shared engine: keyboard navigation, scroll-into-view and virtualized rows.
-/// Returns the response and the horizontal arrow pressed while focused (for trees).
-fn collection(
-    ui: &mut Ui,
-    spec: Spec<'_>,
-    selected: &mut Option<usize>,
-    mut row: impl FnMut(&mut Ui, usize, bool, bool) -> DrawnRow,
-) -> (CollectionResponse, Keys) {
-    let Spec {
-        id,
-        len,
-        height,
-        role,
-        name,
-    } = spec;
-    let row_height = size::ROW_HEIGHT;
-    let focus_id = id.with("focus");
-    let focused = ui.memory(|m| m.has_focus(focus_id));
-    let viewport: Option<Viewport> = ui.ctx().data(|d| d.get_temp(id));
-    let mut selection_changed = false;
-    let mut activated = None;
-    let mut keys = Keys::default();
-    let mut scroll_to = None;
-
-    if *selected >= Some(len) {
-        *selected = len.checked_sub(1);
-        selection_changed = true;
-    }
-    if focused && len > 0 {
-        ui.memory_mut(|m| {
-            m.set_focus_lock_filter(
-                focus_id,
-                egui::EventFilter {
-                    horizontal_arrows: true,
-                    vertical_arrows: true,
-                    ..Default::default()
-                },
-            );
-        });
-        let page = viewport.map_or(10, |v| ((v.height / row_height) as usize).max(1));
-        let current = *selected;
-        let next = crate::parts::nav::pressed(ui, current, len, page);
-        if let Some(next) = next {
-            selection_changed |= current != Some(next);
-            *selected = Some(next);
-            scroll_to = Some(next);
-        }
-        ui.input(|i| {
-            if i.key_pressed(Key::Enter) {
-                activated = *selected;
-                keys.enter = true;
-            }
-            keys.f2 = i.key_pressed(Key::F2);
-            if i.key_pressed(Key::ArrowLeft) {
-                keys.horizontal = Some(Key::ArrowLeft);
-            } else if i.key_pressed(Key::ArrowRight) {
-                keys.horizontal = Some(Key::ArrowRight);
-            }
-        });
-    }
-
-    let mut area = crate::parts::scroll_vertical()
-        .id_salt(id)
-        .max_height(height)
-        .min_scrolled_height(height)
-        .scroll_source(
-            egui::scroll_area::ScrollSource::MOUSE_WHEEL
-                | egui::scroll_area::ScrollSource::SCROLL_BAR,
-        )
-        .auto_shrink([false, false]);
-    if let (Some(index), Some(view)) = (scroll_to, viewport) {
-        let top = index as f32 * row_height;
-        if top < view.offset {
-            area = area.vertical_scroll_offset(top);
-        } else if top + row_height > view.offset + view.height {
-            area = area.vertical_scroll_offset(top + row_height - view.height);
-        }
-    }
-
-    let mut clicked = None;
-    let mut toggled = None;
-    // show_rows strides by the row height plus the item spacing of the ui it starts in.
-    let rows = ui.scope_builder(egui::UiBuilder::new().id_salt(id.with("rows")), |ui| {
-        ui.spacing_mut().item_spacing.y = 0.0;
-        area.show_rows(ui, row_height, len, |ui, range| {
-            for index in range {
-                let drawn = row(ui, index, *selected == Some(index), focused);
-                if drawn.toggled {
-                    toggled = Some(index);
-                } else if drawn.response.double_clicked() && !drawn.handled {
-                    activated = Some(index);
-                }
-                if drawn.response.clicked() || drawn.response.double_clicked() {
-                    clicked = Some(index);
-                }
-            }
-        })
-    });
-    let output = rows.inner;
-    // The rows' parent node gets the viewport bounds, so tools see which rows are cut off.
-    let viewport_rect = output.inner_rect;
-    ui.ctx().accesskit_node_builder(rows.response.id, |node| {
-        node.set_role(egui::accesskit::Role::Group);
-        node.set_bounds(egui::accesskit::Rect {
-            x0: viewport_rect.min.x.into(),
-            y0: viewport_rect.min.y.into(),
-            x1: viewport_rect.max.x.into(),
-            y1: viewport_rect.max.y.into(),
-        });
-    });
-    if let Some(index) = clicked {
-        selection_changed |= *selected != Some(index);
-        *selected = Some(index);
-    }
-    let view = Viewport {
-        offset: output.state.offset.y,
-        height: output.inner_rect.height(),
-    };
-    ui.ctx().data_mut(|d| d.insert_temp(id, view));
-    // The list itself holds keyboard focus (Tab reaches it once, not every row).
-    let response = ui.interact(
-        output.inner_rect,
-        focus_id,
-        Sense::focusable_noninteractive(),
-    );
-    ui.ctx().accesskit_node_builder(focus_id, |node| {
-        node.set_role(role);
-        node.set_label(name);
-    });
-    // After `interact`: a click on a row counts as "elsewhere" for the focus widget, which
-    // would otherwise give up the focus requested here.
-    if clicked.is_some() {
-        ui.memory_mut(|m| m.request_focus(focus_id));
-    }
-    if response.has_focus() && selected.is_none() {
-        let colors = Theme::colors(ui.ctx());
-        common::focus_ring(ui.painter(), output.inner_rect.shrink(1.0), 4, &colors);
-    }
-    (
-        CollectionResponse {
-            response,
-            selection_changed,
-            activated,
-            toggled,
-            sort_clicked: None,
-            edited: None,
-            column_order: None,
-        },
-        keys,
-    )
+    /// The row that was right-clicked this frame. The click has already followed the IDE's
+    /// rule: the selection stays when the row is inside it, else it moves to the row. Open
+    /// your context menu for the selection; attach it with `PopupHandler` on the rows, or
+    /// react to this.
+    pub secondary_clicked: Option<usize>,
+    /// The link of the collection's [empty text](StatusText) that was clicked, counting the
+    /// links from 0.
+    pub empty_text_link: Option<usize>,
+    /// The row the keyboard acts on: the lead row if it is selected, else the first
+    /// selected row.
+    pub current: Option<usize>,
 }
 
 /// A scrolling list of [`ColoredListCellRenderer`]s that draws only the visible ones.
 ///
-/// <kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Home</kbd>/<kbd>End</kbd> and
-/// <kbd>PgUp</kbd>/<kbd>PgDn</kbd> move the selection; <kbd>Enter</kbd> or a double-click
-/// activates a row. Rows with an [`expanded`](ColoredListCellRenderer::expanded) state (a tree drawn from
-/// `ColoredListCellRenderer`s) report <kbd>→</kbd> on a collapsed and <kbd>←</kbd> on an expanded selected
-/// row in [`CollectionResponse::toggled`], like [`Tree`] does.
+/// - <kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Home</kbd>/<kbd>End</kbd> and
+///   <kbd>PgUp</kbd>/<kbd>PgDn</kbd> move the selection (the page keys first go to the
+///   edge of the view, then a page further); <kbd>Shift</kbd> extends it, <kbd>Ctrl</kbd>
+///   (<kbd>Cmd</kbd> on macOS) moves the lead without selecting, <kbd>Ctrl</kbd>+<kbd>A</kbd>
+///   selects all. <kbd>Enter</kbd> or a double-click activates a row.
+/// - Click selects, <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+click toggles, <kbd>Shift</kbd>+click
+///   extends from the anchor. A right click keeps the selection if it lands inside it, else
+///   selects the row.
+/// - Typing opens a [speed search](Self::speed_search).
+/// - Rows with an [`expanded`](ColoredListCellRenderer::expanded) state (a tree drawn from
+///   `ColoredListCellRenderer`s) report <kbd>→</kbd> on a collapsed and <kbd>←</kbd> on an
+///   expanded selected row in [`CollectionResponse::toggled`], like [`Tree`] does.
+///
+/// Pass `&mut Option<usize>` for a single selection or a
+/// [`ListSelectionModel`](crate::ui::ListSelectionModel) for several rows.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -254,24 +93,51 @@ fn collection(
 /// if let Some(i) = out.activated { /* open requests[i] */ }
 /// # });
 /// ```
+///
+/// Several rows, with a speed search:
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::ui::{
+///     ColoredListCellRenderer, JBList, ListSelectionModel, SpeedSearch, SpeedSearchState,
+/// };
+///
+/// let files = ["Cargo.toml", "README.md", "src"];
+/// let mut selection = ListSelectionModel::multiple();
+/// let mut search = SpeedSearchState::new();
+/// JBList::new("files", files.len(), &mut selection)
+///     .speed_search(SpeedSearch::new(&mut search))
+///     .show(ui, |i| ColoredListCellRenderer::new(files[i]));
+/// for index in selection.iter() { /* act on files[index] */ }
+/// # });
+/// ```
 #[must_use = "show it with `list.show(ui, row)`"]
 pub struct JBList<'a> {
     id: Id,
     name: String,
     len: usize,
-    selected: &'a mut Option<usize>,
+    selected: SelectionTarget<'a>,
     height: f32,
+    search: Option<SpeedSearch<'a>>,
+    empty: Option<StatusText>,
 }
 
 impl<'a> JBList<'a> {
-    /// A list of `len` rows with a unique `id_salt`, editing `selected`.
-    pub fn new(id_salt: impl std::hash::Hash, len: usize, selected: &'a mut Option<usize>) -> Self {
+    /// A list of `len` rows with a unique `id_salt`, editing `selected` (a
+    /// `&mut Option<usize>` or a `&mut ListSelectionModel`).
+    pub fn new(
+        id_salt: impl std::hash::Hash,
+        len: usize,
+        selected: impl Into<SelectionTarget<'a>>,
+    ) -> Self {
         Self {
             id: Id::new(id_salt),
             name: "List".into(),
             len,
-            selected,
+            selected: selected.into(),
             height: 240.0,
+            search: None,
+            empty: None,
         }
     }
 
@@ -287,16 +153,58 @@ impl<'a> JBList<'a> {
         self
     }
 
+    /// Lets the user type to search: opens on a letter, digit or punctuation mark, moves
+    /// the selection to the first match, highlights the matches in the rows and keeps the
+    /// text in the caller's [`SpeedSearchState`](crate::ui::SpeedSearchState).
+    pub fn speed_search(mut self, search: SpeedSearch<'a>) -> Self {
+        self.search = Some(search);
+        self
+    }
+
+    /// What to show when the list has no rows (default: "Nothing to show").
+    pub fn empty_text(mut self, text: StatusText) -> Self {
+        self.empty = Some(text);
+        self
+    }
+
     /// Draws the visible rows; `row(index)` describes row `index` (the list sets its
     /// selection).
     pub fn show<'r>(
         self,
         ui: &mut Ui,
-        mut row: impl FnMut(usize) -> ColoredListCellRenderer<'r>,
+        row: impl FnMut(usize) -> ColoredListCellRenderer<'r>,
     ) -> CollectionResponse {
-        // Whether the selected row is an expanded or collapsed node, from the row itself.
-        let mut selected_node = None;
-        let (mut response, keys) = collection(
+        struct ListRows<F>(F);
+        impl<'r, F: FnMut(usize) -> ColoredListCellRenderer<'r>> Rows for ListRows<F> {
+            fn texts(&mut self, index: usize) -> Vec<String> {
+                vec![(self.0)(index).search_text()]
+            }
+
+            fn row(&mut self, ui: &mut Ui, ctx: RowCtx<'_>) -> DrawnRow {
+                let shown = (self.0)(ctx.index)
+                    .selected(ctx.selected)
+                    .inactive(!ctx.focused)
+                    .focusable(false)
+                    .joined(ctx.joined_above, ctx.joined_below)
+                    .lead(ctx.lead)
+                    .search(ctx.search)
+                    .show(ui);
+                DrawnRow {
+                    response: shown.response,
+                    toggled: shown.toggled,
+                    handled: false,
+                }
+            }
+
+            fn horizontal(&mut self, index: usize, left: bool) -> Option<TreeMove> {
+                // A row with an expanded state toggles on the arrow that changes it.
+                match (self.0)(index).is_expanded() {
+                    Some(expanded) if left == expanded => Some(TreeMove::Toggle),
+                    _ => None,
+                }
+            }
+        }
+        let (response, _) = collection(
             ui,
             Spec {
                 id: self.id,
@@ -304,30 +212,12 @@ impl<'a> JBList<'a> {
                 height: self.height,
                 role: egui::accesskit::Role::List,
                 name: &self.name,
+                search: self.search,
+                empty: self.empty,
             },
             self.selected,
-            |ui, index, selected, focused| {
-                let row = row(index);
-                if selected {
-                    selected_node = Some((index, row.is_expanded()));
-                }
-                let shown = row
-                    .selected(selected)
-                    .inactive(!focused)
-                    .focusable(false)
-                    .show(ui);
-                DrawnRow {
-                    response: shown.response,
-                    toggled: shown.toggled,
-                    handled: false,
-                }
-            },
+            &mut ListRows(row),
         );
-        if let (Some(key), Some((index, Some(expanded)))) = (keys.horizontal, selected_node)
-            && ((key == Key::ArrowRight && !expanded) || (key == Key::ArrowLeft && expanded))
-        {
-            response.toggled = Some(index);
-        }
         response
     }
 }
@@ -345,6 +235,7 @@ pub struct TreeNode {
     children: bool,
     expanded: bool,
     editable: bool,
+    fragments: Vec<(String, SimpleTextAttributes)>,
 }
 
 impl TreeNode {
@@ -360,7 +251,24 @@ impl TreeNode {
             children: false,
             expanded: false,
             editable: false,
+            fragments: Vec::new(),
         }
+    }
+
+    /// Adds a fragment of text after the label with its own [`SimpleTextAttributes`]
+    /// (grayed, bold, error …). A speed search matches and highlights it with the label.
+    pub fn append(mut self, text: impl Into<String>, attributes: SimpleTextAttributes) -> Self {
+        self.fragments.push((text.into(), attributes));
+        self
+    }
+
+    /// The label and the fragments, the text a speed search matches against.
+    pub(crate) fn search_text(&self) -> String {
+        let mut text = self.label.clone();
+        for (fragment, _) in &self.fragments {
+            text.push_str(fragment);
+        }
+        text
     }
 
     /// The label.
@@ -425,7 +333,8 @@ impl TreeNode {
 /// A virtualized tree: project views, structure views, JSON documents.
 ///
 /// Keys as in [`JBList`], plus <kbd>→</kbd> expands a collapsed node or moves to its
-/// first child, and <kbd>←</kbd> collapses an expanded node or moves to its parent.
+/// first child, <kbd>←</kbd> collapses an expanded node or moves to its parent, and
+/// <kbd>Enter</kbd> expands or collapses a node with children (a leaf is activated).
 /// Expanding and collapsing is reported in [`CollectionResponse::toggled`]: flip your
 /// expanded state and rebuild the rows.
 ///
@@ -451,27 +360,31 @@ pub struct Tree<'a> {
     id: Id,
     name: String,
     rows: &'a [TreeNode],
-    selected: &'a mut Option<usize>,
+    selected: SelectionTarget<'a>,
     height: f32,
+    search: Option<SpeedSearch<'a>>,
+    empty: Option<StatusText>,
 }
 
 impl<'a> Tree<'a> {
-    /// A tree of the visible `rows` with a unique `id_salt`, editing `selected`.
+    /// A tree of the visible `rows` with a unique `id_salt`, editing `selected` (a
+    /// `&mut Option<usize>` or a `&mut ListSelectionModel`).
     pub fn new(
         id_salt: impl std::hash::Hash,
         rows: &'a [TreeNode],
-        selected: &'a mut Option<usize>,
+        selected: impl Into<SelectionTarget<'a>>,
     ) -> Self {
         Self {
             id: Id::new(id_salt),
             name: "Tree".into(),
             rows,
-            selected,
+            selected: selected.into(),
             height: 240.0,
+            search: None,
+            empty: None,
         }
     }
 
-    /// Visible height in points (default 240).
     /// The accessible name, e.g. "Request history" (default: "List", "Tree" or "Table").
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = name.into();
@@ -481,6 +394,19 @@ impl<'a> Tree<'a> {
     /// Visible height in points.
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
+        self
+    }
+
+    /// Lets the user type to search the visible rows (see
+    /// [`JBList::speed_search`]).
+    pub fn speed_search(mut self, search: SpeedSearch<'a>) -> Self {
+        self.search = Some(search);
+        self
+    }
+
+    /// What to show when the tree has no rows (default: "Nothing to show").
+    pub fn empty_text(mut self, text: StatusText) -> Self {
+        self.empty = Some(text);
         self
     }
 
@@ -518,27 +444,29 @@ impl<'a> Tree<'a> {
     pub fn show_with<'r>(
         self,
         ui: &mut Ui,
-        mut decorate: impl FnMut(usize, ColoredListCellRenderer<'r>) -> ColoredListCellRenderer<'r>,
+        decorate: impl FnMut(usize, ColoredListCellRenderer<'r>) -> ColoredListCellRenderer<'r>,
     ) -> CollectionResponse {
-        let rows = self.rows;
-        let (mut response, keys) = collection(
-            ui,
-            Spec {
-                id: self.id,
-                len: rows.len(),
-                height: self.height,
-                role: egui::accesskit::Role::Tree,
-                name: &self.name,
-            },
-            self.selected,
-            |ui, index, selected, focused| {
-                let tree_row = &rows[index];
+        struct TreeRows<'t, F> {
+            rows: &'t [TreeNode],
+            decorate: F,
+        }
+        impl<'r, F: FnMut(usize, ColoredListCellRenderer<'r>) -> ColoredListCellRenderer<'r>> Rows
+            for TreeRows<'_, F>
+        {
+            fn texts(&mut self, index: usize) -> Vec<String> {
+                vec![self.rows[index].search_text()]
+            }
+
+            fn row(&mut self, ui: &mut Ui, ctx: RowCtx<'_>) -> DrawnRow {
+                let tree_row = &self.rows[ctx.index];
                 let mut row = ColoredListCellRenderer::new(tree_row.label.as_str())
                     .depth(tree_row.depth)
                     .expanded(tree_row.children.then_some(tree_row.expanded))
-                    .selected(selected)
-                    .inactive(!focused)
-                    .focusable(false);
+                    .selected(ctx.selected)
+                    .inactive(!ctx.focused)
+                    .focusable(false)
+                    .joined(ctx.joined_above, ctx.joined_below)
+                    .lead(ctx.lead);
                 if let Some(icon) = tree_row.icon {
                     row = row.icon(icon);
                 }
@@ -551,58 +479,70 @@ impl<'a> Tree<'a> {
                         ui.add(crate::ui::AsyncProcessIcon::new().label(name));
                     }));
                 }
+                for (text, attributes) in &tree_row.fragments {
+                    row = row.append(text.as_str(), *attributes);
+                }
                 if let Some(secondary) = &tree_row.secondary {
                     row = row.secondary(secondary.as_str());
                 }
-                let shown = decorate(index, row).show(ui);
+                let shown = (self.decorate)(ctx.index, row).search(ctx.search).show(ui);
                 DrawnRow {
                     response: shown.response,
                     toggled: shown.toggled,
                     handled: false,
                 }
+            }
+
+            fn horizontal(&mut self, index: usize, left: bool) -> Option<TreeMove> {
+                tree_horizontal(self.rows, index, left)
+            }
+
+            fn enter_toggles(&mut self, index: usize) -> bool {
+                self.rows.get(index).is_some_and(|row| row.children)
+            }
+        }
+        let rows = self.rows;
+        let (response, _) = collection(
+            ui,
+            Spec {
+                id: self.id,
+                len: rows.len(),
+                height: self.height,
+                role: egui::accesskit::Role::Tree,
+                name: &self.name,
+                search: self.search,
+                empty: self.empty,
             },
+            self.selected,
+            &mut TreeRows { rows, decorate },
         );
-        apply_tree_key(rows, self.selected, keys.horizontal, &mut response);
         response
     }
 }
 
-/// <kbd>→</kbd>/<kbd>←</kbd> on the selected row of a tree: expand, collapse, or move to the
-/// first child or the parent.
-fn apply_tree_key(
-    rows: &[TreeNode],
-    selected: &mut Option<usize>,
-    key: Option<Key>,
-    response: &mut CollectionResponse,
-) {
-    let (Some(key), Some(index)) = (key, *selected) else {
-        return;
-    };
-    let row = &rows[index];
-    let mut select = |target: usize| {
-        if *selected != Some(target) {
-            *selected = Some(target);
-            response.selection_changed = true;
+/// <kbd>→</kbd>/<kbd>←</kbd> on the lead row of a tree: expand, collapse, or move to the first
+/// child or the parent.
+fn tree_horizontal(rows: &[TreeNode], index: usize, left: bool) -> Option<TreeMove> {
+    let row = rows.get(index)?;
+    if !left {
+        if row.children && !row.expanded {
+            return Some(TreeMove::Toggle);
         }
-    };
-    match key {
-        Key::ArrowRight if row.children && !row.expanded => response.toggled = Some(index),
-        Key::ArrowRight if row.is_expanded() => {
-            if rows
+        if row.is_expanded() {
+            return rows
                 .get(index + 1)
-                .is_some_and(|next| next.depth > row.depth)
-            {
-                select(index + 1);
-            }
+                .filter(|next| next.depth > row.depth)
+                .map(|_| TreeMove::Select(index + 1));
         }
-        Key::ArrowLeft if row.is_expanded() => response.toggled = Some(index),
-        Key::ArrowLeft => {
-            if let Some(parent) = rows[..index].iter().rposition(|r| r.depth < row.depth) {
-                select(parent);
-            }
-        }
-        _ => {}
+        return None;
     }
+    if row.is_expanded() {
+        return Some(TreeMove::Toggle);
+    }
+    rows[..index]
+        .iter()
+        .rposition(|r| r.depth < row.depth)
+        .map(TreeMove::Select)
 }
 
 /// Sort direction of a [`JBTable`] column.
@@ -779,29 +719,34 @@ pub struct JBTable<'a> {
     name: String,
     columns: &'a mut [ColumnInfo],
     len: usize,
-    selected: &'a mut Option<usize>,
+    selected: SelectionTarget<'a>,
     sort: Option<(usize, SortOrder)>,
     height: f32,
     reorderable: bool,
+    search: Option<SpeedSearch<'a>>,
+    empty: Option<StatusText>,
 }
 
 impl<'a> JBTable<'a> {
-    /// A table of `len` rows in `columns` with a unique `id_salt`, editing `selected`.
+    /// A table of `len` rows in `columns` with a unique `id_salt`, editing `selected` (a
+    /// `&mut Option<usize>` or a `&mut ListSelectionModel`).
     pub fn new(
         id_salt: impl std::hash::Hash,
         columns: &'a mut [ColumnInfo],
         len: usize,
-        selected: &'a mut Option<usize>,
+        selected: impl Into<SelectionTarget<'a>>,
     ) -> Self {
         Self {
             id: Id::new(id_salt),
             name: "Table".into(),
             columns,
             len,
-            selected,
+            selected: selected.into(),
             sort: None,
             height: 240.0,
             reorderable: false,
+            search: None,
+            empty: None,
         }
     }
 
@@ -816,6 +761,19 @@ impl<'a> JBTable<'a> {
     /// reorder your columns (and the indices your cell callback gets) with it.
     pub fn reorderable(mut self, reorderable: bool) -> Self {
         self.reorderable = reorderable;
+        self
+    }
+
+    /// Lets the user type to search the cells: a row matches when one of its cells does, and
+    /// the matching part of the cell is highlighted (see [`JBList::speed_search`]).
+    pub fn speed_search(mut self, search: SpeedSearch<'a>) -> Self {
+        self.search = Some(search);
+        self
+    }
+
+    /// What to show when the table has no rows (default: "Nothing to show").
+    pub fn empty_text(mut self, text: StatusText) -> Self {
+        self.empty = Some(text);
         self
     }
 
@@ -838,30 +796,31 @@ impl<'a> JBTable<'a> {
         ui: &mut Ui,
         mut cell: impl FnMut(usize, usize) -> Cell,
     ) -> CollectionResponse {
-        let colors = Theme::colors(ui.ctx());
-        let ctx = ui.ctx().clone();
-        let (sort_clicked, column_order) =
-            header(ui, self.id, self.columns, self.sort, self.reorderable);
-        let columns: &[ColumnInfo] = self.columns;
-        let id = self.id;
-        let mut editing = edit::Frame::new(&ctx, id);
-        let (mut response, keys) = collection(
-            ui,
-            Spec {
-                id: self.id,
-                len: self.len,
-                height: self.height,
-                role: egui::accesskit::Role::Table,
-                name: &self.name,
-            },
-            self.selected,
-            |ui, index, selected, focused| {
+        struct TableRows<'t, F> {
+            id: Id,
+            columns: &'t [ColumnInfo],
+            cell: &'t mut F,
+            editing: &'t mut edit::Frame,
+        }
+        impl<F: FnMut(usize, usize) -> Cell> Rows for TableRows<'_, F> {
+            fn texts(&mut self, index: usize) -> Vec<String> {
+                (0..self.columns.len())
+                    .map(|col| (self.cell)(index, col).text)
+                    .collect()
+            }
+
+            fn row(&mut self, ui: &mut Ui, ctx: RowCtx<'_>) -> DrawnRow {
+                let colors = Theme::colors(ui.ctx());
+                let (index, selected) = (ctx.index, ctx.selected);
                 let (rect, response) = ui.allocate_exact_size(
                     vec2(ui.available_width(), size::ROW_HEIGHT),
                     Sense::CLICK,
                 );
                 crate::cursor::on_hover(&response, CursorIcon::Default);
-                let cells: Vec<Cell> = (0..columns.len()).map(|col| cell(index, col)).collect();
+                let columns = self.columns;
+                let cells: Vec<Cell> = (0..columns.len())
+                    .map(|col| (self.cell)(index, col))
+                    .collect();
                 response.widget_info(|| {
                     let label: Vec<&str> = cells.iter().map(|c| c.text.as_str()).collect();
                     WidgetInfo::selected(
@@ -896,23 +855,37 @@ impl<'a> JBTable<'a> {
                 if (response.clicked() || response.double_clicked())
                     && let Some(col) = clicked_column()
                 {
-                    edit::set_active_column(ui.ctx(), id, col);
+                    edit::set_active_column(ui.ctx(), self.id, col);
                     if response.double_clicked() && cells[col].editable {
-                        edit::begin(ui.ctx(), id, index, col, &cells[col].text);
+                        edit::begin(ui.ctx(), self.id, index, col, &cells[col].text);
                         handled = true;
                     }
                 }
                 if ui.is_rect_visible(rect) {
                     let state = crate::parts::State::of(&response)
                         .selected(selected)
-                        .inactive(!focused);
-                    let fill = state.row_fill(&colors);
-                    common::row_pill(ui.painter(), rect, fill);
+                        .inactive(!ctx.focused);
+                    row_pill_joined(
+                        ui.painter(),
+                        rect,
+                        state.row_fill(&colors),
+                        ctx.joined_above,
+                        ctx.joined_below,
+                    );
+                    if ctx.lead {
+                        common::focus_ring(
+                            ui.painter(),
+                            rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0)).shrink(1.0),
+                            radius::ROW,
+                            &colors,
+                        );
+                    }
                     for (col, (column, cell)) in columns.iter().zip(cells).enumerate() {
-                        if editing.is_editing(index, col) {
-                            editing.show(ui, column_rects[col], column.title(), column.mono);
+                        if self.editing.is_editing(index, col) {
+                            self.editing
+                                .show(ui, column_rects[col], column.title(), column.mono);
                         } else {
-                            paint_cell(ui, column_rects[col], column, cell, selected);
+                            paint_cell(ui, column_rects[col], column, cell, selected, ctx.search);
                         }
                     }
                 }
@@ -921,13 +894,40 @@ impl<'a> JBTable<'a> {
                     toggled: false,
                     handled,
                 }
+            }
+        }
+
+        let ctx = ui.ctx().clone();
+        let (sort_clicked, column_order) =
+            header(ui, self.id, self.columns, self.sort, self.reorderable);
+        let columns: &[ColumnInfo] = self.columns;
+        let id = self.id;
+        let mut editing = edit::Frame::new(&ctx, id);
+        let (mut response, keys) = collection(
+            ui,
+            Spec {
+                id: self.id,
+                len: self.len,
+                height: self.height,
+                role: egui::accesskit::Role::Table,
+                name: &self.name,
+                search: self.search,
+                empty: self.empty,
+            },
+            self.selected,
+            &mut TableRows {
+                id,
+                columns,
+                cell: &mut cell,
+                editing: &mut editing,
             },
         );
+        let current = response.current;
         editing.finish(
             &ctx,
             &mut response,
             &keys,
-            *self.selected,
+            current,
             columns.len(),
             |row, col| {
                 let cell = cell(row, col);
@@ -938,6 +938,36 @@ impl<'a> JBTable<'a> {
         response.column_order = column_order;
         response
     }
+}
+
+/// The rounded highlight behind a row spanning `rect` (inset from the edges), in `fill`.
+/// Corners that touch a selected neighbor row (`above`, `below`) are square, so a block of
+/// selected rows reads as one shape.
+pub(super) fn row_pill_joined(
+    painter: &egui::Painter,
+    rect: Rect,
+    fill: egui::Color32,
+    above: bool,
+    below: bool,
+) {
+    if fill == egui::Color32::TRANSPARENT {
+        return;
+    }
+    let pill = rect.shrink2(vec2(size::ROW_PILL_INSET, 0.0));
+    let (top, bottom) = (
+        if above { 0 } else { radius::ROW },
+        if below { 0 } else { radius::ROW },
+    );
+    painter.rect_filled(
+        pill,
+        CornerRadius {
+            nw: top,
+            ne: top,
+            sw: bottom,
+            se: bottom,
+        },
+        fill,
+    );
 }
 
 /// A column header being dragged: the table it belongs to and its index.
@@ -1082,7 +1112,14 @@ pub(super) fn header(
     (clicked, order)
 }
 
-pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &ColumnInfo, cell: Cell, selected: bool) {
+pub(super) fn paint_cell(
+    ui: &Ui,
+    rect: Rect,
+    column: &ColumnInfo,
+    cell: Cell,
+    selected: bool,
+    search: Option<&SpeedSearchComparator>,
+) {
     let colors = Theme::colors(ui.ctx());
     let painter = ui
         .painter()
@@ -1118,6 +1155,16 @@ pub(super) fn paint_cell(ui: &Ui, rect: Rect, column: &ColumnInfo, cell: Cell, s
         );
         icons::paint(&painter, icon_rect, icon, colors.icon);
         x += icon_width;
+    }
+    // What the speed search matched, behind the text.
+    if let Some(ranges) = search.and_then(|search| search.matching_fragments(&cell.text)) {
+        crate::parts::paint_ranges(
+            &painter,
+            &galley,
+            pos2(x, rect.center().y - galley.size().y / 2.0),
+            &ranges,
+            colors.search_match,
+        );
     }
     common::text_left(&painter, rect, x, galley, color);
 }

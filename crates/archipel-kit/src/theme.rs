@@ -144,6 +144,16 @@ pub struct Colors {
     pub selection_inactive: Color32,
     /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
     pub row_hover: Color32,
+    /// Background of the part of a row text that matches the speed search
+    /// (`SimpleTextAttributes::STYLE_SEARCH_MATCH`; IntelliJ spec §3.4 `SearchMatch` Yellow7).
+    pub search_match: Color32,
+    /// Fill of the speed search popup (IntelliJ spec §3.4, §15.3 `SpeedSearch.background`).
+    pub speed_search_background: Color32,
+    /// 1 pt border of the speed search popup (IntelliJ spec §3.4 `SpeedSearch.borderColor`).
+    pub speed_search_border: Color32,
+    /// Veil over content that is loading ([`JBLoadingPanel`](crate::ui::JBLoadingPanel);
+    /// IntelliJ spec §13.7: rgba(200,200,200,240) light).
+    pub loading_veil: Color32,
     /// Fill of non-editable dropdowns.
     pub combo: Color32,
     /// Dropdown arrow.
@@ -355,6 +365,15 @@ impl Theme {
                 control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0x33353B),
                 row_hover: rgba(0xFFFFFF10),
+                // Spec §3.4 lists only the light Yellow7 (#FEE6B1); dark uses the Islands
+                // warning border (#694820, spec §15.2) so the dark text stays readable.
+                search_match: rgb(0x694820),
+                // Spec §15.3 has the light values; dark takes the tool window background and
+                // the popup border of §15.2.
+                speed_search_background: rgb(0x191A1C),
+                speed_search_border: rgb(0x33353B),
+                // Spec §13.7 gives the light veil only; dark is the island color at 240/255.
+                loading_veil: rgba(0x191A1CF0),
                 combo: rgb(0x26282C),
                 combo_arrow: rgb(0x9A9DA1),
                 clear_icon: rgb(0x676B71),
@@ -497,6 +516,10 @@ impl Theme {
                 control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0xE9EAEE),
                 row_hover: rgba(0x00000008),
+                search_match: rgb(0xFEE6B1),
+                speed_search_background: rgb(0xFFFFFF),
+                speed_search_border: rgb(0xEBECF0),
+                loading_veil: rgba(0xC8C8C8F0),
                 combo: rgb(0xFFFFFF),
                 combo_arrow: rgb(0x6E6E6E),
                 clear_icon: rgb(0xB0B4C3),

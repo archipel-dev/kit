@@ -4,9 +4,12 @@ use crate::behaviour::{Behaviour, Behaviours};
 use crate::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::ide::HelpTooltip;
-use crate::parts::{IconPainter, SimpleColoredComponent, Slot, State, Tone};
+use crate::parts::{
+    IconPainter, SimpleColoredComponent, SimpleTextAttributes, Slot, State, TextFragment, Tone,
+};
 use crate::theme::Theme;
 use crate::tokens::{opacity, popup, radius, size};
+use crate::ui::SpeedSearchComparator;
 use egui::{
     Color32, CornerRadius, Painter, Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2,
 };
@@ -83,6 +86,11 @@ pub struct ColoredListCellRenderer<'a> {
     trailing: Option<Slot<'a>>,
     trailing_on_hover: bool,
     behaviours: Behaviours<'a>,
+    fragments: Vec<TextFragment>,
+    search: Option<&'a SpeedSearchComparator>,
+    joined_above: bool,
+    joined_below: bool,
+    lead: bool,
 }
 
 impl<'a> ColoredListCellRenderer<'a> {
@@ -108,7 +116,60 @@ impl<'a> ColoredListCellRenderer<'a> {
             trailing: None,
             trailing_on_hover: false,
             behaviours: Behaviours::default(),
+            fragments: Vec::new(),
+            search: None,
+            joined_above: false,
+            joined_below: false,
+            lead: false,
         }
+    }
+
+    /// Adds a fragment of text after the label with its own [`SimpleTextAttributes`]: regular,
+    /// bold, grayed, link, error … (`SimpleColoredComponent.append`). Fragments are
+    /// searched and highlighted by a speed search together with the label.
+    ///
+    /// ```
+    /// # egui::__run_test_ui(|ui| {
+    /// use archipel_kit::parts::SimpleTextAttributes;
+    /// use archipel_kit::ui::ColoredListCellRenderer;
+    ///
+    /// ColoredListCellRenderer::new("main.rs")
+    ///     .append(" src/bin", SimpleTextAttributes::GRAYED_ATTRIBUTES)
+    ///     .append(" 2 errors", SimpleTextAttributes::ERROR_ATTRIBUTES)
+    ///     .show(ui);
+    /// # });
+    /// ```
+    pub fn append(mut self, text: impl Into<String>, attributes: SimpleTextAttributes) -> Self {
+        self.fragments.push(TextFragment::new(text, attributes));
+        self
+    }
+
+    /// The label, as the text a speed search matches against together with the fragments.
+    pub fn search_text(&self) -> String {
+        let mut text = self.label.clone();
+        for fragment in &self.fragments {
+            text.push_str(&fragment.text);
+        }
+        text
+    }
+
+    /// Highlights what `search` matches in the label and the fragments.
+    pub(crate) fn search(mut self, search: Option<&'a SpeedSearchComparator>) -> Self {
+        self.search = search;
+        self
+    }
+
+    /// Squares the corners of the selection pill that touch a selected neighbor row.
+    pub(crate) fn joined(mut self, above: bool, below: bool) -> Self {
+        self.joined_above = above;
+        self.joined_below = below;
+        self
+    }
+
+    /// The keyboard's lead row: outlined when it is not selected.
+    pub(crate) fn lead(mut self, lead: bool) -> Self {
+        self.lead = lead;
+        self
     }
 
     /// Content at the right end of the row: a count, a status, an icon, or widgets such as
@@ -304,14 +365,15 @@ impl<'a> ColoredListCellRenderer<'a> {
                 WidgetType::SelectableLabel,
                 self.enabled,
                 self.selected,
-                &self.label,
+                self.search_text(),
             );
             if let Some(secondary) = &self.secondary {
-                info.label = Some(format!("{} {secondary}", self.label));
+                info.label = Some(format!("{} {secondary}", self.search_text()));
             }
             info
         });
 
+        let search_text = self.search_text();
         let mut toggled = false;
         let mut elided = false;
         // Measured on Android Studio: the pill is inset 12 pt (popup lists: as menu items);
@@ -380,7 +442,18 @@ impl<'a> ColoredListCellRenderer<'a> {
             } else {
                 state.row_fill(&colors)
             };
-            let corner = CornerRadius::same(radius::ROW);
+            // Neighbors that are selected too join into one block: only its outer corners
+            // are round.
+            let (top, bottom) = (
+                if self.joined_above { 0 } else { radius::ROW },
+                if self.joined_below { 0 } else { radius::ROW },
+            );
+            let corner = CornerRadius {
+                nw: top,
+                ne: top,
+                sw: bottom,
+                se: bottom,
+            };
             if fill != Color32::TRANSPARENT {
                 painter.rect_filled(pill, corner, fill);
             }
@@ -392,7 +465,7 @@ impl<'a> ColoredListCellRenderer<'a> {
                     tone.color(&colors).gamma_multiply(opacity::ROW_TINT),
                 );
             }
-            if response.has_focus() && !self.selected {
+            if (response.has_focus() || self.lead) && !self.selected {
                 common::focus_ring(painter, pill.shrink(1.0), radius::ROW, &colors);
             }
             if let Some(expanded) = self.expanded {
@@ -419,6 +492,10 @@ impl<'a> ColoredListCellRenderer<'a> {
                 .trailing
                 .as_ref()
                 .map_or(0.0, |slot| slot.width(ui) + size::ROW_TRAILING_GAP);
+            let matches = self
+                .search
+                .and_then(|search| search.matching_fragments(&search_text))
+                .unwrap_or_default();
             let content = SimpleColoredComponent {
                 icon: self.icon,
                 icon_tone: self.icon_tone,
@@ -428,6 +505,8 @@ impl<'a> ColoredListCellRenderer<'a> {
                 strong: self.strong,
                 secondary: self.secondary.as_deref(),
                 reserve_right,
+                fragments: &self.fragments,
+                matches: &matches,
                 ..SimpleColoredComponent::default()
             };
             elided = content.paint(ui, pill, x, state);

@@ -11,6 +11,11 @@ pub(super) struct State {
     column_order: Vec<usize>,
     requests: std::collections::HashMap<usize, String>,
     documents: Documents,
+    files: archipel_kit::ui::ListSelectionModel,
+    search: archipel_kit::ui::SpeedSearchState,
+    filter_search: bool,
+    advanced_collapsed: bool,
+    loading: bool,
 }
 
 impl Default for State {
@@ -31,6 +36,11 @@ impl Default for State {
             column_order: vec![0, 1, 2, 3],
             requests: Default::default(),
             documents: Documents::new(),
+            files: archipel_kit::ui::ListSelectionModel::multiple(),
+            search: archipel_kit::ui::SpeedSearchState::new(),
+            filter_search: false,
+            advanced_collapsed: true,
+            loading: false,
         }
     }
 }
@@ -225,6 +235,51 @@ impl State {
         if let Some(new) = out.column_order {
             self.columns = new.iter().map(|&i| self.columns[i].clone()).collect();
             self.column_order = new.iter().map(|&i| order[i]).collect();
+        }
+        ui.add(TitledSeparator::new(
+            "Several rows and speed search (type to search)",
+        ));
+        {
+            use archipel_kit::ui::{CollapsiblePanel, JBList, JBLoadingPanel, SpeedSearch};
+            const FILES: [&str; 8] = [
+                "Cargo.toml",
+                "README.md",
+                "NullPointerException.java",
+                "docs",
+                "readme.txt",
+                "src",
+                "tests",
+                "target",
+            ];
+            ui.horizontal(|ui| {
+                ui.add(JBCheckBox::new(&mut self.filter_search, "Filter rows"));
+                ui.add(JBCheckBox::new(&mut self.loading, "Loading"));
+            });
+            ui.add_enabled_ui(enabled, |ui| {
+                JBLoadingPanel::new("gallery-loading", self.loading)
+                    .start_delay_ms(300)
+                    .text("Loading files…")
+                    .show(ui, |ui| {
+                        JBList::new("gallery-files", FILES.len(), &mut self.files)
+                            .name("Files")
+                            .height(144.0)
+                            .speed_search(
+                                SpeedSearch::new(&mut self.search).filter(self.filter_search),
+                            )
+                            .show(ui, |i| {
+                                ColoredListCellRenderer::new(FILES[i])
+                                    .icon(Icon::for_file(FILES[i]))
+                            });
+                    });
+                let mut none = None;
+                JBList::new("gallery-empty", 0, &mut none)
+                    .height(64.0)
+                    .empty_text(StatusText::text("No results. ").link("Reset filters"))
+                    .show(ui, |_| ColoredListCellRenderer::new("never"));
+                CollapsiblePanel::new("Advanced", &mut self.advanced_collapsed).show(ui, |ui| {
+                    ui.label(format!("{} files selected", self.files.len()));
+                });
+            });
         }
         ui.add(TitledSeparator::new(
             "Tree table: 100 000 rows, inline edit",
