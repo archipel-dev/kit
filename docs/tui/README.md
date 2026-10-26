@@ -55,7 +55,7 @@ bundled themes and editor schemes give a consistent terminal look.
 | `HelpTooltip` | An LSP hover float: raised surface, thin rounded border, title, shortcut and description |
 | Notification balloons | nvim-notify floats in the top-right corner with a rounded border in the severity color |
 | Pending two-stroke shortcut | A which-key list at the bottom with the keys that complete the chord |
-| Editor area | A number column in grey with the current line bright, the cursor line on `black2`, indent guides as thin `│` in the `line` color; a dashboard (nvdash style) when no file is open |
+| `EditorComponent` | A sign column, a number column in grey with the current line bright, the cursor line on `black2`, indent guides as thin `│` in the `line` color, the selection as cell backgrounds, the caret as the terminal cursor, diagnostics as undercurl, find as a prompt row, completion as nvim-cmp; a dashboard (nvdash style) when no file is open |
 | Buttons | A filled label with one cell of padding; the mnemonic underlined; focus shows `❯ … ❮` |
 | `InlineBanner` | One row: an edge in the severity color, icon and text, actions as bold links |
 
@@ -221,6 +221,7 @@ input, an interactive counterpart with the GUI's name and rules.
 | `NotificationsManager` | `balloon` | nvim-notify balloons with the GUI timings |
 | `DialogWrapper`, `Messages` | `dialog` | Enter, Esc, Left/Right, Y/N, validation |
 | `InlineBanner` | `components`, `controls` | |
+| `EditorComponent` | `editor` | the GUI editor's model, keymap, find and completion; see [The code editor](#the-code-editor) |
 
 ### Panes, buttons and choices
 
@@ -286,6 +287,188 @@ character, and a test checks that none is missing.
 
 <img alt="Language logos, symbols and glyphs" src="img/icons.dark.svg" width="605"> <img alt="Icons, light" src="img/icons.light.svg" width="605">
 
+## The code editor
+
+`editor::EditorComponent` is the GUI's `EditorComponent` for the terminal. It runs on the
+**same model** (`archipel_kit::editor::model::Editor`: document, carets, undo, folding, scroll
+math, search), so it behaves exactly like the GUI editor, which behaves like the IntelliJ
+editor: every key goes through `input::key_stroke` and the GUI keymap
+(`model::editor_action_for`) to an `EditorAction` and `Editor::execute`; typed text is
+`EditorAction::Type`; the clipboard, the mouse and the find bar call the same model functions as
+the GUI. It looks like NvChad.
+
+```rust
+use archipel_kit::editor::model::Editor;
+use archipel_kit_tui::editor::{CodeHighlighter, EditorComponent, EditorState};
+use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect};
+use archipel_kit_tui::{Event, Id, Runtime};
+
+const CODE: Id = Id::new("code");
+
+struct File {
+    editor: Editor,
+    state: EditorState,
+    highlighter: CodeHighlighter,
+}
+
+impl File {
+    fn event(&mut self, rt: &mut Runtime, event: &Event) {
+        let out = EditorComponent::new(CODE, &mut self.editor)
+            .highlighter(&self.highlighter)
+            .handle(rt, &mut self.state, event);
+        if out.text_changed { /* mark the tab modified */ }
+    }
+
+    fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) {
+        EditorComponent::new(CODE, &mut self.editor)
+            .highlighter(&self.highlighter)
+            .show(rt, &mut self.state, area, buf);
+    }
+}
+```
+
+`EditorState` keeps what only the view knows: the scroll position, the find bar and its
+history, a mouse gesture in progress, the completion menu, a hint. The options are the GUI's:
+`viewer`, `line_numbers`, `wrap` (soft wrap), `folding`, `show_whitespace`, `indent_guides`,
+`right_margin`, `gutter_icons`, `change_markers`, `highlights`, `completer`,
+`gutter_click_selects_line`, plus `virtual_text` and `scrollbar`. Any `SyntaxHighlighter` of the
+GUI kit colors the text with the theme's editor scheme in 24-bit color; `CodeHighlighter` is a
+small one for Rust, Markdown and TOML. `editor::cursor_position` gives `Ln, Col` for the status
+line.
+
+<img alt="The editor: syntax, cursor line, indent guides, sign column, breakpoint, right margin" src="img/editor.dark.svg" width="538"> <img alt="Editor, light" src="img/editor.light.svg" width="538">
+
+What it draws:
+
+- **Gutter**: the sign column (`▎` in green, blue and red for added, modified and deleted lines,
+  breakpoint and bookmark icons in their tone), the number column in grey with the caret lines
+  bright and bold, the fold markers (chevrons), then the text.
+- **Text**: the cursor line on `black2`; the selection as cell backgrounds on `one_bg3` (no
+  rounding; `one_bg2` without focus); search matches, occurrences of the selected word and the
+  matched brace in the scheme's colors; indent guides `│` in the `line` color (the guide of the
+  caret's block in the scheme's selected-guide color); whitespace as `·` and `→`; the right
+  margin column tinted; a collapsed region as a `{…}` pill.
+- **Carets**: the primary caret is the real terminal cursor, a bar while inserting and a block
+  in overwrite mode (DECSCUSR; the shape is restored on exit). Other carets are reversed cells.
+- **Diagnostics**: `highlights` are underlined in the severity color with SGR `4:3` (undercurl)
+  and color `58` where the terminal has them (`runtime::detect_undercurl`, override with
+  `ARCHIPEL_UNDERCURL=0/1`), a plain colored underline elsewhere; the message can follow the
+  line as virtual text. A one-cell scrollbar column shows the thumb and a mark per highlight and
+  find match, like the GUI's error stripe.
+
+<img alt="Multiple carets: the primary is the terminal cursor, the others reversed cells" src="img/editor-carets.dark.svg" width="538"> <img alt="Carets, light" src="img/editor-carets.light.svg" width="538">
+
+<img alt="A column selection made with Alt+drag" src="img/editor-column.dark.svg" width="538"> <img alt="Column selection, light" src="img/editor-column.light.svg" width="538">
+
+<img alt="A collapsed region as a pill and fold markers in the gutter" src="img/editor-folded.dark.svg" width="538"> <img alt="Folding, light" src="img/editor-folded.light.svg" width="538">
+
+<img alt="Diagnostics as undercurl, virtual text and scrollbar marks" src="img/editor-diagnostics.dark.svg" width="538"> <img alt="Diagnostics, light" src="img/editor-diagnostics.light.svg" width="538">
+
+### Keys
+
+All keys are the GUI editor's (`docs/editor-model.md` has the keymap). A legacy terminal cannot
+send some of them, so the editor also understands fallbacks; they work in kitty-protocol
+terminals too. The `Ctrl+K` chords are in `input::terminal_keymap`, so which-key lists them
+after Ctrl+K.
+
+| Action | GUI shortcut | Terminal fallback |
+|---|---|---|
+| Extend / shrink selection | Ctrl+W / Ctrl+Shift+W | Alt+Up / Alt+Down, or Ctrl+K then E / Shift+E (Ctrl+W is the window leader) |
+| Move line up / down | Alt+Shift+Up / Down | Ctrl+K then Up / Down |
+| Move statement up / down | Ctrl+Shift+Up / Down | Ctrl+K then Shift+Up / Shift+Down |
+| Select next occurrence / unselect | Alt+J / Alt+Shift+J | Ctrl+K then S / Shift+S (Option+J types a symbol on macOS) |
+| Select all occurrences | Ctrl+Alt+Shift+J | Ctrl+K then L |
+| Clone caret above / below | double Ctrl + Up / Down | Ctrl+K then Ctrl+Up / Ctrl+Down |
+| Add carets to selected lines | Alt+Shift+G | Ctrl+K then G |
+| Column selection mode | Alt+Shift+Insert | Ctrl+K then C |
+| Start new line before | Ctrl+Alt+Enter | Ctrl+K then O |
+| Split line | Ctrl+Enter | Ctrl+J (what a legacy terminal sends for Ctrl+Enter) |
+| Join lines | Ctrl+Shift+J | Ctrl+K then J |
+| Toggle case | Ctrl+Shift+U | Ctrl+K then U |
+| Move to matching brace | Ctrl+Shift+M | Ctrl+K then M |
+| Code block start / end (with Shift: select) | Ctrl+[ / Ctrl+] | Ctrl+K then [ / ] (Ctrl+[ is Escape) |
+| Comment with line comment | Ctrl+/ | Ctrl+7 (what a legacy terminal sends for Ctrl+/) |
+| Comment with block comment | Ctrl+Shift+/ | Ctrl+K then / |
+| Delete to word start | Ctrl+Backspace | Ctrl+H (what some terminals send) |
+| Expand / collapse region | Ctrl++ / Ctrl+- | Ctrl+K then = / - (Alt: recursively, Shift: all) |
+| Paste without formatting | Ctrl+Alt+Shift+V | Ctrl+K then V |
+| Redo | Ctrl+Shift+Z | Ctrl+K then Z |
+| Completion | Ctrl+Space | none needed |
+
+Paste arrives as the terminal's bracketed paste and goes through `EditorAction::Paste`; text
+copied with an empty selection (whole lines) is pasted above the caret line, also when it comes
+back through the terminal's paste. Copy and Cut publish with OSC 52. Escape that has nothing to
+clear (one caret, no selection, no find bar, no menu) is not consumed, so the app can use it.
+
+### Mouse
+
+| Gesture | Effect |
+|---|---|
+| Click, double click, triple click | caret, word, line |
+| Drag | selects; beyond the edge the view autoscrolls on the GUI's timer (call `tick` and use `EditorState::deadline`) |
+| Shift+click | extends the selection, by words or lines after a double or triple click |
+| Alt+drag, middle drag | column selection (where the terminal reports Alt) |
+| Alt+Shift+click | adds a caret, or removes the one there |
+| Ctrl+click (Cmd on macOS) | reported as a `NavigationRequest` |
+| Middle click | pastes the mouse selection (Linux) |
+| Wheel, Shift+wheel | scrolls three rows, four columns sideways |
+| Click on a collapsed `{…}` | expands it |
+| Line number | a click is reported as a `GutterClick`, a drag selects lines (with `gutter_click_selects_line`, the click selects the line); Shift+click extends by lines |
+| Fold marker | toggles the region (Alt: with the nested ones) |
+| Gutter icon | reported as a `GutterClick` |
+| Scrollbar column | a click on a mark moves the caret there and centers it; elsewhere it scrolls there |
+| Right press | moves the caret unless it is in the selection; `context_menu` says where |
+
+### Find and replace
+
+Ctrl+F opens the find bar (a single-line selection becomes the query, a multi-line selection the
+scope), Ctrl+R the replace row. It is an NvChad prompt row at the top of the editor: a colored
+title pill, the prompt, the `n/m` status, the Match Case, Words and Regex toggles (Alt+C, Alt+W,
+Alt+X), previous, next and close. Typing selects the first match from the caret (the current
+match is the selection); clearing the query puts the carets and the view back. Enter, Down and
+F3 go to the next match, Shift+Enter, Up and Shift+F3 to the previous one; past the last match
+the first press shows a hint, the second wraps. Enter in the replace field replaces and selects
+the next match, Alt+A replaces all as one undo step, Alt+P preserves case. Alt+Enter selects all
+matches with one caret each, Ctrl+Enter (Ctrl+J in a legacy terminal) remembers the query and
+goes back to the text, Tab moves between the fields, Alt+Down opens the history of queries,
+Escape closes the bar.
+
+<img alt="The find and replace bar as a prompt row" src="img/editor-find.dark.svg" width="538"> <img alt="Find and replace, light" src="img/editor-find.light.svg" width="538">
+
+### Completion
+
+With a `completer` (the kit's `Completer` trait), typing opens an nvim-cmp style menu under the
+caret: a kind icon, the label with the typed characters highlighted, the detail in grey, the
+selected row in the accent. Up and Down move and wrap, PageUp and PageDown jump, Enter inserts,
+Tab replaces the identifier after the caret too, Escape closes, a click picks. A completion is
+one undo step.
+
+<img alt="The completion menu" src="img/editor-completion.dark.svg" width="538"> <img alt="Completion, light" src="img/editor-completion.light.svg" width="538">
+
+### In the IDE example
+
+<img alt="The IDE with the editor and the find bar" src="img/ide-editor.dark.svg" width="840"> <img alt="IDE editor, light" src="img/ide-editor.light.svg" width="840">
+
+Files from the project tree open in editor tabs; the tab shows the modified dot until Ctrl+S;
+the status line shows `Ln, Col` of the primary caret and the mode block says `EDIT`, or `VIEW`
+with the toolbar's Read-Only toggle.
+
+### Differences from the GUI editor
+
+- **Cells, not pixels.** A click goes to the cell's position (the first half of a wide character
+  is before it); a drag starts as soon as the pointer leaves the cell. Columns are cells: tabs
+  go to tab stops and wide characters take two, while the model counts them as one column for
+  Up and Down.
+- **No animation and no blinking**: scrolling jumps; the terminal draws the cursor.
+- **Soft wrap** breaks at the last cell, not at word boundaries.
+- **No hover**: the rest tooltips, the fold preview and drag and drop of a selection are left
+  out. The selection keeps its fill without rounded corners.
+- **The find query is one line**: Ctrl+Shift+Enter (a line break in the query) is not there.
+- **Some keys need a fallback** (above); Ctrl+W is the terminal's window leader in the IDE, so
+  extend selection is Alt+Up or Ctrl+K then E there.
+- **The terminal decides** whether Alt and Shift reach the mouse, whether undercurl shows, and
+  how the cursor looks.
+
 ## Terminal limits
 
 - **Keys**: legacy terminals send Ctrl+Shift+letter as Ctrl+letter, no Ctrl+Tab, no Ctrl+digit,
@@ -296,7 +479,8 @@ character, and a test checks that none is missing.
   terminals keep Shift+drag for their own selection.
 - **Clipboard**: copy uses OSC 52 (kitty, WezTerm, iTerm2, Ghostty, Alacritty, Windows Terminal,
   tmux with `set-clipboard on`); paste arrives through the terminal's own paste.
-- **Cursor and focus**: the caret is a drawn block; focus events need terminal support, without
+- **Cursor and focus**: text fields draw their caret as a block; the editor uses the real
+  terminal cursor (`Runtime::set_cursor`); focus events need terminal support, without
   them balloon timers run while the window is in the background.
 - **Fonts**: icons need a Nerd Font.
 
@@ -324,8 +508,6 @@ assert_eq!(lines(&buf), ["  OK"]);
 
 ## What is next
 
-- The terminal editor component on the kit's `editor::model::Editor` (the read-only `TextArea`
-  is a placeholder).
 - Backend-agnostic kit modules so the TUI reuses more of the GUI's logic (see the extraction list
   in the TUI hand-off notes): popup chain, notification timers, speed search over rows, tool window
   pane model.

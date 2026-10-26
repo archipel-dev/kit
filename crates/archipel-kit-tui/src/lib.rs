@@ -31,8 +31,9 @@
 //!   Font in the terminal; JetBrainsMono Nerd Font matches the GUI's code font.
 //!
 //! The interactive layer: [`runtime`] (event loop, keymap dispatch, focus, hit map, layers),
-//! and the components in [`controls`], [`collections`], [`popup`], [`workbench`] and
-//! [`overlay`]. The guide with images is `docs/tui/README.md`.
+//! and the components in [`controls`], [`collections`], [`popup`], [`workbench`],
+//! [`overlay`] and [`editor`] (the code editor on the GUI editor's model). The guide with
+//! images is `docs/tui/README.md`.
 
 pub mod balloon;
 pub mod clipboard;
@@ -42,6 +43,7 @@ pub mod components;
 pub mod controls;
 pub mod dashboard;
 pub mod dialog;
+pub mod editor;
 pub mod focus;
 pub mod glyphs;
 pub mod hit;
@@ -66,6 +68,7 @@ pub use archipel_icons::{Glyph, Language, Symbol, SymbolKind};
 #[doc = include_str!("../../../docs/tui/README.md")]
 struct TuiGuide;
 pub use archipel_kit::Theme;
+pub use editor::{EditorComponent, EditorOutput, EditorState};
 pub use hit::{HitMap, Id};
 pub use input::{Caps, Event};
 pub use palette::{Mode, NvChadPalette};
