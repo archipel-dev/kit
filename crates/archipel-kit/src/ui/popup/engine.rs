@@ -489,7 +489,9 @@ pub(crate) fn drive(
         let level_id = id.with(("level", depth));
         let pos = level_position(ctx, level_id, depth, chain, placement, screen);
         let max_height = match placement {
-            Placement::Combo { max_rows, .. } if depth == 0 => max_rows as f32 * size::ROW_HEIGHT,
+            Placement::Combo { max_rows, .. } if depth == 0 => {
+                max_rows as f32 * crate::tokens::metrics(ctx).popup_row_height
+            }
             _ => (screen.bottom() - pos.y - popup::PADDING).max(160.0),
         };
         let min_width = match placement {
@@ -575,7 +577,9 @@ pub(crate) fn drive(
                         crate::common::text_left(
                             ui.painter(),
                             rect,
-                            rect.left() + popup::ITEM_INSET + popup::ITEM_PADDING,
+                            rect.left()
+                                + crate::tokens::metrics(ui.ctx()).popup_item_inset
+                                + crate::tokens::metrics(ui.ctx()).popup_item_padding,
                             galley,
                             colors.text,
                         );
@@ -614,7 +618,7 @@ pub(crate) fn drive(
                                     && response.rect.contains(p)
                                     && p.x
                                         >= response.rect.right()
-                                            - popup::ITEM_INSET
+                                            - crate::tokens::metrics(ui.ctx()).popup_item_inset
                                             - popup::CHEVRON_HIT
                                 {
                                     chevron_pressed = Some(row_index);
@@ -815,7 +819,9 @@ fn handle_keys(
         return true;
     }
     let mut used = false;
-    let page = ((ctx.content_rect().height() / size::ROW_HEIGHT) as isize - 2).max(1);
+    let page =
+        ((ctx.content_rect().height() / crate::tokens::metrics(ctx).popup_row_height) as isize - 2)
+            .max(1);
     let moves: [(Key, isize, bool); 4] = [
         (Key::ArrowDown, 1, true),
         (Key::ArrowUp, -1, true),

@@ -121,7 +121,8 @@ def emit_index(ui_themes, scheme_specs, meta):
     for theme in ui_themes:
         out.append(f"mod ui_{theme['id']};\n")
     out.append("\nuse super::Theme;\n")
-    out.append("use super::catalog::{EditorScheme, ThemeInfo, UiEntry, build};\n\n")
+    out.append("use super::catalog::{EditorScheme, ThemeInfo, UiEntry, build};\n")
+    out.append("use crate::look::UiLook;\n\n")
     out.append("pub(super) static UI: &[UiEntry] = &[\n")
     for theme in ui_themes:
         out.append(
@@ -134,15 +135,15 @@ def emit_index(ui_themes, scheme_specs, meta):
     out.append("];\n\n")
     out.append("pub(super) static THEMES: &[ThemeInfo] = &[\n")
     entries = [
-        ("archipel_dark", "Archipel Dark", True, "dark"),
-        ("archipel_light", "Archipel Light", False, "light"),
+        ("archipel_dark", "Archipel Dark", True, "dark", "Islands"),
+        ("archipel_light", "Archipel Light", False, "light", "Islands"),
     ]
     for theme in ui_themes:
-        entries.append((theme["id"], theme["name"], theme["dark"], theme["ctor"]))
-    for ident, name, dark, ctor in entries:
+        entries.append((theme["id"], theme["name"], theme["dark"], theme["ctor"], theme["look"]))
+    for ident, name, dark, ctor, look in entries:
         out.append(
             f"    ThemeInfo {{ id: {lit_str(ident)}, name: {lit_str(name)}, "
-            f"dark: {'true' if dark else 'false'}, constructor: Theme::{ctor} }},\n"
+            f"dark: {'true' if dark else 'false'}, constructor: Theme::{ctor}, look: UiLook::{look} }},\n"
         )
     out.append("];\n\nimpl Theme {\n")
     for theme in ui_themes:

@@ -18,6 +18,8 @@ pub mod size {
     pub const ROW_INSET: f32 = 12.0;
     /// Space between a tree row's expander column and its icon.
     pub const CHEVRON_GAP: f32 = 5.0;
+    /// Edge of the Classic look's triangle expander (the classic tree icons' arrow).
+    pub const CLASSIC_EXPANDER: f32 = 8.0;
     /// Width of the expander column; leaf rows reserve it too, so icons align.
     pub const CHEVRON_COLUMN: f32 = 16.0;
     /// Icon edge length.
@@ -31,6 +33,9 @@ pub mod size {
     pub const HEADER_HEIGHT: f32 = 40.0;
     /// Shared main toolbar / integrated window title height.
     pub const WINDOW_TOOLBAR_HEIGHT: f32 = 40.0;
+    /// Space at both sides of a Classic menu bar item's title (looks spec §2.2, estimated:
+    /// the classic `MenuBar` items' insets).
+    pub const MENU_BAR_ITEM_PADDING: f32 = 8.0;
     /// macOS native traffic-light region, including the gap before app content.
     pub const NATIVE_WINDOW_CONTROLS: f32 = 80.0;
     /// Square icon button edge: actions in island headers and toolbars inside islands
@@ -265,6 +270,9 @@ pub mod size {
     pub const HELP_TOOLTIP_MAX_WIDTH: f32 = 250.0;
     /// Gap between the parts of a help tooltip: title, description, link.
     pub const HELP_TOOLTIP_GAP: f32 = 6.0;
+    /// How far below the pointer a tooltip goes when it fits beside its owner nowhere: past
+    /// the arrow cursor, so it never covers the pointer.
+    pub const TOOLTIP_POINTER_CLEARANCE: f32 = 20.0;
     /// Edge of the external-link icon after a help tooltip's link.
     pub const HELP_TOOLTIP_LINK_ICON: f32 = 12.0;
     /// Widest text of a got-it tooltip (IntelliJ spec section 11.2).
@@ -366,6 +374,9 @@ pub mod tab {
     pub const CONTENT_GAP: f32 = 10.0;
     /// Radius of the round hover behind the close button.
     pub const CLOSE_HOVER_RADIUS: f32 = 9.0;
+    /// Underline of a selected tool window header tab in the New UI and Classic looks
+    /// (`ToolWindow.HeaderTab.underlineHeight` 3, looks spec §2.3).
+    pub const HEADER_UNDERLINE: f32 = 3.0;
     /// Space between the island's left edge and the first tab's pill, at rest. It scrolls
     /// away with the tabs when they overflow.
     pub const STRIP_INSET: f32 = 6.0;
@@ -776,6 +787,9 @@ pub mod editor {
     pub const FOLD_ICON: f32 = 9.0;
     /// Width of the fold column: the chevron and its click target (the kit's measured 16).
     pub const FOLD_COLUMN: f32 = 16.0;
+    /// Edge of the Classic look's square folding anchor (`min(4, lineHeight / 2 - 2) * 2`,
+    /// looks spec §2.12).
+    pub const FOLD_ANCHOR: f32 = 9.0;
     /// Thickness of the ring inside a fold placeholder (`FOLDED_TEXT_BORDER_COLOR`).
     pub const FOLD_BORDER: f32 = 2.0;
     /// The line numbers' font is the editor font reduced by this
@@ -858,4 +872,11 @@ pub mod lookup {
     /// How long the selected item rests before its documentation shows by itself, when the
     /// completer asks for that (`JAVADOC_INFO_DELAY`, editor spec §9: 500 ms).
     pub const DOC_DELAY: f32 = 0.5;
+}
+
+/// The sizes of the current [`UiLook`](crate::look::UiLook) and density of `ctx`: the values
+/// the constants above hold for Islands, resolved for New UI, Classic and compact mode (see
+/// `docs/looks.md`). Components read this where a value differs between looks.
+pub fn metrics(ctx: &egui::Context) -> crate::look::Metrics {
+    crate::look::Metrics::of(ctx)
 }

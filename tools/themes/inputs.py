@@ -19,20 +19,22 @@ PLUGIN_THEME_ROOTS = {
 # Shipped UI themes. `id` is the kit id (kebab case, also the Rust module name); `provider`
 # the IntelliJ theme id (what `parentTheme` refers to); `ctor` the `Theme` constructor.
 # `scheme` is the kit id of the editor scheme the theme selects (`editorScheme` in its JSON,
-# or the platform default scheme of its brightness when it names none).
+# or the platform default scheme of its brightness when it names none). `look` is the
+# `UiLook` the theme belongs to (`targetUi`: classic themes, the New UI `expUI` themes, the
+# Islands themes); it is a suggestion for pickers, the application decides the look.
 UI_THEMES = [
-    dict(id="islands_dark", provider="Islands Dark", ctor="islands_dark", name="Islands Dark"),
-    dict(id="islands_light", provider="Islands Light", ctor="islands_light", name="Islands Light"),
-    dict(id="islands_darcula", provider="Islands Darcula", ctor="islands_darcula", name="Islands Darcula"),
-    dict(id="high_contrast", provider="JetBrainsHighContrastTheme", ctor="high_contrast", name="High Contrast"),
-    dict(id="new_ui_dark", provider="ExperimentalDark", ctor="new_ui_dark", name="New UI Dark"),
-    dict(id="new_ui_light", provider="ExperimentalLight", ctor="new_ui_light", name="New UI Light"),
-    dict(id="light_with_light_header", provider="ExperimentalLightWithLightHeader", ctor="light_with_light_header", name="Light with Light Header"),
-    dict(id="darcula", provider="Darcula", ctor="darcula", name="Darcula"),
-    dict(id="intellij_light", provider="JetBrainsLightTheme", ctor="intellij_light", name="IntelliJ Light"),
-    dict(id="classic_high_contrast", provider="HighContrastClassic", ctor="classic_high_contrast", name="High Contrast (Classic)", scheme="classic_high_contrast"),
-    dict(id="macos_light", provider="macOSLight", ctor="macos_light", name="macOS Light"),
-    dict(id="windows10_light", provider="win10Light", ctor="windows10_light", name="Windows 10 Light"),
+    dict(id="islands_dark", provider="Islands Dark", ctor="islands_dark", name="Islands Dark", look="Islands"),
+    dict(id="islands_light", provider="Islands Light", ctor="islands_light", name="Islands Light", look="Islands"),
+    dict(id="islands_darcula", provider="Islands Darcula", ctor="islands_darcula", name="Islands Darcula", look="Islands"),
+    dict(id="high_contrast", provider="JetBrainsHighContrastTheme", ctor="high_contrast", name="High Contrast", look="Islands"),
+    dict(id="new_ui_dark", provider="ExperimentalDark", ctor="new_ui_dark", name="New UI Dark", look="NewUi"),
+    dict(id="new_ui_light", provider="ExperimentalLight", ctor="new_ui_light", name="New UI Light", look="NewUi"),
+    dict(id="light_with_light_header", provider="ExperimentalLightWithLightHeader", ctor="light_with_light_header", name="Light with Light Header", look="NewUi"),
+    dict(id="darcula", provider="Darcula", ctor="darcula", name="Darcula", look="Classic"),
+    dict(id="intellij_light", provider="JetBrainsLightTheme", ctor="intellij_light", name="IntelliJ Light", look="Classic"),
+    dict(id="classic_high_contrast", provider="HighContrastClassic", ctor="classic_high_contrast", name="High Contrast (Classic)", scheme="classic_high_contrast", look="Classic"),
+    dict(id="macos_light", provider="macOSLight", ctor="macos_light", name="macOS Light", look="Classic"),
+    dict(id="windows10_light", provider="win10Light", ctor="windows10_light", name="Windows 10 Light", look="Classic"),
 ]
 
 # Editor color schemes: kit id, IntelliJ scheme name (what `parent_scheme` and

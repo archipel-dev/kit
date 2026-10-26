@@ -35,7 +35,7 @@ pub use glow::project_glow;
 pub use row::{IconPainter, SimpleColoredComponent};
 pub use scroll::ScrollBar;
 pub use slot::Slot;
-pub use state::{State, focus_ring, row_pill};
+pub use state::{State, fill_gradient, focus_ring, paint_expander, row_pill};
 pub use surface::{Surface, desktop, scroll_vertical};
 pub use text_attributes::{SimpleTextAttributes, TextFragment};
 pub(crate) use text_attributes::{layout_run, paint_ranges};

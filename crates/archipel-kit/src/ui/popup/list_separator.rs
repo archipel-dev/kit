@@ -59,7 +59,8 @@ impl Widget for ListSeparator {
                 ui.allocate_exact_size(vec2(width, popup::SEPARATOR_HEIGHT), Sense::hover());
             // As in Android Studio: inset like the item pills, in the popup's border color.
             ui.painter().hline(
-                (rect.left() + popup::ITEM_INSET)..=(rect.right() - popup::ITEM_INSET),
+                (rect.left() + crate::tokens::metrics(ui.ctx()).popup_item_inset)
+                    ..=(rect.right() - crate::tokens::metrics(ui.ctx()).popup_item_inset),
                 rect.top() + (popup::SEPARATOR_HEIGHT / 2.0).floor() + 0.5,
                 Stroke::new(1.0_f32, colors.popup_border),
             );
@@ -70,7 +71,8 @@ impl Widget for ListSeparator {
             title.as_str(),
             typography::semibold(ui.ctx(), typography::BODY),
         );
-        let x = popup::ITEM_INSET + popup::ITEM_PADDING;
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let x = metrics.popup_item_inset + metrics.popup_item_padding;
         let width = ui.available_width().max(galley.size().x + 2.0 * x);
         common::menu_rows(ui);
         let (rect, response) =

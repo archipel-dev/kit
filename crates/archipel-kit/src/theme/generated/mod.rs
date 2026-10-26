@@ -36,6 +36,7 @@ mod ui_windows10_light;
 
 use super::Theme;
 use super::catalog::{EditorScheme, ThemeInfo, UiEntry, build};
+use crate::look::UiLook;
 
 pub(super) static UI: &[UiEntry] = &[
     UiEntry { data: &ui_islands_dark::DATA, colors: ui_islands_dark::colors },
@@ -74,20 +75,20 @@ pub(super) static SCHEMES: &[EditorScheme] = &[
 ];
 
 pub(super) static THEMES: &[ThemeInfo] = &[
-    ThemeInfo { id: "archipel_dark", name: "Archipel Dark", dark: true, constructor: Theme::dark },
-    ThemeInfo { id: "archipel_light", name: "Archipel Light", dark: false, constructor: Theme::light },
-    ThemeInfo { id: "islands_dark", name: "Islands Dark", dark: true, constructor: Theme::islands_dark },
-    ThemeInfo { id: "islands_light", name: "Islands Light", dark: false, constructor: Theme::islands_light },
-    ThemeInfo { id: "islands_darcula", name: "Islands Darcula", dark: true, constructor: Theme::islands_darcula },
-    ThemeInfo { id: "high_contrast", name: "High Contrast", dark: true, constructor: Theme::high_contrast },
-    ThemeInfo { id: "new_ui_dark", name: "New UI Dark", dark: true, constructor: Theme::new_ui_dark },
-    ThemeInfo { id: "new_ui_light", name: "New UI Light", dark: false, constructor: Theme::new_ui_light },
-    ThemeInfo { id: "light_with_light_header", name: "Light with Light Header", dark: false, constructor: Theme::light_with_light_header },
-    ThemeInfo { id: "darcula", name: "Darcula", dark: true, constructor: Theme::darcula },
-    ThemeInfo { id: "intellij_light", name: "IntelliJ Light", dark: false, constructor: Theme::intellij_light },
-    ThemeInfo { id: "classic_high_contrast", name: "High Contrast (Classic)", dark: true, constructor: Theme::classic_high_contrast },
-    ThemeInfo { id: "macos_light", name: "macOS Light", dark: false, constructor: Theme::macos_light },
-    ThemeInfo { id: "windows10_light", name: "Windows 10 Light", dark: false, constructor: Theme::windows10_light },
+    ThemeInfo { id: "archipel_dark", name: "Archipel Dark", dark: true, constructor: Theme::dark, look: UiLook::Islands },
+    ThemeInfo { id: "archipel_light", name: "Archipel Light", dark: false, constructor: Theme::light, look: UiLook::Islands },
+    ThemeInfo { id: "islands_dark", name: "Islands Dark", dark: true, constructor: Theme::islands_dark, look: UiLook::Islands },
+    ThemeInfo { id: "islands_light", name: "Islands Light", dark: false, constructor: Theme::islands_light, look: UiLook::Islands },
+    ThemeInfo { id: "islands_darcula", name: "Islands Darcula", dark: true, constructor: Theme::islands_darcula, look: UiLook::Islands },
+    ThemeInfo { id: "high_contrast", name: "High Contrast", dark: true, constructor: Theme::high_contrast, look: UiLook::Islands },
+    ThemeInfo { id: "new_ui_dark", name: "New UI Dark", dark: true, constructor: Theme::new_ui_dark, look: UiLook::NewUi },
+    ThemeInfo { id: "new_ui_light", name: "New UI Light", dark: false, constructor: Theme::new_ui_light, look: UiLook::NewUi },
+    ThemeInfo { id: "light_with_light_header", name: "Light with Light Header", dark: false, constructor: Theme::light_with_light_header, look: UiLook::NewUi },
+    ThemeInfo { id: "darcula", name: "Darcula", dark: true, constructor: Theme::darcula, look: UiLook::Classic },
+    ThemeInfo { id: "intellij_light", name: "IntelliJ Light", dark: false, constructor: Theme::intellij_light, look: UiLook::Classic },
+    ThemeInfo { id: "classic_high_contrast", name: "High Contrast (Classic)", dark: true, constructor: Theme::classic_high_contrast, look: UiLook::Classic },
+    ThemeInfo { id: "macos_light", name: "macOS Light", dark: false, constructor: Theme::macos_light, look: UiLook::Classic },
+    ThemeInfo { id: "windows10_light", name: "Windows 10 Light", dark: false, constructor: Theme::windows10_light, look: UiLook::Classic },
 ];
 
 impl Theme {

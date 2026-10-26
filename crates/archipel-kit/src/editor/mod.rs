@@ -60,3 +60,15 @@ fn paint_border(ui: &Ui, rect: Rect, focused: bool) {
     ui.painter()
         .rect_stroke(rect, radius::CONTROL, stroke, StrokeKind::Inside);
 }
+
+/// The left margin that centers an editor's text in Distraction Free and presentation mode
+/// (IntelliJ `editor.distraction.free.margin` = -1, the automatic rule): the text area of
+/// `right_margin` columns of `cell` width, after `lead` (gutter and padding), is centered in
+/// `width`. Never negative.
+pub fn distraction_free_margin(width: f32, lead: f32, cell: f32, right_margin: usize) -> f32 {
+    let content = lead + right_margin as f32 * cell;
+    if !width.is_finite() || !content.is_finite() {
+        return 0.0;
+    }
+    ((width - content) / 2.0).max(0.0)
+}

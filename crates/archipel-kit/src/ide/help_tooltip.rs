@@ -284,8 +284,31 @@ impl HelpTooltip {
             .open(open)
             .frame(Self::frame(ctx))
             .gap(size::POPUP_PADDING);
-        if let Some(align) = self.align {
-            tooltip.popup = tooltip.popup.align(align);
+        // Placed where it fits on screen without covering its owner or the pointer, trying the
+        // preferred side, its mirror, then the menu placements; with no room for any of them
+        // it goes below (or above) the pointer, so it never blocks a click.
+        let expected = tooltip.popup.get_expected_size();
+        let owner = response.interact_rect;
+        match expected.map(|size| placement(ctx, owner, pointer, size, self.align)) {
+            Some(Placement::Align(align)) => {
+                tooltip.popup = tooltip.popup.align(align).align_alternatives(&[]);
+            }
+            Some(Placement::At(pos)) => {
+                tooltip.popup = tooltip
+                    .popup
+                    .anchor(egui::PopupAnchor::Position(pos))
+                    .align(egui::RectAlign {
+                        parent: egui::Align2::LEFT_TOP,
+                        child: egui::Align2::LEFT_TOP,
+                    })
+                    .align_alternatives(&[])
+                    .gap(0.0);
+            }
+            None => {
+                if let Some(align) = self.align {
+                    tooltip.popup = tooltip.popup.align(align);
+                }
+            }
         }
         state.popup = tooltip.show(|ui| self.content(ui)).map(|shown| {
             out.link_clicked = shown.inner;
@@ -340,5 +363,116 @@ impl HelpTooltipExt for Response {
     fn tooltip_with_response(self, tooltip: HelpTooltip) -> (Self, HelpTooltipResponse) {
         let shown = tooltip.show_for(&self);
         (self, shown)
+    }
+}
+
+/// Where a tooltip goes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Placement {
+    /// Beside its owner.
+    Align(egui::RectAlign),
+    /// At this top-left corner, clear of the pointer.
+    At(egui::Pos2),
+}
+
+/// Where a tooltip of `size` for `owner` goes: the first of `preferred` (default below the
+/// owner), its mirror images and the menu placements that fits on screen without covering
+/// the owner or the pointer; else beside the pointer.
+fn placement(
+    ctx: &egui::Context,
+    owner: egui::Rect,
+    pointer: Option<egui::Pos2>,
+    size: egui::Vec2,
+    preferred: Option<egui::RectAlign>,
+) -> Placement {
+    let screen = ctx.content_rect();
+    let gap = size::POPUP_PADDING;
+    let preferred = preferred.unwrap_or(egui::RectAlign::BOTTOM_START);
+    let clear = |rect: egui::Rect| {
+        screen.contains_rect(rect)
+            && !rect.intersects(owner.shrink(0.5))
+            && !pointer.is_some_and(|p| rect.expand(1.0).contains(p))
+    };
+    let candidates = std::iter::once(preferred)
+        .chain(preferred.symmetries())
+        .chain(egui::RectAlign::MENU_ALIGNS);
+    for align in candidates {
+        if clear(align.align_rect(&owner, size, gap)) {
+            return Placement::Align(align);
+        }
+    }
+    // No side fits: below the pointer (past the cursor's height), else above it, kept on
+    // screen sideways.
+    let at = pointer.unwrap_or(owner.center());
+    let x = (at.x - size.x / 2.0)
+        .min(screen.right() - size.x)
+        .max(screen.left());
+    let below = at.y + size::TOOLTIP_POINTER_CLEARANCE;
+    let y = if below + size.y <= screen.bottom() || at.y - gap - size.y < screen.top() {
+        below
+    } else {
+        at.y - gap - size.y
+    };
+    Placement::At(egui::pos2(x, y))
+}
+
+#[cfg(test)]
+mod placement_tests {
+    use super::*;
+
+    #[test]
+    fn tooltip_never_covers_the_pointer_or_its_owner() {
+        let ctx = egui::Context::default();
+        // A small window: a stripe button at the left edge, a wide tooltip to its right.
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(200.0, 120.0),
+                )),
+                ..Default::default()
+            },
+            |_| {},
+        );
+        let owner = egui::Rect::from_min_size(egui::pos2(4.0, 40.0), egui::vec2(30.0, 30.0));
+        let pointer = Some(owner.center());
+        let size = egui::vec2(190.0, 36.0);
+        let at = placement(&ctx, owner, pointer, size, Some(egui::RectAlign::RIGHT));
+        let rect = match at {
+            Placement::Align(align) => align.align_rect(&owner, size, size::POPUP_PADDING),
+            Placement::At(pos) => egui::Rect::from_min_size(pos, size),
+        };
+        assert!(
+            !rect.contains(owner.center()),
+            "{rect:?} covers the pointer"
+        );
+        assert!(
+            !rect.intersects(owner.shrink(0.5)),
+            "{rect:?} covers the owner"
+        );
+    }
+
+    #[test]
+    fn tooltip_keeps_the_preferred_side_when_it_fits() {
+        let ctx = egui::Context::default();
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(800.0, 600.0),
+                )),
+                ..Default::default()
+            },
+            |_| {},
+        );
+        let owner = egui::Rect::from_min_size(egui::pos2(4.0, 40.0), egui::vec2(30.0, 30.0));
+        let at = placement(
+            &ctx,
+            owner,
+            Some(owner.center()),
+            egui::vec2(120.0, 36.0),
+            Some(egui::RectAlign::RIGHT),
+        );
+        assert_eq!(at, Placement::Align(egui::RectAlign::RIGHT));
     }
 }

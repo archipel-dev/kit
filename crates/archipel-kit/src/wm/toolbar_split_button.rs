@@ -4,7 +4,7 @@ use crate::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{radius, size, toolbar, typography};
+use crate::tokens::{size, toolbar, typography};
 use egui::{Rect, Response, Sense, Stroke, Ui, WidgetInfo, WidgetType, pos2, vec2};
 
 /// What [`ToolbarSplitButton::show`] reports.
@@ -100,7 +100,7 @@ impl ToolbarSplitButton {
         let (rect, _) = ui.allocate_exact_size(
             vec2(
                 main_width + separator + toolbar::SPLIT_ARROW_WIDTH,
-                toolbar::BUTTON,
+                crate::tokens::metrics(ui.ctx()).toolbar_button,
             ),
             Sense::hover(),
         );
@@ -118,7 +118,7 @@ impl ToolbarSplitButton {
         crate::cursor::on_hover_action(&arrow);
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            let corner = radius::ICON_BUTTON;
+            let corner = crate::tokens::metrics(ui.ctx()).icon_button_radius;
             for (part, response, open) in
                 [(main_rect, &main, false), (arrow_rect, &arrow, self.open)]
             {

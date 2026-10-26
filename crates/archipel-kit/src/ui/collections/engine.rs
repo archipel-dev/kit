@@ -8,7 +8,7 @@ use super::CollectionResponse;
 use crate::common;
 use crate::parts::ScrollBar;
 use crate::theme::Theme;
-use crate::tokens::{empty_text, size};
+use crate::tokens::empty_text;
 use crate::ui::speed_search::{self, Action, Jump};
 use crate::ui::{
     ListSelectionModel, SelectionMode, SpeedSearch, SpeedSearchComparator, SpeedSearchState,
@@ -167,12 +167,12 @@ struct Page {
 }
 
 impl Page {
-    fn of(viewport: Option<Viewport>) -> Self {
+    fn of(viewport: Option<Viewport>, row_height: f32) -> Self {
         match viewport {
             Some(view) => {
-                let rows = ((view.height / size::ROW_HEIGHT) as usize).max(1);
-                let first = (view.offset / size::ROW_HEIGHT).ceil() as usize;
-                let last = (((view.offset + view.height) / size::ROW_HEIGHT).floor() as usize)
+                let rows = ((view.height / row_height) as usize).max(1);
+                let first = (view.offset / row_height).ceil() as usize;
+                let last = (((view.offset + view.height) / row_height).floor() as usize)
                     .saturating_sub(1)
                     .max(first);
                 Self { first, last, rows }
@@ -360,7 +360,7 @@ pub(super) fn collection(
         search,
         empty,
     } = spec;
-    let row_height = size::ROW_HEIGHT;
+    let row_height = crate::tokens::metrics(ui.ctx()).row_height;
     let focus_id = id.with("focus");
     let widget_focused = ui.memory(|m| m.has_focus(focus_id));
     // A selection is drawn in the active color only while the collection has the focus and
@@ -461,7 +461,7 @@ pub(super) fn collection(
         map: matches.as_deref().filter(|_| filter).map(Vec::as_slice),
         len,
     };
-    let page = Page::of(viewport);
+    let page = Page::of(viewport, row_height);
     let multiple = model.mode() != SelectionMode::Single;
 
     for action in actions {

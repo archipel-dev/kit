@@ -158,7 +158,9 @@ impl Widget for StatusBarWidget<'_> {
             0.0
         };
         let chevron = if self.chevron { size::ICON } else { 0.0 };
-        let extra = 2.0 * size::STATUS_ITEM_PADDING + icon + chevron;
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let padding = metrics.status_item_padding;
+        let extra = 2.0 * padding + icon + chevron;
         let limit = self
             .max_width
             .unwrap_or_else(|| ui.available_width())
@@ -170,7 +172,8 @@ impl Widget for StatusBarWidget<'_> {
         } else {
             Sense::hover()
         };
-        let (rect, response) = ui.allocate_exact_size(vec2(width, size::STATUS_ITEM_HEIGHT), sense);
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(width, metrics.status_item_height), sense);
         crate::cursor::on_hover_action(&response);
         let name = self.name.as_deref().unwrap_or(&self.text);
         response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, self.enabled, name));
@@ -188,12 +191,12 @@ impl Widget for StatusBarWidget<'_> {
                 egui::Color32::TRANSPARENT
             };
             if fill != egui::Color32::TRANSPARENT {
-                painter.rect_filled(rect, CornerRadius::same(radius::CONTROL), fill);
+                painter.rect_filled(rect, CornerRadius::same(metrics.status_hover_radius), fill);
             }
             if response.has_focus() {
                 common::focus_ring(painter, rect, radius::STATUS_FOCUS, &colors);
             }
-            let mut x = rect.left() + size::STATUS_ITEM_PADDING;
+            let mut x = rect.left() + padding;
             if let Some(icon) = self.icon {
                 let icon_rect = Rect::from_min_size(
                     pos2(x, rect.center().y - size::ICON / 2.0),
@@ -207,7 +210,7 @@ impl Widget for StatusBarWidget<'_> {
                 icons::paint(painter, icon_rect, icon, state.icon(tone, &colors));
                 x += size::ICON + gap;
             }
-            let room = rect.right() - size::STATUS_ITEM_PADDING - chevron - x;
+            let room = rect.right() - padding - chevron - x;
             let galley = if elided {
                 common::galley_elided(ui, &self.text, font, room.max(0.0))
             } else {
@@ -229,7 +232,7 @@ impl Widget for StatusBarWidget<'_> {
             if self.chevron {
                 let chevron_rect = Rect::from_min_size(
                     pos2(
-                        rect.right() - size::STATUS_ITEM_PADDING - size::ICON,
+                        rect.right() - padding - size::ICON,
                         rect.center().y - size::ICON / 2.0,
                     ),
                     vec2(size::ICON, size::ICON),

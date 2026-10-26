@@ -1,6 +1,7 @@
 //! Native window integration and the shared desktop toolbar.
 
 use crate::action_system::ActionButton;
+use crate::behaviour::WidgetExt;
 use crate::{Glyph, Theme, egui, tokens};
 use egui::{
     Align, Id, InnerResponse, Layout, Sense, Ui, UiBuilder, ViewportBuilder, ViewportCommand,
@@ -162,6 +163,10 @@ pub struct MainToolbar<'a> {
         &'a crate::action_system::DataContext,
         crate::action_system::ActionPlace,
     )>,
+    main_menu: Option<(
+        &'a dyn crate::action_system::ActionGroup,
+        &'a crate::action_system::DataContext,
+    )>,
 }
 
 impl<'a> MainToolbar<'a> {
@@ -172,7 +177,22 @@ impl<'a> MainToolbar<'a> {
             chrome: IdeFrameDecorator::Native,
             project_color: None,
             menu: None,
+            main_menu: None,
         }
+    }
+
+    /// The main menu (IntelliJ group `MainMenu`): its popup groups are the menus. In the
+    /// Classic look they are a menu bar row above the toolbar (looks spec §2.2); in New UI
+    /// and Islands a hamburger button at the start of the toolbar opens them as a popup
+    /// (`MainMenuDisplayMode.UNDER_HAMBURGER_BUTTON`). Actions run through
+    /// [`perform`](crate::action_system::perform_with_modifiers) when picked.
+    pub fn main_menu(
+        mut self,
+        group: &'a dyn crate::action_system::ActionGroup,
+        context: &'a crate::action_system::DataContext,
+    ) -> Self {
+        self.main_menu = Some((group, context));
+        self
     }
 
     /// The context menu of the toolbar's empty background, opened with a right click
@@ -284,9 +304,20 @@ impl<'a> MainToolbar<'a> {
                 egui::SystemTheme::Light
             }));
         }
+        let metrics = tokens::metrics(ctx);
+        let classic_menu = self
+            .main_menu
+            .filter(|_| metrics.menu_bar_height > 0.0 && !metrics.view.hides_toolbar());
+        let menu_height = if classic_menu.is_some() {
+            metrics.menu_bar_height
+        } else {
+            0.0
+        };
+        // New UI and Classic: a 1 pt line under the header (`MainToolbar.borderColor`).
+        let line = metrics.panel_line;
         egui::TopBottomPanel::top(self.id)
             .show_separator_line(false)
-            .exact_height(tokens::size::WINDOW_TOOLBAR_HEIGHT)
+            .exact_height(menu_height + metrics.window_toolbar_height + line)
             .frame(
                 egui::Frame::new()
                     .fill(colors.frame)
@@ -296,11 +327,37 @@ impl<'a> MainToolbar<'a> {
                     )),
             )
             .show(ctx, |ui| {
-                if let Some(color) = self.project_color {
+                if let Some(color) = self
+                    .project_color
+                    .filter(|_| metrics.look != crate::UiLook::Classic)
+                {
                     let window = ctx.input(|i| i.viewport_rect());
                     crate::parts::project_glow(ui.painter(), window, color);
                 }
-                let rect = ui.max_rect();
+                let full = ui.max_rect();
+                let full = egui::Rect::from_min_max(
+                    full.min,
+                    egui::pos2(full.right(), full.bottom() - line),
+                );
+                if line > 0.0 {
+                    ui.painter().hline(
+                        (full.left() - tokens::toolbar::WINDOW_PADDING)
+                            ..=(full.right() + tokens::toolbar::WINDOW_PADDING),
+                        full.bottom() + line / 2.0,
+                        egui::Stroke::new(line, colors.divider),
+                    );
+                }
+                let rect = egui::Rect::from_min_max(
+                    egui::pos2(full.left(), full.top() + menu_height),
+                    full.max,
+                );
+                if let Some((group, context)) = classic_menu {
+                    let bar = egui::Rect::from_min_max(
+                        full.min,
+                        egui::pos2(full.right(), full.top() + menu_height),
+                    );
+                    menu_bar(ui, self.id.with("menu-bar"), bar, group, context);
+                }
                 // Register beneath children: their click/drag targets take precedence.
                 let drag =
                     ui.interact(rect, self.id.with("background"), Sense::CLICK | Sense::DRAG);
@@ -347,6 +404,17 @@ impl<'a> MainToolbar<'a> {
                 );
                 child.set_clip_rect(content_rect.intersect(ui.clip_rect()));
                 child.spacing_mut().item_spacing.x = tokens::toolbar::GAP;
+                if let Some((group, context)) = self
+                    .main_menu
+                    .filter(|_| metrics.menu_bar_height <= 0.0 && !metrics.view.hides_toolbar())
+                {
+                    hamburger(&mut child, self.id.with("hamburger"), group, context);
+                }
+                // Distraction Free mode keeps only the window header (30 pt): the toolbar's
+                // widgets are laid out but neither drawn nor interactive.
+                if metrics.view.hides_toolbar() {
+                    child.set_invisible();
+                }
                 let result = content(&mut child);
                 // With focus on one of the toolbar's controls (IntelliJ's `FocusMainToolbar`),
                 // Left and Right move it to the neighbor. Text fields keep their arrows.
@@ -417,5 +485,142 @@ impl<'a> MainToolbar<'a> {
                 }
                 result
             })
+    }
+}
+
+/// The open menu of a menu bar or hamburger: which one and where it hangs.
+#[derive(Clone, Copy)]
+struct OpenMenu {
+    index: usize,
+    anchor: egui::Rect,
+}
+
+/// The Classic look's menu bar: one flat item per popup group of `group`, its menu below it
+/// while open. Hovering another item while a menu is open switches to its menu.
+fn menu_bar(
+    ui: &mut Ui,
+    id: Id,
+    bar: egui::Rect,
+    group: &dyn crate::action_system::ActionGroup,
+    context: &crate::action_system::DataContext,
+) {
+    use crate::action_system::{ActionPlace, ActionRow, flatten};
+    let colors = Theme::colors(ui.ctx());
+    let place = ActionPlace::MAIN_MENU;
+    let rows = flatten(group, context, &place);
+    let mut open: Option<OpenMenu> = ui.ctx().data(|d| d.get_temp(id));
+    let mut x = bar.left();
+    let font = tokens::typography::body(tokens::typography::BODY);
+    for (index, row) in rows.iter().enumerate() {
+        let ActionRow::Group { presentation, .. } = row else {
+            continue;
+        };
+        let galley = crate::common::galley(ui, presentation.text.as_str(), font.clone());
+        let width = galley.size().x + 2.0 * tokens::size::MENU_BAR_ITEM_PADDING;
+        let item =
+            egui::Rect::from_min_size(egui::pos2(x, bar.top()), egui::vec2(width, bar.height()));
+        x += width;
+        let response = ui.interact(item, id.with(index), Sense::click());
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, presentation.text.as_str())
+        });
+        let is_open = open.is_some_and(|menu| menu.index == index);
+        if response.clicked() {
+            open = if is_open {
+                None
+            } else {
+                Some(OpenMenu {
+                    index,
+                    anchor: item,
+                })
+            };
+        } else if open.is_some() && !is_open && response.hovered() {
+            open = Some(OpenMenu {
+                index,
+                anchor: item,
+            });
+        }
+        let highlighted = open.is_some_and(|menu| menu.index == index);
+        if highlighted {
+            ui.painter().rect_filled(item, 0.0, colors.selection);
+        } else if response.hovered() {
+            ui.painter().rect_filled(item, 0.0, colors.hover);
+        }
+        crate::common::text_left(
+            ui.painter(),
+            item,
+            item.left() + tokens::size::MENU_BAR_ITEM_PADDING,
+            galley,
+            if highlighted {
+                colors.selection_text
+            } else {
+                colors.text
+            },
+        );
+    }
+    show_open_menu(ui, id, &rows, open, context);
+}
+
+/// The New UI main menu button: a hamburger that opens the menus as a popup.
+fn hamburger(
+    ui: &mut Ui,
+    id: Id,
+    group: &dyn crate::action_system::ActionGroup,
+    context: &crate::action_system::DataContext,
+) {
+    use crate::action_system::{ActionPlace, flatten};
+    let mut open: Option<OpenMenu> = ui.ctx().data(|d| d.get_temp(id));
+    let button = ui.add(
+        ActionButton::new(Glyph::Menu, "Main Menu")
+            .large(true)
+            .with(crate::ide::HelpTooltip::new("Main Menu")),
+    );
+    if button.clicked() {
+        open = match open {
+            Some(_) => None,
+            None => Some(OpenMenu {
+                index: usize::MAX,
+                anchor: button.rect,
+            }),
+        };
+    }
+    let rows = flatten(group, context, &ActionPlace::MAIN_MENU);
+    show_open_menu(ui, id, &rows, open, context);
+}
+
+/// The menu `open` names (`usize::MAX`: all of `rows`), below its anchor, until an item
+/// runs or it is dismissed.
+fn show_open_menu(
+    ui: &mut Ui,
+    id: Id,
+    rows: &[crate::action_system::ActionRow],
+    open: Option<OpenMenu>,
+    context: &crate::action_system::DataContext,
+) {
+    use crate::action_system::{ActionPlace, ActionRow, flatten};
+    let Some(menu) = open else {
+        ui.ctx().data_mut(|d| d.remove::<OpenMenu>(id));
+        return;
+    };
+    let place = ActionPlace::MAIN_MENU;
+    let items: Vec<ActionRow> = if menu.index == usize::MAX {
+        rows.to_vec()
+    } else {
+        match rows.get(menu.index) {
+            Some(ActionRow::Group { group, .. }) => flatten(group.as_ref(), context, &place),
+            _ => Vec::new(),
+        }
+    };
+    let mut still_open = true;
+    let done = crate::ui::popup::JBPopup::new(id.with(("popup", menu.index)), menu.anchor)
+        .width(tokens::size::SUBMENU_WIDTH)
+        .show(ui.ctx(), &mut still_open, |ui| {
+            crate::wm::action_rows::show_menu_rows(ui, &items, context, &place)
+        })
+        .flatten();
+    if done.is_some() || !still_open {
+        ui.ctx().data_mut(|d| d.remove::<OpenMenu>(id));
+    } else {
+        ui.ctx().data_mut(|d| d.insert_temp(id, menu));
     }
 }

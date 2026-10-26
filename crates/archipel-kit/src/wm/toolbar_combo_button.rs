@@ -4,7 +4,7 @@ use crate::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::{Slot, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{radius, size, toolbar, typography};
+use crate::tokens::{size, toolbar, typography};
 use egui::{Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
 
 /// A flat button with text for the main window toolbar, like Android Studio's project and
@@ -111,7 +111,8 @@ impl<'a> ToolbarComboButton<'a> {
         } else {
             Sense::hover()
         };
-        let (rect, response) = ui.allocate_exact_size(vec2(width, toolbar::BUTTON), sense);
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let (rect, response) = ui.allocate_exact_size(vec2(width, metrics.toolbar_button), sense);
         crate::cursor::on_hover_action(&response);
         response.widget_info(|| {
             let kind = if self.dropdown {
@@ -131,9 +132,9 @@ impl<'a> ToolbarComboButton<'a> {
             } else {
                 egui::Color32::TRANSPARENT
             };
-            painter.rect_filled(rect, radius::ICON_BUTTON, fill);
+            painter.rect_filled(rect, metrics.icon_button_radius, fill);
             if response.has_focus() {
-                common::focus_ring(painter, rect, radius::ICON_BUTTON, &colors);
+                common::focus_ring(painter, rect, metrics.icon_button_radius, &colors);
             }
             if let Some(width) = leading_width {
                 let lead = Rect::from_min_size(

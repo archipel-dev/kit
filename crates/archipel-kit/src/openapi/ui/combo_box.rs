@@ -4,7 +4,7 @@ use crate::common;
 use crate::icons::{self, Glyph};
 use crate::parts::{Slot, State, Tone};
 use crate::theme::Theme;
-use crate::tokens::{motion, radius, size, typography};
+use crate::tokens::{motion, size, typography};
 use crate::ui::popup::{Options, Placement, PopupChain, RowSpec, drive};
 use egui::{
     Color32, CornerRadius, Id, Key, Modifiers, Rect, Response, Sense, Stroke, StrokeKind, Ui,
@@ -183,7 +183,8 @@ impl<T: PartialEq + Clone + ToString> Widget for ComboBox<'_, T> {
         let popup_id = id.with("popup");
         let typed_id = id.with("typed");
         let width = self.width.max(size::COMBO_MIN_WIDTH);
-        let (rect, _) = ui.allocate_exact_size(vec2(width, size::CONTROL_HEIGHT), Sense::hover());
+        let metrics = crate::tokens::metrics(ui.ctx());
+        let (rect, _) = ui.allocate_exact_size(vec2(width, metrics.control_height), Sense::hover());
         let sense = if enabled {
             Sense::click()
         } else {
@@ -296,7 +297,7 @@ impl<T: PartialEq + Clone + ToString> Widget for ComboBox<'_, T> {
         let focused = response.has_focus();
         if ui.is_rect_visible(rect) {
             let painter = ui.painter();
-            let corner = CornerRadius::same(radius::CONTROL);
+            let corner = CornerRadius::same(metrics.control_radius);
             let (fill, stroke, text_color, arrow) = if enabled {
                 (
                     colors.combo,
@@ -316,7 +317,7 @@ impl<T: PartialEq + Clone + ToString> Widget for ComboBox<'_, T> {
             };
             painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
             if focused && enabled {
-                crate::parts::focus_ring(painter, rect, radius::CONTROL, &colors);
+                crate::parts::focus_ring(painter, rect, metrics.control_radius, &colors);
             }
             let chevron = Rect::from_center_size(
                 pos2(rect.right() - size::COMBO_CHEVRON_INSET, rect.center().y),

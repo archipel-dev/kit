@@ -6,7 +6,7 @@ use crate::common;
 use crate::icons::Icon;
 use crate::parts::{Surface, Tone};
 use crate::theme::Theme;
-use crate::tokens::{popup, size, typography};
+use crate::tokens::{size, typography};
 use crate::wm::StatusBarWidget;
 use egui::{Align, Id, Key, Layout, Pos2, Rect, Sense, Ui, UiBuilder, pos2, vec2};
 
@@ -312,7 +312,9 @@ impl StatusBar {
         } else {
             size::STATUS_BAR_HEIGHT * 20.0
         };
-        let height = ui.available_height().min(size::STATUS_BAR_HEIGHT);
+        let height = ui
+            .available_height()
+            .min(crate::tokens::metrics(ui.ctx()).status_bar_height);
         let (rect, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
         let mut out = StatusBarResponse {
             rect,
@@ -484,7 +486,9 @@ impl StatusBar {
                         .x
                 })
                 .fold(0.0, f32::max)
-                + 2.0 * (popup::ITEM_INSET + popup::ITEM_PADDING);
+                + 2.0
+                    * (crate::tokens::metrics(ui.ctx()).popup_item_inset
+                        + crate::tokens::metrics(ui.ctx()).popup_item_padding);
             let mut picked = None;
             above_popup(
                 ui.ctx(),

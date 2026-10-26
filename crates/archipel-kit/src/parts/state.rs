@@ -2,7 +2,7 @@
 
 use super::Tone;
 use crate::theme::Colors;
-use crate::tokens::{radius, size};
+use crate::tokens::size;
 use egui::{Color32, CornerRadius, Painter, Rect, Response, Stroke, StrokeKind};
 
 /// The interaction state of a widget this frame. Build it from the response with
@@ -81,13 +81,26 @@ impl State {
         }
     }
 
-    /// The color of text meant as `tone`: disabled text when disabled, strong text for the
-    /// default tone on a selected row.
+    /// The color of text meant as `tone`: disabled text when disabled, the theme's selection
+    /// foreground for the default tone on a selected row (`List.selectionForeground`: white
+    /// on the classic light themes' dark blue selection; its inactive variant without focus).
     pub fn text(&self, tone: Tone, colors: &Colors) -> Color32 {
         if !self.enabled {
             colors.text_disabled
         } else if self.selected && tone == Tone::Default {
-            colors.text_strong
+            if self.inactive {
+                colors.selection_text_inactive
+            } else {
+                colors.selection_text
+            }
+        } else if self.selected
+            && !self.inactive
+            && colors.selection_text != colors.text_strong
+            && matches!(tone, Tone::Strong | Tone::Secondary | Tone::Muted)
+        {
+            // A selection with a foreground of its own (white on the classic themes' blue)
+            // paints the gray texts of the row in it too, so they stay readable.
+            colors.selection_text
         } else {
             tone.color(colors)
         }
@@ -116,9 +129,79 @@ pub fn focus_ring(painter: &Painter, rect: Rect, corner: u8, colors: &Colors) {
 }
 
 /// The rounded pill behind a row spanning `rect` (inset from the edges), in `fill`.
+/// In the Classic look it is a flat rectangle over the whole row.
 pub fn row_pill(painter: &Painter, rect: Rect, fill: Color32) {
     if fill != Color32::TRANSPARENT {
-        let pill = rect.shrink2(egui::vec2(size::ROW_PILL_INSET, 0.0));
-        painter.rect_filled(pill, CornerRadius::same(radius::ROW), fill);
+        let metrics = crate::tokens::metrics(painter.ctx());
+        let pill = rect.shrink2(egui::vec2(metrics.row_pill_inset, 0.0));
+        painter.rect_filled(pill, CornerRadius::same(metrics.row_radius), fill);
     }
+}
+
+/// A tree expander in `rect`: a chevron in New UI and Islands, a small filled triangle in the
+/// Classic look (looks spec §2.7). `expanded` points it down.
+pub fn paint_expander(painter: &Painter, rect: Rect, expanded: bool, color: Color32) {
+    use crate::look::ExpanderStyle;
+    match crate::tokens::metrics(painter.ctx()).expander {
+        ExpanderStyle::Chevron => crate::icons::paint(
+            painter,
+            rect,
+            if expanded {
+                crate::Glyph::ChevronDown
+            } else {
+                crate::Glyph::ChevronRight
+            },
+            color,
+        ),
+        ExpanderStyle::Triangle => {
+            // An 8 pt triangle centered in the column, like the classic tree icons.
+            let c = rect.center();
+            let h = size::CLASSIC_EXPANDER / 2.0;
+            let points = if expanded {
+                vec![
+                    egui::pos2(c.x - h, c.y - h / 2.0),
+                    egui::pos2(c.x + h, c.y - h / 2.0),
+                    egui::pos2(c.x, c.y + h / 2.0 + 1.0),
+                ]
+            } else {
+                vec![
+                    egui::pos2(c.x - h / 2.0, c.y - h),
+                    egui::pos2(c.x + h / 2.0 + 1.0, c.y),
+                    egui::pos2(c.x - h / 2.0, c.y + h),
+                ]
+            };
+            painter.add(egui::Shape::convex_polygon(points, color, Stroke::NONE));
+        }
+    }
+}
+
+/// Fills `rect` (with `corner`) with a vertical gradient from `top` to `bottom`: the Classic
+/// look's button fill (looks spec §2.9). A plain fill when both are equal.
+pub fn fill_gradient(
+    painter: &Painter,
+    rect: Rect,
+    corner: CornerRadius,
+    top: Color32,
+    bottom: Color32,
+) {
+    if top == bottom {
+        painter.rect_filled(rect, corner, top);
+        return;
+    }
+    let shape = egui::epaint::RectShape::filled(rect, corner, Color32::WHITE);
+    let mut mesh = egui::Mesh::default();
+    let mut tessellator = egui::epaint::Tessellator::new(
+        painter.ctx().pixels_per_point(),
+        egui::epaint::TessellationOptions::default(),
+        [1, 1],
+        Vec::new(),
+    );
+    tessellator.tessellate_rect(&shape, &mut mesh);
+    let height = rect.height().max(1.0);
+    for vertex in &mut mesh.vertices {
+        let t = ((vertex.pos.y - rect.top()) / height).clamp(0.0, 1.0);
+        let color = crate::common::lerp_color(top, bottom, t);
+        vertex.color = color.gamma_multiply(f32::from(vertex.color.a()) / 255.0);
+    }
+    painter.add(egui::Shape::mesh(mesh));
 }

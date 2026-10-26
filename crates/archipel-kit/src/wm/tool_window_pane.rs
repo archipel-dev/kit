@@ -203,6 +203,7 @@ pub struct ToolWindowPane<'a> {
     glow_anchor: Option<egui::Rect>,
     center_padded: bool,
     frame_background: bool,
+    main_menu: Option<(&'a dyn ActionGroup, &'a DataContext)>,
 }
 
 impl<'a> ToolWindowPane<'a> {
@@ -220,7 +221,15 @@ impl<'a> ToolWindowPane<'a> {
             glow_anchor: None,
             center_padded: true,
             frame_background: true,
+            main_menu: None,
         }
+    }
+
+    /// The main menu of the window toolbar (see [`MainToolbar::main_menu`]): a menu bar row
+    /// in the Classic look, a hamburger button in New UI and Islands.
+    pub fn main_menu(mut self, group: &'a dyn ActionGroup, data_context: &'a DataContext) -> Self {
+        self.main_menu = Some((group, data_context));
+        self
     }
 
     /// A titled left tool window. Its header provides Hide and Maximize/Restore actions.
@@ -511,6 +520,7 @@ impl<'a> ToolWindowPane<'a> {
             glow_anchor: self.glow_anchor,
             center_padded: self.center_padded,
             frame_background: self.frame_background,
+            main_menu: self.main_menu,
         }
     }
 
@@ -522,6 +532,9 @@ impl<'a> ToolWindowPane<'a> {
             if let Some(color) = self.project_color {
                 toolbar = toolbar.project_color(color);
             }
+            if let Some((group, context)) = self.main_menu {
+                toolbar = toolbar.main_menu(group, context);
+            }
             toolbar.show(ctx, |ui| {
                 if let Some(content) = content {
                     content(ui);
@@ -530,20 +543,40 @@ impl<'a> ToolWindowPane<'a> {
         }
         // The glow continues from the toolbar: anchor it to the window, not the islands.
         self.glow_anchor = Some(ctx.input(|i| i.viewport_rect()));
-        if let Some(content) = self.status.take() {
-            // Android Studio's status bar: 30 pt on the frame, items 21 pt high.
+        let metrics = tokens::metrics(ctx);
+        // Presentation and Distraction Free modes hide the status bar.
+        let status = self
+            .status
+            .take()
+            .filter(|_| !metrics.view.hides_status_bar());
+        if let Some(content) = status {
+            // Android Studio's status bar: 30 pt on the frame, items 21 pt high. New UI and
+            // Classic draw a 1 pt line on top of it.
+            let line = metrics.status_top_line;
             egui::TopBottomPanel::bottom(self.id.with("status"))
                 .show_separator_line(false)
-                .exact_height(tokens::size::STATUS_BAR_HEIGHT)
+                .exact_height(metrics.status_bar_height)
                 .frame(
                     egui::Frame::new()
                         .fill(Theme::colors(ctx).frame)
-                        .inner_margin(egui::Margin::symmetric(
-                            tokens::size::STATUS_BAR_INSET as i8,
-                            0,
-                        )),
+                        .inner_margin(egui::Margin {
+                            left: metrics.status_bar_inset as i8,
+                            right: metrics.status_bar_inset as i8,
+                            top: line as i8,
+                            bottom: 0,
+                        }),
                 )
                 .show(ctx, |ui| {
+                    if line > 0.0 {
+                        let rect = ui.max_rect();
+                        let x = (rect.left() - metrics.status_bar_inset)
+                            ..=(rect.right() + metrics.status_bar_inset);
+                        ui.painter().hline(
+                            x,
+                            rect.top() - line / 2.0,
+                            egui::Stroke::new(line, Theme::colors(ctx).divider),
+                        );
+                    }
                     ui.horizontal_centered(|ui| {
                         ui.spacing_mut().item_spacing.x = 0.0;
                         if let Some(content) = content {
@@ -556,7 +589,7 @@ impl<'a> ToolWindowPane<'a> {
             .frame(
                 egui::Frame::new()
                     .fill(Theme::colors(ctx).frame)
-                    .inner_margin(tokens::size::ISLAND_GAP as i8),
+                    .inner_margin(metrics.island_gap as i8),
             )
             .show(ctx, |ui| self.show_inside(ui, center))
             .response
@@ -595,13 +628,40 @@ impl<'a> ToolWindowPane<'a> {
             ui.painter()
                 .rect_filled(full, 0, Theme::colors(ui.ctx()).frame);
         }
-        if let Some(color) = project_color {
+        // The project glow reaches over the stripes only in Islands; New UI tints just the
+        // toolbar, Classic not at all (looks spec §8.2 `glow`).
+        if let Some(color) = project_color.filter(|_| tokens::metrics(ui.ctx()).is_islands()) {
             crate::parts::project_glow(ui.painter(), glow_anchor.unwrap_or(full), color);
+        }
+        let ctx = ui.ctx().clone();
+        let metrics = tokens::metrics(&ctx);
+        // Presentation mode hides the tool windows (the layout comes back after it).
+        if metrics.view.hides_tool_windows() {
+            left = None;
+            right = None;
+            bottom = None;
         }
         // Tool window stripes on the frame, beside the islands.
         let mut rect = full;
-        let stripe_width = tokens::stripe::WIDTH - tokens::size::ISLAND_GAP;
-        let ctx = ui.ctx().clone();
+        let gap = metrics.island_gap;
+        let stripe_width = metrics.stripe_column();
+        let show_stripes = !metrics.view.hides_stripes();
+        let mut toggled = None;
+        let mut closed = None;
+        let mut events: Vec<ToolWindowEvent> = Vec::new();
+        if show_stripes && !metrics.has_icon_stripes() {
+            rect = classic_stripes(
+                ui,
+                id,
+                full,
+                [&left, &right, &bottom],
+                state,
+                &mut toggled,
+                &mut closed,
+                &mut events,
+            );
+        }
+        let icon_stripes = show_stripes && metrics.has_icon_stripes();
         let button = |region: &Option<Region<'_>>, kind: ToolWindowAnchor, hidden: bool| {
             region.as_ref().and_then(|r| {
                 r.icon.map(|icon| {
@@ -615,18 +675,20 @@ impl<'a> ToolWindowPane<'a> {
                 })
             })
         };
-        let left_top = button(&left, ToolWindowAnchor::Left, state.left_hidden);
-        let left_bottom = button(&bottom, ToolWindowAnchor::Bottom, state.bottom_hidden);
-        let right_top = button(&right, ToolWindowAnchor::Right, state.right_hidden);
-        let mut toggled = None;
-        let mut closed = None;
-        let mut events: Vec<ToolWindowEvent> = Vec::new();
+        let left_top =
+            button(&left, ToolWindowAnchor::Left, state.left_hidden).filter(|_| icon_stripes);
+        let left_bottom =
+            button(&bottom, ToolWindowAnchor::Bottom, state.bottom_hidden).filter(|_| icon_stripes);
+        let right_top =
+            button(&right, ToolWindowAnchor::Right, state.right_hidden).filter(|_| icon_stripes);
         if left_top.is_some() || left_bottom.is_some() {
             let stripe = egui::Rect::from_min_max(
                 full.min,
                 egui::pos2(full.left() + stripe_width, full.bottom()),
             );
-            rect.min.x = stripe.right() + tokens::size::ISLAND_GAP;
+            rect.min.x = stripe.right() + gap;
+            // New UI: a 1 pt line between the stripe and the tool windows.
+            crate::parts::Surface::island_lines(ui.painter(), stripe, [false, false, true, false]);
             let mut column = ui.new_child(egui::UiBuilder::new().max_rect(stripe));
             let has_top = left_top.is_some();
             let mut bar = ToolWindowToolbar::new(id.with("left-stripe"));
@@ -670,7 +732,8 @@ impl<'a> ToolWindowPane<'a> {
                 egui::pos2(full.right() - stripe_width, full.top()),
                 full.max,
             );
-            rect.max.x = stripe.left() - tokens::size::ISLAND_GAP;
+            rect.max.x = stripe.left() - gap;
+            crate::parts::Surface::island_lines(ui.painter(), stripe, [true, false, false, false]);
             let mut column = ui.new_child(egui::UiBuilder::new().max_rect(stripe));
             let response = ToolWindowToolbar::new(id.with("right-stripe"))
                 .top(b)
@@ -742,7 +805,7 @@ impl<'a> ToolWindowPane<'a> {
                 state.maximized = None;
                 let min = tokens::size::SPLIT_MIN_PANE;
                 let center_min = tokens::size::WORKBENCH_CENTER_MIN;
-                let gap = tokens::size::SPLIT_DIVIDER;
+                let gap = metrics.split_divider;
                 let left_open = left.is_some() && !state.left_hidden;
                 let right_open = right.is_some() && !state.right_hidden;
                 let auto_right = right_open
@@ -1030,6 +1093,73 @@ fn region_active(ctx: &egui::Context, workbench: Id, region: ToolWindowAnchor) -
     ctx.memory(|m| m.focused())
         .and_then(|id| ctx.read_response(id))
         .is_some_and(|response| rect.contains_rect(response.rect))
+}
+
+/// The Classic look's three text stripes around the tool windows (looks spec §2.3, §3.2):
+/// left and right along the sides, and one along the bottom for the bottom tool window. Each
+/// is drawn even when empty, as in the classic IDE. Returns the area left for the islands;
+/// clicks are reported like the icon stripes'.
+#[allow(clippy::too_many_arguments)]
+fn classic_stripes(
+    ui: &mut Ui,
+    id: Id,
+    full: egui::Rect,
+    regions: [&Option<Region<'_>>; 3],
+    state: &ToolWindowPaneState,
+    toggled: &mut Option<ToolWindowAnchor>,
+    closed: &mut Option<ToolWindowAnchor>,
+    events: &mut Vec<ToolWindowEvent>,
+) -> egui::Rect {
+    use crate::wm::{Stripe, StripeButton, StripeSide};
+    let metrics = tokens::metrics(ui.ctx());
+    let (side, low) = (metrics.stripe_width, metrics.stripe_height);
+    let rects = [
+        egui::Rect::from_min_max(
+            full.min,
+            egui::pos2(full.left() + side, full.bottom() - low),
+        ),
+        egui::Rect::from_min_max(
+            egui::pos2(full.right() - side, full.top()),
+            egui::pos2(full.right(), full.bottom() - low),
+        ),
+        egui::Rect::from_min_max(egui::pos2(full.left(), full.bottom() - low), full.max),
+    ];
+    let sides = [StripeSide::Left, StripeSide::Right, StripeSide::Bottom];
+    for ((region, anchor), (rect, stripe_side)) in regions
+        .into_iter()
+        .zip(ANCHORS)
+        .zip(rects.into_iter().zip(sides))
+    {
+        let mut stripe = Stripe::new(id.with(("classic-stripe", anchor)), stripe_side);
+        if let Some(r) = region.as_ref().filter(|r| r.icon.is_some()) {
+            let open = state.is_visible(anchor);
+            let mut button = StripeButton::new(r.title.clone())
+                .open(open)
+                .active(open && region_active(ui.ctx(), id, anchor));
+            if let Some(icon) = r.icon {
+                button = button.icon(icon);
+            }
+            if let Some(digit) = r.activate_number {
+                button = button.shortcut(format!("Alt+{digit}"));
+            }
+            stripe = stripe.button(button);
+        }
+        let mut column = ui.new_child(egui::UiBuilder::new().max_rect(rect));
+        let response = stripe.show(&mut column);
+        if response.clicked.is_some() {
+            *toggled = Some(anchor);
+        }
+        if response.close_clicked.is_some() {
+            *closed = Some(anchor);
+        }
+        if let Some((_, pos)) = response.popup {
+            events.push(ToolWindowEvent::StripeMenuRequested(anchor, pos));
+        }
+    }
+    egui::Rect::from_min_max(
+        egui::pos2(rects[0].right(), full.top()),
+        egui::pos2(rects[1].left(), rects[2].top()),
+    )
 }
 
 fn center_island(ui: &mut Ui, padded: bool, content: impl FnOnce(&mut Ui)) {

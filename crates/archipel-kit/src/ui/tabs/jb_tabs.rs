@@ -4,7 +4,7 @@ use crate::action_system::{ActionGroup, ActionPlace, DataContext, flatten};
 use crate::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::theme::Theme;
-use crate::tokens::{motion, popup, radius, size, tab, typography};
+use crate::tokens::{motion, radius, size, tab, typography};
 use egui::{
     Color32, CornerRadius, EventFilter, Id, Key, Rect, Response, Sense, Stroke, StrokeKind, Ui,
     WidgetInfo, WidgetType, pos2, vec2,
@@ -267,7 +267,12 @@ impl<'a> JBTabs<'a> {
     /// [`tab::STRIP_INSET`] from the left edge.
     pub fn show(self, ui: &mut Ui) -> JBTabsResponse {
         let colors = Theme::colors(ui.ctx());
+        let metrics = crate::tokens::metrics(ui.ctx());
         let mut out = JBTabsResponse::default();
+        // Presentation and Distraction Free modes show one editor without its tabs.
+        if metrics.view.hides_tabs() {
+            return out;
+        }
         let id = ui.id().with(("archipel-tab-bar", self.id_salt));
         let mut state: Strip = ui.data(|d| d.get_temp(id)).unwrap_or_default();
         let separator_range = ui.max_rect().x_range();
@@ -303,20 +308,20 @@ impl<'a> JBTabs<'a> {
             .iter()
             .zip(&galleys)
             .zip(&action_counts)
-            .map(|((item, galley), &actions)| tab_width(item, galley.size().x, actions))
+            .map(|((item, galley), &actions)| tab_width(&metrics, item, galley.size().x, actions))
             .collect();
         let layout_starts = |order: &[usize]| {
             let mut starts = vec![0.0; count];
-            let mut x = tab::STRIP_INSET;
+            let mut x = metrics.tab_strip_inset;
             for &index in order {
                 starts[index] = x;
-                x += widths[index] + tab::GAP;
+                x += widths[index] + metrics.tab_gap;
             }
             (starts, x)
         };
         let natural: Vec<usize> = (0..count).collect();
         let (natural_starts, x) = layout_starts(&natural);
-        let content = if count == 0 { x } else { x - tab::GAP };
+        let content = if count == 0 { x } else { x - metrics.tab_gap };
 
         // The strip, its buttons at the right end, and the scrolling area before them.
         let button = vec2(size::ICON_BUTTON, size::ICON_BUTTON);
@@ -326,7 +331,7 @@ impl<'a> JBTabs<'a> {
         } else {
             content + tab::STRIP_BUTTONS_GAP + 2.0 * size::ICON_BUTTON + tab::BUTTON_GAP
         };
-        let (strip, _) = ui.allocate_exact_size(vec2(width, size::HEADER_HEIGHT), Sense::hover());
+        let (strip, _) = ui.allocate_exact_size(vec2(width, metrics.header_height), Sense::hover());
         let mut right = strip.right() - tab::BUTTONS_INSET;
         let more_rect = self.more.is_some().then(|| {
             let rect = Rect::from_center_size(
@@ -483,7 +488,7 @@ impl<'a> JBTabs<'a> {
             if dragged >= count || (!primary_down && !released) {
                 state.drag = None;
             } else if let Some(pos) = latest {
-                let lowest = tab::STRIP_INSET;
+                let lowest = metrics.tab_strip_inset;
                 let want = (pos.x - strip.left() - grab + state.offset)
                     .clamp(lowest, (content - widths[dragged]).max(lowest));
                 let others: Vec<usize> = (0..count).filter(|&index| index != dragged).collect();
@@ -524,12 +529,13 @@ impl<'a> JBTabs<'a> {
             let (item, galley) = (&self.tabs[index], galleys[index].clone());
             let rect = Rect::from_min_size(
                 pos2(strip.left() + starts[index] - state.offset, strip.top()),
-                vec2(widths[index], size::HEADER_HEIGHT),
+                vec2(widths[index], metrics.header_height),
             );
             let selected = index == self.selected;
             let env = TabEnv {
                 id: tab_id(index),
                 colors: &colors,
+                metrics: &metrics,
                 now,
                 data_context,
                 actions: action_counts[index],
@@ -694,7 +700,9 @@ impl<'a> JBTabs<'a> {
                 let width = label_width
                     + size::ICON
                     + size::ICON_TEXT_GAP
-                    + 2.0 * (popup::ITEM_INSET + popup::ITEM_PADDING);
+                    + 2.0
+                        * (crate::tokens::metrics(ui.ctx()).popup_item_inset
+                            + crate::tokens::metrics(ui.ctx()).popup_item_padding);
                 let was_open = state.hidden_open;
                 let escape = ui.input(|i| i.key_pressed(egui::Key::Escape));
                 let mut picked = None;
@@ -777,11 +785,20 @@ impl<'a> JBTabs<'a> {
             ui.painter()
                 .rect_filled(thumb, thickness / 2.0, color.gamma_multiply(thumb_alpha));
         }
-        if self.separator {
+        // Classic always has the line under the strip; flush looks draw it in the divider
+        // color.
+        if self.separator || metrics.look == crate::UiLook::Classic {
             ui.painter().hline(
                 separator_range,
                 strip.bottom() + 0.5,
-                Stroke::new(1.0_f32, colors.frame),
+                Stroke::new(
+                    1.0_f32,
+                    if metrics.is_islands() {
+                        colors.frame
+                    } else {
+                        colors.divider
+                    },
+                ),
             );
         }
         ui.data_mut(|d| d.insert_temp(id, state));
@@ -791,7 +808,7 @@ impl<'a> JBTabs<'a> {
 
 /// Room taken by the tab's buttons after its title: its actions, then the close button or
 /// pin. Kept on every tab that has them, so showing them on hover moves nothing.
-fn trailing_width(item: &TabInfo, actions: usize) -> f32 {
+fn trailing_width(m: &crate::look::Metrics, item: &TabInfo, actions: usize) -> f32 {
     let actions_width = if actions > 0 {
         actions as f32 * (size::ICON_BUTTON_SMALL + tab::ACTION_GAP) - tab::ACTION_GAP
     } else {
@@ -799,25 +816,25 @@ fn trailing_width(item: &TabInfo, actions: usize) -> f32 {
     };
     let button = item.closable || item.pinned;
     match (actions > 0, button) {
-        (false, false) => tab::PADDING_LEFT,
-        (false, true) => tab::CLOSE_GAP + tab::CLOSE + tab::PADDING_RIGHT,
-        (true, false) => tab::CLOSE_GAP + actions_width + tab::PADDING_RIGHT,
+        (false, false) => m.tab_padding_left,
+        (false, true) => tab::CLOSE_GAP + tab::CLOSE + m.tab_padding_right,
+        (true, false) => tab::CLOSE_GAP + actions_width + m.tab_padding_right,
         (true, true) => {
-            tab::CLOSE_GAP + actions_width + tab::CLOSE_GAP + tab::CLOSE + tab::PADDING_RIGHT
+            tab::CLOSE_GAP + actions_width + tab::CLOSE_GAP + tab::CLOSE + m.tab_padding_right
         }
     }
 }
 
 /// The width of `item`'s pill, whose title is `text` wide: at most [`tab::MAX_WIDTH`], where
 /// the title is cut off.
-fn tab_width(item: &TabInfo, text: f32, actions: usize) -> f32 {
+fn tab_width(m: &crate::look::Metrics, item: &TabInfo, text: f32, actions: usize) -> f32 {
     let icon = if item.icon.is_some() {
         size::ICON + size::ICON_TEXT_GAP
     } else {
         0.0
     };
     let dot = if item.modified { MODIFIED_DOT } else { 0.0 };
-    let fixed = tab::PADDING_LEFT + icon + dot + trailing_width(item, actions);
+    let fixed = m.tab_padding_left + icon + dot + trailing_width(m, item, actions);
     fixed + text.min((tab::MAX_WIDTH - fixed).max(0.0))
 }
 
@@ -828,6 +845,7 @@ const MODIFIED_DOT: f32 = 10.0;
 struct TabEnv<'e> {
     id: Id,
     colors: &'e crate::theme::Colors,
+    metrics: &'e crate::look::Metrics,
     now: f64,
     data_context: &'e DataContext,
     /// How many action buttons the tab has.
@@ -875,7 +893,9 @@ fn draw_tab(
         Sense::hover()
     };
     let response = ui.interact(rect, env.id, sense);
-    let pill = Rect::from_center_size(rect.center(), vec2(rect.width(), tab::HEIGHT));
+    let m = env.metrics;
+    let pills = m.tab_style == crate::look::TabStyle::Pill;
+    let pill = Rect::from_center_size(rect.center(), vec2(rect.width(), m.tab_height));
     crate::cursor::on_hover(&response, egui::CursorIcon::Default);
     response.widget_info(|| {
         WidgetInfo::selected(
@@ -909,11 +929,12 @@ fn draw_tab(
             .request_repaint_after_secs(motion::TAB_CLOSE_DEADZONE - waited);
     }
 
-    // The tab's buttons, from the right: close or pin, then its actions.
-    let show_buttons = item.enabled && (selected || hovered || env.dragged);
+    // The tab's buttons, from the right: close or pin, then its actions. Classic shows the
+    // close button on every tab (looks spec §2.4).
+    let show_buttons = item.enabled && (selected || hovered || env.dragged || m.tab_close_always);
     let has_button = item.closable || item.pinned;
     let button_center = pos2(
-        pill.right() - tab::PADDING_RIGHT - tab::CLOSE / 2.0,
+        pill.right() - m.tab_padding_right - tab::CLOSE / 2.0,
         pill.center().y,
     );
     let button_rect = Rect::from_center_size(
@@ -921,9 +942,9 @@ fn draw_tab(
         vec2(2.0 * tab::CLOSE_HOVER_RADIUS, 2.0 * tab::CLOSE_HOVER_RADIUS),
     );
     let actions_right = if has_button {
-        pill.right() - tab::PADDING_RIGHT - tab::CLOSE - tab::CLOSE_GAP
+        pill.right() - m.tab_padding_right - tab::CLOSE - tab::CLOSE_GAP
     } else {
-        pill.right() - tab::PADDING_RIGHT
+        pill.right() - m.tab_padding_right
     };
     let actions_width = if env.actions > 0 {
         env.actions as f32 * (size::ICON_BUTTON_SMALL + tab::ACTION_GAP) - tab::ACTION_GAP
@@ -992,7 +1013,23 @@ fn draw_tab(
     let painter = ui.painter().clone();
     let corner = CornerRadius::same(radius::TAB);
     let lifted = selected || env.dragged;
-    if lifted {
+    if !pills {
+        // New UI and Classic: flat tabs the strip's height; the selected one has a fill and
+        // an underline (New UI 4 pt, radius 2; Classic 3 pt, square).
+        if lifted {
+            painter.rect_filled(pill, 0.0, colors.tab_selected);
+            let line = Rect::from_min_max(
+                pos2(pill.left(), pill.bottom() - m.tab_underline),
+                pill.right_bottom(),
+            );
+            painter.rect_filled(line, m.tab_underline_radius, colors.tab_selected_border);
+        } else if hovered {
+            painter.rect_filled(pill, 0.0, colors.hover);
+        }
+        if response.has_focus() {
+            crate::parts::focus_ring(&painter, pill.shrink(1.0), 0, colors);
+        }
+    } else if lifted {
         // The selected tab: a tinted pill with a 1 pt border.
         painter.rect_filled(pill, corner, colors.tab_selected);
         painter.rect_stroke(
@@ -1004,10 +1041,10 @@ fn draw_tab(
     } else if hovered {
         painter.rect_filled(pill, corner, colors.hover);
     }
-    if response.has_focus() {
+    if pills && response.has_focus() {
         crate::parts::focus_ring(&painter, pill, radius::TAB, colors);
     }
-    let mut x = pill.left() + tab::PADDING_LEFT;
+    let mut x = pill.left() + m.tab_padding_left;
     if let Some(icon) = item.icon {
         let icon_rect = Rect::from_min_size(
             pos2(x, pill.center().y - size::ICON / 2.0),
@@ -1019,14 +1056,15 @@ fn draw_tab(
     // Hover brings an unselected title up to full strength, as in Android Studio.
     let text_color = if !item.enabled {
         colors.text_disabled
-    } else if selected || hovered {
+    } else if selected || hovered || m.look == crate::UiLook::Classic {
+        // Classic does not dim unselected titles (alpha 1).
         colors.text
     } else {
         colors.tab_text
     };
     // The title is cut off with an ellipsis where the tab is at its widest.
     let dot = if item.modified { MODIFIED_DOT } else { 0.0 };
-    let reserved = trailing_width(item, env.actions);
+    let reserved = trailing_width(m, item, env.actions);
     let room = (pill.right() - reserved - x - dot).max(0.0);
     let elided = galley.size().x > room + 0.5;
     let galley = if elided {

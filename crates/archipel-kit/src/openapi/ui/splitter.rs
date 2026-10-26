@@ -39,7 +39,8 @@ pub enum Side {
 pub enum DividerStyle {
     /// The Islands layout: the 4 pt gap between islands is the divider. A 1 pt line grows
     /// to 2 pt on hover and takes the accent color while dragged (unless
-    /// [`Splitter::line`] is off). The default.
+    /// [`Splitter::line`] is off). The default. In the New UI and Classic looks (flush
+    /// panels) it is a 1 pt line in the divider color with a 6 pt hit zone, always drawn.
     #[default]
     Gap,
     /// IntelliJ's `Splitter`: a 7 pt divider that draws nothing, only the resize cursor.
@@ -51,18 +52,19 @@ pub enum DividerStyle {
 
 impl DividerStyle {
     /// The room the divider takes between the panes.
-    fn width(self) -> f32 {
+    fn width(self, metrics: &crate::look::Metrics) -> f32 {
         match self {
-            Self::Gap => size::SPLIT_DIVIDER,
+            Self::Gap => metrics.split_divider,
             Self::Classic => size::SPLIT_CLASSIC_DIVIDER,
             Self::OnePixel => size::SPLIT_ONE_PIXEL,
         }
     }
 
     /// How far the pointer target reaches past the divider on each side.
-    fn grab(self) -> f32 {
+    fn grab(self, metrics: &crate::look::Metrics) -> f32 {
         match self {
-            Self::Gap => size::SPLIT_GRAB,
+            Self::Gap if metrics.is_islands() => size::SPLIT_GRAB,
+            Self::Gap => ((size::SPLIT_MOUSE_ZONE - metrics.split_divider) / 2.0).max(0.0),
             Self::Classic => 0.0,
             Self::OnePixel => ((size::SPLIT_MOUSE_ZONE - size::SPLIT_ONE_PIXEL) / 2.0).max(0.0),
         }
@@ -308,6 +310,7 @@ impl<'a> Splitter<'a> {
         second: impl FnOnce(&mut Ui) -> B,
     ) -> SplitterResponse<A, B> {
         let colors = Theme::colors(ui.ctx());
+        let metrics = crate::tokens::metrics(ui.ctx());
         let horizontal = self.orientation == Orientation::Horizontal;
         let divider_id = ui.id().with(self.id).with("divider");
 
@@ -339,7 +342,7 @@ impl<'a> Splitter<'a> {
             self.default_ratio,
             (self.min_first, self.min_second),
             whole,
-            self.style.width(),
+            self.style.width(&metrics),
             self.lack_of_space,
             self.limits,
         );
@@ -357,9 +360,9 @@ impl<'a> Splitter<'a> {
         // The divider takes part in Tab order before the panes, so an outer divider comes
         // before those of splits nested in its panes, and it moves them in the same frame.
         let grab = bar.expand2(if horizontal {
-            vec2(self.style.grab(), 0.0)
+            vec2(self.style.grab(&metrics), 0.0)
         } else {
-            vec2(0.0, self.style.grab())
+            vec2(0.0, self.style.grab(&metrics))
         });
         let sense = if self.enabled {
             Sense::click_and_drag()
@@ -411,7 +414,7 @@ impl<'a> Splitter<'a> {
                 } else {
                     whole.top()
                 };
-                let wanted = along(pointer) - grabbed - self.style.width() / 2.0 - start;
+                let wanted = along(pointer) - grabbed - self.style.width(&metrics) / 2.0 - start;
                 target = Some(wanted);
                 if let Some(side) = side {
                     // How big the collapsible pane would be if it followed the pointer,
@@ -623,12 +626,16 @@ impl<'a> Splitter<'a> {
             } else if collapsed {
                 // A collapsed pane's edge must stay easy to see.
                 (2.0, colors.control_border)
+            } else if gap && !metrics.is_islands() {
+                (metrics.split_divider, colors.divider)
             } else {
                 (1.0, colors.separator)
             };
-            // Without a line, only a collapsed edge is drawn: the gap is the divider.
+            // Without a line, only a collapsed edge is drawn: the gap is the divider. Flush
+            // panels always have their 1 pt line.
             let color = match self.style {
                 DividerStyle::Classic if !collapsed => egui::Color32::TRANSPARENT,
+                DividerStyle::Gap if !metrics.is_islands() => color,
                 _ if self.line || collapsed => color,
                 _ => egui::Color32::TRANSPARENT,
             };

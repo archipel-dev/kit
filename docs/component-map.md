@@ -117,6 +117,26 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Button | 30 pt, radius 6, 20 pt icon, 40 pt pitch; first button 3 pt below the island's top | `SquareStripeButton` |
 | States | Open: pressed fill (~16 % white); active (focus in the tool window): accent fill, white icon; hover: `hover` fill; tooltip beside it at once | `SquareStripeButton::open`, `active` |
 
+### UI looks (looks spec)
+
+The values above are the Islands look. New UI and Classic, and compact density, resolve
+through `tokens::metrics(ctx)`; the full table is in [UI looks](looks.md#metrics). Their
+values come from the IntelliJ looks spec (§2, §6, §8.2), not from a measurement; the ones the
+spec marks as derived (status bar and classic toolbar heights, classic stripe width) are
+estimates to re-measure with `tools/reference/` on a New UI and a Classic build.
+
+| Situation | IntelliJ (looks spec) | Kit |
+|---|---|---|
+| Panels | Islands: rounded islands, 4 pt gaps; New UI and Classic: flush, 1 pt `Borders.color` lines | `Metrics::panels`, `Surface::Flat`, `Surface::island_lines` |
+| Stripes | New UI: 40 pt icon toolbar with a 1 pt line; Classic: rotated text buttons on three stripes | `ToolWindowToolbar`; `Stripe`, `StripeButton` |
+| Editor tabs | Islands pills; New UI 4 pt underline radius 2, close on hover/selected; Classic 3 pt underline, close always | `JBTabs` (`Metrics::tab_style`, `tab_close_always`) |
+| Tool window header | 40 (compact 30); Classic 28, active header highlighted, actions always shown, title with ":" | `SimpleToolWindowPanel` |
+| Status bar | Islands 30, no line; New UI 31 with a 1 pt top line; Classic 23 with the line, square hovers | `ToolWindowPane::status`, `StatusBarWidget` |
+| Rows | 24 (compact 22) pills; Classic 20, flat full-row selection, triangles, indent 18 | `ColoredListCellRenderer`, `JBList`, `Tree`, `JBTable` |
+| Menus | pills inset 8; Classic full-width flat rows, square popups, padding 4 | `ActionMenuItem`, `Surface::Popup` |
+| Header | 40 (compact 32, Distraction Free 30); Classic: menu bar row + 30 pt toolbar | `MainToolbar::main_menu` |
+| Gutter | hover chevrons; Classic: always-visible outline with square anchors | `EditorComponent` |
+
 ### Window family behavior (IntelliJ spec)
 
 Behavior and numbers from the IntelliJ UX specification (sections 2, 8, 9, 12, 15.1). Where the

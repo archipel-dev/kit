@@ -220,6 +220,25 @@ pub(crate) fn show(ui: &mut Ui, st: &mut ViewState, input: GutterInput<'_>) -> G
         .map(|c| editor.document.line_number(c.offset))
         .collect();
 
+    // Classic: the folding outline is always there: square anchors at both ends of every
+    // region and a line along the region the caret is in (looks spec §2.12).
+    let outline = crate::tokens::metrics(ui.ctx()).folding == crate::look::FoldingStyle::Outline;
+    let caret_region = caret_lines.first().and_then(|&caret| {
+        editor
+            .folding
+            .regions()
+            .iter()
+            .filter(|region| region.expanded)
+            .map(|region| {
+                (
+                    editor.document.line_number(region.start),
+                    editor.document.line_number(region.end),
+                )
+            })
+            .filter(|&(a, b)| a <= caret && caret <= b && a < b)
+            .min_by_key(|&(a, b)| b - a)
+    });
+
     let mut last_logical = usize::MAX;
     let mut row = first_row;
     while row <= last_row {
@@ -315,6 +334,42 @@ pub(crate) fn show(ui: &mut Ui, st: &mut ViewState, input: GutterInput<'_>) -> G
                 });
             }
         }
+        // Classic outline: the line along the caret's region and the end anchors.
+        if outline && let Some((x0, x1)) = layout.fold {
+            let center_x = (x0 + x1) / 2.0;
+            let anchor = metrics::FOLD_ANCHOR;
+            if let Some((a, b)) = caret_region
+                && line >= a
+                && line <= b
+            {
+                let y0 = if line == a {
+                    top + geo.row_h / 2.0 + anchor / 2.0
+                } else {
+                    top
+                };
+                let y1 = if line == b {
+                    top + geo.row_h / 2.0 - anchor / 2.0
+                } else {
+                    top + geo.row_h
+                };
+                if y1 > y0 {
+                    painter.vline(center_x, y0..=y1, Stroke::new(1.0_f32, colors.fold_marker));
+                }
+            }
+            let ends_here = editor.folding.regions().iter().any(|region| {
+                region.expanded
+                    && editor.document.line_number(region.end) == line
+                    && editor.document.line_number(region.start) < line
+            });
+            if ends_here {
+                paint_anchor(
+                    &painter,
+                    pos2(center_x, top + geo.row_h / 2.0),
+                    AnchorKind::End,
+                    colors.fold_marker,
+                );
+            }
+        }
         // Fold chevron.
         if let (Some((x0, x1)), Some(index)) = (layout.fold, region_at_line(editor, line)) {
             let region = &editor.folding.regions()[index];
@@ -349,7 +404,18 @@ pub(crate) fn show(ui: &mut Ui, st: &mut ViewState, input: GutterInput<'_>) -> G
             } else {
                 alpha
             };
-            if alpha > 0.0 {
+            if outline {
+                paint_anchor(
+                    &painter,
+                    rect.center(),
+                    if collapsed {
+                        AnchorKind::Collapsed
+                    } else {
+                        AnchorKind::Expanded
+                    },
+                    colors.fold_marker,
+                );
+            } else if alpha > 0.0 {
                 paint_chevron(
                     &painter,
                     rect.center(),
@@ -389,4 +455,29 @@ pub(crate) fn paint_chevron(painter: &Painter, center: Pos2, collapsed: bool, co
         ]
     };
     painter.add(egui::Shape::line(points, Stroke::new(1.0_f32, color)));
+}
+
+/// Which classic folding anchor to draw.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum AnchorKind {
+    /// The start of an expanded region: a square with a minus.
+    Expanded,
+    /// A collapsed region: a square with a plus.
+    Collapsed,
+    /// The end of an expanded region: a square with a minus.
+    End,
+}
+
+/// A classic folding outline anchor (spec: square +/- anchors, size
+/// `min(4, lineHeight / 2 - 2) * 2`), a 1 px outline.
+fn paint_anchor(painter: &Painter, center: Pos2, kind: AnchorKind, color: Color32) {
+    let half = metrics::FOLD_ANCHOR / 2.0;
+    let rect = Rect::from_center_size(center, vec2(2.0 * half, 2.0 * half));
+    let stroke = Stroke::new(1.0_f32, color);
+    painter.rect_stroke(rect.shrink(0.5), 0.0, stroke, egui::StrokeKind::Inside);
+    let arm = half - 2.0;
+    painter.hline((center.x - arm)..=(center.x + arm), center.y, stroke);
+    if kind == AnchorKind::Collapsed {
+        painter.vline(center.x, (center.y - arm)..=(center.y + arm), stroke);
+    }
 }

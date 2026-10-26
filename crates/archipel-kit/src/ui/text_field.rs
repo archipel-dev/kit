@@ -9,7 +9,7 @@ use crate::editor::{styled_job, token_format};
 use crate::icons::{self, Glyph, Icon};
 use crate::openapi::ui::ValidationInfo;
 use crate::theme::Theme;
-use crate::tokens::{motion, radius, size, typography};
+use crate::tokens::{motion, size, typography};
 use egui::text::{CCursor, CCursorRange};
 use egui::{Color32, CornerRadius, Id, Rect, Response, Stroke, Ui, Widget, pos2, vec2};
 use std::cell::RefCell;
@@ -345,7 +345,7 @@ impl JBTextField<'_> {
             let height = if multiline {
                 self.rows as f32 * size::CODE_LINE_HEIGHT + size::CODE_PADDING
             } else {
-                size::CONTROL_HEIGHT
+                crate::tokens::metrics(ui.ctx()).control_height
             };
             let (rect, frame_response) =
                 ui.allocate_exact_size(vec2(width, height), egui::Sense::hover());
@@ -822,7 +822,7 @@ impl JBTextField<'_> {
                 background,
                 egui::epaint::RectShape::new(
                     border_rect,
-                    CornerRadius::same(radius::CONTROL),
+                    CornerRadius::same(crate::tokens::metrics(ui.ctx()).control_radius),
                     fill,
                     stroke,
                     egui::StrokeKind::Inside,

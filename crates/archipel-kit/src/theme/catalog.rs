@@ -77,6 +77,10 @@ pub struct ThemeInfo {
     pub dark: bool,
     /// Builds the theme.
     pub constructor: fn() -> Theme,
+    /// The UI look the theme was made for (classic Darcula and IntelliJ Light: Classic; the
+    /// New UI themes: New UI; the Islands themes: Islands). A suggestion for pickers: the
+    /// application decides the look (see [`crate::look`]).
+    pub look: crate::look::UiLook,
 }
 
 /// Where a [`Theme`]'s generated tables come from: ids into the bundled IntelliJ themes
@@ -356,6 +360,16 @@ impl Theme {
     /// the IntelliJ Community UI themes.
     pub fn all() -> &'static [ThemeInfo] {
         generated::THEMES
+    }
+
+    /// The UI look this theme was made for ([`ThemeInfo::look`]); Islands for a theme built
+    /// by hand. A suggestion only: set the look with [`crate::look::set_look`].
+    pub fn suggested_look(&self) -> crate::look::UiLook {
+        let id = self.source.ui;
+        Self::all()
+            .iter()
+            .find(|info| Some(info.id) == id)
+            .map_or(crate::look::UiLook::Islands, |info| info.look)
     }
 
     /// The bundled theme with this id (see [`ThemeInfo::id`]).

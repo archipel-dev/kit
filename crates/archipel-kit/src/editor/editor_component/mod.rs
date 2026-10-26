@@ -524,14 +524,30 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         metrics::STRIPE_WIDTH
     };
     let lanes = gutter_icons.iter().map(|i| i.lane + 1).max().unwrap_or(0);
+    // Distraction Free mode turns off line numbers, gutter icons and folding; presentation
+    // mode the folding (looks spec §7).
+    let view = crate::tokens::metrics(&ctx).view;
+    let dfm = view.distraction_free;
     let cfg = GutterCfg {
-        numbers: line_numbers,
+        numbers: line_numbers && !dfm,
         lines: editor.document.line_count(),
-        change_markers: !markers.is_empty(),
-        lanes,
-        folding,
+        change_markers: !markers.is_empty() && !dfm,
+        lanes: if dfm { 0 } else { lanes },
+        folding: folding && !view.hides_gutter_extras(),
     };
     let gutter_w = gutter::width(&cfg, number_cell);
+    // Both modes center the text: the right margin column sits in the middle.
+    let inner = if view.centers_editor() {
+        let margin = crate::editor::distraction_free_margin(
+            inner.width() - stripe_w,
+            gutter_w + pad,
+            cell,
+            editor.settings.right_margin,
+        );
+        Rect::from_min_max(pos2(inner.min.x + margin, inner.min.y), inner.max)
+    } else {
+        inner
+    };
     let gutter_rect = Rect::from_min_max(inner.min, pos2(inner.min.x + gutter_w, inner.max.y));
     let area = Rect::from_min_max(
         pos2(inner.min.x + gutter_w, inner.min.y),

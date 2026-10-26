@@ -1,7 +1,7 @@
 //! Fonts, spacing and egui visuals.
 
 use crate::theme::Theme;
-use crate::tokens::{opacity, popup, radius, scroll, size, typography};
+use crate::tokens::{opacity, scroll, size, typography};
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, Stroke};
 use std::sync::Arc;
 
@@ -11,6 +11,7 @@ use std::sync::Arc;
 /// themes later with [`Theme::apply`].
 pub fn install(ctx: &egui::Context, theme: Theme) {
     install_fonts(ctx);
+    let metrics = crate::tokens::metrics(ctx);
     ctx.all_styles_mut(|style| {
         use egui::{FontId, TextStyle};
         style.text_styles = [
@@ -30,10 +31,10 @@ pub fn install(ctx: &egui::Context, theme: Theme) {
         style.spacing.item_spacing = egui::vec2(6.0, 4.0);
         // Popups and menus: a small vertical inset, rows reach the sides (their pills inset
         // themselves), like the reference IDE's popup lists.
-        style.spacing.menu_margin = egui::Margin::symmetric(0, popup::PADDING as i8);
+        style.spacing.menu_margin = egui::Margin::symmetric(0, metrics.popup_padding as i8);
         style.spacing.window_margin = egui::Margin::same(size::DIALOG_PADDING as i8);
         style.spacing.button_padding = egui::vec2(8.0, 3.0);
-        style.spacing.interact_size.y = size::ROW_HEIGHT;
+        style.spacing.interact_size.y = metrics.row_height;
         // Android Studio's scroll bars: a thin thumb that stays visible over the content and
         // brightens under the pointer, no track.
         style.spacing.scroll = egui::style::ScrollStyle {
@@ -54,6 +55,26 @@ pub fn install(ctx: &egui::Context, theme: Theme) {
         style.interaction.selectable_labels = false;
     });
     theme.apply(ctx);
+}
+
+/// Like [`install`], with the look settings `look` (UI look, compact density, view mode)
+/// instead of the defaults (Islands, normal density). Switch later with
+/// [`look::set_look`](crate::look::set_look) and friends.
+pub fn install_with_look(ctx: &egui::Context, theme: Theme, look: crate::look::LookSettings) {
+    install(ctx, theme);
+    crate::look::set_settings(ctx, look);
+    apply_look(ctx);
+}
+
+/// Re-applies the look-dependent parts of egui's style (menu margins, row height, corner
+/// radii) after the look of `ctx` changed.
+pub(crate) fn apply_look(ctx: &egui::Context) {
+    let metrics = crate::tokens::metrics(ctx);
+    ctx.all_styles_mut(|style| {
+        style.spacing.menu_margin = egui::Margin::symmetric(0, metrics.popup_padding as i8);
+        style.spacing.interact_size.y = metrics.row_height;
+    });
+    apply_visuals(ctx, &Theme::current(ctx));
 }
 
 fn install_fonts(ctx: &egui::Context) {
@@ -120,6 +141,7 @@ pub(crate) fn apply_visuals(ctx: &egui::Context, theme: &Theme) {
         egui::Theme::Light
     });
     let c = &theme.colors;
+    let metrics = crate::tokens::metrics(ctx);
     ctx.style_mut(|style| {
         let visuals = &mut style.visuals;
         *visuals = if theme.dark {
@@ -131,8 +153,8 @@ pub(crate) fn apply_visuals(ctx: &egui::Context, theme: &Theme) {
         visuals.panel_fill = c.frame;
         visuals.window_fill = c.popup;
         visuals.window_stroke = Stroke::new(1.0_f32, c.popup_border);
-        visuals.window_corner_radius = CornerRadius::same(radius::POPUP);
-        visuals.menu_corner_radius = CornerRadius::same(radius::POPUP);
+        visuals.window_corner_radius = CornerRadius::same(metrics.popup_radius);
+        visuals.menu_corner_radius = CornerRadius::same(metrics.popup_radius);
         visuals.window_shadow = egui::Shadow {
             offset: [0, 4],
             blur: 16,
@@ -155,7 +177,7 @@ pub(crate) fn apply_visuals(ctx: &egui::Context, theme: &Theme) {
         visuals.warn_fg_color = c.warning;
         visuals.resize_corner_size = 0.0;
 
-        let radius = CornerRadius::same(radius::CONTROL);
+        let radius = CornerRadius::same(metrics.control_radius);
         let widgets = &mut visuals.widgets;
         widgets.noninteractive.bg_fill = c.frame;
         widgets.noninteractive.weak_bg_fill = c.frame;

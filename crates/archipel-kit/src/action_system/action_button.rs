@@ -8,7 +8,7 @@ use crate::common;
 use crate::icons::{self, Glyph, Icon};
 use crate::parts::Tone;
 use crate::theme::Theme;
-use crate::tokens::{action_toolbar, radius, size, toolbar};
+use crate::tokens::{action_toolbar, size, toolbar};
 use egui::{
     Color32, Id, Key, PointerButton, Rect, Response, Sense, Ui, Widget, WidgetInfo, WidgetType,
     pos2, vec2,
@@ -260,10 +260,12 @@ impl<'a> ActionButton<'a> {
             (true, true) => Sense::click(),
             (true, false) => Sense::CLICK,
         };
+        let metrics = crate::tokens::metrics(ui.ctx());
         let (edge, icon_edge) = if self.title_pane {
             (toolbar::TITLE_BUTTON, size::ICON)
         } else if self.large {
-            (toolbar::BUTTON, toolbar::ICON)
+            // Compact: 26 pt with a 16 pt icon; Classic: the plain 22 pt toolbar button.
+            (metrics.toolbar_button, metrics.toolbar_icon)
         } else if self.small {
             (size::ICON_BUTTON_SMALL, size::ICON)
         } else {
@@ -340,9 +342,9 @@ impl<'a> ActionButton<'a> {
             let corner = if self.title_pane {
                 0
             } else if self.large {
-                radius::ICON_BUTTON
+                metrics.icon_button_radius
             } else {
-                radius::ICON_BUTTON_SMALL
+                metrics.icon_button_small_radius
             };
             painter.rect_filled(rect, corner, fill);
             if focused {
