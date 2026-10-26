@@ -30,6 +30,7 @@
 pub mod behaviour;
 pub mod components;
 pub mod cursor;
+pub mod editor;
 pub mod icons;
 pub mod parts;
 mod style;
@@ -65,6 +66,7 @@ mod docs {
         Cursors = "cursors.md";
         Behaviours = "behaviours.md";
         BuildingComponents = "building-components.md";
+        EditorModel = "editor-model.md";
         Collections = "components/collections.md";
         TreeTable = "components/tree-table.md";
         Tooltip = "components/tooltip.md";
