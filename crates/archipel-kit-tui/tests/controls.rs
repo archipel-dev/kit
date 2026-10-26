@@ -1,5 +1,7 @@
 //! Event-driven tests of the basic controls: keys and the mouse against an in-memory screen.
 
+#![allow(clippy::unnecessary_mut_passed)]
+
 use archipel_kit::ui::Status;
 use archipel_kit_tui::components::{Pane, PaneKind};
 use archipel_kit_tui::controls::*;

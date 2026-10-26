@@ -34,23 +34,28 @@
 //! and the components in [`controls`], [`collections`], [`popup`], [`workbench`] and
 //! [`overlay`]. The guide with images is `docs/tui/README.md`.
 
+pub mod balloon;
 pub mod clipboard;
 pub mod collections;
 pub mod combo;
 pub mod components;
 pub mod controls;
+pub mod dialog;
 pub mod focus;
 pub mod glyphs;
 pub mod hit;
 pub mod input;
+pub mod overlay;
 pub mod palette;
 pub mod pointer;
 pub mod popup;
 pub mod runtime;
+pub mod statusbar;
 pub mod tabs;
 pub mod testing;
 pub mod toolbar;
 pub mod tooltip;
+pub mod workbench;
 
 pub use archipel_icons::{Glyph, Language, Symbol, SymbolKind};
 

@@ -1,5 +1,7 @@
 //! Event-driven tests of lists, trees, tables and speed search.
 
+#![allow(clippy::unnecessary_mut_passed)]
+
 use archipel_kit::ui::SortOrder;
 use archipel_kit_tui::collections::*;
 use archipel_kit_tui::components::{Pane, PaneKind, RowIcon};

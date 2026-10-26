@@ -1,5 +1,7 @@
 //! Event-driven tests of list popups and action popup menus: keys, mouse, timers.
 
+#![allow(clippy::unnecessary_mut_passed)]
+
 use archipel_kit::action_system::{
     ActionPlace, AnAction, AnActionEvent, DataContext, DefaultActionGroup, Presentation, Toggle,
     ToggleAction,

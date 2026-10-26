@@ -387,6 +387,27 @@ pub fn snapshot(name: &str, buf: &Buffer) {
     );
 }
 
+/// Writes `text` at (`x`, `y`) in `fg` on `bg`, clipped to `area`: for test apps that label the
+/// areas they got.
+pub fn put_text(
+    buf: &mut Buffer,
+    area: Rect,
+    x: u16,
+    y: u16,
+    text: &str,
+    fg: ratatui::style::Color,
+    bg: ratatui::style::Color,
+) {
+    crate::components::put(
+        buf,
+        area,
+        x,
+        y,
+        text,
+        ratatui::style::Style::default().fg(fg).bg(bg),
+    );
+}
+
 /// An [`App`] made of closures over some state, for tests and small examples.
 pub struct FnApp<S, E, D> {
     /// The state the closures share.
@@ -509,6 +530,11 @@ impl<A: App> Harness<A> {
     /// Ctrl plus a character.
     pub fn ctrl(&mut self, c: char) -> &mut Self {
         self.send(crate::input::ctrl(c))
+    }
+
+    /// Alt plus a navigation key.
+    pub fn alt_arrow(&mut self, code: KeyCode) -> &mut Self {
+        self.send(crate::input::key_with(code, KeyModifiers::ALT))
     }
 
     /// Alt plus a character.

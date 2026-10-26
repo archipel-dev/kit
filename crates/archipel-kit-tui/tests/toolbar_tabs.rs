@@ -1,5 +1,7 @@
 //! Event-driven tests of the action toolbar, the combo box and the tab strip.
 
+#![allow(clippy::unnecessary_mut_passed)]
+
 use archipel_kit::action_system::{
     ActionPlace, AnAction, AnActionEvent, DataContext, DefaultActionGroup, Presentation, Toggle,
     ToggleAction,

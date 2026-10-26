@@ -229,3 +229,11 @@ light, and `q` quits.
 ## Toolbar, tabs and combo box
 
 <img alt="Toolbar with a tooltip, tab line and combo box" src="img/toolbar.dark.svg" width="672"> <img alt="Toolbar, light" src="img/toolbar.light.svg" width="672">
+
+## Tool windows
+
+<img alt="Workbench" src="img/workbench.dark.svg" width="840"> <img alt="Workbench, light" src="img/workbench.light.svg" width="840">
+
+## Dialogs, notifications and the status bar
+
+<img alt="A dialog, balloons and the status line" src="img/overlays.dark.svg" width="840"> <img alt="Overlays, light" src="img/overlays.light.svg" width="840">
