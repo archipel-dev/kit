@@ -820,3 +820,42 @@ pub mod editor {
     /// Width of the history popup's rows when the field is narrower.
     pub const FIND_HISTORY_MIN_WIDTH: f32 = 180.0;
 }
+
+/// The completion popup (IntelliJ `Lookup`; editor spec §9, UX spec §5.3).
+pub mod lookup {
+    /// Rows shown before the list scrolls (`maxLookupListHeight`, editor spec §9: 11).
+    pub const MAX_ROWS: usize = 11;
+    /// Row height (`List.rowHeight` 24 in the New UI; editor spec §9 marks it [verify], the
+    /// kit keeps the measured list row).
+    pub const ROW_HEIGHT: f32 = super::size::ROW_HEIGHT;
+    /// Space between the popup's border and its rows (editor spec §9: popup body inset 4).
+    pub const BODY_INSET: f32 = 4.0;
+    /// Space between the body and the selection capsule (`CompletionPopup.selectionInnerInsets`,
+    /// editor spec §9: 2).
+    pub const SELECTION_INSET: f32 = 2.0;
+    /// Space before a row's icon column (editor spec §9: icon inset left 6).
+    pub const ICON_INSET: f32 = 6.0;
+    /// Space after the type text (editor spec §9: 10 px right padding).
+    pub const RIGHT_PADDING: f32 = 10.0;
+    /// Space between an item's text and its gray tail text (the kit's choice; the spec says
+    /// only "right after").
+    pub const TAIL_GAP: f32 = 4.0;
+    /// Smallest space between the text (and tail) and the right-aligned type text (the kit's
+    /// choice).
+    pub const TYPE_GAP: f32 = 12.0;
+    /// Space between the caret's line and the popup (the kit's choice).
+    pub const CARET_GAP: f32 = 2.0;
+    /// Narrowest a lookup is (the kit's choice; the spec gives no minimum).
+    pub const MIN_WIDTH: f32 = 180.0;
+    /// Widest the documentation popup beside the lookup is (the kit's choice).
+    pub const DOC_WIDTH: f32 = 320.0;
+    /// Vertical padding of the advertiser line under the rows (the kit's choice; the spec
+    /// gives `CompletionPopup.Advertiser.borderInsets` no default).
+    pub const ADVERTISER_INSET_Y: f32 = 4.0;
+    /// Horizontal padding of the advertiser line (Islands `Popup.Advertiser.borderInsets`
+    /// (8,12), UX spec §5.3: 12 at the sides).
+    pub const ADVERTISER_INSET_X: f32 = 12.0;
+    /// How long the selected item rests before its documentation shows by itself, when the
+    /// completer asks for that (`JAVADOC_INFO_DELAY`, editor spec §9: 500 ms).
+    pub const DOC_DELAY: f32 = 0.5;
+}

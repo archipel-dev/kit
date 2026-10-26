@@ -38,7 +38,7 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 | `.monospace(bool)` | Code font, for paths, URLs and ids. |
 | `.enabled(bool)` | Disabled inputs are dimmed and read-only. |
 | `.highlighter(&dyn SyntaxHighlighter)` | Colors the text (URLs, `{{variables}}`); see [single-line fields](code.md#single-line-fields-and-variables). |
-| `.completer(&dyn Completer)` | A completion list under the caret, operated by the kit; see [autocomplete](code.md#autocomplete). |
+| `.completer(&dyn Completer)` | A completion popup (IntelliJ `Lookup`: matched fragments, tail and type text, wrapping <kbd>Up</kbd>/<kbd>Down</kbd>, <kbd>Enter</kbd> inserts, <kbd>Tab</kbd> replaces the identifier tail, double click inserts) under the caret, operated by the kit; keys and rows in [autocomplete](code.md#autocomplete). A combo box's `.suggestions(..)` list keeps the combo behavior (a single click picks, no prefix matching). |
 | `.suggestions(&[String])` | An editable combo box: free text plus a chevron listing the suggestions; see [combo box](#combo-box). |
 | `.width(f32)` | Total width (default: the available width, at least 49 pt: `TextField.minimumSize`, and wide enough for its icons). |
 | `.extension(Extension)` | An icon button inside the field; see [extensions](#extensions). |

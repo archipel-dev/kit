@@ -57,7 +57,7 @@ fn body_panel(ui: &mut egui::Ui, request: &mut Editor, response: &mut Editor) {
 | `.wrap(bool)` | Soft wrap at the width instead of sideways scrolling (Home, End, Up and Down still follow logical lines). |
 | `.placeholder(str)` | Hint shown while the document is empty. |
 | `.tab_indents(bool)` | <kbd>Tab</kbd> indents (default); off, it moves focus (for forms). |
-| `.completer(&dyn Completer)` | A completion list under the caret, as in [single-line fields](#autocomplete); <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it. `Completion::caret(n)` puts the caret inside the insertion (`user(id: \|)`). |
+| `.completer(&dyn Completer)` | A completion popup (IntelliJ `Lookup`) under the caret, as in [single-line fields](#autocomplete); it opens while typing an identifier and on <kbd>Ctrl</kbd>+<kbd>Space</kbd>, and inserts at every caret. `Completion::caret(n)` puts the caret inside the insertion (`user(id: \|)`). |
 | `.scroll_to_line(Option<usize>)` | Centers a line (0-based), on the frame it is passed. |
 | `.stick_to_bottom(bool)` | Follows the end while the text grows (a console, a log); scrolling up stays there until the user scrolls back down. Turns scroll past the end off. |
 | `.gutter_icons(&[GutterIcon])`, `.change_markers(&[ChangeMarker])` | Icon lanes and version control markers in the gutter, as data. |
@@ -427,14 +427,39 @@ fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
 
 ### Autocomplete
 
-`.completer(&dyn Completer)` (the `Completer` trait) gives a field a completion list, drawn and operated by the kit.
-The completer is any `Fn(&str, usize) -> Option<Completions>`: given the text and the caret
-(a char index) it returns where the replaced part starts and the suggestions, or `None` when
-nothing completes there. The kit opens the list under the caret on every edit with
-suggestions, moves in it with <kbd>Up</kbd>/<kbd>Down</kbd>, inserts with <kbd>Enter</kbd>,
-<kbd>Tab</kbd> or a click (caret after the insertion, focus kept), and closes it on
-<kbd>Esc</kbd> (the field keeps the focus) or when the field loses focus. <kbd>Enter</kbd> with
-no list open still submits.
+`.completer(&dyn Completer)` (the `Completer` trait, IntelliJ's `CompletionContributor`) gives a
+field a completion popup (IntelliJ `Lookup`), drawn and operated by the kit. The completer is
+any `Fn(&str, usize) -> Option<Completions>`: given the text and the caret (a char index) it
+returns where the replaced part starts and the suggestions (`Completion`, IntelliJ
+`LookupElement`), or `None` when nothing completes there. It may return everything it knows:
+the kit narrows and sorts the suggestions by what was typed since the start of the identifier
+before the caret (`PrefixMatcher`, ranked by `MatchKind`: prefix, then camel humps, then words, then substrings, all
+ignoring case; an exact-case match sorts first; ties keep the completer's order and put
+recently chosen items first). <kbd>Enter</kbd> with no list open still submits.
+
+Each suggestion is one row (`LookupElementPresentation`): an `.icon(..)`, the label with the
+fragments that match drawn in the link color (`CompletionPopup.matchForeground`), a gray
+`.tail_text(..)` right after it and a gray `.type_text(..)` (`.detail(..)`) right-aligned;
+`.bold()` and `.strikeout()` style the label, `.lookup_string(..)` changes what is matched and
+`.documentation(..)` fills the documentation popup. A `Completer` may also override
+`complete_extended` (second <kbd>Ctrl</kbd>+<kbd>Space</kbd>), `recency` (the caller's
+`LookupStats`), `auto_popup_delay`, `auto_insert_single`, `advertisement` (a line under the
+rows), `auto_show_documentation` and `filters_by_prefix` (`false` for combo-box style
+completers that filter and replace whole values themselves).
+
+| Rule | Behavior |
+|---|---|
+| Opens | After a letter, digit or `_` is typed, without delay (`auto_popup_delay` adds one); never after other characters. <kbd>Ctrl</kbd>+<kbd>Space</kbd> opens it anywhere and, pressed again, asks for `complete_extended`. An explicit request that finds exactly one item inserts it at once. |
+| Move | <kbd>Up</kbd>/<kbd>Down</kbd> wrap around at the ends; <kbd>PgUp</kbd>/<kbd>PgDn</kbd> move by 10 rows and stop at the ends. <kbd>Home</kbd>, <kbd>End</kbd> and the other caret keys move the caret: the list follows the prefix and closes when the caret leaves it. |
+| Insert | <kbd>Enter</kbd> replaces the typed prefix and keeps the text after the caret; <kbd>Tab</kbd> also replaces the rest of the identifier after the caret; <kbd>Ctrl</kbd>+<kbd>.</kbd> inserts and types a dot. |
+| Context characters | `.` `,` `;` `=` space `:` `(` insert the selected item and are then typed (so `(` gets the editor's auto-closing). Any other non-identifier character closes the list and is typed; `-` stays in the prefix while something matches. |
+| Backspace | Narrows and widens the list; closes it when the prefix becomes empty (an explicitly opened list closes when the caret passes its start). |
+| Mouse | A click selects a row, a double click inserts it. The wheel scrolls the rows. |
+| Close | <kbd>Esc</kbd> (the editor keeps the focus), losing the focus, an empty list. |
+| Documentation | <kbd>Ctrl</kbd>+<kbd>Q</kbd> (also <kbd>Ctrl</kbd>+<kbd>J</kbd>, <kbd>F1</kbd>) toggles the documentation of the selected item beside the list; a completer can ask for it to show by itself after 500 ms. |
+| Multiple carets | The insertion applies at every caret whose text before it ends in the same prefix, as one undo step. |
+| Layout | At most 11 rows of 24 pt, then it scrolls; a 4 pt body inset, a selection capsule inset by 2 more (radius 4, `CompletionPopup.selectionBackground`); icon 16 pt after 6 pt, 4 pt to the text, 10 pt after the type text. As wide as the widest row (at least 180 pt). It sits under the caret's line with the item text aligned to the start of the typed prefix, above it when there is no room below. |
+| Result | `EditorComponentResponse::completed` is the item inserted this frame, to record in `LookupStats`. |
 
 ```rust
 use archipel_kit::ui::{Completion, Completions, JBTextField};
@@ -466,8 +491,28 @@ fn url_bar(ui: &mut egui::Ui, url: &mut String) -> bool {
   <img alt="A URL field with the variables starting with us listed under the caret" src="img/jb_text_field_completion.light.png" width="400">
 </picture>
 
-Each suggestion is one row: the label, and its `detail` dimmed at the right end. Tests:
-[`tests/completion.rs`](../../crates/archipel-kit/tests/completion.rs).
+A popup with matched fragments (`gS` matches `getString`, `setString` and `GetStringRequest` by
+their humps), tail and type text, a deprecated (struck out) and a bold item, and an advertiser
+line; the same with the documentation of the selected item; and the popup above the caret when
+the window has no room below:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/lookup.dark.png">
+  <img alt="The completion popup for gS: five rows with icons, matched letters in blue, tail and type text, an advertiser line" src="img/lookup.light.png" width="420">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/lookup_docs.dark.png">
+  <img alt="The completion popup with the documentation of the selected item beside it" src="img/lookup_docs.light.png" width="700">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/lookup_above.dark.png">
+  <img alt="The completion popup above the caret" src="img/lookup_above.light.png" width="420">
+</picture>
+
+Tests: [`tests/completion.rs`](../../crates/archipel-kit/tests/completion.rs) and
+[`tests/lookup.rs`](../../crates/archipel-kit/tests/lookup.rs) (one test per rule above).
 
 ### The caret and your own list
 

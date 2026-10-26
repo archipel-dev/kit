@@ -75,13 +75,23 @@ fn escape_closes_and_a_click_inserts() {
     h.get_by_label("URL").focus();
     h.get_by_label("URL").type_text("{{");
     h.run();
+    assert!(
+        h.query_by_label_contains("base_url").is_none(),
+        "`{{` is not an identifier character: nothing opens"
+    );
+    h.get_by_label("URL").type_text("b");
+    h.run();
     assert!(h.query_by_label_contains("base_url").is_some());
     h.key_press(Key::Escape);
     h.run();
     assert!(h.query_by_label_contains("base_url").is_none());
-    h.get_by_label("URL").type_text("b");
+    h.get_by_label("URL").type_text("a");
     h.run();
-    assert_eq!(h.state(), "{{b", "the field kept the focus");
+    assert_eq!(h.state(), "{{ba", "the field kept the focus");
+    // A click selects; a double click inserts.
+    h.get_by_label_contains("base_url").click();
+    h.run();
+    assert_eq!(h.state(), "{{ba", "a single click only selects");
     h.get_by_label_contains("base_url").click();
     h.run();
     h.run();
@@ -229,7 +239,10 @@ impl archipel_kit::ui::Completer for Patient {
         Some(Completions {
             start: caret,
             end: caret,
-            items: vec![Completion::new("users", "users")],
+            items: vec![
+                Completion::new("users", "users"),
+                Completion::new("user", "user"),
+            ],
         })
     }
 }

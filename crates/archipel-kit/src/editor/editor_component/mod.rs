@@ -130,6 +130,9 @@ pub struct EditorComponentResponse {
     pub laid_out_rows: usize,
     /// Matches of the find bar (0 while it is closed).
     pub matches: usize,
+    /// The completion item inserted this frame (to record in
+    /// [`LookupStats`](crate::ui::LookupStats)).
+    pub completed: Option<crate::ui::Completion>,
 }
 
 impl<'a> EditorComponent<'a> {
@@ -574,8 +577,13 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         )
     });
     // The completion list takes its keys after find.
-    let (list, _list_keys) =
-        crate::ui::completion::List::begin(ui, id, focused && completer.is_some() && !viewer);
+    let (mut list, _list_keys) = crate::ui::completion::List::begin(
+        ui,
+        id,
+        focused && completer.is_some() && !viewer,
+        completer,
+    );
+    list.code_font(font.clone(), cell);
     let list_open = list.is_open();
 
     let mut frame = build_frame(&ctx, id, editor, highlighter, wrap_cols);
@@ -1125,6 +1133,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     find.store(&ctx, id);
 
     // Completion list.
+    let mut completed = None;
     if let Some(completer) = completer
         && !viewer
     {
@@ -1140,8 +1149,9 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
                 (editor.document.text()[..offset].chars().count(), rect)
             });
         let chosen = list.end_with(ui, completer, editor.document.text(), &mut response, caret);
-        if let Some((start, end, item)) = chosen {
-            apply_completion(editor, language, start, end, &item);
+        if let Some(chosen) = chosen {
+            super::lookup::apply(editor, language, &chosen);
+            completed = Some(chosen.item);
             text_changed = true;
             st.last_activity = now;
         }
@@ -1222,35 +1232,8 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         visible_lines: paint_out.visible_lines,
         laid_out_rows: paint_out.laid_out_rows,
         matches: match_count,
+        completed,
     }
-}
-
-/// Applies an accepted completion: replaces the chars `start..end` with the suggestion as one
-/// undo step and puts the caret where the suggestion asks.
-fn apply_completion(
-    editor: &mut Editor,
-    _language: &Language,
-    start: usize,
-    end: usize,
-    item: &crate::ui::Completion,
-) {
-    let text = editor.document.text();
-    let byte = |chars: usize| {
-        text.char_indices()
-            .nth(chars)
-            .map_or(text.len(), |(b, _)| b)
-    };
-    let (from, to) = (byte(start), byte(end.max(start)));
-    let inserted = item.insert.chars().count();
-    let after_chars = item.caret.unwrap_or(inserted).min(inserted);
-    editor.replace_range(from, to, &item.insert);
-    let after_byte: usize = item
-        .insert
-        .chars()
-        .take(after_chars)
-        .map(char::len_utf8)
-        .sum();
-    editor.carets.set_caret(&editor.document, from + after_byte);
 }
 
 /// Paints and operates the error stripe: marks proportional to the document, a click moves
