@@ -2,6 +2,7 @@
 
 use crate::behaviour::{Behaviour, Behaviours};
 use crate::cursor;
+use crate::host::PropertiesComponent;
 use crate::parts::focus_ring;
 use crate::theme::Theme;
 use crate::tokens::{radius, size};
@@ -30,6 +31,56 @@ pub enum Side {
     First,
     /// The right pane (side by side) or the bottom pane (stacked).
     Second,
+}
+
+/// How wide a [`Splitter`]'s divider is and what it draws (IntelliJ spec section 12).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum DividerStyle {
+    /// The Islands layout: the 4 pt gap between islands is the divider. A 1 pt line grows
+    /// to 2 pt on hover and takes the accent color while dragged (unless
+    /// [`Splitter::line`] is off). The default.
+    #[default]
+    Gap,
+    /// IntelliJ's `Splitter`: a 7 pt divider that draws nothing, only the resize cursor.
+    Classic,
+    /// IntelliJ's `OnePixelSplitter`: a 1 pt line in the separator color between the panes,
+    /// with a 6 pt wide hit zone (`ide.splitter.mouseZone`) that reaches into them.
+    OnePixel,
+}
+
+impl DividerStyle {
+    /// The room the divider takes between the panes.
+    fn width(self) -> f32 {
+        match self {
+            Self::Gap => size::SPLIT_DIVIDER,
+            Self::Classic => size::SPLIT_CLASSIC_DIVIDER,
+            Self::OnePixel => size::SPLIT_ONE_PIXEL,
+        }
+    }
+
+    /// How far the pointer target reaches past the divider on each side.
+    fn grab(self) -> f32 {
+        match self {
+            Self::Gap => size::SPLIT_GRAB,
+            Self::Classic => 0.0,
+            Self::OnePixel => ((size::SPLIT_MOUSE_ZONE - size::SPLIT_ONE_PIXEL) / 2.0).max(0.0),
+        }
+    }
+}
+
+/// What a [`Splitter`] does when the panes' minimum sizes do not fit (IntelliJ
+/// `Splitter.LackOfSpaceStrategy`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum LackOfSpaceStrategy {
+    /// The space is shared in proportion to the minimums (`SIMPLE_RATIO`). The default.
+    #[default]
+    SimpleRatio,
+    /// The first pane keeps its minimum size (`HONOR_THE_FIRST_MIN_SIZE`).
+    HonorTheFirstMinSize,
+    /// The second pane keeps its minimum size (`HONOR_THE_SECOND_MIN_SIZE`).
+    HonorTheSecondMinSize,
 }
 
 /// Two panes separated by a divider the user drags (or moves with the arrow keys) to
@@ -72,6 +123,11 @@ pub struct Splitter<'a> {
     label: String,
     enabled: bool,
     line: bool,
+    style: DividerStyle,
+    lack_of_space: LackOfSpaceStrategy,
+    limits: (f32, f32),
+    switch_orientation: bool,
+    persist: Option<(String, &'a mut dyn PropertiesComponent)>,
     collapse: Option<Collapse<'a>>,
     behaviours: Behaviours<'a>,
 }
@@ -91,6 +147,10 @@ pub struct SplitterResponse<A, B> {
     /// The divider. `changed()` when the user moved it or collapsed or expanded a pane this
     /// frame, `dragged()` while the pointer drags it, `double_clicked()` when it was reset.
     pub divider: Response,
+    /// The user Ctrl-clicked (Cmd on macOS) the divider of a split that
+    /// [allows it](Splitter::allow_switch_orientation_by_mouse_click): the caller flips
+    /// the orientation it passes (vertical <-> horizontal).
+    pub flip_orientation: bool,
 }
 
 impl<'a> Splitter<'a> {
@@ -107,6 +167,11 @@ impl<'a> Splitter<'a> {
             label: "Resize panes".into(),
             enabled: true,
             line: true,
+            style: DividerStyle::Gap,
+            lack_of_space: LackOfSpaceStrategy::SimpleRatio,
+            limits: (0.0, 1.0),
+            switch_orientation: false,
+            persist: None,
             collapse: None,
             behaviours: Behaviours::default(),
         }
@@ -178,6 +243,56 @@ impl<'a> Splitter<'a> {
         self
     }
 
+    /// Switches the orientation (a splitter whose orientation the caller keeps in state:
+    /// flip it when [`SplitterResponse::flip_orientation`] is reported).
+    pub fn orientation(mut self, orientation: Orientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    /// The divider's width and look (default [`DividerStyle::Gap`], the Islands gap).
+    pub fn divider_style(mut self, style: DividerStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    /// What happens when the panes do not both fit at their minimum sizes (default: share
+    /// the space in proportion to the minimums).
+    pub fn lack_of_space_strategy(mut self, strategy: LackOfSpaceStrategy) -> Self {
+        self.lack_of_space = strategy;
+        self
+    }
+
+    /// Limits the share of the first pane to `min..=max` (IntelliJ
+    /// `Splitter.setMinProportion` / `setMaxProportion`); the minimum sizes still apply.
+    pub fn proportion_limits(mut self, min: f32, max: f32) -> Self {
+        let (min, max) = (min.clamp(0.0, 1.0), max.clamp(0.0, 1.0));
+        self.limits = (min.min(max), max);
+        self
+    }
+
+    /// Lets a Ctrl-click (Cmd on macOS) on the divider ask for the other orientation, which
+    /// is reported in [`SplitterResponse::flip_orientation`] (IntelliJ
+    /// `setAllowSwitchOrientationByMouseClick`).
+    pub fn allow_switch_orientation_by_mouse_click(mut self, allow: bool) -> Self {
+        self.switch_orientation = allow;
+        self
+    }
+
+    /// Stores the share in `properties` under `key` whenever the user changes it, and loads
+    /// it from there the first time the split is shown (IntelliJ `JBSplitter`: it loads the
+    /// proportion by key when added and saves it on every `setProportion`). A key with no
+    /// stored value leaves the caller's ratio alone. Persisting the properties is the
+    /// host's job.
+    pub fn persist(
+        mut self,
+        key: impl Into<String>,
+        properties: &'a mut dyn PropertiesComponent,
+    ) -> Self {
+        self.persist = Some((key.into(), properties));
+        self
+    }
+
     /// A tooltip, context menu … on the divider.
     pub fn with(mut self, behaviour: impl Behaviour + 'a) -> Self {
         self.behaviours.push(behaviour);
@@ -203,11 +318,30 @@ impl<'a> Splitter<'a> {
             ui.allocate_exact_size(vec2(finite(avail.x), finite(avail.y)), Sense::hover());
         let whole = whole.rect;
 
+        // A persisted share is loaded the first time the split is shown.
+        if let Some((key, properties)) = self.persist.as_ref() {
+            let loaded_id = divider_id.with("persisted");
+            if !ui.data(|d| d.get_temp::<bool>(loaded_id)).unwrap_or(false) {
+                ui.data_mut(|d| d.insert_temp(loaded_id, true));
+                let stored = properties
+                    .get(key)
+                    .and_then(|value| value.parse::<f32>().ok())
+                    .filter(|value| value.is_finite());
+                if let Some(stored) = stored {
+                    *self.ratio = stored.clamp(0.0, 1.0);
+                }
+            }
+        }
+        let ratio_before = *self.ratio;
+
         let layout = Geometry::new(
             self.orientation,
             self.default_ratio,
             (self.min_first, self.min_second),
             whole,
+            self.style.width(),
+            self.lack_of_space,
+            self.limits,
         );
         let side = self.collapse.as_ref().map(|c| c.side);
         let was_collapsed = self.collapse.as_ref().is_some_and(|c| *c.collapsed);
@@ -223,9 +357,9 @@ impl<'a> Splitter<'a> {
         // The divider takes part in Tab order before the panes, so an outer divider comes
         // before those of splits nested in its panes, and it moves them in the same frame.
         let grab = bar.expand2(if horizontal {
-            vec2(size::SPLIT_GRAB, 0.0)
+            vec2(self.style.grab(), 0.0)
         } else {
-            vec2(0.0, size::SPLIT_GRAB)
+            vec2(0.0, self.style.grab())
         });
         let sense = if self.enabled {
             Sense::click_and_drag()
@@ -254,6 +388,7 @@ impl<'a> Splitter<'a> {
         let along = |p: egui::Pos2| if horizontal { p.x } else { p.y };
         let mut target = None;
         let mut collapse_to = None;
+        let mut flip_orientation = false;
         if self.enabled {
             let center = along(bar.center());
             if response.drag_started()
@@ -276,7 +411,7 @@ impl<'a> Splitter<'a> {
                 } else {
                     whole.top()
                 };
-                let wanted = along(pointer) - grabbed - size::SPLIT_DIVIDER / 2.0 - start;
+                let wanted = along(pointer) - grabbed - self.style.width() / 2.0 - start;
                 target = Some(wanted);
                 if let Some(side) = side {
                     // How big the collapsible pane would be if it followed the pointer,
@@ -295,6 +430,19 @@ impl<'a> Splitter<'a> {
                         target = None;
                     }
                 }
+            }
+            if self.switch_orientation
+                && response.clicked()
+                && !response.double_clicked()
+                && ui.input(|i| {
+                    let held = |m: &Modifiers| m.command || m.ctrl || m.mac_cmd;
+                    held(&i.modifiers)
+                        || i.events.iter().any(|event| {
+                            matches!(event, egui::Event::PointerButton { modifiers, .. } if held(modifiers))
+                        })
+                })
+            {
+                flip_orientation = true;
             }
             if response.double_clicked() {
                 if was_collapsed {
@@ -372,6 +520,11 @@ impl<'a> Splitter<'a> {
                 ui.ctx().request_repaint();
             }
             shown_size = size;
+        }
+        if let Some((key, properties)) = self.persist.as_mut()
+            && (*self.ratio - ratio_before).abs() > 1e-6
+        {
+            properties.set(key, &self.ratio.to_string());
         }
         let (first_rect, bar, second_rect) = layout.rects(shown_size);
         let mut pane = |rect: Rect, name: &str, hidden: bool, add: &mut dyn FnMut(&mut Ui)| {
@@ -451,11 +604,12 @@ impl<'a> Splitter<'a> {
         });
 
         if ui.is_rect_visible(grab) {
+            let gap = self.style == DividerStyle::Gap;
             let active =
-                self.enabled && (response.dragged() || response.is_pointer_button_down_on());
+                gap && self.enabled && (response.dragged() || response.is_pointer_button_down_on());
             let (thickness, color) = if active {
                 (2.0, colors.accent)
-            } else if self.enabled && response.hovered() {
+            } else if gap && self.enabled && response.hovered() {
                 // A collapsed edge already looks like a hovered divider: take the accent
                 // color, so it shows it can be grabbed.
                 (
@@ -473,10 +627,10 @@ impl<'a> Splitter<'a> {
                 (1.0, colors.separator)
             };
             // Without a line, only a collapsed edge is drawn: the gap is the divider.
-            let color = if self.line || collapsed {
-                color
-            } else {
-                egui::Color32::TRANSPARENT
+            let color = match self.style {
+                DividerStyle::Classic if !collapsed => egui::Color32::TRANSPARENT,
+                _ if self.line || collapsed => color,
+                _ => egui::Color32::TRANSPARENT,
             };
             let line = if horizontal {
                 Rect::from_center_size(bar.center(), vec2(thickness, bar.height()))
@@ -495,6 +649,7 @@ impl<'a> Splitter<'a> {
             first: first_out.expect("the first pane is drawn exactly once"),
             second: second_out.expect("the second pane is drawn exactly once"),
             divider,
+            flip_orientation,
         }
     }
 }
@@ -507,10 +662,23 @@ struct Geometry {
     whole: Rect,
     /// Space shared by the panes: the whole minus the divider.
     avail: f32,
+    /// Width of the divider.
+    divider: f32,
+    lack_of_space: LackOfSpaceStrategy,
+    /// The first pane's share, at least and at most.
+    limits: (f32, f32),
 }
 
 impl Geometry {
-    fn new(orientation: Orientation, default_ratio: f32, min: (f32, f32), whole: Rect) -> Self {
+    fn new(
+        orientation: Orientation,
+        default_ratio: f32,
+        min: (f32, f32),
+        whole: Rect,
+        divider: f32,
+        lack_of_space: LackOfSpaceStrategy,
+        limits: (f32, f32),
+    ) -> Self {
         let horizontal = orientation == Orientation::Horizontal;
         let length = if horizontal {
             whole.width()
@@ -522,7 +690,10 @@ impl Geometry {
             default_ratio,
             min,
             whole,
-            avail: (length - size::SPLIT_DIVIDER).max(0.0),
+            avail: (length - divider).max(0.0),
+            divider,
+            lack_of_space,
+            limits,
         }
     }
 
@@ -530,14 +701,29 @@ impl Geometry {
     /// minimums, the space is shared in proportion to them.
     fn range(&self) -> (f32, f32) {
         let (a, b) = self.min;
-        if self.avail >= a + b {
+        let (lo, hi) = if self.avail >= a + b {
             (a, self.avail - b)
-        } else if a + b > 0.0 {
-            let shared = self.avail * a / (a + b);
-            (shared, shared)
         } else {
-            (0.0, 0.0)
-        }
+            match self.lack_of_space {
+                LackOfSpaceStrategy::HonorTheFirstMinSize => {
+                    let first = a.min(self.avail);
+                    (first, first)
+                }
+                LackOfSpaceStrategy::HonorTheSecondMinSize => {
+                    let first = (self.avail - b).max(0.0);
+                    (first, first)
+                }
+                LackOfSpaceStrategy::SimpleRatio if a + b > 0.0 => {
+                    let shared = self.avail * a / (a + b);
+                    (shared, shared)
+                }
+                LackOfSpaceStrategy::SimpleRatio => (0.0, 0.0),
+            }
+        };
+        // The proportion limits narrow the range, unless the minimums already pinned it.
+        let (min_share, max_share) = (self.limits.0 * self.avail, self.limits.1 * self.avail);
+        let (lo2, hi2) = (lo.max(min_share), hi.min(max_share));
+        if lo2 <= hi2 { (lo2, hi2) } else { (lo, hi) }
     }
 
     fn clamp(&self, size: f32) -> f32 {
@@ -577,7 +763,7 @@ impl Geometry {
     /// First pane, divider and second pane for a first pane of `first` points.
     fn rects(&self, first: f32) -> (Rect, Rect, Rect) {
         let w = self.whole;
-        let d = size::SPLIT_DIVIDER;
+        let d = self.divider;
         if self.horizontal {
             (
                 Rect::from_min_max(w.min, pos2(w.left() + first, w.bottom())),

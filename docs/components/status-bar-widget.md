@@ -53,12 +53,85 @@ fn status_bar(ui: &mut egui::Ui, branch: &str, errors: usize) {
 | `.tone(Tone)` | Meaning of the text and icon color. |
 | `.enabled(bool)` | Disabled items are dimmed and ignore clicks. |
 | `.max_width(f32)` | Widest the item may be; text is elided beyond it. |
+| `.hover_effect(bool)` | Hover and press fill it (default `true`; `StatusBar` turns it off for its left panel). |
+| `.text_alignment(f32)`, `.reserve_width_of(prototype)` | Where the text sits in spare width (0 to 1), and a prototype that reserves the width of a changing value. |
+| `.name(text)` | The accessible name and tooltip of an icon-only widget. |
 | `.with(behaviour)` | A tooltip, context menu … (see [behaviours](../behaviours.md)). A tooltip you attach replaces the automatic one for elided text, so only one shows. |
 
 ## Behavior
 
 - Click, <kbd>Enter</kbd> and <kbd>Space</kbd> activate it; <kbd>Tab</kbd> reaches it.
-- Hover fills it; the cursor is the theme's action cursor (the arrow when disabled).
+- Hover and press fill it with the same color (IntelliJ Islands: one token for both), a
+  rounded rectangle of arc 4; the cursor is the theme's action cursor (the arrow when
+  disabled). The focus ring has arc 10 (`radius::STATUS_FOCUS`).
+
+# StatusBar
+
+`StatusBar` is the container: info text and left widgets on the left, the right panel's
+widgets at the right end in anchor order, with what IntelliJ's status bar adds to them.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/status_bar.dark.png">
+  <img alt="A status bar: main and Indexing finished at the left; 12:8, UTF-8 with a chevron under the pointer, 2 errors and a bell at the right" src="img/status_bar.light.png" width="520">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/status_bar_values.dark.png">
+  <img alt="The encoding widget's list of values open above it: UTF-8 highlighted, UTF-16, ISO-8859-1" src="img/status_bar_values.light.png" width="520">
+</picture>
+
+```rust
+# egui::__run_test_ui(|ui| {
+use archipel_kit::wm::{
+    IconPresentation, MultipleTextValuesPresentation, StatusBar, StatusBarAnchor,
+    StatusBarWidgetItem, TextPresentation,
+};
+use archipel_kit::Glyph;
+
+let mut encoding = 0;
+let out = StatusBar::new("status")
+    .info("Indexing finished")
+    .left_widget(StatusBarWidgetItem::new("vcs", TextPresentation::new("main")))
+    .widget(StatusBarWidgetItem::new(
+        "position",
+        TextPresentation::new("12:8").max_value("9999:99").alignment(1.0),
+    ))
+    .widget(StatusBarWidgetItem::new(
+        "encoding",
+        MultipleTextValuesPresentation::new(vec!["UTF-8".into(), "UTF-16".into()], encoding),
+    ))
+    .widget(
+        StatusBarWidgetItem::new("bell", IconPresentation::new(Glyph::Bell, "Notifications"))
+            .anchor(StatusBarAnchor::Before("encoding".into())),
+    )
+    .show(ui);
+if let Some((_id, index)) = out.selected_value {
+    encoding = index;
+}
+# let _ = encoding;
+# });
+```
+
+| Item | Effect (IntelliJ spec section 9) |
+|---|---|
+| `StatusBar::new(id).info(text)` | The info text, between the panels, in the secondary text color. |
+| `.left_widget(item)` / `.widget(item)` | The left panel (no hover effect) / the right panel (hover and press effect). |
+| `StatusBarWidgetItem::new(id, presentation)` | `.anchor(StatusBarAnchor)`: `First`, `Last` (default), `Before(id)`, `After(id)`; an anchor that names a missing id waits for it and ends up last. `.enabled(bool)`, `.tone(Tone)`. |
+| `WidgetPresentation` | The enum a widget item takes: `Text(TextPresentation)`, `Icon(IconPresentation)`, `MultipleTextValues(MultipleTextValuesPresentation)`. |
+| `TextPresentation` | `text`, `.tooltip`, `.alignment(0..1)`, `.max_value(prototype)` reserves the width of a changing value. |
+| `IconPresentation::new(icon, tooltip)` | An icon-only widget, named by its tooltip. |
+| `MultipleTextValuesPresentation::new(values, selected)` | The selected value as text with a chevron; a press opens the list **above** it; the pick is `StatusBarResponse::selected_value`. <kbd>Esc</kbd> or a click outside closes it. |
+| `StatusBarResponse` | `activated` (a left **press**, or <kbd>Enter</kbd>/<kbd>Space</kbd> on a focused widget), `selected_value`, `widgets_menu` (a right click on the right panel: show the menu that enables and disables widgets), `escaped`. |
+
+- A left click acts on **press**, as in IntelliJ; a right click is never a click.
+- <kbd>←</kbd> <kbd>→</kbd> move the focus between the widgets (left panel first); <kbd>Esc</kbd> lets
+  go of it and is reported as `escaped`, for the caller to give the focus back.
+- The bar takes the width it is given and no outer padding (the window frame supplies it:
+  `ToolWindowPane::status` insets 8 pt, where IntelliJ has 10).
+- Deferred: the progress indicator in the center, the status bar widgets menu itself (reported,
+  not drawn), widget enable/disable persistence, the macOS tool window stripe toggle.
+
+Tests: [`tests/status_bar_widgets.rs`](../../crates/archipel-kit/tests/status_bar_widgets.rs)
 
 ## Accessibility
 

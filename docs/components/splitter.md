@@ -8,6 +8,14 @@ Two panes with a draggable divider, side by side or stacked, for workbench layou
   <img alt="A side-by-side split and a stacked split, each with a thin divider" src="img/splitter.light.png" width="340">
 </picture>
 
+Divider variants, from the IntelliJ Platform's splitter family: the Islands gap (default),
+the classic 7 pt `Splitter` divider and the `OnePixelSplitter` line:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/splitter_variants.dark.png">
+  <img alt="Three side-by-side splits: Gap with the thin Islands divider, Classic with no line, OnePixel with a 1 pt line" src="img/splitter_variants.light.png" width="340">
+</picture>
+
 ## Usage
 
 The caller owns the split. `ratio` is the share (0 to 1) of the space the first pane gets;
@@ -93,6 +101,13 @@ fn with_sidebar(ui: &mut egui::Ui, ratio: &mut f32, collapsed: &mut bool) {
 | `.collapsible(Side, &mut bool)` | The side that can collapse (`Side::First` or `Side::Second`) and the caller's collapsed flag. One side per split. |
 | `.label(text)` | The divider's accessible name (default "Resize panes"). |
 | `.enabled(bool)` | A locked split ignores pointer and keyboard. |
+| `.divider_style(style)` with a `DividerStyle` | `Gap` (default, the 4 pt Islands gap), `Classic` (a 7 pt divider that draws nothing, IntelliJ `Splitter`) or `OnePixel` (a 1 pt line with a 6 pt hit zone, IntelliJ `OnePixelSplitter`). |
+| `.lack_of_space_strategy(s)` with a `LackOfSpaceStrategy` | When both minimums do not fit: `SimpleRatio` (default), `HonorTheFirstMinSize`, `HonorTheSecondMinSize`. |
+| `.proportion_limits(min, max)` | The first pane's share stays in `min..=max` (IntelliJ `setMinProportion`/`setMaxProportion`). |
+| `.allow_switch_orientation_by_mouse_click(bool)` | <kbd>Ctrl</kbd>+click (<kbd>Cmd</kbd> on macOS) on the divider is reported as `SplitterResponse::flip_orientation`; the caller flips the orientation it passes. |
+| `.persist(key, &mut dyn PropertiesComponent)` | Loads the share from the properties the first time the split is shown and stores it on every user change (IntelliJ `JBSplitter`). Saving the properties is the host's job. |
+| `OnePixelSplitter::horizontal(id, &mut f32)` / `vertical` | A `Splitter` with the `OnePixel` divider. |
+| `JBSplitter::horizontal(id, &mut f32, key, &mut props)` / `vertical` | A one pixel splitter that persists its share by `key`. |
 | `.line(bool)` | Whether the divider draws a line (default `true`). Islands pass `false`: the frame-colored gap is the divider, and only the resize cursor, a collapsed edge and the focus ring show. |
 | `.with(behaviour)` | A [behaviour](../behaviours.md) on the divider, such as a tooltip. |
 | `.show(ui, first, second)` | Draws both panes; each closure gets a `Ui` that is exactly its pane. |
@@ -107,7 +122,11 @@ user change.
 - **Drag**: the divider follows the pointer, wherever on it was grabbed. The cursor is
   `ResizeHorizontal` or `ResizeVertical` (see [cursors](../cursors.md)) and stays while
   dragging, even if the pointer leaves the thin divider.
-- **Double click** resets to the default ratio. On a collapsed pane it only expands it, to
+- **Divider widths** (`tokens::size`): `Gap` is `SPLIT_DIVIDER` (4 pt) plus 2 pt of reach on each side;
+  `Classic` is `SPLIT_CLASSIC_DIVIDER` (7 pt); `OnePixel` is a `SPLIT_ONE_PIXEL` (1 pt) line in the
+  separator color with a `SPLIT_MOUSE_ZONE` (6 pt) hit zone that reaches into the panes. Classic and one
+  pixel dividers draw no hover or drag highlight (only the cursor and the focus ring), as in IntelliJ.
+- **Double click** resets to the default ratio (0.5 unless `default_ratio` says otherwise). On a collapsed pane it only expands it, to
   the size it had; it never resets that.
 - **Keyboard**: <kbd>Tab</kbd> focuses the divider (focus ring). The arrow keys along the
   split (<kbd>←</kbd> <kbd>→</kbd> side by side, <kbd>↑</kbd> <kbd>↓</kbd> stacked) move it by
@@ -168,6 +187,8 @@ percent, with the allowed range as minimum and maximum, so a screen reader annou
 (`expanded` in AccessKit), and while collapsed its value is 0 (or 100 for a collapsed second
 pane). Disabled, it reports disabled and is skipped by <kbd>Tab</kbd>.
 
-Source: [`openapi/ui/splitter.rs`](../../crates/archipel-kit/src/openapi/ui/splitter.rs) ·
+Source: [`openapi/ui/splitter.rs`](../../crates/archipel-kit/src/openapi/ui/splitter.rs),
+[`openapi/ui/one_pixel_splitter.rs`](../../crates/archipel-kit/src/openapi/ui/one_pixel_splitter.rs) ·
 Tests: [`tests/splitter.rs`](../../crates/archipel-kit/tests/splitter.rs),
+[`tests/splitter_variants.rs`](../../crates/archipel-kit/tests/splitter_variants.rs),
 [`tests/conformance.rs`](../../crates/archipel-kit/tests/conformance.rs)

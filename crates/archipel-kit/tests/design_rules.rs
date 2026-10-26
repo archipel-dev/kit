@@ -265,6 +265,24 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("ToolWindowPlace", "enum"),
     ("ToolWindowAnchor", "enum"),
     ("ToolWindowPaneState", "layout state"),
+    ("DividerStyle", "enum"),
+    ("LackOfSpaceStrategy", "enum"),
+    ("StripeResponse", "response"),
+    ("Content", "tool window content data"),
+    ("ContentManager", "tool window content model"),
+    ("ToolWindow", "tool window description and contents"),
+    ("ToolWindowEvent", "enum"),
+    (
+        "StatusBar",
+        "container of `StatusBarWidget`s, which conform; audited in tests/status_bar_widgets.rs",
+    ),
+    ("StatusBarAnchor", "enum"),
+    ("StatusBarResponse", "response"),
+    ("StatusBarWidgetItem", "widget description"),
+    ("TextPresentation", "widget description"),
+    ("IconPresentation", "widget description"),
+    ("MultipleTextValuesPresentation", "widget description"),
+    ("WidgetPresentation", "enum"),
 ];
 
 /// The modules whose `pub use` lines export the kit's widgets, relative to `src/`. The

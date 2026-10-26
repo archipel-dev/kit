@@ -29,6 +29,31 @@ const MANY: [&str; 9] = [
     "CHANGELOG.md",
 ];
 
+/// Moves the tab at `from` to `to` (what a drag reports) and keeps `selected` on the same tab.
+fn move_tab(tabs: &mut Vec<TabInfo>, selected: &mut usize, from: usize, to: usize) {
+    if from >= tabs.len() || to >= tabs.len() {
+        return;
+    }
+    let tab = tabs.remove(from);
+    tabs.insert(to, tab);
+    *selected = if *selected == from {
+        to
+    } else if from < *selected && to >= *selected {
+        *selected - 1
+    } else if from > *selected && to <= *selected {
+        *selected + 1
+    } else {
+        *selected
+    };
+}
+
+/// Pins or unpins the tab at `index`.
+fn toggle_pin(tabs: &mut [TabInfo], index: usize) {
+    if let Some(tab) = tabs.get_mut(index) {
+        *tab = tab.clone().pinned(!tab.is_pinned());
+    }
+}
+
 fn file_tabs(names: &[&str]) -> Vec<TabInfo> {
     names
         .iter()
@@ -45,7 +70,12 @@ impl Default for State {
         Self {
             view: View::Pretty,
             tab: 0,
-            tabs: file_tabs(&["main.rs", "theme.rs", "Cargo.toml", "README.md"]),
+            tabs: {
+                // Drag tabs to reorder them; the pin unpins.
+                let mut tabs = file_tabs(&["main.rs", "theme.rs", "Cargo.toml", "README.md"]);
+                tabs[0] = tabs[0].clone().pinned(true);
+                tabs
+            },
             many_tab: 2,
             many_tabs: file_tabs(&MANY),
         }
@@ -90,6 +120,12 @@ impl State {
             self.tabs.remove(index);
             self.tab = self.tab.min(self.tabs.len().saturating_sub(1));
         }
+        if let Some((from, to)) = out.moved {
+            move_tab(&mut self.tabs, &mut self.tab, from, to);
+        }
+        if let Some(index) = out.pin_toggled {
+            toggle_pin(&mut self.tabs, index);
+        }
         if self.tabs.is_empty() && ui.add(ActionLink::new("Reopen tabs")).clicked() {
             self.tabs = State::default().tabs;
         }
@@ -111,6 +147,9 @@ impl State {
             if let Some(index) = out.closed {
                 self.many_tabs.remove(index);
                 self.many_tab = self.many_tab.min(self.many_tabs.len().saturating_sub(1));
+            }
+            if let Some((from, to)) = out.moved {
+                move_tab(&mut self.many_tabs, &mut self.many_tab, from, to);
             }
         });
         if close_all {

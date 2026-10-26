@@ -63,6 +63,46 @@ fn project_window(ui: &mut egui::Ui, visible: &mut bool) {
 The kit has one container with a title bar, so the header is part of `SimpleToolWindowPanel` rather than a
 second component that would paint the same title and toolbar.
 
+### Header actions from an `ActionGroup`, the options menu and the header's mouse
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/tool_window_header.dark.png">
+  <img alt="A Problems tool window: bold title, File and Project Errors tabs, then rerun, filter, options and hide buttons" src="img/tool_window_header.light.png" width="420">
+</picture>
+
+```rust
+# egui::__run_test_ui(|ui| {
+use archipel_kit::action_system::{ActionGroup, DataContext, DefaultActionGroup};
+use archipel_kit::wm::SimpleToolWindowPanel;
+
+let title = DefaultActionGroup::new("Title actions"); // add your actions
+let options = DefaultActionGroup::popup("Options");
+let context = DataContext::empty();
+SimpleToolWindowPanel::new("Problems")
+    .title_actions(&title as &dyn ActionGroup)
+    .popup_group(&options as &dyn ActionGroup)
+    .data_context(&context)
+    .on_activate(|| { /* move the focus into the tool window */ })
+    .on_toggle_maximize(|| { /* maximize or restore */ })
+    .on_hide(|| { /* hide it */ })
+    .show(ui, |ui| { ui.label("No problems"); });
+# });
+```
+
+| Builder | Effect (IntelliJ spec section 8.1) |
+|---|---|
+| `.title_actions(&dyn ActionGroup)` | The group's visible actions as buttons in the group's order (place `TOOLWINDOW_TITLE`), left of `.actions(...)`, under the same show-on-hover rules. A click performs the action. |
+| `.popup_group(&dyn ActionGroup)` | An "Options" gear before Hide opens the group below it (place `TOOLWINDOW_POPUP`), and so does a right click on the header; the gear toggles it. |
+| `.on_activate(f)` | A left click on the header (not on its buttons or tabs). |
+| `.on_toggle_maximize(f)` | A double click on the header. |
+| `.on_hide(f)` | The Hide button, a middle click, or Shift + left click on the header. |
+| `.on_popup(f)` | A right click, when there is no `popup_group`: receives the pointer position. |
+| `.tab_closable(&[bool])`, `.on_close_tab(f)` | Content tabs the user may close with a middle or Shift + left click; `f` gets the index. |
+| `.data_context(&DataContext)` | What the group and the menu update and run with. |
+
+The header's area under its buttons is not a Tab stop and has no accessible node; the
+buttons and tabs are the keyboard's way in.
+
 ## API
 
 | Component | API |
@@ -76,7 +116,8 @@ Panels sit on the frame color with a 4 pt gap between them (`tokens::size::ISLAN
 the [gallery](../../crates/archipel-kit-gallery/src/main.rs) for a full workbench layout.
 
 Source: [`wm/simple_tool_window_panel.rs`](../../crates/archipel-kit/src/wm/simple_tool_window_panel.rs) ·
-Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs)
+Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs),
+[`tests/tool_windows.rs`](../../crates/archipel-kit/tests/tool_windows.rs)
 
 ## Composable island headers
 
