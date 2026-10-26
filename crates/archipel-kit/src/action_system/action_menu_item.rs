@@ -49,6 +49,19 @@ pub struct ActionMenuItem<'a> {
     highlighted: bool,
     description: Option<String>,
     submenu: Option<Submenu<'a>>,
+    /// Drawn by a popup engine ([`ListPopup`](crate::ui::popup::ListPopup),
+    /// [`ActionPopupMenu`](super::ActionPopupMenu)): the engine owns the highlight, the
+    /// submenus and closing, so the item only paints and reports the pointer.
+    managed: bool,
+    /// Managed: a chevron for a row with a sub-step.
+    arrow: bool,
+    /// Managed: the icon column is reserved (some row of the list has an icon or check).
+    reserve_icons: Option<bool>,
+    /// Managed: width of the mnemonic column (0 when no row has a mnemonic).
+    mnemonic_column: f32,
+    mnemonic: Option<char>,
+    /// Managed: the width the list gives every row.
+    fixed_width: Option<f32>,
 }
 
 /// The content of a submenu.
@@ -66,7 +79,89 @@ impl<'a> ActionMenuItem<'a> {
             highlighted: false,
             description: None,
             submenu: None,
+            managed: false,
+            arrow: false,
+            reserve_icons: None,
+            mnemonic_column: 0.0,
+            mnemonic: None,
+            fixed_width: None,
         }
+    }
+
+    /// An item rendering `presentation`: text, icon, shortcut text, description, enabled and
+    /// toggle state (a check mark), and a chevron for a popup group.
+    pub fn from_presentation(presentation: &super::Presentation) -> Self {
+        let mut item = Self::new(presentation.text.clone());
+        item.icon = presentation.icon;
+        item.shortcut = presentation.shortcut_text.clone();
+        item.enabled = presentation.enabled;
+        item.checked = presentation.selected;
+        item.arrow = presentation.popup_group;
+        if !presentation.description.is_empty() {
+            item.description = Some(presentation.description.clone());
+        }
+        item
+    }
+
+    /// Engine use: the list owns highlight, submenus and closing.
+    pub(crate) fn managed(mut self, managed: bool) -> Self {
+        self.managed = managed;
+        self
+    }
+
+    /// Engine use: draw the sub-step chevron.
+    pub(crate) fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = arrow;
+        self
+    }
+
+    /// Engine use: reserve (or not) the icon column.
+    pub(crate) fn reserve_icons(mut self, reserve: bool) -> Self {
+        self.reserve_icons = Some(reserve);
+        self
+    }
+
+    /// Engine use: the mnemonic hint and the width of the mnemonic column.
+    pub(crate) fn mnemonic(mut self, mnemonic: Option<char>, column: f32) -> Self {
+        self.mnemonic = mnemonic;
+        self.mnemonic_column = column;
+        self
+    }
+
+    /// Engine use: the row's width.
+    pub(crate) fn fixed_width(mut self, width: f32) -> Self {
+        self.fixed_width = Some(width);
+        self
+    }
+
+    /// The width this item needs, without the list's minimum (engine use: all rows of a list
+    /// share the widest).
+    pub(crate) fn natural_width(&self, ui: &Ui) -> f32 {
+        let two_line = self.description.is_some();
+        let reserve = self
+            .reserve_icons
+            .unwrap_or(self.icon.is_some() || self.checked.is_some());
+        let content = SimpleColoredComponent {
+            icon: if two_line { None } else { self.icon },
+            reserve_icon: !two_line && reserve,
+            label: &self.label,
+            trailing: self
+                .shortcut
+                .as_deref()
+                .filter(|_| self.submenu.is_none() && !self.arrow),
+            ..SimpleColoredComponent::default()
+        };
+        let chrome = 2.0 * (popup::ITEM_INSET + popup::ITEM_PADDING);
+        let large_icon = popup::LARGE_ICON + 2.0 * size::ICON_TEXT_GAP;
+        content.min_width(ui)
+            + chrome
+            + self.mnemonic_column
+            + if two_line { large_icon } else { 0.0 }
+            + if self.submenu.is_some() || self.arrow {
+                size::ICON
+            } else {
+                0.0
+            }
     }
 
     /// A second, dimmed line under the label, like the path under a project in Android
@@ -124,7 +219,11 @@ impl Widget for ActionMenuItem<'_> {
             (None, icon) => (icon, None),
         };
         let two_line = self.description.is_some();
-        let reserve_icons = menu_icon_column(ui, icon.is_some() || self.checked.is_some());
+        let reserve_icons = match self.reserve_icons {
+            Some(reserve) => reserve,
+            None => menu_icon_column(ui, icon.is_some() || self.checked.is_some()),
+        };
+        let has_arrow = self.submenu.is_some() || self.arrow;
         let content = SimpleColoredComponent {
             // A two-line item paints its larger icon itself.
             icon: if two_line { None } else { icon },
@@ -133,35 +232,29 @@ impl Widget for ActionMenuItem<'_> {
             label: &self.label,
             label_tone: Tone::Default,
             secondary: None,
-            trailing: self.shortcut.as_deref().filter(|_| self.submenu.is_none()),
+            trailing: self.shortcut.as_deref().filter(|_| !has_arrow),
             ..SimpleColoredComponent::default()
         };
         // Geometry measured on Android Studio: the highlight pill is inset from the popup's
         // sides, and the icon column is inset inside the pill.
-        let chrome = 2.0 * (popup::ITEM_INSET + popup::ITEM_PADDING);
         let large_icon = popup::LARGE_ICON + 2.0 * size::ICON_TEXT_GAP;
-        let width = ui
-            .available_width()
-            .max(
-                content.min_width(ui)
-                    + chrome
-                    + if two_line { large_icon } else { 0.0 }
-                    + if self.submenu.is_some() {
-                        size::ICON
-                    } else {
-                        0.0
-                    },
-            )
-            .max(180.0);
+        let width = match self.fixed_width {
+            Some(width) => width,
+            None => ui
+                .available_width()
+                .max(self.natural_width(ui))
+                .max(popup::MIN_WIDTH),
+        };
         let height = if two_line {
             size::ROW_HEIGHT + popup::DESCRIPTION_HEIGHT
         } else {
             size::ROW_HEIGHT
         };
-        let sense = if self.enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
+        let sense = match (self.enabled, self.managed) {
+            (false, _) => Sense::hover(),
+            // The list owns the highlight, so rows are not Tab stops.
+            (true, true) => Sense::CLICK,
+            (true, false) => Sense::click(),
         };
         common::menu_rows(ui);
         let (rect, response) = ui.allocate_exact_size(vec2(width, height), sense);
@@ -178,7 +271,11 @@ impl Widget for ActionMenuItem<'_> {
             }
             info
         });
-        let current = menu_current(ui, &response, self.enabled);
+        let current = if self.managed {
+            false
+        } else {
+            menu_current(ui, &response, self.enabled)
+        };
         if ui.is_rect_visible(rect) {
             let mut state = State::of(&response);
             state.hovered = self.enabled && (self.highlighted || current);
@@ -188,7 +285,18 @@ impl Widget for ActionMenuItem<'_> {
                 ui.painter()
                     .rect_filled(pill, CornerRadius::same(radius::ROW), fill);
             }
-            let x = pill.left() + popup::ITEM_PADDING;
+            let mut x = pill.left() + popup::ITEM_PADDING;
+            if self.mnemonic_column > 0.0 {
+                if let Some(mnemonic) = self.mnemonic {
+                    let galley = common::galley(
+                        ui,
+                        mnemonic.to_string(),
+                        typography::body(typography::BODY),
+                    );
+                    common::text_left(ui.painter(), pill, x, galley, colors.popup_mnemonic);
+                }
+                x += self.mnemonic_column;
+            }
             if let Some(description) = &self.description {
                 let line = Rect::from_min_size(pill.min, vec2(pill.width(), size::ROW_HEIGHT));
                 if let Some(icon) = icon {
@@ -227,7 +335,7 @@ impl Widget for ActionMenuItem<'_> {
             } else {
                 content.paint(ui, pill, x, state);
             }
-            if self.submenu.is_some() {
+            if has_arrow {
                 let chevron = Rect::from_min_size(
                     pos2(
                         pill.right() - size::ROW_PILL_INSET - size::ICON,
@@ -242,6 +350,9 @@ impl Widget for ActionMenuItem<'_> {
                     state.icon(Tone::Icon, &colors),
                 );
             }
+        }
+        if self.managed {
+            return response;
         }
         match self.submenu {
             Some(submenu) if self.enabled => show_submenu(ui, &response, submenu),

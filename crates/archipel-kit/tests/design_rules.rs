@@ -338,6 +338,32 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("IconPresentation", "widget description"),
     ("MultipleTextValuesPresentation", "widget description"),
     ("WidgetPresentation", "enum"),
+    ("ActionButtonResponse", "response"),
+    ("ButtonLook", "enum"),
+    (
+        "ActionPopupMenu",
+        "popup container of ActionMenuItem rows, not a widget; keys, pointer and timings in tests/action_popup_menu.rs",
+    ),
+    ("ActionPopupMenuResponse", "response"),
+    (
+        "ActionToolbar",
+        "layout of ActionButtons, which conform; behavior and audit in tests/action_toolbar.rs",
+    ),
+    ("ActionToolbarResponse", "response"),
+    ("ToolbarOrientation", "enum"),
+    ("ToolbarSplitResponse", "response"),
+    ("PopupChain", "popup state owned by the caller"),
+    (
+        "BaseListPopupStep",
+        "data of a ListPopup, tested in tests/list_popup.rs",
+    ),
+    (
+        "ListPopup",
+        "popup container of ActionMenuItem rows, not a widget; keys, pointer and timings in tests/list_popup.rs",
+    ),
+    ("ListPopupResponse", "response"),
+    ("PopupStep", "trait: the rows of a ListPopup"),
+    ("PopupStepResult", "enum"),
 ];
 
 /// The modules whose `pub use` lines export the kit's widgets, relative to `src/`. The

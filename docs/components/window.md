@@ -45,6 +45,56 @@ width. Hosts should set a sensible minimum window size for their toolbar actions
 The snapshots show the portable `Borderless` mode. Native traffic lights belong to the
 operating system and are checked in the running macOS gallery.
 
+## Zones, context menu and window controls (IntelliJ spec §14)
+
+`MainToolbar::show_zones(ctx, left, center, right)` lays the toolbar out like IntelliJ's main
+toolbar: the left zone (main menu button, project and version control widgets), the center zone
+(the run widget, centered in the window), and the right zone (search everywhere, settings,
+account), right-aligned. The center and right zones are positioned from their width in the
+previous frame, so the first frame after a change can be a frame late.
+
+![Dark zones](img/main_toolbar_zones.dark.png)
+![Light zones](img/main_toolbar_zones.light.png)
+
+- `.context_menu(&group, &context)`: right click on the empty background opens the group as an
+  `ActionPopupMenu` (IntelliJ's "Customize Toolbar"). Buttons and widgets keep their own
+  clicks.
+- With focus on one of the toolbar's controls (IntelliJ's `FocusMainToolbar`), <kbd>←</kbd> and
+  <kbd>→</kbd> move focus to the neighbor (text fields keep their arrows). The buttons are in
+  the Tab order only with `ActionButton::focusable(true)` or a screen reader; there is no
+  default key to focus the toolbar, as in IntelliJ.
+- Borderless windows get 40 × 40 pt title pane buttons (`TitlePane.Button.preferredSize`) with a
+  square hover fill, flush with the window's edge.
+- `ToolbarSplitButton::new(text).icon(..)` is the run widget: an action part and a 26 pt chevron
+  part divided by a 20 pt line with 3 pt margins (`MainToolbar.SplitDropdown`); `show(ui)`
+  returns a `ToolbarSplitResponse` with the `main` and `arrow` responses, and `.open(true)` keeps the arrow filled while its list
+  is open. Open the list with `ListPopup` or `ActionPopupMenu` anchored to the arrow.
+- `ToolbarComboButton` grows to at most 350 pt (`MainToolbar.Dropdown.maxWidth`); longer text is
+  elided with an ellipsis. Its radius stays at the measured 6 pt (IntelliJ's `arc` 12) and its
+  chevron margin at the measured 8 pt.
+
+```rust
+# egui::__run_test_ctx(|ctx| {
+use archipel_kit::{Glyph, action_system::ActionButton, wm::{MainToolbar, ToolbarComboButton, ToolbarSplitButton}};
+
+MainToolbar::new("main-toolbar").show_zones(
+    ctx,
+    |ui| {
+        ui.add(ActionButton::new(Glyph::Menu, "Main menu").large(true));
+        let _ = ToolbarComboButton::new("archipel").dropdown(true).show(ui);
+    },
+    |ui| {
+        let run = ToolbarSplitButton::new("app").icon(Glyph::Run).show(ui);
+        if run.arrow.clicked() { /* open the configurations list */ }
+    },
+    |ui| {
+        ui.add(ActionButton::new(Glyph::Search, "Search everywhere").large(true));
+        ui.add(ActionButton::new(Glyph::Settings, "Settings").large(true));
+    },
+);
+# });
+```
+
 ## Toolbar controls
 
 Measured on Android Studio's main toolbar (`tokens::toolbar`):

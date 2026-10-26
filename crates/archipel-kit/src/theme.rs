@@ -71,6 +71,9 @@ pub struct Colors {
     pub popup: Color32,
     /// Popup, menu and dialog outline.
     pub popup_border: Color32,
+    /// The mnemonic or number hint at the start of a popup list row (`Popup.mnemonicForeground`,
+    /// `Gray.x78` dark / `Gray.x99` light; IntelliJ spec §5.3).
+    pub popup_mnemonic: Color32,
     /// Text field and other input backgrounds.
     pub field: Color32,
     /// Notification balloon background.
@@ -337,6 +340,8 @@ impl Theme {
                 island: rgb(0x191A1C),
                 popup: rgb(0x26282C),
                 popup_border: rgb(0x33353B),
+                // IntelliJ spec §5.3: `Popup.mnemonicForeground` Gray.x78 in dark themes.
+                popup_mnemonic: rgb(0x787878),
                 field: rgb(0x191A1C),
                 notification: rgb(0x33353B),
                 tooltip: rgb(0x33353B),
@@ -491,6 +496,8 @@ impl Theme {
                 island: rgb(0xFFFFFF),
                 popup: rgb(0xFFFFFF),
                 popup_border: rgb(0xD1D3D9),
+                // IntelliJ spec §5.3: `Popup.mnemonicForeground` Gray.x99 in light themes.
+                popup_mnemonic: rgb(0x999999),
                 field: rgb(0xFFFFFF),
                 notification: rgb(0xFFFFFF),
                 tooltip: rgb(0xFFFFFF),

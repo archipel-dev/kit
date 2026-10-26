@@ -44,7 +44,28 @@ fn file_row(ui: &mut egui::Ui, wrap: &mut bool) {
 | `ActionMenuItem::new(label)` | `.icon(Icon)`, `.shortcut(str)`, `.checked(bool)`, `.enabled(bool)`, `.description(str)` (a dimmed second line, larger icon), `.highlighted(bool)`, `.submenu(\|ui\| …)` |
 | `ListSeparator::new()` | A line between groups; add it with `ui.add(ListSeparator::new())`. |
 | `ListSeparator::with_text(title)` | A dimmed semibold group title aligned with the icons; not focusable. |
-| `ActionLink::new(text)` | Underlined on hover, pointer cursor. |
+| `ActionMenuItem::from_presentation(&Presentation)` | Text, icon, shortcut text, description, enabled, toggle check, chevron for a popup group. |
+| `ActionLink::new(text)` | Underlined on hover, pointer cursor; `.enabled(bool)`, `.external(true)`, `.dropdown(true)`. |
+
+`ActionMenuItem` is the row renderer of [`ListPopup`](list-popup.md) and
+[`ActionPopupMenu`](action-popup-menu.md), which own the highlight, submenus, keys and timings
+(see those pages). Used on its own inside an egui menu or `JBPopup`, it keeps the shared
+highlight described below.
+
+## ActionLink (IntelliJ spec §13.6)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/action_link_variants.dark.png">
+  <img alt="Links: plain, with an external link icon, with a drop-down arrow, and disabled" src="img/action_link_variants.light.png" width="360">
+</picture>
+
+Link-colored text (`Colors::link`), underlined on hover only, with the hand cursor. A click
+fires on release; <kbd>Space</kbd> and <kbd>Enter</kbd> fire it when it has focus, which shows
+the focus ring. Disabled links are dimmed, have no hand cursor or underline, and ignore input.
+`.external(true)` adds the external-link icon after the text, `.dropdown(true)` a drop-down
+arrow (open your popup from `clicked()`). IntelliJ's hover, pressed and visited colors
+(`Link.hoverForeground` …) are the same blue in the New UI, so the kit has one link color;
+the spec gives no other values.
 
 ## Geometry and behavior
 

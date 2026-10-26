@@ -22,3 +22,15 @@ pub fn advance_by<S>(harness: &mut archipel_kit::testing::Harness<'_, S>, second
         left -= step;
     }
 }
+
+/// Fills the canvas with the window frame color, like the area around islands (popups
+/// float over it in snapshots).
+#[allow(dead_code)]
+pub fn backdrop(ctx: &egui::Context) {
+    let colors = archipel_kit::Theme::colors(ctx);
+    ctx.layer_painter(egui::LayerId::background()).rect_filled(
+        ctx.content_rect(),
+        0.0,
+        colors.frame,
+    );
+}

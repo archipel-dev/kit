@@ -21,6 +21,9 @@
 |---|---|---|
 | [Button](components/button.md) | <img src="components/img/button.dark.png" width="160"> | Actions: primary, secondary, ghost, danger. |
 | [ActionButton](components/action-button.md) | <img src="components/img/action_button.dark.png" width="160"> | Toolbar actions and toggles. |
+| [ActionToolbar](components/action-toolbar.md) | <img src="components/img/action_toolbar.dark.png" width="160"> | An action group as a toolbar, with drop-downs and overflow. |
+| [ListPopup, PopupStep](components/list-popup.md) | <img src="components/img/list_popup.dark.png" width="140"> | Choosing a value from a list, with sub-steps. |
+| [ActionPopupMenu](components/action-popup-menu.md) | <img src="components/img/action_popup_menu.dark.png" width="160"> | Context menus and drop-downs of actions. |
 | [JBTextField](components/jb-text-field.md) | <img src="components/img/jb_text_field.dark.png" width="160"> | Text input, search, validation. |
 | [JBCheckBox, JBRadioButton, OnOffButton](components/choice.md) | <img src="components/img/choice.dark.png" width="160"> | Booleans and one-of-many choices. |
 | [ComboBox](components/combo-box.md) | <img src="components/img/combo_box.dark.png" width="100"> | Picking one value from a long list. |

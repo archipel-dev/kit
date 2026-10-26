@@ -15,7 +15,7 @@ use archipel_kit::{
         JBCheckBox, JBIntSpinner, JBList, JBRadioButton, JBTable, JBTextField, OnOffButton,
         SegmentedButton, TitledSeparator, Tree, TreeNode, TreeTable,
     },
-    wm::{SquareStripeButton, StatusBarWidget, ToolbarComboButton},
+    wm::{SquareStripeButton, StatusBarWidget, ToolbarComboButton, ToolbarSplitButton},
 };
 
 #[test]
@@ -89,6 +89,54 @@ fn toolbar_controls_conform() {
             .dropdown(true)
             .enabled(enabled)
             .show(ui)
+    })
+    .run();
+}
+
+#[test]
+fn toolbar_split_button_conforms() {
+    testing::conformance("Run app", |ui, enabled| {
+        ToolbarSplitButton::new("Run app")
+            .icon(Glyph::Run)
+            .enabled(enabled)
+            .show(ui)
+            .main
+    })
+    .run();
+    testing::conformance("Run app options", |ui, enabled| {
+        ToolbarSplitButton::new("Run app")
+            .icon(Glyph::Run)
+            .enabled(enabled)
+            .show(ui)
+            .arrow
+    })
+    .run();
+}
+
+#[test]
+fn action_button_variants_conform() {
+    testing::conformance("Pin tab", |ui, enabled| {
+        ui.add(
+            ActionButton::new(Glyph::Pin, "Pin tab")
+                .selected(true)
+                .enabled(enabled),
+        )
+    })
+    .run();
+    testing::conformance("Branch", |ui, enabled| {
+        ui.add(
+            ActionButton::new(Glyph::Branch, "Branch")
+                .dropdown(true)
+                .enabled(enabled),
+        )
+    })
+    .run();
+    testing::conformance("Close window", |ui, enabled| {
+        ui.add(
+            ActionButton::new(Glyph::Close, "Close window")
+                .title_pane(true)
+                .enabled(enabled),
+        )
     })
     .run();
 }
