@@ -10,6 +10,7 @@ use crate::runtime::Runtime;
 use archipel_kit::editor::model::{
     ClipboardContent, Editor, EditorAction, KeyModifiers as ModelMods, Os, editor_action_for,
 };
+use archipel_kit::editor::{NavigationKind, NavigationRequest};
 use archipel_kit::egui::Key;
 
 /// A fallback chord: `Ctrl+K`, then `keys`, runs `action`.
@@ -208,7 +209,7 @@ pub(crate) fn key(
             if let Some(action) = chord_action(&id)
                 && !(opts.viewer && is_editing(&action))
             {
-                state.menu = None;
+                state.close_menu();
                 run_action(opts, editor, rt, state, &action, None, out);
                 super::find::after_user_move(editor, state);
                 return;
@@ -225,6 +226,15 @@ pub(crate) fn key(
         out.consumed = true;
         return;
     }
+    // Tab belongs to the application when the editor does not indent with it.
+    if !opts.tab_indents
+        && matches!(event.code, KeyCode::Tab | KeyCode::BackTab)
+        && !event
+            .modifiers
+            .intersects(input::KeyModifiers::CONTROL | input::KeyModifiers::ALT)
+    {
+        return;
+    }
     if super::find::editor_key(opts, editor, rt, state, event, out) {
         out.consumed = true;
         return;
@@ -234,7 +244,17 @@ pub(crate) fn key(
         && event.modifiers.contains(input::KeyModifiers::CONTROL)
         && !opts.viewer
     {
-        super::completion::request(opts, editor, state);
+        super::completion::request(opts, editor, rt, state, out);
+        out.consumed = true;
+        return;
+    }
+    // Go to Declaration (Ctrl+B, Cmd+B) and Go to Implementation (Ctrl+Alt+B): the editor
+    // only reports the request, as it does for a Ctrl+click.
+    if let Some(kind) = navigation_key(event, opts.os) {
+        out.navigation = Some(NavigationRequest {
+            offset: editor.carets.primary().offset,
+            kind,
+        });
         out.consumed = true;
         return;
     }
@@ -246,7 +266,6 @@ pub(crate) fn key(
         let action = EditorAction::Type(c);
         if run_action(opts, editor, rt, state, &action, None, out) {
             super::find::after_user_move(editor, state);
-            super::completion::after(opts, editor, state, &action);
         }
         return;
     }
@@ -265,8 +284,27 @@ pub(crate) fn key(
     }
     if run_action(opts, editor, rt, state, &action, clipboard.as_ref(), out) {
         super::find::after_user_move(editor, state);
-        super::completion::after(opts, editor, state, &action);
     }
+}
+
+/// Ctrl+B (Cmd+B on macOS) asks for the declaration, with Alt for the implementation.
+fn navigation_key(event: &KeyEvent, os: Os) -> Option<NavigationKind> {
+    if !matches!(event.code, KeyCode::Char('b' | 'B')) {
+        return None;
+    }
+    let mods = event.modifiers;
+    let primary = match os {
+        Os::MacOs => mods.contains(input::KeyModifiers::SUPER),
+        Os::WindowsLinux => mods.contains(input::KeyModifiers::CONTROL),
+    };
+    if !primary || mods.contains(input::KeyModifiers::SHIFT) {
+        return None;
+    }
+    Some(if mods.contains(input::KeyModifiers::ALT) {
+        NavigationKind::Implementation
+    } else {
+        NavigationKind::Declaration
+    })
 }
 
 /// The clipboard as paste content: whole lines when they were copied from an empty
@@ -292,7 +330,7 @@ pub(crate) fn paste(
     if !rt.focused(opts.id) {
         return;
     }
-    if state.find.open && super::find::paste(opts, editor, state, text, out) {
+    if state.find.open && super::find::paste(opts, editor, state, rt.now, text, out) {
         out.consumed = true;
         return;
     }
@@ -300,7 +338,7 @@ pub(crate) fn paste(
         return;
     }
     let content = clipboard_content(rt, Some(text));
-    state.menu = None;
+    state.close_menu();
     if run_action(
         opts,
         editor,

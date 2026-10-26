@@ -6,9 +6,11 @@
 //! editor, because it **is** the GUI editor's logic: every key goes through
 //! [`editor_action_for`](archipel_kit::editor::model::editor_action_for) and
 //! [`Editor::execute`], typed text becomes [`EditorAction::Type`], the clipboard and the
-//! mouse become the model's caret operations, and find and replace run on the model's
-//! [`search`](archipel_kit::editor::model) functions. Undo, multiple carets, column
-//! selection, folding and scrolling are the model's.
+//! mouse become the model's caret operations, and find and replace, the completion list,
+//! brace matching, indent guides, bracket folding and the hover rules are the shared
+//! [`archipel_kit::editor::logic`] the GUI runs. Undo, multiple carets, column selection,
+//! folding and scrolling are the model's. `docs/tui-editor-parity.md` lists every feature of
+//! the GUI editor against this one.
 //!
 //! The component is stateless like every kit component: it borrows an [`Editor`] you own and
 //! an [`EditorState`] for what only the view knows (scroll position, the find bar, a drag in
@@ -33,11 +35,13 @@
 mod completion;
 mod find;
 mod highlight;
+mod hover;
 mod keys;
 mod layout;
 mod mouse;
 mod paint;
 
+pub use archipel_kit::editor::logic::hover::HoverTarget;
 pub use completion::default_kind;
 pub use highlight::{CodeHighlighter, CodeLanguage};
 pub use keys::{EditorChord, chords, label_of};
@@ -50,6 +54,7 @@ use crate::hit::Id;
 use crate::input::{Event, KeyModifiers, MouseButton};
 use crate::runtime::{CursorShape, Runtime};
 use archipel_kit::action_system::Os as ActionOs;
+use archipel_kit::editor::logic::lookup::LookupState;
 use archipel_kit::editor::model::{
     ActionContext, ClipboardContent, ContentSize, Editor, EditorAction, Language, Os,
     ScrollRequest, ScrollType, SearchHistory, Viewport, clamp_first_line, scroll_to_caret,
@@ -58,10 +63,11 @@ use archipel_kit::editor::{
     ChangeMarker, GutterArea, GutterIcon, NavigationRequest, PlainText, RangeHighlight, Span,
     SyntaxHighlighter,
 };
-use archipel_kit::ui::Completer;
+use archipel_kit::ui::{Completer, Completion};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::collections::HashMap;
+use std::ops::Range;
 use std::rc::Rc;
 
 /// How long a hint ("Not found, press F3 to search from the top") stays, in seconds.
@@ -100,6 +106,27 @@ pub struct EditorOutput {
     /// A right press on the text at this cell (the caret was moved there unless it was in
     /// the selection): show the context menu.
     pub context_menu: Option<(u16, u16)>,
+    /// The pointer has rested on the text for half a second: what is there (the editor
+    /// shows the float of the diagnostics under it itself; this is for the application's
+    /// own tooltip). Set by [`EditorComponent::show`].
+    pub hover: Option<HoverTarget>,
+    /// The pointer has rested on a fold placeholder: the byte range of the folded text.
+    pub fold_preview: Option<Range<usize>>,
+    /// The index (in the highlights passed in) of the scrollbar mark under the pointer.
+    pub stripe_hover: Option<usize>,
+    /// The primary selection as a byte range, `None` for a bare caret.
+    pub selection: Option<Range<usize>>,
+    /// The primary caret's cell on screen, for anchoring popups (`None` when scrolled away).
+    pub caret_cell: Option<(u16, u16)>,
+    /// Number of lines in the document.
+    pub line_count: usize,
+    /// The logical lines that are at least partly visible.
+    pub visible_lines: Range<usize>,
+    /// Matches of the find bar (0 while it is closed).
+    pub matches: usize,
+    /// The completion item inserted by this event (to record in
+    /// [`LookupStats`](archipel_kit::ui::LookupStats)).
+    pub completed: Option<Completion>,
 }
 
 /// What the view remembers between frames: scroll position, the find bar, a mouse gesture in
@@ -120,6 +147,18 @@ pub struct EditorState {
     pub(crate) autoscroll_last: f64,
     pub(crate) autoscroll_at: Option<(u16, u16)>,
     pub(crate) menu: Option<Menu>,
+    /// The completion list's state, the one the GUI list runs.
+    pub(crate) lookup: LookupState,
+    /// When the list needs a tick (the auto-popup delay is running).
+    pub(crate) lookup_wake: Option<f64>,
+    pub(crate) hover: hover::HoverState,
+    /// The view follows the end of a growing document (`stick_to_bottom`).
+    pub(crate) stuck: bool,
+    pub(crate) last_rows: usize,
+    /// Whether the last frame was asked to stick to the bottom (no room past the end).
+    pub(crate) stick: bool,
+    /// The text the bracket folds were last computed for.
+    pub(crate) bracket_stamp: Option<u64>,
     pub(crate) pending_scroll: Option<ScrollRequest>,
     pub(crate) center_line: Option<usize>,
     /// The text last selected with the mouse: the X11 primary selection of Linux.
@@ -220,6 +259,13 @@ impl EditorState {
             autoscroll_last: 0.0,
             autoscroll_at: None,
             menu: None,
+            lookup: LookupState::default(),
+            lookup_wake: None,
+            hover: hover::HoverState::default(),
+            stuck: true,
+            last_rows: 0,
+            stick: false,
+            bracket_stamp: None,
             pending_scroll: None,
             center_line: None,
             primary: String::new(),
@@ -261,13 +307,22 @@ impl EditorState {
         self.menu.is_some()
     }
 
+    /// The rectangle of the hover float drawn last, if one is showing.
+    pub fn hover_rect(&self) -> Option<Rect> {
+        self.hover.rect
+    }
+
     /// The time (in [`Runtime::now`] seconds) the editor next needs a
     /// [`tick`](EditorComponent::tick): while the mouse drags beyond the edge of the text, the
     /// autoscroll runs on a timer.
     pub fn deadline(&self) -> Option<f64> {
-        self.autoscroll_at.map(|_| {
+        let autoscroll = self.autoscroll_at.map(|_| {
             self.autoscroll_last + f64::from(archipel_kit::tokens::motion::EDITOR_AUTOSCROLL_TICK)
-        })
+        });
+        [autoscroll, self.hover.wake, self.lookup_wake]
+            .into_iter()
+            .flatten()
+            .min_by(f64::total_cmp)
     }
 
     fn rows(&mut self, editor: &Editor, wrap: Option<usize>) -> Rc<RowMap> {
@@ -384,6 +439,11 @@ pub struct EditorComponent<'a> {
     line_numbers: bool,
     wrap: bool,
     folding: bool,
+    bracket_folding: bool,
+    enabled: bool,
+    tab_indents: bool,
+    stick_to_bottom: bool,
+    scroll_to_line: Option<usize>,
     whitespace: bool,
     indent_guides: bool,
     right_margin: bool,
@@ -407,6 +467,11 @@ pub(crate) struct Opts<'a> {
     pub line_numbers: bool,
     pub wrap: bool,
     pub folding: bool,
+    pub bracket_folding: bool,
+    pub enabled: bool,
+    pub tab_indents: bool,
+    pub stick_to_bottom: bool,
+    pub scroll_to_line: Option<usize>,
     pub whitespace: bool,
     pub indent_guides: bool,
     pub right_margin: bool,
@@ -456,6 +521,11 @@ impl<'a> EditorComponent<'a> {
             line_numbers: true,
             wrap: false,
             folding: false,
+            bracket_folding: false,
+            enabled: true,
+            tab_indents: true,
+            stick_to_bottom: false,
+            scroll_to_line: None,
             whitespace: false,
             indent_guides: true,
             right_margin: true,
@@ -508,6 +578,39 @@ impl<'a> EditorComponent<'a> {
     /// Shows fold markers in the gutter for the regions of the model's `FoldingModel`.
     pub fn folding(mut self, on: bool) -> Self {
         self.folding = on;
+        self
+    }
+
+    /// Folds the multi-line `{...}` and `[...]` pairs of the text (shown with
+    /// [`folding`](Self::folding)): the regions follow the text and keep what was collapsed.
+    pub fn bracket_folding(mut self, on: bool) -> Self {
+        self.bracket_folding = on;
+        self
+    }
+
+    /// With `false` the editor is dimmed and takes no input, focus or pointer (default on).
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
+    /// Whether Tab and Shift+Tab indent (default on); with `false` they are left to the
+    /// application, which moves the focus.
+    pub fn tab_indents(mut self, on: bool) -> Self {
+        self.tab_indents = on;
+        self
+    }
+
+    /// Follows the end of a growing document (a log, a console) while the view is at the
+    /// bottom, and leaves no room past the last line.
+    pub fn stick_to_bottom(mut self, on: bool) -> Self {
+        self.stick_to_bottom = on;
+        self
+    }
+
+    /// Centers `line` (0-based) in the view on the next frame; pass it again to scroll again.
+    pub fn scroll_to_line(mut self, line: Option<usize>) -> Self {
+        self.scroll_to_line = line;
         self
     }
 
@@ -603,6 +706,11 @@ impl<'a> EditorComponent<'a> {
             line_numbers: self.line_numbers,
             wrap: self.wrap,
             folding: self.folding,
+            bracket_folding: self.bracket_folding,
+            enabled: self.enabled,
+            tab_indents: self.tab_indents,
+            stick_to_bottom: self.stick_to_bottom,
+            scroll_to_line: self.scroll_to_line,
             whitespace: self.whitespace,
             indent_guides: self.indent_guides,
             right_margin: self.right_margin,
@@ -643,8 +751,26 @@ impl<'a> EditorComponent<'a> {
         let os = rt.caps.os;
         let (opts, editor) = self.into_parts(os, &owned);
         let mut out = EditorOutput::default();
+        if !opts.enabled {
+            return out;
+        }
         let stamp = editor.document.modification_stamp();
         let carets = editor.carets.snapshot();
+        // A key or a press puts the hover float away until the pointer moves on.
+        match event {
+            Event::Key(_) | Event::Paste(_) => state.hover.dismiss(),
+            Event::Mouse(_)
+                if rt.pointer().is_some_and(|p| {
+                    !matches!(
+                        p.kind,
+                        crate::pointer::PointerKind::Move | crate::pointer::PointerKind::Drag(_)
+                    )
+                }) =>
+            {
+                state.hover.dismiss()
+            }
+            _ => {}
+        }
         match event {
             Event::Key(key) => keys::key(&opts, editor, rt, state, key, &mut out),
             Event::Paste(text) => keys::paste(&opts, editor, rt, state, text, &mut out),
@@ -657,6 +783,10 @@ impl<'a> EditorComponent<'a> {
         }
         out.text_changed |= editor.document.modification_stamp() != stamp;
         out.carets_moved |= out.text_changed || editor.carets.snapshot() != carets;
+        // The completion list follows what the event did to the text and the caret.
+        if matches!(event, Event::Key(_) | Event::Paste(_) | Event::Mouse(_)) {
+            completion::after_event(&opts, editor, rt, state, event, out.text_changed, &mut out);
+        }
         out
     }
 
@@ -670,7 +800,19 @@ impl<'a> EditorComponent<'a> {
         let mut out = EditorOutput::default();
         let carets = editor.carets.snapshot();
         mouse::tick(&opts, editor, rt, state);
-        out.carets_moved = editor.carets.snapshot() != carets;
+        // The completion list's auto-popup delay ran out.
+        if state.lookup_wake.is_some_and(|at| rt.now >= at) {
+            completion::feed(
+                &opts,
+                editor,
+                rt,
+                state,
+                archipel_kit::editor::logic::lookup::LookupKeys::default(),
+                false,
+                &mut out,
+            );
+        }
+        out.carets_moved |= editor.carets.snapshot() != carets;
         out
     }
 }
@@ -789,7 +931,7 @@ pub(crate) fn apply_scroll(
                 col as f64,
                 scroll_type,
                 animate,
-                &editor.settings,
+                &scroll_settings(editor, state),
             );
             state.first_row = target.first_line.round().max(0.0) as usize;
             state.first_col = if geo.wrap_cols.is_some() {
@@ -803,7 +945,7 @@ pub(crate) fn apply_scroll(
                 state.first_row as f64 + n as f64,
                 content,
                 viewport.visible_lines,
-                &editor.settings,
+                &scroll_settings(editor, state),
             );
             state.first_row = first.round().max(0.0) as usize;
         }
@@ -824,7 +966,7 @@ pub(crate) fn clamp_scroll(editor: &Editor, state: &mut EditorState, geo: &Geo) 
         state.first_row as f64,
         content,
         geo.rows() as f64,
-        &editor.settings,
+        &scroll_settings(editor, state),
     );
     state.first_row = first.round().max(0.0) as usize;
     if geo.wrap_cols.is_some() {
@@ -833,7 +975,7 @@ pub(crate) fn clamp_scroll(editor: &Editor, state: &mut EditorState, geo: &Geo) 
         let max = archipel_kit::editor::model::max_first_column(
             content,
             geo.width() as f64,
-            &editor.settings,
+            &scroll_settings(editor, state),
         );
         state.first_col = (state.first_col as f64).clamp(0.0, max).round() as usize;
     }
@@ -917,11 +1059,25 @@ pub(crate) fn reveal(editor: &mut Editor, state: &mut EditorState, offset: usize
         col as f64,
         ScrollType::MakeVisible,
         false,
-        &editor.settings,
+        &scroll_settings(editor, state),
     );
     state.first_row = target.first_line.round().max(0.0) as usize;
     if geo.wrap_cols.is_none() {
         state.first_col = target.first_column.round().max(0.0) as usize;
+    }
+}
+
+/// The settings scrolling follows: no room past the end while the view sticks to the bottom.
+pub(crate) fn scroll_settings<'a>(
+    editor: &'a Editor,
+    state: &EditorState,
+) -> std::borrow::Cow<'a, archipel_kit::editor::model::EditorSettings> {
+    if state.stick && editor.settings.scroll_past_end_lines != 0 {
+        let mut settings = editor.settings.clone();
+        settings.scroll_past_end_lines = 0;
+        std::borrow::Cow::Owned(settings)
+    } else {
+        std::borrow::Cow::Borrowed(&editor.settings)
     }
 }
 

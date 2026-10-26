@@ -3,6 +3,7 @@
 //! indent guides, diagnostics as undercurl, a thin scrollbar column with marks, the find
 //! prompt and the completion menu on top.
 
+use super::hover;
 use super::layout::{Ctx, LineLayout, RowMap, char_cols};
 use super::mouse::{region_at_line, stripe_y};
 use super::{
@@ -14,9 +15,12 @@ use crate::glyphs;
 use crate::runtime::Runtime;
 use crate::{Glyph, Look};
 use archipel_kit::Tone;
-use archipel_kit::editor::model::{Editor, Language, advance_column};
+use archipel_kit::editor::logic::{
+    BracePair, bracket_regions, effective_indent, fold_regions, match_brace, occurrence_source,
+    occurrences_of, selected_guide,
+};
+use archipel_kit::editor::model::Editor;
 use archipel_kit::editor::{ChangeKind, HighlightSeverity, Span, TextAttributesKey};
-use archipel_kit::tokens::editor as metrics;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
@@ -46,162 +50,6 @@ impl Px {
             cont: false,
         }
     }
-}
-
-/// The matched (or unmatched) brace at the caret.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct BracePair {
-    brace: usize,
-    partner: Option<usize>,
-}
-
-/// The brace at the caret and its partner: the bracket directly before the caret, else the
-/// one directly after. Only with one caret and no selection.
-fn match_brace(editor: &Editor, language: &Language) -> Option<BracePair> {
-    if editor.carets.caret_count() != 1 || editor.carets.primary().has_selection() {
-        return None;
-    }
-    let doc = &editor.document;
-    let offset = editor.carets.primary().offset;
-    let is_bracket = |c: char| language.brackets.iter().any(|&(o, cl)| c == o || c == cl);
-    let (brace, c) = match doc.char_before(offset).filter(|c| is_bracket(*c)) {
-        Some(c) => (offset - c.len_utf8(), c),
-        None => {
-            let c = doc.char_at(offset).filter(|c| is_bracket(*c))?;
-            (offset, c)
-        }
-    };
-    let (open, close, forward) = language.brackets.iter().find_map(|&(o, cl)| {
-        if c == o {
-            Some((o, cl, true))
-        } else if c == cl {
-            Some((o, cl, false))
-        } else {
-            None
-        }
-    })?;
-    let text = doc.text();
-    let limit = 200_000;
-    let mut depth = 0usize;
-    let partner = if forward {
-        text[brace..]
-            .char_indices()
-            .take(limit)
-            .find_map(|(i, ch)| {
-                if ch == open {
-                    depth += 1;
-                } else if ch == close {
-                    depth -= 1;
-                    if depth == 0 {
-                        return Some(brace + i);
-                    }
-                }
-                None
-            })
-    } else {
-        let mut found = None;
-        for (i, ch) in text[..brace + c.len_utf8()]
-            .char_indices()
-            .rev()
-            .take(limit)
-        {
-            if ch == close {
-                depth += 1;
-            } else if ch == open {
-                depth -= 1;
-                if depth == 0 {
-                    found = Some(i);
-                    break;
-                }
-            }
-        }
-        found
-    };
-    Some(BracePair { brace, partner })
-}
-
-/// The indentation of `line` in columns, `None` for a blank line.
-fn indent_cols(
-    doc: &archipel_kit::editor::model::Document,
-    line: usize,
-    tab: usize,
-) -> Option<usize> {
-    let mut col = 0;
-    for c in doc.line_text(line).chars() {
-        match c {
-            ' ' | '\t' => col = advance_column(col, c, tab),
-            _ => return Some(col),
-        }
-    }
-    None
-}
-
-/// The indentation guides of `line` follow: its own, or for a blank line the smaller of the
-/// nearest non-blank lines around it.
-fn effective_indent(doc: &archipel_kit::editor::model::Document, line: usize, tab: usize) -> usize {
-    if let Some(indent) = indent_cols(doc, line, tab) {
-        return indent;
-    }
-    let near = |step: isize| -> usize {
-        let mut l = line as isize + step;
-        for _ in 0..64 {
-            if l < 0 || l as usize >= doc.line_count() {
-                return 0;
-            }
-            if let Some(indent) = indent_cols(doc, l as usize, tab) {
-                return indent;
-            }
-            l += step;
-        }
-        0
-    };
-    near(-1).min(near(1))
-}
-
-/// The guide the caret's block highlights: its column and the lines it spans.
-fn selected_guide(
-    doc: &archipel_kit::editor::model::Document,
-    line: usize,
-    tab: usize,
-    unit: usize,
-) -> Option<(usize, usize, usize)> {
-    let indent = effective_indent(doc, line, tab);
-    // A block header highlights the guide of its body; a line in a body, the body's guide.
-    let next = {
-        let mut l = line + 1;
-        let mut found = None;
-        while l < doc.line_count() && l < line + 64 {
-            if let Some(i) = indent_cols(doc, l, tab) {
-                found = Some(i);
-                break;
-            }
-            l += 1;
-        }
-        found
-    };
-    let col = if next.is_some_and(|n| n > indent) && indent_cols(doc, line, tab).is_some() {
-        indent
-    } else if indent >= unit {
-        (indent - 1) / unit * unit
-    } else {
-        return None;
-    };
-    let mut first = line;
-    while first > 0 && line - first < 1000 && effective_indent(doc, first - 1, tab) > col {
-        first -= 1;
-    }
-    let mut last = line;
-    while last + 1 < doc.line_count()
-        && last - line < 1000
-        && effective_indent(doc, last + 1, tab) > col
-    {
-        last += 1;
-    }
-    // The header line itself is not in the body.
-    if effective_indent(doc, line, tab) <= col {
-        first = line + 1;
-    }
-    Some((col, first, last))
 }
 
 /// What the rows need to know, computed once per frame.
@@ -276,7 +124,8 @@ impl Paint<'_> {
         };
         let occurrence_bg = look.color(ed.rename_occurrence);
         let search_bg = look.color(ed.search_result);
-        let current_bg = look.color(ed.search_result_current);
+        let current_bg = look.color(ed.caret);
+        let current_fg = p.black;
         let brace_bg = look.color(ed.matched_brace);
         let ws_color = look.color(ed.whitespace);
         let mut last_written: Option<usize> = None;
@@ -333,7 +182,11 @@ impl Paint<'_> {
                     .get(si)
                     .filter(|s| s.start <= rel)
                     .map_or(TextAttributesKey::Plain, |s| s.kind);
-                let mut fg = kind_color(look, kind);
+                let mut fg = if self.opts.enabled {
+                    kind_color(look, kind)
+                } else {
+                    p.grey
+                };
                 let mut bg = row_bg;
                 if any_contains(&self.occurrences, o) {
                     bg = occurrence_bg;
@@ -350,14 +203,18 @@ impl Paint<'_> {
                 if self.selections.iter().any(|r| r.start <= o && o < r.end) {
                     bg = sel_bg;
                 }
+                let mut mods = Modifier::empty();
                 if self
                     .current
                     .as_ref()
                     .is_some_and(|r| r.start <= o && o < r.end)
                 {
+                    // The current match is inverted and bold, as Neovim's IncSearch: the
+                    // other matches only tint.
                     bg = current_bg;
+                    fg = current_fg;
+                    mods |= Modifier::BOLD;
                 }
-                let mut mods = Modifier::empty();
                 if let Some(pair) = self.brace
                     && pair.partner.is_none()
                     && o == pair.brace
@@ -573,7 +430,7 @@ pub(crate) fn show(
     area: Rect,
     buf: &mut Buffer,
 ) -> EditorOutput {
-    let out = EditorOutput::default();
+    let mut out = EditorOutput::default();
     let look = rt.look.clone();
     let p = look.palette;
     st.area = area;
@@ -582,18 +439,30 @@ pub(crate) fn show(
         return out;
     }
     crate::components::fill_rect(buf, area, Style::default().bg(p.black).fg(p.white));
+    st.stick = opts.stick_to_bottom;
+    // Bracket folds follow the text.
+    if opts.bracket_folding && st.bracket_stamp != Some(editor.document.modification_stamp()) {
+        let regions = fold_regions(&bracket_regions(&editor.document), editor.folding.regions());
+        editor.folding.replace_regions(regions);
+    }
+    st.bracket_stamp = Some(editor.document.modification_stamp());
     let geo = geometry(opts, editor, st, area);
     st.geo = Some(geo.clone());
     if geo.text.width == 0 || geo.text.height == 0 {
         find::draw(opts, editor, rt, st, geo.bar, buf);
         return out;
     }
-    rt.widget(opts.id, geo.text);
-    if !geo.gutter.is_empty() {
-        rt.clickable(opts.gutter_id(), geo.gutter);
+    if opts.enabled {
+        rt.widget(opts.id, geo.text);
+        if !geo.gutter.is_empty() {
+            rt.clickable(opts.gutter_id(), geo.gutter);
+        }
+        if let Some(stripe) = geo.stripe {
+            rt.clickable(opts.stripe_id(), stripe);
+        }
     }
-    if let Some(stripe) = geo.stripe {
-        rt.clickable(opts.stripe_id(), stripe);
+    if let Some(line) = opts.scroll_to_line {
+        st.center_line = Some(line);
     }
     // Scrolling asked for since the last frame.
     if let Some(line) = st.center_line.take() {
@@ -610,7 +479,17 @@ pub(crate) fn show(
     }
     clamp_scroll(editor, st, &geo);
     let map = st.rows(editor, geo.wrap_cols);
-    let focused = rt.focused(opts.id);
+    if opts.stick_to_bottom {
+        // A growing document keeps its last row in view while the user has not scrolled up.
+        let total = map.total_rows();
+        let last_first = total.saturating_sub(geo.rows());
+        if st.stuck && total != st.last_rows {
+            st.first_row = last_first;
+        }
+        st.stuck = st.first_row >= last_first;
+        st.last_rows = total;
+    }
+    let focused = rt.focused(opts.id) && opts.enabled;
     let found = st.find.results(editor);
     let current = if st.find.open {
         find::current_match(editor, &found).map(|i| found.ranges[i].clone())
@@ -618,25 +497,9 @@ pub(crate) fn show(
         None
     };
     // Occurrences of the selected text.
-    let mut occurrences: Vec<Range<usize>> = Vec::new();
-    {
-        let carets = editor.carets.carets();
-        if carets.len() == 1 && carets[0].has_selection() {
-            let (s, e) = (carets[0].selection_start(), carets[0].selection_end());
-            let text = editor.document.slice(s, e);
-            if !text.trim().is_empty() && !text.contains('\n') {
-                for (at, _) in editor.document.text().match_indices(text) {
-                    if at != s {
-                        occurrences.push(at..at + text.len());
-                    }
-                    if occurrences.len() > metrics::MAX_SELECTION_OCCURRENCES {
-                        occurrences.clear();
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    let occurrences = occurrence_source(editor)
+        .map(|range| occurrences_of(&editor.document, range))
+        .unwrap_or_default();
     let tab = editor.settings.tab_size;
     let diagnostics: Vec<(Range<usize>, Color)> = {
         let ed = &look.theme.editor;
@@ -800,8 +663,8 @@ pub(crate) fn show(
             buf,
         );
     }
-    // The cursor.
-    if focused && st.find.focus == find::FindFocus::Editor {
+    // The cursor: the primary caret's cell, and the terminal cursor while focused.
+    {
         let (row, col) = {
             let c = editor.carets.primary();
             row_col(&ctx, &map, c.offset, c.virtual_spaces)
@@ -819,9 +682,30 @@ pub(crate) fn show(
                 let x = text.x + col_in_row as u16;
                 let y = text.y + (row - st.first_row) as u16;
                 let (x, y) = (x.min(text.right().saturating_sub(1)), y);
-                rt.set_cursor(x, y, cursor_shape(editor));
+                out.caret_cell = Some((x, y));
+                if focused && st.find.focus == find::FindFocus::Editor {
+                    rt.set_cursor(x, y, cursor_shape(editor));
+                }
             }
         }
+    }
+    // What the caller may want to know about the frame.
+    {
+        let primary = editor.carets.primary();
+        out.selection = primary
+            .has_selection()
+            .then(|| primary.selection_start()..primary.selection_end());
+        out.line_count = editor.document.line_count();
+        out.matches = found.ranges.len();
+        let doc = &editor.document;
+        let last_row = (st.first_row + text.height as usize)
+            .min(total)
+            .saturating_sub(1);
+        let (v0, _) = map.visual_at_row(st.first_row.min(total.saturating_sub(1)));
+        let (v1, _) = map.visual_at_row(last_row);
+        let first = editor.folding.visual_to_logical_line(doc, v0);
+        let last = editor.folding.visual_to_logical_line(doc, v1);
+        out.visible_lines = first..(last + 1).min(doc.line_count());
     }
     drop(ctx);
     find::draw(opts, editor, rt, st, geo.bar, buf);
@@ -874,6 +758,11 @@ pub(crate) fn show(
                 Style::default().fg(p.yellow).bg(p.one_bg3),
             );
         }
+    }
+    // The float of what the pointer rests on.
+    match hover::update(opts, editor, rt, st, &geo, &map, &mut out) {
+        Some(float) => hover::draw(&look, st, &float, area, buf),
+        None => st.hover.rect = None,
     }
     out
 }

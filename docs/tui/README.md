@@ -338,7 +338,13 @@ impl File {
 history, a mouse gesture in progress, the completion menu, a hint. The options are the GUI's:
 `viewer`, `line_numbers`, `wrap` (soft wrap), `folding`, `show_whitespace`, `indent_guides`,
 `right_margin`, `gutter_icons`, `change_markers`, `highlights`, `completer`,
-`gutter_click_selects_line`, plus `virtual_text` and `scrollbar`. Any `SyntaxHighlighter` of the
+`gutter_click_selects_line`, `bracket_folding`, `enabled`, `tab_indents`, `stick_to_bottom`,
+`scroll_to_line`, `placeholder`, `keymap_os`, plus `virtual_text` and `scrollbar`. What a frame
+and an event report is in `EditorOutput`: `text_changed`, `carets_moved`, `navigation`,
+`gutter_clicks`, `hint`, `hover`, `fold_preview`, `stripe_hover`, `selection`, `caret_cell`,
+`line_count`, `visible_lines`, `matches` and `completed`. The editor has every feature of the GUI
+`EditorComponent`; `docs/tui-editor-parity.md` is the audit, and the logic both share is
+`archipel_kit::editor::logic`. Any `SyntaxHighlighter` of the
 GUI kit colors the text with the theme's editor scheme in 24-bit color; `CodeHighlighter` is a
 small one for Rust, Markdown and TOML. `editor::cursor_position` gives `Ln, Col` for the status
 line.
@@ -363,6 +369,8 @@ What it draws:
   line as virtual text. A one-cell scrollbar column shows the thumb and a mark per highlight and
   find match, like the GUI's error stripe.
 
+<img alt="The brace at the caret and its partner tinted, the guide of the caret's block highlighted" src="img/editor-braces.dark.svg" width="538"> <img alt="Braces, light" src="img/editor-braces.light.svg" width="538">
+
 <img alt="Multiple carets: the primary is the terminal cursor, the others reversed cells" src="img/editor-carets.dark.svg" width="538"> <img alt="Carets, light" src="img/editor-carets.light.svg" width="538">
 
 <img alt="A column selection made with Alt+drag" src="img/editor-column.dark.svg" width="538"> <img alt="Column selection, light" src="img/editor-column.light.svg" width="538">
@@ -370,6 +378,19 @@ What it draws:
 <img alt="A collapsed region as a pill and fold markers in the gutter" src="img/editor-folded.dark.svg" width="538"> <img alt="Folding, light" src="img/editor-folded.light.svg" width="538">
 
 <img alt="Diagnostics as undercurl, virtual text and scrollbar marks" src="img/editor-diagnostics.dark.svg" width="538"> <img alt="Diagnostics, light" src="img/editor-diagnostics.light.svg" width="538">
+
+### Hover
+
+Resting the pointer on the text for 500 ms opens a float with the messages of the diagnostics
+under it, most severe first, as Neovim's LSP hover does; `EditorOutput::hover` reports the same
+rest for your own tooltip. Resting 300 ms on a collapsed `{…}` previews the folded lines
+(`fold_preview`); resting on a gutter icon shows its name; resting on a mark of the scrollbar
+column shows its message (`stripe_hover`). A key or a press puts the float away until the pointer
+moves on. Wake the loop with `EditorState::deadline`, the delay is running until then.
+
+<img alt="Diagnostics with undercurl and the hover float" src="img/editor-hover.dark.svg" width="538"> <img alt="Hover, light" src="img/editor-hover.light.svg" width="538">
+
+<img alt="A folded region previewed on hover" src="img/editor-fold-preview.dark.svg" width="538"> <img alt="Fold preview, light" src="img/editor-fold-preview.light.svg" width="538">
 
 ### Keys
 
@@ -416,7 +437,7 @@ clear (one caret, no selection, no find bar, no menu) is not consumed, so the ap
 | Shift+click | extends the selection, by words or lines after a double or triple click |
 | Alt+drag, middle drag | column selection (where the terminal reports Alt) |
 | Alt+Shift+click | adds a caret, or removes the one there |
-| Ctrl+click (Cmd on macOS) | reported as a `NavigationRequest` |
+| Ctrl+click (Cmd on macOS) | reported as a `NavigationRequest` (Ctrl+Alt for the implementation); Ctrl+B and Ctrl+Alt+B (Cmd+B) ask for it from the keyboard |
 | Middle click | pastes the mouse selection (Linux) |
 | Wheel, Shift+wheel | scrolls three rows, four columns sideways |
 | Click on a collapsed `{…}` | expands it |
@@ -432,7 +453,8 @@ Ctrl+F opens the find bar (a single-line selection becomes the query, a multi-li
 scope), Ctrl+R the replace row. It is an NvChad prompt row at the top of the editor: a colored
 title pill, the prompt, the `n/m` status, the Match Case, Words and Regex toggles (Alt+C, Alt+W,
 Alt+X), previous, next and close. Typing selects the first match from the caret (the current
-match is the selection); clearing the query puts the carets and the view back. Enter, Down and
+match is the selection, drawn inverted and bold so it stands out from the other matches, which
+only carry the search tint); clearing the query puts the carets and the view back. Enter, Down and
 F3 go to the next match, Shift+Enter, Up and Shift+F3 to the previous one; past the last match
 the first press shows a hint, the second wraps. Enter in the replace field replaces and selects
 the next match, Alt+A replaces all as one undo step, Alt+P preserves case. Alt+Enter selects all
@@ -440,17 +462,31 @@ matches with one caret each, Ctrl+Enter (Ctrl+J in a legacy terminal) remembers 
 goes back to the text, Tab moves between the fields, Alt+Down opens the history of queries,
 Escape closes the bar.
 
-<img alt="The find and replace bar as a prompt row" src="img/editor-find.dark.svg" width="538"> <img alt="Find and replace, light" src="img/editor-find.light.svg" width="538">
+<img alt="The find and replace bar as a prompt row, the current match inverted" src="img/editor-find.dark.svg" width="538"> <img alt="Find and replace, light" src="img/editor-find.light.svg" width="538">
+
+<img alt="The current match inverted and bold among the tinted matches" src="img/editor-find-current.dark.svg" width="538"> <img alt="Current match, light" src="img/editor-find-current.light.svg" width="538">
 
 ### Completion
 
 With a `completer` (the kit's `Completer` trait), typing opens an nvim-cmp style menu under the
-caret: a kind icon, the label with the typed characters highlighted, the detail in grey, the
-selected row in the accent. Up and Down move and wrap, PageUp and PageDown jump, Enter inserts,
-Tab replaces the identifier after the caret too, Escape closes, a click picks. A completion is
-one undo step.
+caret: a kind icon (the item's own icon when it has one), the label with the typed characters
+highlighted, the tail text and the type in grey, bold and struck-out items, the selected row in
+the accent. It is the GUI list's state machine (`logic::lookup::LookupState`), so it behaves like
+the IntelliJ lookup: the typed text filters and ranks by camel humps, middle matching and exact
+case, recently chosen items first (`Completer::recency`); Ctrl+Space asks for everything, a lone
+answer goes in at once and a second Ctrl+Space asks for more (`complete_extended`); Backspace on
+an empty prefix and the caret leaving the prefix close it.
+
+Keys while it is open: Up and Down move and wrap, PageUp and PageDown jump, Enter inserts, Tab
+replaces the identifier after the caret too, `.` `,` `;` `=` space `:` `(` insert the item and are
+typed after it, Ctrl+Q (Ctrl+J, F1) shows the documentation of the selected item beside the menu,
+Escape closes, a click picks, the wheel scrolls. The item goes in at every caret as one undo
+step, and `EditorOutput::completed` reports it for `LookupStats`. `{{variable}}` templates work
+with `TemplateHighlighter` for the colors and `template_at` in the completer.
 
 <img alt="The completion menu" src="img/editor-completion.dark.svg" width="538"> <img alt="Completion, light" src="img/editor-completion.light.svg" width="538">
+
+<img alt="The completion menu with the documentation of the selected item and an advertisement" src="img/editor-completion-docs.dark.svg" width="605"> <img alt="Completion with documentation, light" src="img/editor-completion-docs.light.svg" width="605">
 
 ### In the IDE example
 
@@ -468,8 +504,10 @@ with the Read-Only toggle (Find Action or the editor's context menu).
   Up and Down.
 - **No animation and no blinking**: scrolling jumps; the terminal draws the cursor.
 - **Soft wrap** breaks at the last cell, not at word boundaries.
-- **No hover**: the rest tooltips, the fold preview and drag and drop of a selection are left
-  out. The selection keeps its fill without rounded corners.
+- **The selection** keeps its fill without rounded corners: the Islands radius is a sixth of a
+  line, below a cell.
+- **Hover floats** are drawn by the editor itself (the GUI reports the hover and the application
+  shows the tooltip); `EditorOutput::hover` is there for your own tooltip as well.
 - **The find query is one line**: Ctrl+Shift+Enter (a line break in the query) is not there.
 - **Some keys need a fallback** (above); Ctrl+W is the terminal's window leader in the IDE, so
   extend selection is Alt+Up or Ctrl+K then E there.

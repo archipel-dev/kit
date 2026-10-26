@@ -7,7 +7,7 @@ use super::state::{Drag, Frame, Geo, Unit, ViewState};
 use crate::editor::decorations::{GutterArea, GutterClick, NavigationKind, NavigationRequest};
 use crate::editor::model::{
     ActionContext, ClipboardContent, Editor, EditorAction, Language, LogicalPosition, Os,
-    ScrollRequest, ScrollType, word_range_at,
+    ScrollRequest, ScrollType,
 };
 use crate::tokens::{editor as metrics, motion};
 use egui::{CursorIcon, Event, Modifiers, PointerButton, Pos2, Response, Ui};
@@ -75,46 +75,7 @@ pub(crate) fn locate(editor: &Editor, env_geo: &Geo, frame: &Frame, p: Pos2) -> 
     }
 }
 
-fn inside_selection(editor: &Editor, offset: usize) -> bool {
-    editor
-        .carets
-        .carets()
-        .iter()
-        .any(|c| c.has_selection() && c.selection_start() <= offset && offset < c.selection_end())
-}
-
-fn line_range(editor: &Editor, offset: usize) -> (usize, usize) {
-    let doc = &editor.document;
-    let line = doc.line_number(offset);
-    (doc.line_start_offset(line), doc.line_end_with_break(line))
-}
-
-fn word_or_line(editor: &Editor, offset: usize) -> (usize, usize) {
-    let doc = &editor.document;
-    if let Some(range) = word_range_at(
-        doc,
-        offset,
-        editor.settings.mouse_selection_honors_camel_humps && editor.settings.camel_humps,
-    ) {
-        return range;
-    }
-    // No word: the text of the line, without its break.
-    let line = doc.line_number(offset);
-    (doc.line_start_offset(line), doc.line_end_offset(line))
-}
-
-/// Sets the primary selection to `anchor..lead` keeping the other carets when `multi`.
-fn set_selection(editor: &mut Editor, anchor: usize, lead: usize, multi: bool) {
-    if multi {
-        let doc = &editor.document;
-        let (anchor, lead) = (doc.snap(anchor), doc.snap(lead));
-        let caret = editor.carets.primary_mut();
-        caret.select(anchor, lead);
-        editor.carets.normalize();
-    } else {
-        editor.carets.set_selection(&editor.document, anchor, lead);
-    }
-}
+use crate::editor::logic::gestures::{inside_selection, line_range, set_selection, word_or_line};
 
 fn logical_position(at: &Located) -> LogicalPosition {
     // Columns past the end of the line count as virtual columns.

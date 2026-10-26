@@ -7,8 +7,10 @@
 //! humps included), sorts them, draws them and reports the one chosen. See `docs/components/
 //! code.md` for the keys.
 
-use super::lookup::{LookupElementPresentation, PrefixMatch, PrefixMatcher, is_identifier_char};
+use super::lookup::{LookupElementPresentation, PrefixMatcher, is_identifier_char};
 use crate::Theme;
+use crate::editor::logic::lookup::{COMMIT_CHARS, LookupInput, LookupState};
+pub(crate) use crate::editor::logic::lookup::{Chosen, tail_len};
 use crate::icons::Icon;
 use crate::tokens::{lookup as tk, popup, radius, scroll, size, typography};
 use egui::text::{CCursor, CCursorRange, LayoutJob, TextFormat};
@@ -268,81 +270,16 @@ impl Completer for Suggestions<'_> {
     }
 }
 
-/// The characters that insert the selected item and are then typed themselves
-/// (IntelliJ `DefaultCharFilter`: "select and finish").
-const COMMIT_CHARS: [char; 7] = ['.', ',', ';', '=', ' ', ':', '('];
-
-/// Where the list is, between frames.
+/// Where the list is, between frames: the lookup's state and where it was drawn.
 #[derive(Debug, Clone, Copy, Default)]
 struct State {
-    open: bool,
-    selected: usize,
-    count: usize,
-    /// First visible row.
-    top: usize,
-    /// Char index where the typed prefix starts: the caret leaving it ahead closes the list.
-    anchor: usize,
-    /// Opened by <kbd>Ctrl</kbd>+<kbd>Space</kbd>: an empty prefix does not close it.
-    explicit: bool,
-    /// How many times <kbd>Ctrl</kbd>+<kbd>Space</kbd> was pressed since the list opened.
-    invocations: u8,
-    /// The documentation popup was toggled on (<kbd>Ctrl</kbd>+<kbd>Q</kbd>).
-    doc_open: bool,
-    /// Input time the selection last changed (for the documentation delay).
-    selected_at: f64,
-    /// The row `selected_at` belongs to.
-    selected_for: usize,
-    /// Input time of the typed identifier character waiting for the auto-popup delay.
-    pending: Option<f64>,
+    lookup: LookupState,
     /// Where the popup was drawn, for the wheel and the clicks.
     rect: Option<Rect>,
 }
 
 /// The keys the open list took this frame.
-#[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct Keys {
-    down: bool,
-    up: bool,
-    page_down: bool,
-    page_up: bool,
-    accept: bool,
-    /// Tab chose: the item replaces the rest of the identifier after the caret.
-    replace: bool,
-    /// A context character (or <kbd>Ctrl</kbd>+<kbd>.</kbd>'s dot) chose and is typed next.
-    commit: Option<char>,
-    /// Escape closed the list (egui also took the focus away; the input takes it back).
-    pub(crate) escaped: bool,
-    /// Ctrl+Space asked for the list.
-    explicit: bool,
-    /// The text typed this frame ends in an identifier character.
-    typed_ident: bool,
-    /// Backspace was pressed.
-    backspace: bool,
-    /// The documentation toggle was pressed.
-    toggle_doc: bool,
-    /// Wheel rows over the popup.
-    wheel: f32,
-}
-
-impl Keys {
-    /// Enter (or Tab) picked a suggestion: the input must not treat it as its own.
-    pub(crate) fn accepted(&self) -> bool {
-        self.accept
-    }
-}
-
-/// An accepted suggestion and what to do around it.
-pub(crate) struct Chosen {
-    /// Char index where the replaced part starts.
-    pub(crate) start: usize,
-    /// Char index where the replaced part ends (the completer's `end`).
-    pub(crate) end: usize,
-    pub(crate) item: Completion,
-    /// Tab: the rest of the identifier after the caret goes too.
-    pub(crate) replace_tail: bool,
-    /// A context character typed after the insertion.
-    pub(crate) then: Option<char>,
-}
+pub(crate) use crate::editor::logic::lookup::LookupKeys as Keys;
 
 /// The completion list of the input `key` names.
 pub(crate) struct List {
@@ -373,14 +310,14 @@ impl List {
             let pointer_over = state
                 .rect
                 .zip(ui.input(|i| i.pointer.hover_pos()))
-                .is_some_and(|(rect, pos)| state.open && rect.contains(pos));
+                .is_some_and(|(rect, pos)| state.lookup.open && rect.contains(pos));
             ui.input_mut(|i| {
                 keys.explicit = i.consume_key(Modifiers::CTRL, Key::Space);
                 keys.typed_ident = i.events.iter().any(|e| {
                     matches!(e, egui::Event::Text(t) if t.chars().last().is_some_and(is_identifier_char))
                 });
                 keys.backspace = i.key_pressed(Key::Backspace);
-                if state.open && state.count > 0 {
+                if state.lookup.open && state.lookup.count > 0 {
                     keys.down = i.consume_key(Modifiers::NONE, Key::ArrowDown);
                     keys.up = i.consume_key(Modifiers::NONE, Key::ArrowUp);
                     keys.page_down = i.consume_key(Modifiers::NONE, Key::PageDown);
@@ -410,7 +347,7 @@ impl List {
                         }
                     }
                     if i.consume_key(Modifiers::NONE, Key::Escape) {
-                        state.open = false;
+                        state.lookup.open = false;
                         keys.escaped = true;
                     }
                     if pointer_over && i.raw_scroll_delta.y != 0.0 {
@@ -442,12 +379,12 @@ impl List {
 
     /// Whether the list was open at the start of the frame.
     pub(crate) fn is_open(&self) -> bool {
-        self.state.open
+        self.state.lookup.open
     }
 
     /// Closes the list: a second click on a combo box's chevron.
     pub(crate) fn close(&mut self) {
-        self.state.open = false;
+        self.state.lookup.open = false;
     }
 
     /// Hangs the list below `field`, as wide as it, instead of under the caret.
@@ -502,236 +439,44 @@ impl List {
             // closed the list, so the input keeps it (a second Escape leaves).
             edited.request_focus();
         }
-        let Some(caret) = caret else {
-            self.state.open = false;
+        if caret.is_none() {
+            self.state.lookup.close();
             self.store(ui);
             return None;
-        };
-        let lookup = self.lookup;
-        let was_open = self.state.open;
-        let changed = edited.changed();
-        let mut open = was_open;
-
-        // What the caret did to an open list: it left the prefix, or the prefix is no longer
-        // an identifier (a typed `)`), or Backspace emptied it.
-        if was_open && lookup {
-            if caret < self.state.anchor {
-                open = false;
-            } else {
-                let prefix = chars_between(text, self.state.anchor, caret);
-                if prefix.chars().any(|c| !is_identifier_char(c) && c != '-')
-                    || (keys.backspace && prefix.is_empty() && !self.state.explicit)
-                {
-                    open = false;
-                }
-            }
         }
-
-        // What may open it: Ctrl+Space, or an edit (an identifier character, in a lookup),
-        // after the completer's delay.
-        let delay = if lookup {
-            completer.auto_popup_delay()
-        } else {
-            0.0
-        };
-        let mut auto = changed && (keys.typed_ident || !lookup) && !open;
-        if delay > 0.0 && lookup {
-            if auto {
-                self.state.pending = Some(now);
-                auto = false;
-            } else if changed {
-                self.state.pending = None;
-            }
-            if let Some(since) = self.state.pending {
-                let remaining = f64::from(delay) - (now - since);
-                if remaining <= 0.0 && focused {
-                    self.state.pending = None;
-                    auto = !open;
-                } else if focused {
-                    ctx.request_repaint_after(std::time::Duration::from_secs_f64(
-                        remaining.max(0.0),
-                    ));
-                } else {
-                    self.state.pending = None;
-                }
-            }
-        }
-        if keys.explicit {
-            self.state.invocations = if was_open {
-                self.state.invocations.saturating_add(1)
-            } else {
-                1
-            };
-            if !was_open {
-                self.state.explicit = true;
-            }
-        }
-        let asked = keys.explicit || open;
-        let mut found = None;
-        if asked || auto {
-            found = if (keys.explicit || open) && self.state.invocations >= 2 {
-                completer.complete_extended(text, caret)
-            } else if asked {
-                completer.complete_on_request(text, caret)
-            } else {
-                completer.complete(text, caret)
-            }
-            .filter(|c| !c.items.is_empty());
-        }
-        let opening = !open && (keys.explicit || auto) && found.is_some();
-        if opening {
-            open = true;
-            self.state.selected = 0;
-            self.state.top = 0;
-            self.state.doc_open = false;
-            if !keys.explicit {
-                self.state.explicit = false;
-                self.state.invocations = 0;
-            }
-            self.state.anchor = match &found {
-                Some(found) if lookup => run_start(text, caret).max(found.start),
-                _ => caret,
-            };
-        } else if changed && open {
-            // The prefix changed: the best match is selected again.
-            self.state.selected = 0;
-            self.state.top = 0;
-        }
-
-        // Filter, match and sort by the typed prefix.
-        let prefix = if lookup && open {
-            chars_between(text, self.state.anchor.min(caret), caret)
-        } else {
-            String::new()
-        };
-        let matcher = PrefixMatcher::new(&prefix);
-        let mut ranked: Vec<(usize, Option<PrefixMatch>)> = Vec::new();
-        if let Some(found) = &found {
-            if lookup {
-                for (i, item) in found.items.iter().enumerate() {
-                    if let Some(m) = matcher.matches(item.lookup()) {
-                        ranked.push((i, Some(m)));
-                    }
-                }
-                ranked.sort_by_key(|(i, m)| {
-                    let item = &found.items[*i];
-                    (
-                        m.as_ref().map(|m| m.kind),
-                        m.as_ref().is_some_and(|m| !m.exact_case),
-                        std::cmp::Reverse(completer.recency(item.lookup())),
-                        *i,
-                    )
-                });
-            } else {
-                ranked.extend((0..found.items.len()).map(|i| (i, None)));
-            }
-        }
-        let count = ranked.len();
         let clicking = ui.input(|i| i.pointer.any_pressed() || i.pointer.any_released());
-        if count == 0 || (!focused && !clicking) {
-            open = false;
+        let frame = self.state.lookup.update(
+            completer,
+            &LookupInput {
+                text,
+                caret,
+                keys,
+                lookup: self.lookup,
+                changed: edited.changed(),
+                focused,
+                clicking,
+                now,
+                max_rows: tk::MAX_ROWS,
+            },
+        );
+        if let Some(after) = frame.repaint_after {
+            ctx.request_repaint_after(std::time::Duration::from_secs_f64(after.max(0.0)));
         }
-
-        // A single answer to an explicit request is inserted at once.
-        if keys.explicit
-            && !was_open
-            && open
-            && count == 1
-            && lookup
-            && completer.auto_insert_single()
-            && let Some(found) = &found
-        {
-            self.state.open = false;
-            self.state.count = 0;
+        if frame.auto_inserted {
+            // A single answer to an explicit request is inserted at once.
             self.store(ui);
             edited.mark_changed();
-            return Some(Chosen {
-                start: found.start,
-                end: found.end.max(found.start),
-                item: found.items[ranked[0].0].clone(),
-                replace_tail: false,
-                then: None,
-            });
+            return frame.chosen;
         }
 
-        self.state.open = open;
-        self.state.count = count;
-        let last = count.saturating_sub(1);
-        if open {
-            if keys.down {
-                self.state.selected = if self.state.selected >= last {
-                    0
-                } else {
-                    self.state.selected + 1
-                };
-            }
-            if keys.up {
-                self.state.selected = if self.state.selected == 0 {
-                    last
-                } else {
-                    self.state.selected - 1
-                };
-            }
-            let page = tk::MAX_ROWS - 1;
-            if keys.page_down {
-                self.state.selected = (self.state.selected + page).min(last);
-            }
-            if keys.page_up {
-                self.state.selected = self.state.selected.saturating_sub(page);
-            }
-            if keys.toggle_doc {
-                self.state.doc_open = !self.state.doc_open;
-            }
-        }
-        self.state.selected = self.state.selected.min(last);
-        let visible = count.min(tk::MAX_ROWS);
-        let max_top = count.saturating_sub(tk::MAX_ROWS);
-        if keys.wheel != 0.0 {
-            let rows = if keys.wheel.abs() < 1.0 {
-                keys.wheel.signum()
-            } else {
-                keys.wheel.round()
-            };
-            self.state.top = (self.state.top as f32 + rows).clamp(0.0, max_top as f32) as usize;
-        } else if self.state.selected < self.state.top {
-            self.state.top = self.state.selected;
-        } else if self.state.selected >= self.state.top + visible {
-            self.state.top = self.state.selected + 1 - visible;
-        }
-        self.state.top = self.state.top.min(max_top);
-        if self.state.selected != self.state.selected_for || changed || opening {
-            self.state.selected_for = self.state.selected;
-            self.state.selected_at = now;
-        }
-
-        let mut chosen = None;
-        if let (Some(found), true) = (&found, open && count > 0) {
-            if keys.accept
-                && let Some((i, _)) = ranked.get(self.state.selected)
-            {
-                chosen = Some(Chosen {
-                    start: found.start,
-                    end: found.end.max(found.start),
-                    item: found.items[*i].clone(),
-                    replace_tail: keys.replace,
-                    then: keys.commit,
-                });
-            }
-            let rows: Vec<LookupElementPresentation> = ranked
-                .iter()
-                .map(|(i, m)| {
-                    let mut p = found.items[*i].presentation(None);
-                    if let Some(m) = m {
-                        p.fragments = m.fragments.clone();
-                    }
-                    p
-                })
-                .collect();
+        let mut chosen = frame.chosen.clone();
+        if frame.open && frame.found.is_some() {
+            let rows = frame.rows();
             if let Some(field) = self.below {
                 // A combo box's list is a plain popup list below the field, not a lookup:
                 // one click picks a row.
                 let mut still_open = true;
-                let selected = self.state.selected;
+                let selected = frame.selected;
                 let picked = crate::ui::popup::JBPopup::new(self.key.with("list"), field)
                     .width(field.width())
                     .show(ctx, &mut still_open, |ui| {
@@ -749,68 +494,32 @@ impl List {
                         }
                         picked
                     });
-                if let Some(Some(row)) = picked
-                    && let Some((i, _)) = ranked.get(row)
-                {
-                    chosen = Some(Chosen {
-                        start: found.start,
-                        end: found.end.max(found.start),
-                        item: found.items[*i].clone(),
-                        replace_tail: false,
-                        then: None,
-                    });
+                if let Some(Some(row)) = picked {
+                    chosen = frame.chosen_row(row);
                 }
-                self.state.open &= still_open;
+                self.state.lookup.open &= still_open;
             } else if let Some(anchor) = caret_rect {
-                let selected = self.state.selected;
-                let docs = ranked
-                    .get(selected)
-                    .and_then(|(i, _)| found.items[*i].documentation.clone());
-                let doc_visible = docs.is_some()
-                    && (self.state.doc_open
-                        || (completer.auto_show_documentation()
-                            && now - self.state.selected_at >= f64::from(tk::DOC_DELAY)));
-                if completer.auto_show_documentation() && !self.state.doc_open {
-                    let wait = f64::from(tk::DOC_DELAY) - (now - self.state.selected_at);
-                    if wait > 0.0 {
-                        ctx.request_repaint_after(std::time::Duration::from_secs_f64(wait));
-                    }
-                }
-                let prefix_width = if self.below.is_some() {
-                    0.0
-                } else {
-                    self.prefix_width(ui, &prefix)
-                };
+                let prefix_width = self.prefix_width(ui, &frame.prefix);
                 let shown = show_popup(
                     ui,
                     PopupArgs {
                         key: self.key,
                         rows: &rows,
-                        selected,
-                        top: self.state.top,
+                        selected: frame.selected,
+                        top: frame.top,
                         anchor,
                         field: self.below,
                         prefix_width,
                         font: self.font(),
-                        advertisement: completer.advertisement(),
-                        docs: doc_visible.then_some(docs).flatten(),
+                        advertisement: frame.advertisement.clone(),
+                        docs: frame.doc.clone(),
                     },
                 );
                 self.state.rect = Some(shown.rect);
                 if let Some(row) = shown.activate {
-                    if let Some((i, _)) = ranked.get(row) {
-                        chosen = Some(Chosen {
-                            start: found.start,
-                            end: found.end.max(found.start),
-                            item: found.items[*i].clone(),
-                            replace_tail: false,
-                            then: None,
-                        });
-                    }
+                    chosen = frame.chosen_row(row);
                 } else if let Some(row) = shown.select {
-                    self.state.selected = row;
-                    self.state.selected_for = row;
-                    self.state.selected_at = now;
+                    self.state.lookup.select(row, now);
                 }
                 if shown.pressed_inside {
                     // The input keeps the keyboard while the pointer works the list.
@@ -822,7 +531,7 @@ impl List {
         }
         if chosen.is_some() {
             edited.mark_changed();
-            self.state.open = false;
+            self.state.lookup.close();
         }
         self.store(ui);
         chosen
@@ -850,33 +559,6 @@ impl List {
     fn store(&self, ui: &Ui) {
         ui.data_mut(|d| d.insert_temp(self.key, self.state));
     }
-}
-
-/// The text between two char indices.
-fn chars_between(text: &str, from: usize, to: usize) -> String {
-    text.chars()
-        .skip(from)
-        .take(to.saturating_sub(from))
-        .collect()
-}
-
-/// Char index where the identifier ending at `caret` starts.
-fn run_start(text: &str, caret: usize) -> usize {
-    let before: Vec<char> = text.chars().take(caret).collect();
-    let run = before
-        .iter()
-        .rev()
-        .take_while(|c| is_identifier_char(**c))
-        .count();
-    caret - run
-}
-
-/// How many chars after `caret` continue the identifier.
-pub(crate) fn tail_len(text: &str, caret: usize) -> usize {
-    text.chars()
-        .skip(caret)
-        .take_while(|c| is_identifier_char(*c))
-        .count()
 }
 
 /// Replaces the chars of the accepted completion in `text`, puts the caret where it asks

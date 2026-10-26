@@ -15,7 +15,7 @@ use crate::pointer::{Pointer, PointerKind};
 use crate::runtime::Runtime;
 use archipel_kit::editor::model::{
     ActionContext, ClipboardContent, Editor, EditorAction, LogicalPosition, Os, ScrollRequest,
-    ScrollType, column_of, word_range_at,
+    ScrollType, column_of,
 };
 use archipel_kit::editor::{GutterArea, NavigationKind, NavigationRequest};
 use archipel_kit::tokens::{editor as metrics, motion};
@@ -80,9 +80,9 @@ pub(crate) struct Located {
     pub logical: usize,
 }
 
-struct View {
-    geo: Geo,
-    map: Rc<RowMap>,
+pub(crate) struct View {
+    pub geo: Geo,
+    pub map: Rc<RowMap>,
 }
 
 fn view(opts: &Opts<'_>, editor: &Editor, st: &mut EditorState) -> View {
@@ -92,7 +92,7 @@ fn view(opts: &Opts<'_>, editor: &Editor, st: &mut EditorState) -> View {
 }
 
 /// The text position under cell (`x`, `y`), clamped to the document.
-fn locate(editor: &Editor, v: &View, st: &EditorState, x: u16, y: u16) -> Located {
+pub(crate) fn locate(editor: &Editor, v: &View, st: &EditorState, x: u16, y: u16) -> Located {
     let ctx = Ctx::new(&editor.document, &editor.folding, editor.settings.tab_size);
     let total = v.map.total_rows();
     let row = (st.first_row as isize + (y as isize - v.geo.text.y as isize))
@@ -118,45 +118,9 @@ fn locate(editor: &Editor, v: &View, st: &EditorState, x: u16, y: u16) -> Locate
     }
 }
 
-fn inside_selection(editor: &Editor, offset: usize) -> bool {
-    editor
-        .carets
-        .carets()
-        .iter()
-        .any(|c| c.has_selection() && c.selection_start() <= offset && offset < c.selection_end())
-}
-
-fn line_range(editor: &Editor, offset: usize) -> (usize, usize) {
-    let doc = &editor.document;
-    let line = doc.line_number(offset);
-    (doc.line_start_offset(line), doc.line_end_with_break(line))
-}
-
-fn word_or_line(editor: &Editor, offset: usize) -> (usize, usize) {
-    let doc = &editor.document;
-    if let Some(range) = word_range_at(
-        doc,
-        offset,
-        editor.settings.mouse_selection_honors_camel_humps && editor.settings.camel_humps,
-    ) {
-        return range;
-    }
-    // No word: the text of the line, without its break.
-    let line = doc.line_number(offset);
-    (doc.line_start_offset(line), doc.line_end_offset(line))
-}
-
-/// Sets the primary selection to `anchor..lead`, keeping the other carets when `multi`.
-fn set_selection(editor: &mut Editor, anchor: usize, lead: usize, multi: bool) {
-    if multi {
-        let doc = &editor.document;
-        let (anchor, lead) = (doc.snap(anchor), doc.snap(lead));
-        editor.carets.primary_mut().select(anchor, lead);
-        editor.carets.normalize();
-    } else {
-        editor.carets.set_selection(&editor.document, anchor, lead);
-    }
-}
+use archipel_kit::editor::logic::gestures::{
+    inside_selection, line_range, select_lines, set_selection, word_or_line,
+};
 
 /// The model's logical position of a located cell (columns past the line end are virtual).
 fn logical_position(editor: &Editor, at: &Located) -> LogicalPosition {
@@ -164,47 +128,7 @@ fn logical_position(editor: &Editor, at: &Located) -> LogicalPosition {
     LogicalPosition::new(at.logical, col)
 }
 
-/// The fold region drawn at a line, as an index into the model's regions.
-pub(crate) fn region_at_line(editor: &Editor, line: usize) -> Option<usize> {
-    let doc = &editor.document;
-    let start = doc.line_start_offset(line);
-    let end = doc.line_end_offset(line);
-    let regions = editor.folding.regions();
-    let first = regions.partition_point(|r| r.start < start);
-    let mut found = None;
-    for (i, region) in regions.iter().enumerate().skip(first) {
-        if region.start > end {
-            break;
-        }
-        if editor.folding.is_offset_folded(region.start) {
-            continue;
-        }
-        if !region.expanded {
-            return Some(i);
-        }
-        found.get_or_insert(i);
-    }
-    found
-}
-
-/// The model's tick of the autoscroll timer (spec 2.3): with the pointer `distance` beyond the
-/// edge, a step happens every `floor(unit / d) + 1` ticks and moves `1 + floor(d / unit)`
-/// lines. `counter` counts the ticks since the last step.
-pub(crate) fn autoscroll_tick(counter: &mut u32, distance: f32, unit: f32) -> Option<usize> {
-    let d = distance.abs();
-    if d <= 0.0 {
-        *counter = 0;
-        return None;
-    }
-    *counter += 1;
-    let every = (unit / d).floor() as u32 + 1;
-    if *counter >= every {
-        *counter = 0;
-        Some(1 + (d / unit).floor() as usize)
-    } else {
-        None
-    }
-}
+pub(crate) use archipel_kit::editor::logic::gestures::{autoscroll_tick, region_at_line};
 
 fn nav_modifier(os: Os, mods: KeyModifiers) -> bool {
     match os {
@@ -234,7 +158,7 @@ pub(crate) fn mouse(
         PointerKind::ScrollUp
         | PointerKind::ScrollDown
         | PointerKind::ScrollLeft
-        | PointerKind::ScrollRight => wheel(opts, editor, st, &p, out),
+        | PointerKind::ScrollRight => wheel(opts, editor, rt, st, &p, out),
         _ => {}
     }
     find::after_user_move(editor, st);
@@ -261,15 +185,15 @@ fn press(
 ) {
     if !ours(opts, p.target) {
         // A press elsewhere closes the completion menu.
-        st.menu = None;
+        st.close_menu();
         return;
     }
     let target = p.target;
     if target == Some(opts.menu_id()) {
-        super::completion::click(editor, st, p.y, out);
+        super::completion::click(opts, editor, st, p.y, out);
         return;
     }
-    st.menu = None;
+    st.close_menu();
     rt.focus.focus(opts.id);
     out.consumed = true;
     if target == Some(opts.bar_id()) {
@@ -815,23 +739,6 @@ fn drag(
 }
 
 /// Selects whole lines from `anchor_line` to `line`.
-fn select_lines(editor: &mut Editor, anchor_line: usize, line: usize) {
-    let doc = &editor.document;
-    let anchor_line = anchor_line.min(doc.line_count() - 1);
-    let (anchor, lead) = if line >= anchor_line {
-        (
-            doc.line_start_offset(anchor_line),
-            doc.line_end_with_break(line),
-        )
-    } else {
-        (
-            doc.line_end_with_break(anchor_line),
-            doc.line_start_offset(line),
-        )
-    };
-    set_selection(editor, anchor, lead, false);
-}
-
 /// Moves the selection head while the pointer is beyond the edge of the text (spec 2.3): a
 /// timer ticks; every `floor(20 / d) + 1` ticks the head moves `1 + floor(d / 20)` lines (or
 /// columns), where `d` is the distance beyond the edge in rows scaled to the GUI's pixels.
@@ -952,6 +859,7 @@ pub(crate) fn tick(opts: &Opts<'_>, editor: &mut Editor, rt: &mut Runtime, st: &
 fn wheel(
     opts: &Opts<'_>,
     editor: &mut Editor,
+    rt: &Runtime,
     st: &mut EditorState,
     p: &Pointer,
     out: &mut EditorOutput,
@@ -961,12 +869,16 @@ fn wheel(
     }
     if p.target == Some(opts.menu_id()) {
         super::completion::wheel(
+            opts,
+            editor,
+            rt,
             st,
             if p.kind == PointerKind::ScrollUp {
                 -1
             } else {
                 1
             },
+            out,
         );
         out.consumed = true;
         return;
@@ -992,7 +904,7 @@ fn wheel(
         let max = archipel_kit::editor::model::max_first_column(
             content,
             v.geo.width() as f64,
-            &editor.settings,
+            &super::scroll_settings(editor, st),
         );
         st.first_col = (st.first_col as f64 + dx as f64).clamp(0.0, max).round() as usize;
     }

@@ -37,24 +37,7 @@ pub(crate) fn caret_visible(now: f64, last_activity: f64, blink: f64) -> bool {
     (phase.floor() as u64).is_multiple_of(2)
 }
 
-/// One tick of the drag autoscroll timer (spec §2.3) with the pointer `distance` pixels beyond
-/// the viewport's edge: a step happens every `floor(20 / d) + 1` ticks and moves
-/// `1 + floor(d / 20)` lines. `counter` counts the ticks since the last step.
-pub(crate) fn autoscroll_tick(counter: &mut u32, distance: f32, unit: f32) -> Option<usize> {
-    let d = distance.abs();
-    if d <= 0.0 {
-        *counter = 0;
-        return None;
-    }
-    *counter += 1;
-    let every = (unit / d).floor() as u32 + 1;
-    if *counter >= every {
-        *counter = 0;
-        Some(1 + (d / unit).floor() as usize)
-    } else {
-        None
-    }
-}
+pub(crate) use crate::editor::logic::gestures::autoscroll_tick;
 
 /// A mouse gesture in progress.
 #[derive(Clone, Debug)]
@@ -95,14 +78,6 @@ pub(crate) enum Unit {
     Line(usize, usize),
 }
 
-/// The pointer resting on the text.
-#[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct Rest {
-    pub offset: usize,
-    pub since: f64,
-    pub pos: Pos2,
-}
-
 #[derive(Clone, Default)]
 pub(crate) struct ViewState {
     /// The scroll offset after the last frame.
@@ -119,7 +94,7 @@ pub(crate) struct ViewState {
     pub click_count: u32,
     pub autoscroll_last: f64,
     pub autoscroll_counter: u32,
-    pub rest: Option<Rest>,
+    pub rest: Option<crate::editor::logic::hover::Rest>,
     pub fold_rest: Option<(usize, f64)>,
     /// The fold chevrons' opacity and the time the pointer left the gutter.
     pub chevron_alpha: f32,
