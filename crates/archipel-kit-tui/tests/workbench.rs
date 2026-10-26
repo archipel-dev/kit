@@ -1,4 +1,5 @@
-//! Event-driven tests of the workbench: tool window keys, stripes, headers, splitters.
+//! Event-driven tests of the workbench: tool window keys, title lines, splitters and the
+//! opt-in stripes.
 
 #![allow(clippy::unnecessary_mut_passed)]
 
@@ -111,6 +112,13 @@ macro_rules! events {
     ($h:expr) => {
         &mut $h.app.state.events
     };
+}
+
+/// Turns the opt-in stripes on.
+fn with_stripes(h: &mut Harness<ScreenApp>) {
+    let wb = wb!(h).clone().stripes(true);
+    *wb!(h) = wb;
+    h.draw();
 }
 
 fn alt(h: &mut Harness<ScreenApp>, digit: char) {
@@ -254,8 +262,60 @@ fn resize_keys_move_a_separator_by_two_cells() {
 }
 
 #[test]
+fn there_is_no_stripe_column_by_default() {
+    let mut h = harness();
+    assert!(!wb!(h).has_stripes());
+    let layout = wb!(h).layout(Rect::new(0, 0, 100, 30));
+    assert!(layout.left_stripe.is_empty() && layout.right_stripe.is_empty());
+    alt(&mut h, '1');
+    alt(&mut h, '3');
+    alt(&mut h, '4');
+    let project = h.app.state.areas.tool("project").expect("body");
+    assert_eq!(project.x, 0, "the Project pane starts at the screen edge");
+    let right = layout_right_edge(&mut h);
+    assert_eq!(right, 100, "the right pane ends at the screen edge");
+}
+
+fn layout_right_edge(h: &mut Harness<ScreenApp>) -> u16 {
+    let body = h.app.state.areas.tool("notifications").expect("body");
+    body.right()
+}
+
+#[test]
+fn the_title_line_is_a_plain_bar_without_buttons() {
+    let mut h = harness();
+    alt(&mut h, '1');
+    let body = h.app.state.areas.tool("project").expect("body");
+    // The title row is above the body: icon and name, nothing at the right end.
+    let row: String = (0..body.width)
+        .map(|x| h.buffer()[(x, body.y - 1)].symbol().to_owned())
+        .collect();
+    assert!(row.contains("Project"), "{row:?}");
+    assert!(row.trim_end().ends_with("Project"), "{row:?}");
+}
+
+#[test]
+fn clicking_a_pane_title_focuses_the_window_and_a_right_click_asks_for_its_menu() {
+    let mut h = harness();
+    alt(&mut h, '4');
+    let body = h.app.state.areas.tool("project").expect("body");
+    h.click(body.x + 3, body.y - 1);
+    assert_eq!(wb!(h).focused_tool(), Some("project"));
+    let run = h.app.state.areas.tool("run").expect("body");
+    h.click(run.x + 3, run.y - 1);
+    assert_eq!(wb!(h).focused_tool(), Some("run"));
+    h.right_click(run.x + 3, run.y - 1);
+    assert!(events!(h).contains(&WorkbenchEvent::HeaderMenu(
+        "run".into(),
+        run.x + 3,
+        run.y - 1
+    )));
+}
+
+#[test]
 fn a_stripe_button_toggles_its_window() {
     let mut h = harness();
+    with_stripes(&mut h);
     // The Project button is the first left stripe row (y = 1), x = 1.
     h.click(1, 1);
     assert_eq!(wb!(h).focused_tool(), Some("project"));
@@ -266,6 +326,7 @@ fn a_stripe_button_toggles_its_window() {
 #[test]
 fn middle_click_or_shift_click_on_a_stripe_button_hides_the_window() {
     let mut h = harness();
+    with_stripes(&mut h);
     alt(&mut h, '1');
     h.middle_click(1, 1);
     assert!(!wb!(h).is_visible("project"));
@@ -277,6 +338,7 @@ fn middle_click_or_shift_click_on_a_stripe_button_hides_the_window() {
 #[test]
 fn a_right_click_on_a_stripe_button_asks_for_its_menu() {
     let mut h = harness();
+    with_stripes(&mut h);
     h.right_click(1, 1);
     assert!(events!(h).contains(&WorkbenchEvent::StripeMenu("project".into(), 1, 1)));
 }
@@ -284,6 +346,7 @@ fn a_right_click_on_a_stripe_button_asks_for_its_menu() {
 #[test]
 fn a_stripe_button_shows_its_tooltip_with_the_shortcut() {
     let mut h = harness();
+    with_stripes(&mut h);
     h.hover(1, 1);
     h.advance(0.6);
     assert_eq!(h.rt.tooltip.showing_title(), Some("Project"));
@@ -308,7 +371,7 @@ fn a_double_click_on_a_header_maximizes_and_a_middle_click_hides() {
     let header_y = body.y - 1;
     h.double_click(body.x + 15, header_y);
     assert_eq!(wb!(h).state.maximized, Some(ToolWindowAnchor::Left));
-    // Maximized: the header is at the top of the area, right of the stripe.
+    // Maximized: the header is at the top of the area.
     let body = h.app.state.areas.tool("project").expect("body");
     h.advance(1.0);
     h.double_click(body.x + 15, body.y - 1);
@@ -319,10 +382,10 @@ fn a_double_click_on_a_header_maximizes_and_a_middle_click_hides() {
 }
 
 #[test]
-fn the_hide_button_of_a_header_hides_the_window() {
+fn a_shift_click_on_a_title_hides_the_window() {
     let mut h = harness();
     let body = h.app.state.areas.tool("project").expect("body");
-    h.click(body.right() - 2, body.y - 1);
+    h.click_with(body.x + 3, body.y - 1, KeyModifiers::SHIFT);
     assert!(!wb!(h).is_visible("project"));
 }
 
@@ -398,9 +461,16 @@ fn close_content_asks_to_close_the_selected_content() {
 
 #[test]
 fn the_layout_never_overlaps_or_leaves_the_screen_at_any_size() {
-    for w in (1..=24u16).chain((25..=70).step_by(5)) {
-        for hgt in (1..=14u16).chain([20, 30]) {
+    for (w, hgt, stripes) in (1..=24u16).chain((25..=70).step_by(5)).flat_map(|w| {
+        (1..=14u16)
+            .chain([20, 30])
+            .flat_map(move |h| [(w, h, false), (w, h, true)])
+    }) {
+        {
             let mut h = harness_sized(w, hgt);
+            if stripes {
+                with_stripes(&mut h);
+            }
             alt(&mut h, '1');
             alt(&mut h, '3');
             alt(&mut h, '4');
@@ -434,6 +504,23 @@ fn the_layout_never_overlaps_or_leaves_the_screen_at_any_size() {
                 KeyModifiers::CONTROL | KeyModifiers::SHIFT,
             );
         }
+    }
+}
+
+#[test]
+fn the_workbench_with_opt_in_stripes_in_both_themes() {
+    for (name, look) in [("dark", Look::dark()), ("light", Look::light())] {
+        let mut h = Harness::with_runtime(
+            app_fn(screen(), event as EventFn, draw as DrawFn),
+            Runtime::new(look),
+            100,
+            28,
+        );
+        with_stripes(&mut h);
+        h.alt('1');
+        h.alt('4');
+        h.draw();
+        snapshot(&format!("workbench-stripes.{name}"), h.buffer());
     }
 }
 

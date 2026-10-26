@@ -240,3 +240,67 @@ fn the_editor_in_the_ide_with_a_selection_and_the_find_bar() {
         h.snapshot(&format!("ide-editor.{name}"));
     }
 }
+
+#[test]
+fn there_is_no_toolbar_no_app_name_and_no_stripe() {
+    let h = harness();
+    let top: String = (0..130)
+        .map(|x| h.buffer()[(x, 0)].symbol().to_owned())
+        .collect();
+    assert!(
+        top.contains("Project") && top.contains("README.md"),
+        "{top:?}"
+    );
+    assert!(!top.contains("kit ") && !top.contains("Tools"), "{top:?}");
+    // The tree starts at the screen edge: no stripe column.
+    let tree = h.find("crates").expect("tree row");
+    assert!(tree.0 < 12, "{tree:?}");
+}
+
+#[test]
+fn keys_open_and_close_every_tool_window() {
+    let mut h = harness();
+    for digit in ['1', '3', '4'] {
+        h.alt(digit);
+        if h.app.workbench_focus_tool().is_none() {
+            h.alt(digit);
+        }
+        assert!(h.app.workbench_focus_tool().is_some(), "{digit} opens");
+        h.alt(digit);
+        assert!(h.app.workbench_focus_tool().is_none(), "{digit} closes");
+    }
+    h.alt('4');
+    h.press_with(KeyCode::Esc, KeyModifiers::SHIFT);
+    assert!(h.app.workbench_focus_tool().is_none());
+}
+
+#[test]
+fn the_run_segment_in_the_status_line_picks_the_configuration() {
+    let mut h = harness();
+    let row: Vec<String> = (0..130)
+        .map(|x| h.buffer()[(x, 35)].symbol().to_owned())
+        .collect();
+    let x = (0..127)
+        .rev()
+        .find(|&i| row[i..i + 3].concat() == "ide")
+        .expect("run segment") as u16;
+    h.click(x, 35);
+    assert!(h.text().contains("Run Configurations"), "{}", h.text());
+    h.press(KeyCode::Down);
+    h.press(KeyCode::Down);
+    h.press(KeyCode::Enter);
+    assert!(h.text().contains("cargo test"), "{}", h.text());
+    h.press_with(KeyCode::F(10), KeyModifiers::SHIFT);
+    assert!(h.app.is_running());
+    assert!(h.text().contains("running"));
+}
+
+#[test]
+fn find_action_offers_what_the_toolbar_did() {
+    let mut h = harness();
+    h.ctrl('p');
+    h.type_text("debug");
+    assert!(h.text().contains("Debug"), "{}", h.text());
+    h.press(KeyCode::Enter);
+    assert!(h.app.is_running());
+}

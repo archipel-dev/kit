@@ -39,10 +39,11 @@ fn slot_index(slot: StatusSlot) -> u64 {
         StatusSlot::Lsp => 5,
         StatusSlot::Cwd => 6,
         StatusSlot::Cursor => 7,
+        StatusSlot::Run => 8,
     }
 }
 
-const SLOTS: [StatusSlot; 8] = [
+const SLOTS: [StatusSlot; 9] = [
     StatusSlot::Mode,
     StatusSlot::File,
     StatusSlot::Git,
@@ -51,6 +52,7 @@ const SLOTS: [StatusSlot; 8] = [
     StatusSlot::Lsp,
     StatusSlot::Cwd,
     StatusSlot::Cursor,
+    StatusSlot::Run,
 ];
 
 /// The interactive wrapper of [`StatusBar`].
