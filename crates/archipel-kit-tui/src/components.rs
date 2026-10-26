@@ -1808,6 +1808,8 @@ pub enum StatusSlot {
     Diagnostics,
     /// The language server or inspection profile.
     Lsp,
+    /// The active run configuration and whether it runs.
+    Run,
     /// The working directory block.
     Cwd,
     /// The cursor position block.
@@ -1853,6 +1855,7 @@ pub struct StatusBar<'a> {
     center: &'a str,
     diagnostics: Option<Diagnostics>,
     lsp: Option<&'a str>,
+    run: Option<(&'a str, bool)>,
     cwd: Option<&'a str>,
     cursor: Option<&'a str>,
     hovered: Option<StatusSlot>,
@@ -1869,6 +1872,7 @@ impl<'a> StatusBar<'a> {
             center: "",
             diagnostics: None,
             lsp: None,
+            run: None,
             cwd: None,
             cursor: None,
             hovered: None,
@@ -1908,6 +1912,14 @@ impl<'a> StatusBar<'a> {
     /// The language server name.
     pub fn lsp(mut self, name: &'a str) -> Self {
         self.lsp = Some(name);
+        self
+    }
+
+    /// The run configuration segment: the active configuration's name, or `running` while it
+    /// runs (`true`). It replaces the IDE's toolbar run widget; clicking it is the caller's
+    /// to answer (a picker of the configurations).
+    pub fn run(mut self, name: &'a str, running: bool) -> Self {
+        self.run = Some((name, running));
         self
     }
 
@@ -1963,6 +1975,11 @@ impl<'a> StatusBar<'a> {
             (StatusSlot::File, self.file.map(|(_, n)| text_width(n) + 4)),
             (StatusSlot::Cwd, self.cwd.map(|t| 3 + text_width(t) + 2 + 1)),
             (
+                StatusSlot::Run,
+                self.run
+                    .map(|(name, running)| text_width(if running { "running" } else { name }) + 5),
+            ),
+            (
                 StatusSlot::Git,
                 self.git.map(|g| text_width(&Self::git_text(g)) + 2),
             ),
@@ -1998,6 +2015,7 @@ impl<'a> StatusBar<'a> {
         for slot in [
             StatusSlot::Cursor,
             StatusSlot::Cwd,
+            StatusSlot::Run,
             StatusSlot::Lsp,
             StatusSlot::Diagnostics,
         ] {
@@ -2188,6 +2206,44 @@ impl Widget for StatusBar<'_> {
                 rect.y,
                 &format!("{} LSP ~ {name}", glyphs::nerd_font(Glyph::Settings)),
                 Style::default().bg(bg).fg(p.green),
+            );
+        }
+        if let (Some((name, running)), Some(rect)) = (self.run, rect_of(StatusSlot::Run)) {
+            let bg = if hover(StatusSlot::Run) {
+                p.lightbg
+            } else {
+                bar
+            };
+            fill(
+                buf,
+                rect,
+                rect.x,
+                rect.y,
+                rect.width,
+                Style::default().bg(bg),
+            );
+            let (glyph, text, color) = if running {
+                (Glyph::Stop, "running", p.yellow)
+            } else {
+                (Glyph::Run, name, p.green)
+            };
+            let x = put(
+                buf,
+                rect,
+                rect.x + 1,
+                rect.y,
+                &format!("{} ", glyphs::nerd_font(glyph)),
+                Style::default().bg(bg).fg(color),
+            );
+            put(
+                buf,
+                rect,
+                x,
+                rect.y,
+                text,
+                Style::default()
+                    .bg(bg)
+                    .fg(if running { p.yellow } else { p.white }),
             );
         }
         for (slot, text, icon, color) in [

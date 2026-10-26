@@ -45,7 +45,11 @@ bundled themes and editor schemes give a consistent terminal look.
 | GUI | Terminal (NvChad) |
 |---|---|
 | Islands on a frame color | Flat full-bleed panes edge to edge, no gaps and no rounded blocks: the editor on `black`, side bars and the bottom pane on `darker_black`, separated by a thin `│` or `─` in the `line` color |
-| Tool windows (left, right, bottom) | A side bar like nvim-tree, a bottom pane like a toggled terminal split; a header row with a title block (accent when focused, like a Telescope title); a narrow stripe of icon buttons |
+| Tool windows (left, right, bottom) | A side bar like nvim-tree whose title (`  Project`) sits in the top row on `darker_black`, the tabufline offset; a bottom pane like a toggled horizontal terminal split with a thin title line (and content tabs); the right pane is hidden until asked for. No header action icons |
+| Tool window stripes | None (opt in with `Workbench::stripes(true)`). Open, focus and hide windows with Alt+digit (Ctrl+W then digit), Shift+Esc, Ctrl+Shift+F12, Find Action / Search Everywhere, or a click on the pane title (double click maximizes, middle or Shift click hides) |
+| Tool window header actions | A right click on the pane title opens a context menu (Hide, Maximize, Hide All Tool Windows), and the same actions are in Find Action |
+| Main toolbar (app name, Run/Stop, icons, Tools menu, run configuration combo) | None: the top row is the tabufline only. Run (Shift+F10), Debug (Shift+F9), Stop (Ctrl+F2) and the toggles are actions in Find Action and the keymap; the run configuration and its running state are a status line segment (` ide` / ` running`) that opens a Telescope picker (also Alt+Shift+F10); the project name is the status line's directory segment; the theme toggle and close-all are at the right end of the tabufline |
+| Notifications tool window and balloons | `nvim-notify`-style floats; the Notifications window (Alt+3) is the history and hidden by default |
 | Editor tabs (`JBTabs`) | The tabufline: `  <icon> name  󰅖` per buffer, the active one on the editor background with bright bold text, inactive ones on `black2` with grey text, a green dot for a modified buffer, theme and close-all buttons at the right end |
 | Status bar and widgets | The default NvChad statusline: a mode block with a rounded end, file, git branch with `+ ~ -` counts, message in the center, diagnostics counts, language server, working directory and cursor position as colored segments; lower-priority segments drop first when narrow |
 | Text field | A Telescope prompt: `black2` background, a colored title block as the label (or a search icon), a block caret |
@@ -215,7 +219,7 @@ input, an interactive counterpart with the GUI's name and rules.
 | `JBCheckBox`, `JBRadioButton`, `OnOffButton`, `SegmentedButton` | `controls` | tri-state, group arrows |
 | `JBList`, `Tree`, `JBTable` | `collections` | `ListSelectionModel`, `SpeedSearchState` and the camel-hump matcher of the kit |
 | `JBTabs` | `tabs` | the tabufline |
-| `ToolWindowPane`, stripes | `workbench` | `ToolWindowPaneState`; Alt+digit, Esc, Shift+Esc, Ctrl+Shift+F12, splitters |
+| `ToolWindowPane`, stripes (opt-in) | `workbench` | `ToolWindowPaneState`; Alt+digit, Esc, Shift+Esc, Ctrl+Shift+F12, splitters |
 | `StatusBar` | `components`, `statusbar` | NvChad statusline slots, clickable |
 | `HelpTooltip` | `tooltip` | hover with delay and focus |
 | `NotificationsManager` | `balloon` | nvim-notify balloons with the GUI timings |
@@ -262,10 +266,13 @@ clears, Esc closes it, and Enter, Left, Right and Page keys close it and act.
 
 ### Tool windows
 
-`Workbench` draws stripes, headers and separators around the editor and implements the key and
-mouse rules; you draw the content into the rectangles it returns.
+`Workbench` draws the title lines and separators around the editor and implements the key and
+mouse rules; you draw the content into the rectangles it returns. There is no stripe column
+unless you ask for one with `Workbench::stripes(true)` (shown in the second pair of images).
 
-<img alt="Workbench: project, editor, run window, notifications, stripes" src="img/workbench.dark.svg" width="840"> <img alt="Workbench, light" src="img/workbench.light.svg" width="840">
+<img alt="Workbench: project, editor, run window, notifications" src="img/workbench.dark.svg" width="840"> <img alt="Workbench, light" src="img/workbench.light.svg" width="840">
+
+<img alt="Workbench with opt-in stripes" src="img/workbench-stripes.dark.svg" width="840"> <img alt="Workbench with opt-in stripes, light" src="img/workbench-stripes.light.svg" width="840">
 
 ### Status bar
 
@@ -451,7 +458,7 @@ one undo step.
 
 Files from the project tree open in editor tabs; the tab shows the modified dot until Ctrl+S;
 the status line shows `Ln, Col` of the primary caret and the mode block says `EDIT`, or `VIEW`
-with the toolbar's Read-Only toggle.
+with the Read-Only toggle (Find Action or the editor's context menu).
 
 ### Differences from the GUI editor
 
