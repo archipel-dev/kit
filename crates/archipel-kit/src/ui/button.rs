@@ -40,6 +40,7 @@ pub struct Button {
     enabled: bool,
     small: bool,
     min_width: f32,
+    mnemonic: Option<char>,
 }
 
 impl Button {
@@ -51,7 +52,8 @@ impl Button {
             icon: None,
             enabled: true,
             small: false,
-            min_width: 72.0,
+            min_width: size::BUTTON_MIN_WIDTH,
+            mnemonic: None,
         }
     }
 
@@ -90,6 +92,13 @@ impl Button {
     /// Compact height for dense toolbars and banners.
     pub fn small(mut self, small: bool) -> Self {
         self.small = small;
+        self
+    }
+
+    /// The mnemonic: <kbd>Alt</kbd>+`letter` clicks the button while it is enabled, and the
+    /// first matching letter of the label is underlined (IntelliJ spec section 13.2).
+    pub fn mnemonic(mut self, letter: char) -> Self {
+        self.mnemonic = Some(letter);
         self
     }
 
@@ -148,7 +157,19 @@ impl Widget for Button {
         } else {
             Sense::hover()
         };
-        let (rect, response) = ui.allocate_exact_size(vec2(width, height), sense);
+        let (rect, mut response) = ui.allocate_exact_size(vec2(width, height), sense);
+        // Space activates on release, Enter on press; Alt+letter is the mnemonic.
+        super::activation::key_activation(ui, &mut response, self.enabled, true);
+        if self.enabled
+            && let Some(key) = self
+                .mnemonic
+                .and_then(|letter| egui::Key::from_name(&letter.to_uppercase().to_string()))
+            && ui.input_mut(|i| i.consume_key(egui::Modifiers::ALT, key))
+        {
+            response
+                .flags
+                .set(egui::response::Flags::FAKE_PRIMARY_CLICKED, true);
+        }
         crate::cursor::on_hover_action(&response);
         response
             .widget_info(|| WidgetInfo::labeled(WidgetType::Button, self.enabled, galley.text()));
@@ -159,16 +180,29 @@ impl Widget for Button {
         let pressed = response.is_pointer_button_down_on();
         let hovered = response.hovered() && self.enabled;
         let (fill, stroke, text) = match (self.variant, self.enabled) {
-            // Android Studio's buttons do not react to hover or press: only focus shows.
-            (ButtonVariant::Primary, true) => (colors.accent, Stroke::NONE, colors.text_on_accent),
-            (ButtonVariant::Danger, true) => (colors.stop, Stroke::NONE, colors.text_on_accent),
+            // Buttons do not react to hover (measured on Android Studio, IntelliJ spec section
+            // 13.2); only focus shows. A press darkens them, as in Swing's button model.
+            (ButtonVariant::Primary, true) => (
+                darken(colors.accent, pressed),
+                Stroke::NONE,
+                colors.text_on_accent,
+            ),
+            (ButtonVariant::Danger, true) => (
+                darken(colors.stop, pressed),
+                Stroke::NONE,
+                colors.text_on_accent,
+            ),
             (ButtonVariant::Primary | ButtonVariant::Danger, false) => (
                 colors.accent_disabled,
                 Stroke::NONE,
                 colors.text_on_accent_disabled,
             ),
             (ButtonVariant::Secondary, enabled) => (
-                Color32::TRANSPARENT,
+                if pressed && enabled {
+                    colors.pressed
+                } else {
+                    Color32::TRANSPARENT
+                },
                 Stroke::new(
                     1.0_f32,
                     if enabled {
@@ -226,11 +260,28 @@ impl Widget for Button {
             icons::paint(painter, icon_rect, icon, text);
             x += icon_width;
         }
-        painter.galley_with_override_text_color(
-            egui::pos2(x, rect.center().y - galley.size().y / 2.0),
-            galley,
-            text,
-        );
+        let top = rect.center().y - galley.size().y / 2.0;
+        if let Some(letter) = self.mnemonic
+            && let Some(index) = galley
+                .text()
+                .chars()
+                .position(|c| c.to_lowercase().eq(letter.to_lowercase()))
+        {
+            let from = galley.pos_from_cursor(egui::text::CCursor::new(index));
+            let to = galley.pos_from_cursor(egui::text::CCursor::new(index + 1));
+            let y = top + galley.size().y - 1.0;
+            painter.hline(x + from.min.x..=x + to.min.x, y, Stroke::new(1.0_f32, text));
+        }
+        painter.galley_with_override_text_color(egui::pos2(x, top), galley, text);
         response
+    }
+}
+
+/// `color` darkened for a pressed button (Swing's button model darkens on press).
+fn darken(color: Color32, pressed: bool) -> Color32 {
+    if pressed {
+        color.lerp_to_gamma(Color32::BLACK, size::BUTTON_PRESSED_DARKEN)
+    } else {
+        color
     }
 }

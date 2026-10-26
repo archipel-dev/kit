@@ -32,6 +32,8 @@ pub(crate) struct RowSpec {
     pub mnemonic: Option<char>,
     /// Choosing it leaves the popup open.
     pub keep_open: bool,
+    /// Colors the row's text by meaning (combo boxes of HTTP methods).
+    pub tone: Option<crate::parts::Tone>,
 }
 
 /// What a source says about a level.
@@ -209,6 +211,9 @@ pub(crate) enum Placement {
     Below(Rect),
     /// With its top-left corner at a point (context menus).
     At(Pos2),
+    /// A combo box's list: below (or above) the combo, at least as wide as it, showing at
+    /// most `max_rows` rows before it scrolls (IntelliJ spec section 4).
+    Combo { anchor: Rect, max_rows: usize },
 }
 
 /// How the chain behaves.
@@ -483,7 +488,14 @@ pub(crate) fn drive(
         let colors = Theme::colors(ctx);
         let level_id = id.with(("level", depth));
         let pos = level_position(ctx, level_id, depth, chain, placement, screen);
-        let max_height = (screen.bottom() - pos.y - popup::PADDING).max(160.0);
+        let max_height = match placement {
+            Placement::Combo { max_rows, .. } if depth == 0 => max_rows as f32 * size::ROW_HEIGHT,
+            _ => (screen.bottom() - pos.y - popup::PADDING).max(160.0),
+        };
+        let min_width = match placement {
+            Placement::Combo { anchor, .. } if depth == 0 => anchor.width(),
+            _ => popup::MIN_WIDTH,
+        };
         let selected = chain.levels[depth].selected;
         let scroll_to = std::mem::take(&mut chain.levels[depth].scroll_to);
         let reserve_icons = spec
@@ -532,6 +544,9 @@ pub(crate) fn drive(
                             if let Some(shortcut) = &row.shortcut {
                                 item = item.shortcut(shortcut.clone());
                             }
+                            if let Some(tone) = row.tone {
+                                item = item.label_tone(tone);
+                            }
                             if let Some(checked) = row.checked {
                                 item = item.checked(checked);
                             }
@@ -544,7 +559,7 @@ pub(crate) fn drive(
                     let width = items
                         .iter()
                         .map(|(_, item)| item.natural_width(ui))
-                        .fold(popup::MIN_WIDTH, f32::max);
+                        .fold(min_width, f32::max);
                     ui.set_width(width);
                     if let Some(title) = &spec.title {
                         ui.add(ListSeparator::with_text(title.clone()));
@@ -658,7 +673,7 @@ fn level_position(
         .map_or(popup::MIN_WIDTH, |r| r.width());
     if depth == 0 {
         return match placement {
-            Placement::Below(anchor) => {
+            Placement::Below(anchor) | Placement::Combo { anchor, .. } => {
                 let below = anchor.left_bottom() + vec2(0.0, size::POPUP_PADDING);
                 let x = below.x.min((screen.right() - width).max(screen.left()));
                 if below.y + height > screen.bottom() && anchor.top() > height {

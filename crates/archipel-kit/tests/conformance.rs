@@ -170,16 +170,29 @@ fn choices_conform() {
     testing::conformance("Format on save", move |ui, enabled| {
         ui.add_enabled(enabled, JBCheckBox::new(&mut on, "Format on save"))
     })
+    // Space on release; Enter belongs to the dialog's default button (IntelliJ spec 13.3).
+    .keys(&[egui::Key::Space])
+    .run();
+    let mut three = archipel_kit::ui::ThreeState::Unchecked;
+    testing::conformance("Select all", move |ui, enabled| {
+        ui.add_enabled(
+            enabled,
+            archipel_kit::ui::ThreeStateCheckBox::new(&mut three, "Select all"),
+        )
+    })
+    .keys(&[egui::Key::Space])
     .run();
     let mut indent = "tabs";
     testing::conformance("Spaces", move |ui, enabled| {
         ui.add_enabled(enabled, JBRadioButton::new(&mut indent, "spaces", "Spaces"))
     })
+    .keys(&[egui::Key::Space])
     .run();
     let mut toggle = true;
     testing::conformance("Power save", move |ui, enabled| {
         ui.add_enabled(enabled, OnOffButton::new(&mut toggle, "Power save"))
     })
+    .keys(&[egui::Key::Space])
     .run();
 }
 
@@ -250,6 +263,17 @@ fn jb_text_field_conforms() {
                 .label("Project name")
                 .enabled(enabled),
         )
+    })
+    .no_click()
+    .keys(&[])
+    .run();
+}
+
+#[test]
+fn search_text_field_conforms() {
+    let mut text = String::from("main");
+    testing::conformance("Search", move |ui, enabled| {
+        ui.add(archipel_kit::ui::SearchTextField::new(&mut text).enabled(enabled))
     })
     .no_click()
     .keys(&[])
@@ -599,6 +623,7 @@ fn key_value_enable_check_box_conforms() {
             .show(ui);
         activated_if(out.response, out.changes.contains(&Change::Toggled(0)))
     })
+    .keys(&[egui::Key::Space])
     .run();
 }
 

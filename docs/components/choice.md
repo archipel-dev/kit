@@ -1,4 +1,4 @@
-# JBCheckBox, JBRadioButton, OnOffButton
+# JBCheckBox, ThreeStateCheckBox, JBRadioButton, OnOffButton
 
 Boolean and one-of-many choices. Use a **checkbox** for options that are confirmed later
 (a dialog's OK), **radio buttons** for two to five mutually exclusive options, and a
@@ -47,7 +47,8 @@ fn inspections(ui: &mut egui::Ui, children: &mut [bool; 3]) {
 
 | Component | Builders |
 |---|---|
-| `JBCheckBox::new(&mut bool, label)` | `.mixed(bool)`, `.enabled(bool)`, `.comment(text)`, `.inline_comment(text)` ([Form](form.md)), `.label_visible(bool)` (off: the label is only the accessible name, e.g. in a row's leading slot) |
+| `JBCheckBox::new(&mut bool, label)` | `.mixed(bool)`, `.enabled(bool)`, `.comment(text)`, `.inline_comment(text)` ([UI DSL](dsl.md)), `.label_visible(bool)` (off: the label is only the accessible name, e.g. in a row's leading slot) |
+| `ThreeStateCheckBox::new(&mut ThreeState, label)` | `.enabled(bool)`; a click cycles `Unchecked`, `Checked`, `Indeterminate`, `Unchecked` |
 | `JBRadioButton::new(&mut T, value, label)` | `.enabled(bool)`, `.comment(text)`, `.inline_comment(text)`; selected when `*current == value` |
 | `OnOffButton::new(&mut bool, label)` | `.enabled(bool)` |
 
@@ -55,10 +56,22 @@ All return a `Response` whose `changed()` is true on the frame the value changed
 
 ## Behavior
 
-- The whole row (control, label and inline comment) is the click target; a comment below is not.
-- The label starts 8 pt after the box (measured on Android Studio).
-- <kbd>Space</kbd> toggles a focused control.
-- Toggles animate the knob.
+IntelliJ spec section 13.3 (`DarculaCheckBoxUI`, `DarculaRadioButtonUI`):
+
+| Input | Result |
+|---|---|
+| Click on the box, the label or the inline comment | Toggles when the button is **released** inside the row; pressing and moving away cancels. A comment below is not a target. |
+| <kbd>Space</kbd> on the focused control | Toggles when the key is **released**. |
+| <kbd>Enter</kbd> | Does nothing here: in a dialog it triggers the default button. |
+| Click on a `ThreeStateCheckBox` | Unchecked, checked, indeterminate, unchecked. A `JBCheckBox` with `.mixed(true)` only displays the dash and checks on a click. |
+| Hover | No change (measured on Android Studio, and the spec has none). |
+| Focus | A 2 pt border in the control's blue, one of them outside. |
+
+- The label starts 8 pt after the box (measured on Android Studio). The glyph is 16 pt: the
+  spec's `CheckBox.iconSize` is 24 with a 14 pt glyph inside 18; the measured 16 pt box
+  is kept.
+- Mnemonics (<kbd>Alt</kbd>+letter) are not provided for choices.
+- Toggles animate the knob (`OnOffButton`: on/off colors `toggle_on`, `toggle_off`).
 
 ## Accessibility
 

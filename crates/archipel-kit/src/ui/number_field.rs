@@ -41,9 +41,17 @@ integer!(i32, i64, u16, u32, u64, usize);
 /// An integer input (a page size, a timeout, a port), as Android Studio's integer fields:
 /// the user types digits; a number in [`range`](Self::range) is written to the value at
 /// once, anything else shows an error and leaves the value alone, and leaving the field
-/// shows the value again. <kbd>Up</kbd>/<kbd>Down</kbd> step it by [`step`](Self::step).
+/// shows the value again.
 ///
-/// The response is `changed()` when the value changed.
+/// | Input | |
+/// |---|---|
+/// | <kbd>Up</kbd> / <kbd>Down</kbd> | Step by [`step`](Self::step), clamped to the range. |
+/// | arrows at the right | A press steps once; held, it repeats after 300 ms every 60 ms. |
+/// | mouse wheel | Steps, but only while the field has focus (IntelliJ spec section 13.4). |
+/// | leaving the field | Invalid text is replaced by the value again. |
+///
+/// The size is `Spinner.minimumSize`, 72 x 28. The response is `changed()` when the value
+/// changed.
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
@@ -80,8 +88,8 @@ impl<'a, T: Integer> JBIntSpinner<'a, T> {
         }
     }
 
-    /// The accessible name (the field has no visible label: put a
-    /// [`FieldLabel`](crate::ui::FieldLabel) or form row label before it).
+    /// The accessible name (the field has no visible label: the label of its
+    /// [row](crate::ui::dsl::Row) names it).
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
@@ -167,21 +175,57 @@ impl<T: Integer> Widget for JBIntSpinner<'_, T> {
             .id(id)
             .width(self.width)
             .enabled(self.enabled)
+            .spinner(true)
             .error(error);
         if let Some(name) = &self.name {
             field = field.name(name.as_str());
         }
-        let mut response = field.show(ui).response;
-        if response.has_focus() {
+        let output = field.show(ui);
+        let mut response = output.response;
+        // The spinner is the whole field with its arrows, not the text edit.
+        response.rect = output.frame;
+        // The arrows step by the arrow press; the wheel steps while the field has focus.
+        let mut spin = i128::from(output.spin);
+        if focused && self.enabled && ui.rect_contains_pointer(output.frame) {
+            let wheel = ui.input_mut(|i| {
+                let mut lines = 0.0_f32;
+                i.events.retain(|event| match event {
+                    egui::Event::MouseWheel { delta, .. } => {
+                        // Up is positive; a notch is one step, however far it scrolls.
+                        lines += delta.y.signum() * delta.y.abs().ceil().max(1.0);
+                        false
+                    }
+                    _ => true,
+                });
+                if lines != 0.0 {
+                    i.smooth_scroll_delta = egui::Vec2::ZERO;
+                    i.raw_scroll_delta = egui::Vec2::ZERO;
+                }
+                lines as i128
+            });
+            spin += wheel;
+        }
+        let mut spun = None;
+        if spin != 0 && self.enabled {
+            // From what was typed when that is valid, else from the value.
+            let base = self.parse(&text).unwrap_or(current);
+            let next = base
+                .saturating_add(spin.saturating_mul(self.step))
+                .clamp(self.min, self.max);
+            text = next.to_string();
+            spun = Some(next);
+            ui.ctx().request_repaint();
+        }
+        if response.has_focus() || spun.is_some() && focused {
             ui.data_mut(|d| d.insert_temp(buffer_id, text.clone()));
         } else {
             ui.data_mut(|d| d.remove_temp::<String>(buffer_id));
         }
         // `changed()` reports the value, not the text: an edit to something invalid or to
         // the same number is no change.
-        let edited = response.changed() || stepped.is_some();
+        let edited = response.changed() || stepped.is_some() || spun.is_some();
         response.flags.set(egui::response::Flags::CHANGED, false);
-        if let Some(n) = self.parse(&text)
+        if let Some(n) = spun.or_else(|| self.parse(&text))
             && n != current
             && edited
         {

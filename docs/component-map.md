@@ -156,10 +156,28 @@ is listed as the difference.
 | Editable combo box | A text field with the combo box's chevron (centered 16 pt from the right edge, as on the non-editable one); the list hangs below the field, as wide as it | `JBTextField::suggestions` |
 | Checkbox label | Starts 8 pt after the box (radio the same); radios in a row 16 pt apart | `size::CHECK_LABEL_GAP`, `FORM_CONTROL_GAP` |
 | Disabled combo box | No fill, `border_disabled` border, dimmed text (not a faded copy) | `ComboBox::enabled(false)` |
-| Settings rows | Checkbox rows 29 pt apart; fields 9 pt from a box or field above and below; label 6 pt before its field | `Form`, `size::FORM_*` |
+| Settings rows | Checkbox rows 29 pt apart; fields 9 pt from a box or field above and below; label 6 pt before its field | `ui::dsl::panel`, `size::FORM_*` |
 | Comments | 12 pt in `#73767C` (both themes), 16 pt lines, aligned with the label; first line's cap 6 pt below the row; a comment adds 7 pt + 16 per line. Inline comment 12 pt after the label, same baseline | `JBCheckBox::comment`, `inline_comment`, `size::COMMENT_*` |
-| Group title | Regular weight, text color; 1 pt line `#33353B` / `#E9EAEE` from 6 pt after the title, 4 pt above its baseline, to the right edge; 20 pt extra above, none for the first group; rows indented 24 pt | `Form::group`, `TitledSeparator`, `Colors::group_separator` |
-| Collapsible group title | The group title after a 16 pt chevron (right closed, down open) and a 4 pt gap, in the text color; the title and chevron toggle it | `FormUi::collapsible`, `TitledSeparator::collapsible` |
+| Group title | Regular weight, text color; 1 pt line `#33353B` / `#E9EAEE` from 6 pt after the title, 4 pt above its baseline, to the right edge; 20 pt extra above, none for the first group; rows indented 24 pt | `Panel::group`, `TitledSeparator`, `Colors::group_separator` |
+| Collapsible group title | The group title after a 16 pt chevron (right closed, down open) and a 4 pt gap, in the text color; the title and chevron toggle it | `Panel::collapsible_group`, `TitledSeparator::collapsible` |
+
+### Inputs (IntelliJ spec sections 4, 6, 13.2 to 13.5 and the UI DSL, `API` section 6)
+
+Values from the spec, where Android Studio was not measured (the measured rows above win when both exist).
+
+| Situation | IntelliJ | Kit |
+|---|---|---|
+| Button minimum size (13.2) | 72 x 28, compact 72 x 24; padding 14; arc 8 | `size::BUTTON_MIN_WIDTH`, `CONTROL_HEIGHT`, `BUTTON_PADDING`, `radius::CONTROL` |
+| Button press (13.2) | Swing model: pressed darkens; no hover paint | `size::BUTTON_PRESSED_DARKEN` 12% (the amount is the kit's own); hover: none |
+| Button keys (13.2) | Space on release, Enter, mnemonic Alt+letter | `Button::mnemonic`, `ui::activation` |
+| Checkbox / radio (13.3) | Icon box 24 with 4 insets, glyph 14 in 18; toggles on release inside; Space on release; tri-state cycle | Measured 16 pt box kept; release and Space-on-release implemented; `ThreeStateCheckBox` |
+| Spinner (13.4) | 72 x 28; wheel only while focused; arrows repeat while pressed; Up/Down step; invalid input reverts | `size::NUMBER_FIELD_WIDTH` 72, `SPINNER_ARROW_AREA` 20, `motion::SPINNER_REPEAT_DELAY` 0.3 s and `SPINNER_REPEAT_INTERVAL` 0.06 s (S: Swing's timer, not in the spec) |
+| Segmented button (13.5) | Left/Right move, Space/Enter select; focused selected fill `focusedSelectedButtonColor`; more than `DEFAULT_MAX_BUTTONS_COUNT` becomes a combo box | `Colors::selection` for the focused selection (nearest theme color), `size::SEGMENTED_MAX_BUTTONS` 6 (IntelliJ's value, not in the notes) |
+| Combo box (4) | 49 x 28; padding (1, 9, 1, 6); arrow area 28; 10 rows; popup as wide as the combo; Alt+Down / F4 open; Up/Down step a closed combo; Esc closes; typing selects by prefix | `size::COMBO_MIN_WIDTH`, `COMBO_PADDING_LEFT`, `COMBO_MAX_ROWS`, `motion::COMBO_TYPE_AHEAD_RESET` 1 s (S); chevron 16 pt from the edge kept (measured) |
+| Text field (6) | 49 x 28; arc 8; focus ring 2; error / warning rings | `size::TEXT_FIELD_MIN_WIDTH`, `Colors::error`, `Colors::warning` |
+| Extensions (6) | Icon buttons after or before the text; hover icon and hand; tooltip; focusable | `Extension`, `size::EXTENSION_GAP` 6 (default `getIconGap` not in the spec) |
+| Search field (6) | Magnifier; history on the first 28 px; clear when non-empty; Esc clears; Alt+Down/Up; history length 5 | `SearchTextField`, `size::SEARCH_ICON_AREA`, `SEARCH_HISTORY_LENGTH` |
+| UI DSL spacing (API section 6) | `verticalComponentGap` 6, `verticalSmallGap` 8, `verticalMediumGap` 20, `horizontalSmallGap` 6, `horizontalDefaultGap` 16, `horizontalColumnsGap` 60, `horizontalCommentGap` 12 | Rows keep the measured 5 + 4 pt rhythm (it reproduces the measured pitches with the kit's component heights); `size::DSL_GAP_SMALL`, `DSL_GAP_MEDIUM`, `DSL_COLUMNS_GAP`, `FORM_CONTROL_GAP`, `FORM_LABEL_GAP`, `INLINE_COMMENT_GAP` |
 
 ### Tooltips and status bar
 

@@ -31,6 +31,7 @@ pub struct SegmentedButton<'a, T: PartialEq + Clone> {
     options: Vec<(T, String, Option<Icon>)>,
     enabled: bool,
     icon_only: bool,
+    max_segments: usize,
 }
 
 impl<'a, T: PartialEq + Clone> SegmentedButton<'a, T> {
@@ -47,6 +48,7 @@ impl<'a, T: PartialEq + Clone> SegmentedButton<'a, T> {
                 .collect(),
             enabled: true,
             icon_only: false,
+            max_segments: size::SEGMENTED_MAX_BUTTONS,
         }
     }
 
@@ -64,6 +66,14 @@ impl<'a, T: PartialEq + Clone> SegmentedButton<'a, T> {
         self
     }
 
+    /// With more than `count` segments the control becomes a
+    /// [`ComboBox`](crate::openapi::ui::ComboBox), as IntelliJ's `SegmentedButton` does
+    /// (default 6).
+    pub fn max_segments(mut self, count: usize) -> Self {
+        self.max_segments = count;
+        self
+    }
+
     /// Hide labels on segments with icons, keeping the labels as accessible names and
     /// hover tooltips. Segments without an icon still show their label.
     pub fn icon_only(mut self, icon_only: bool) -> Self {
@@ -72,8 +82,50 @@ impl<'a, T: PartialEq + Clone> SegmentedButton<'a, T> {
     }
 }
 
+/// An option of the combo box a crowded segmented button turns into.
+#[derive(Clone, PartialEq)]
+struct Entry(usize, String);
+
+impl std::fmt::Display for Entry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.1)
+    }
+}
+
+impl<T: PartialEq + Clone> SegmentedButton<'_, T> {
+    /// More segments than fit: a dropdown of the same options.
+    fn show_as_combo_box(self, ui: &mut Ui) -> Response {
+        let entries: Vec<Entry> = self
+            .options
+            .iter()
+            .enumerate()
+            .map(|(index, (_, label, _))| Entry(index, label.clone()))
+            .collect();
+        let at = self
+            .options
+            .iter()
+            .position(|(value, _, _)| value == self.selected)
+            .unwrap_or(0);
+        let mut chosen = entries.get(at).cloned().unwrap_or(Entry(0, String::new()));
+        let id = ui.next_auto_id();
+        let mut response = ui
+            .add(crate::openapi::ui::ComboBox::new(id, &mut chosen, entries).enabled(self.enabled));
+        if response.changed()
+            && let Some((value, _, _)) = self.options.get(chosen.0)
+        {
+            *self.selected = value.clone();
+        } else {
+            response.flags.set(egui::response::Flags::CHANGED, false);
+        }
+        response
+    }
+}
+
 impl<T: PartialEq + Clone> Widget for SegmentedButton<'_, T> {
     fn ui(self, ui: &mut Ui) -> Response {
+        if self.options.len() > self.max_segments {
+            return self.show_as_combo_box(ui);
+        }
         let colors = Theme::colors(ui.ctx());
         let height = size::CONTROL_HEIGHT;
         let padding = 12.0;
@@ -186,7 +238,11 @@ impl<T: PartialEq + Clone> Widget for SegmentedButton<'_, T> {
             segment.widget_info(|| {
                 WidgetInfo::selected(WidgetType::RadioButton, self.enabled, selected, label)
             });
-            let fill = if selected {
+            let fill = if selected && segment.has_focus() {
+                // `SegmentedButton.focusedSelectedButtonColor` is a light blue; the kit's
+                // selection color is the nearest theme color.
+                colors.selection
+            } else if selected {
                 colors.segment_selected
             } else if self.enabled {
                 common::flat_fill(&segment, &colors)

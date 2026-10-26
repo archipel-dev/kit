@@ -15,10 +15,11 @@ use archipel_kit::{
     ui::tabs::{JBTabs, TabInfo},
     ui::{
         ActionLink, AsyncProcessIcon, Avatar, Bucket, Button, Cell, ChartColor,
-        ColoredListCellRenderer, ColumnInfo, Counter, Form, Histogram, InlineBanner, JBCheckBox,
-        JBRadioButton, JBTable, JBTextField, Kbd, KeyValueEntry, KeyValueTable, OnOffButton,
-        ProgressBar, PropertyGrid, SegmentedButton, SeparatorComponent, SortOrder, Sparkline,
-        Status, StatusText, Tag, TitledSeparator, Tree, TreeNode, TreeTable,
+        ColoredListCellRenderer, ColumnInfo, Counter, Extension, Histogram, InlineBanner,
+        JBCheckBox, JBIntSpinner, JBTable, JBTextField, Kbd, KeyValueEntry, KeyValueTable,
+        OnOffButton, ProgressBar, PropertyGrid, SearchHistory, SearchTextField, SegmentedButton,
+        SeparatorComponent, SortOrder, Sparkline, Status, StatusText, Tag, TitledSeparator, Tree,
+        TreeNode, TreeTable,
     },
     wm::{SimpleToolWindowPanel, StatusBarWidget},
 };

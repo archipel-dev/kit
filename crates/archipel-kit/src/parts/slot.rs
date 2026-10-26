@@ -76,6 +76,14 @@ impl<'a> Slot<'a> {
         }
     }
 
+    /// The icon of an icon slot (a list of rows that only has room for icons shows these).
+    pub(crate) fn icon_of(&self) -> Option<Icon> {
+        match &self.kind {
+            SlotKind::Icon(icon, _) => Some(*icon),
+            _ => None,
+        }
+    }
+
     /// Whether the slot holds widgets (which take input) rather than painted content.
     pub fn is_interactive(&self) -> bool {
         matches!(self.kind, SlotKind::Ui(..))

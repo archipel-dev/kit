@@ -84,10 +84,7 @@ const RULES: &[Rule] = &[
         ],
         instead: "`Button`, `ActionButton`, `JBCheckBox`, `JBRadioButton`, `OnOffButton`, `JBTextField`, \
                   `ComboBox`, `ActionLink` … (they have the measured sizes, states and focus)",
-        allowed: &[(
-            "openapi/ui/combo_box.rs",
-            "`ComboBox` wraps egui's combo box popup",
-        )],
+        allowed: &[],
     },
     Rule {
         name: "tooltips are kit tooltips",
@@ -230,13 +227,13 @@ const NOT_INTERACTIVE: &[(&str, &str)] = &[
     ("SpeedSearchState", "caller-owned state"),
     ("SpeedSearchComparator", "text matcher"),
     ("StatusTextResponse", "response"),
-    ("FieldLabel", "display only: names the field after it"),
-    ("Integer", "trait: the types a JBIntSpinner edits"),
+    ("SearchHistory", "caller-owned state of a search field"),
     (
-        "Form",
-        "layout of other components, measured in tests/form.rs",
+        "Extension",
+        "description of an icon button in a text field; activation tested in tests/jb_text_field.rs",
     ),
-    ("FormUi", "layout handle of Form"),
+    ("ThreeState", "enum"),
+    ("Integer", "trait: the types a JBIntSpinner edits"),
     ("Histogram", "chart, audited in tests/chart.rs"),
     ("HistogramResponse", "response"),
     ("Kbd", "display only"),

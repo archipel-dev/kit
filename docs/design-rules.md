@@ -28,9 +28,13 @@ checks the ones a machine can check; reviews check the rest.
 - **Rows have no hover.** Trees, lists and tables show only the selection: blue with focus,
   gray without. Popup rows (menus, completion lists) highlight under the pointer instead,
   with one highlight per menu shared with the keyboard.
-- **Buttons don't react to hover or press.** Only focus shows: the border becomes a 2 pt
-  focus-colored border, one point of it outside. Flat toolbar controls (icon buttons, toolbar
-  and status bar widgets, stripe buttons, tabs) do show a hover fill.
+- **Buttons don't react to hover.** Focus shows: the border becomes a 2 pt focus-colored
+  border, one point of it outside. A press darkens a push button: Android Studio showed no
+  press change, but the IntelliJ spec (section 13.2) says pressed follows Swing's button
+  model, so the spec wins here (the amount, 12%, is the kit's own). Flat toolbar controls
+  (icon buttons, toolbar and status bar widgets, stripe buttons, tabs) do show a hover fill.
+- **Keys activate like Swing.** <kbd>Space</kbd> acts on release; <kbd>Enter</kbd> clicks a push
+  button but not a checkbox, radio or toggle (it belongs to a dialog's default button).
 - **Checkboxes and radios** have their own blue and no hover change.
 - **Menus**: 24 pt rows that touch, 8 pt popup padding, pills inset 8 pt, icons 8 pt inside
   the pill, text 4 pt after the icon; first pointer move after opening ignored.

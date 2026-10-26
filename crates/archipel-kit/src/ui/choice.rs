@@ -234,85 +234,203 @@ impl Widget for JBCheckBox<'_> {
         let below = self.comments.below.take();
         let enabled = self.enabled;
         with_comment(ui, below.as_deref(), enabled, |ui| {
-            self.row(ui, below.as_deref())
+            let shown = if self.label_visible { &self.label } else { "" };
+            let inline = self
+                .comments
+                .inline
+                .as_deref()
+                .filter(|_| self.label_visible);
+            let state = match (*self.checked, self.mixed) {
+                (_, true) => CheckState::Mixed,
+                (true, false) => CheckState::On,
+                (false, false) => CheckState::Off,
+            };
+            let (checked, mixed) = (&mut *self.checked, self.mixed);
+            check_row(
+                ui,
+                CheckRow {
+                    state,
+                    label: &self.label,
+                    shown,
+                    inline,
+                    enabled,
+                    description: below.as_deref(),
+                },
+                // Clicking a mixed checkbox checks it.
+                move || {
+                    *checked = mixed || !*checked;
+                    if *checked {
+                        CheckState::On
+                    } else {
+                        CheckState::Off
+                    }
+                },
+            )
         })
     }
 }
 
-impl JBCheckBox<'_> {
-    fn row(self, ui: &mut Ui, description: Option<&str>) -> Response {
-        let colors = Theme::colors(ui.ctx());
-        let shown = if self.label_visible { &self.label } else { "" };
-        let inline = self
-            .comments
-            .inline
-            .as_deref()
-            .filter(|_| self.label_visible);
-        let (mut response, rect, galley) =
-            control_row(ui, vec2(BOX, BOX), shown, inline, self.enabled);
-        describe(ui, &response, description);
-        if response.clicked() {
-            *self.checked = self.mixed || !*self.checked;
-            response.mark_changed();
-        }
-        let state = match (*self.checked, self.mixed && !response.changed()) {
-            (_, true) => CheckState::Mixed,
-            (true, false) => CheckState::On,
-            (false, false) => CheckState::Off,
-        };
-        crate::cursor::on_hover_action(&response);
-        response.widget_info(|| {
-            WidgetInfo::selected(
-                WidgetType::Checkbox,
-                self.enabled,
-                state == CheckState::On,
-                &self.label,
-            )
-        });
-        if ui.is_rect_visible(response.rect) {
-            let painter = ui.painter();
-            let corner = CornerRadius::same(radius::CHECKBOX);
-            let filled = state != CheckState::Off;
-            // Measured on Android Studio: no hover change; checked in its own blue.
-            let (fill, stroke) = match (filled, self.enabled) {
-                (true, true) => (colors.control_selected, Stroke::NONE),
-                (true, false) => (colors.accent_disabled, Stroke::NONE),
-                (false, enabled) => (
-                    colors.control,
-                    Stroke::new(
-                        1.0_f32,
-                        if enabled {
-                            colors.control_border
-                        } else {
-                            colors.border_disabled
-                        },
-                    ),
+/// What [`check_row`] draws.
+struct CheckRow<'a> {
+    state: CheckState,
+    /// The accessible name.
+    label: &'a str,
+    /// The visible label (empty when only the accessible name is wanted).
+    shown: &'a str,
+    inline: Option<&'a str>,
+    enabled: bool,
+    description: Option<&'a str>,
+}
+
+/// Draws a checkbox row and reports the click. `toggled` runs on activation and returns the
+/// state to draw instead of the old one.
+fn check_row(ui: &mut Ui, row: CheckRow<'_>, toggled: impl FnOnce() -> CheckState) -> Response {
+    let colors = Theme::colors(ui.ctx());
+    let enabled = row.enabled;
+    let (mut response, rect, galley) =
+        control_row(ui, vec2(BOX, BOX), row.shown, row.inline, enabled);
+    describe(ui, &response, row.description);
+    // Click on release inside the box or label; Space on release; Enter is the dialog's.
+    super::activation::key_activation(ui, &mut response, enabled, false);
+    let mut state = row.state;
+    if response.clicked() {
+        state = toggled();
+        response.mark_changed();
+    }
+    crate::cursor::on_hover_action(&response);
+    response.widget_info(|| {
+        WidgetInfo::selected(
+            WidgetType::Checkbox,
+            enabled,
+            state == CheckState::On,
+            row.label,
+        )
+    });
+    if ui.is_rect_visible(response.rect) {
+        let painter = ui.painter();
+        let corner = CornerRadius::same(radius::CHECKBOX);
+        let filled = state != CheckState::Off;
+        // Measured on Android Studio: no hover change; checked in its own blue.
+        let (fill, stroke) = match (filled, enabled) {
+            (true, true) => (colors.control_selected, Stroke::NONE),
+            (true, false) => (colors.accent_disabled, Stroke::NONE),
+            (false, enabled) => (
+                colors.control,
+                Stroke::new(
+                    1.0_f32,
+                    if enabled {
+                        colors.control_border
+                    } else {
+                        colors.border_disabled
+                    },
                 ),
-            };
-            painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
-            if response.has_focus() {
-                // The border becomes 2 pt in the checkbox blue, one of them outside.
-                painter.rect_stroke(
-                    rect.expand(1.0),
-                    CornerRadius::same(radius::CHECKBOX + 1),
-                    Stroke::new(size::FOCUS_RING, colors.control_selected),
-                    StrokeKind::Inside,
-                );
-            }
-            let mark = Stroke::new(1.6_f32, mark_color(ui, &colors, self.enabled));
-            let p = |x: f32, y: f32| rect.min + vec2(x, y);
-            match state {
-                CheckState::On => {
-                    painter.line(vec![p(4.0, 8.2), p(7.0, 11.0), p(12.0, 5.2)], mark);
-                }
-                CheckState::Mixed => {
-                    painter.line_segment([p(4.5, 8.0), p(11.5, 8.0)], mark);
-                }
-                CheckState::Off => {}
-            }
-            paint_label(ui, &response, rect, galley, self.enabled);
+            ),
+        };
+        painter.rect(rect, corner, fill, stroke, StrokeKind::Inside);
+        if response.has_focus() {
+            // The border becomes 2 pt in the checkbox blue, one of them outside.
+            painter.rect_stroke(
+                rect.expand(1.0),
+                CornerRadius::same(radius::CHECKBOX + 1),
+                Stroke::new(size::FOCUS_RING, colors.control_selected),
+                StrokeKind::Inside,
+            );
         }
-        response
+        let mark = Stroke::new(1.6_f32, mark_color(ui, &colors, enabled));
+        let p = |x: f32, y: f32| rect.min + vec2(x, y);
+        match state {
+            CheckState::On => {
+                painter.line(vec![p(4.0, 8.2), p(7.0, 11.0), p(12.0, 5.2)], mark);
+            }
+            CheckState::Mixed => {
+                painter.line_segment([p(4.5, 8.0), p(11.5, 8.0)], mark);
+            }
+            CheckState::Off => {}
+        }
+        paint_label(ui, &response, rect, galley, enabled);
+    }
+    response
+}
+
+/// The state of a [`ThreeStateCheckBox`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ThreeState {
+    /// Unchecked.
+    #[default]
+    Unchecked,
+    /// Checked.
+    Checked,
+    /// Some, but not all, children are checked (shown as a dash).
+    Indeterminate,
+}
+
+/// A checkbox with three states (IntelliJ `ThreeStateCheckBox`): a click cycles unchecked,
+/// checked, indeterminate, unchecked (IntelliJ spec section 13.3). Use it for a parent of
+/// checkboxes; [`JBCheckBox::mixed`] only displays a dash.
+///
+/// ```
+/// # egui::__run_test_ui(|ui| {
+/// use archipel_kit::ui::{ThreeState, ThreeStateCheckBox};
+///
+/// let mut all = ThreeState::Indeterminate;
+/// ui.add(ThreeStateCheckBox::new(&mut all, "Select all"));
+/// # });
+/// ```
+#[must_use = "add it with `ui.add(checkbox)`"]
+pub struct ThreeStateCheckBox<'a> {
+    state: &'a mut ThreeState,
+    label: String,
+    enabled: bool,
+}
+
+impl<'a> ThreeStateCheckBox<'a> {
+    /// A checkbox bound to `state`.
+    pub fn new(state: &'a mut ThreeState, label: impl Into<String>) -> Self {
+        Self {
+            state,
+            label: label.into(),
+            enabled: true,
+        }
+    }
+
+    /// Disabled checkboxes are dimmed and ignore clicks.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+}
+
+fn as_check_state(state: ThreeState) -> CheckState {
+    match state {
+        ThreeState::Unchecked => CheckState::Off,
+        ThreeState::Checked => CheckState::On,
+        ThreeState::Indeterminate => CheckState::Mixed,
+    }
+}
+
+impl Widget for ThreeStateCheckBox<'_> {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let state = as_check_state(*self.state);
+        let target = self.state;
+        check_row(
+            ui,
+            CheckRow {
+                state,
+                label: &self.label,
+                shown: &self.label,
+                inline: None,
+                enabled: self.enabled,
+                description: None,
+            },
+            move || {
+                *target = match *target {
+                    ThreeState::Unchecked => ThreeState::Checked,
+                    ThreeState::Checked => ThreeState::Indeterminate,
+                    ThreeState::Indeterminate => ThreeState::Unchecked,
+                };
+                as_check_state(*target)
+            },
+        )
     }
 }
 
@@ -391,6 +509,7 @@ impl<T: PartialEq> JBRadioButton<'_, T> {
             self.enabled,
         );
         describe(ui, &response, description);
+        super::activation::key_activation(ui, &mut response, self.enabled, false);
         let mut selected = *self.current == self.value;
         if response.clicked() && !selected {
             *self.current = self.value;
@@ -479,6 +598,7 @@ impl Widget for OnOffButton<'_> {
         const TRACK: egui::Vec2 = vec2(28.0, 16.0);
         let colors = Theme::colors(ui.ctx());
         let (mut response, rect, galley) = control_row(ui, TRACK, &self.label, None, self.enabled);
+        super::activation::key_activation(ui, &mut response, self.enabled, false);
         if response.clicked() {
             *self.on = !*self.on;
             response.mark_changed();

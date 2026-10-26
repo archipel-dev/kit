@@ -5,7 +5,7 @@ mod common;
 use archipel_kit::Theme;
 use archipel_kit::egui::{self, Key};
 use archipel_kit::testing::{self, Queryable};
-use archipel_kit::ui::{FieldLabel, Form, JBIntSpinner};
+use archipel_kit::ui::{JBIntSpinner, dsl::panel};
 
 fn harness(value: u64) -> testing::Harness<'static, u64> {
     testing::harness_state(Theme::dark(), value, |ui, limit| {
@@ -104,33 +104,23 @@ fn snapshot() {
             let id = egui::Id::new("number-snapshot");
             let (mut size, mut timeout) =
                 ui.data_mut(|d| *d.get_temp_mut_or_insert_with(id, || (50_u32, 30_u32)));
-            Form::new().show(ui, |form| {
-                form.fields(|ui| {
-                    ui.add(FieldLabel::new("Page size:"));
-                    ui.add(
-                        JBIntSpinner::new(&mut size)
-                            .name("Page size")
-                            .range(1..=1000),
-                    );
+            panel(ui, |p| {
+                p.row("Page size:", |r| {
+                    r.int_spinner_with(&mut size, |s| s.range(1..=1000));
                 });
-                form.fields(|ui| {
-                    ui.add(FieldLabel::new("Timeout (s):"));
-                    ui.add(
-                        JBIntSpinner::new(&mut timeout)
-                            .name("Timeout")
-                            .range(1..=600),
-                    );
+                p.row("Timeout (s):", |r| {
+                    r.int_spinner_with(&mut timeout, |s| s.range(1..=600));
                 });
             });
             ui.data_mut(|d| d.insert_temp(id, (size, timeout)));
             ui.add_space(24.0);
         },
         |h| {
-            h.get_by_label("Timeout").focus();
+            h.get_by_label("Timeout (s)").focus();
             h.run();
             h.key_press_modifiers(egui::Modifiers::COMMAND, Key::A);
             h.run();
-            h.get_by_label("Timeout").type_text("900");
+            h.get_by_label("Timeout (s)").type_text("900");
             h.run();
         },
     );
