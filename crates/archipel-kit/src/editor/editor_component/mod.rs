@@ -9,7 +9,7 @@ mod paint;
 mod rows;
 mod state;
 
-use self::cache::{DocCache, fold_regions};
+use self::cache::DocCache;
 use self::gutter::{GutterCfg, GutterInput, GutterLayout};
 pub(super) use self::input::key_modifiers;
 use self::state::{Frame, Geo, ScrollAnim, ViewState};
@@ -18,6 +18,8 @@ use super::decorations::{
 };
 use super::find::{self, ApplyEnv, FindState};
 use super::highlight::{PlainText, SyntaxHighlighter};
+use super::logic::fold_regions;
+use super::logic::hover::{Rest, fold_dwell, highlight_at, remaining};
 use super::model::{
     ContentSize, Editor, Language, Os, ScrollRequest, ScrollType, SearchHistory, SearchResults,
     Viewport, clamp_first_line, match_at, scroll_to_caret,
@@ -518,7 +520,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     let inner = Rect::from_min_max(pos2(inner.min.x, bar_area.max.y), inner.max);
     let tab = editor.settings.tab_size;
 
-    let stripe_w = if highlights.is_empty() && !(find.open && !find.query.is_empty()) {
+    let stripe_w = if highlights.is_empty() && !(find.open && !find.core.query.is_empty()) {
         0.0
     } else {
         metrics::STRIPE_WIDTH
@@ -699,9 +701,9 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     let mut found = if find.open {
         cache.find(
             &editor.document,
-            &find.query,
-            find.options,
-            find.scope.clone(),
+            &find.core.query,
+            find.core.options,
+            find.core.scope.clone(),
         )
     } else {
         empty_results.clone()
@@ -731,9 +733,9 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         found = if find.open {
             cache.find(
                 &editor.document,
-                &find.query,
-                find.options,
-                find.scope.clone(),
+                &find.core.query,
+                find.core.options,
+                find.core.scope.clone(),
             )
         } else {
             empty_results.clone()
@@ -921,23 +923,13 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         ));
     }
     let brace = if focused_now {
-        paint::match_brace(editor, language)
+        super::logic::match_brace(editor, language)
     } else {
         None
     };
-    let occurrences = {
-        let carets = editor.carets.carets();
-        if carets.len() == 1 && carets[0].has_selection() {
-            let (s, e) = (carets[0].selection_start(), carets[0].selection_end());
-            let text = editor.document.slice(s, e);
-            if !text.trim().is_empty() && !text.contains('\n') {
-                cache.occurrences(&editor.document, s..e)
-            } else {
-                std::sync::Arc::new(Vec::new())
-            }
-        } else {
-            std::sync::Arc::new(Vec::new())
-        }
+    let occurrences = match super::logic::occurrence_source(editor) {
+        Some(range) => cache.occurrences(&editor.document, range),
+        None => std::sync::Arc::new(Vec::new()),
     };
     let opts = paint::PaintOpts {
         whitespace,
@@ -1064,48 +1056,35 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     if resp_text.hovered() && st.drag.is_none() && enabled {
         if let Some(pos) = ui.input(|i| i.pointer.hover_pos()) {
             let at = mouse::locate(editor, &geo_final, &frame, pos);
-            let still = st
-                .rest
-                .is_some_and(|r| r.offset == at.offset && r.pos.distance(pos) < 3.0);
-            if !still {
-                st.rest = Some(state::Rest {
-                    offset: at.offset,
-                    since: now,
-                    pos,
-                });
+            let (waited, restarted) =
+                Rest::observe(&mut st.rest, at.offset, (pos.x, pos.y), now, 3.0);
+            if restarted {
                 st.fold_rest = None;
             }
-            if let Some(rest) = st.rest {
-                let waited = now - rest.since;
-                if waited >= motion::EDITOR_TOOLTIP_DELAY as f64 && at.virtual_cols == 0 {
-                    let highlight = highlights.iter().position(|h| h.range.contains(&at.offset));
-                    hover = Some(HoverInfo {
-                        offset: at.offset,
-                        pos,
-                        highlight,
-                    });
-                } else {
-                    ctx.request_repaint_after(Duration::from_secs_f32(
-                        (motion::EDITOR_TOOLTIP_DELAY - waited as f32 + 0.001).max(0.001),
-                    ));
-                }
+            if waited >= motion::EDITOR_TOOLTIP_DELAY as f64 && at.virtual_cols == 0 {
+                let highlight = highlight_at(highlights, at.offset);
+                hover = Some(HoverInfo {
+                    offset: at.offset,
+                    pos,
+                    highlight,
+                });
+            } else {
+                ctx.request_repaint_after(Duration::from_secs_f64(remaining(
+                    motion::EDITOR_TOOLTIP_DELAY,
+                    waited,
+                )));
             }
             // A fold placeholder under the pointer.
             let layout = frame.layout(&editor.document, at.visual, tab);
             if let Some(seg) = layout.fold_at(at.col) {
-                let since = match st.fold_rest {
-                    Some((start, since)) if start == seg.off0 => since,
-                    _ => {
-                        st.fold_rest = Some((seg.off0, now));
-                        now
-                    }
-                };
-                if now - since >= motion::FOLD_PREVIEW_DELAY as f64 {
+                let waited = fold_dwell(&mut st.fold_rest, seg.off0, now);
+                if waited >= motion::FOLD_PREVIEW_DELAY as f64 {
                     fold_preview = Some(seg.off0..seg.off1);
                 } else {
-                    ctx.request_repaint_after(Duration::from_secs_f32(
-                        (motion::FOLD_PREVIEW_DELAY - (now - since) as f32 + 0.001).max(0.001),
-                    ));
+                    ctx.request_repaint_after(Duration::from_secs_f64(remaining(
+                        motion::FOLD_PREVIEW_DELAY,
+                        waited,
+                    )));
                 }
             } else {
                 st.fold_rest = None;
@@ -1121,8 +1100,8 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     if find.open {
         let problem = found.problem.is_some();
         let view = find::BarView {
-            status: found.status(find.query.is_empty(), current_match),
-            not_found: problem || (found.ranges.is_empty() && !find.query.is_empty()),
+            status: found.status(find.core.query.is_empty(), current_match),
+            not_found: problem || (found.ranges.is_empty() && !find.core.query.is_empty()),
             viewer,
             history: history.queries(),
         };
@@ -1166,7 +1145,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             });
         let chosen = list.end_with(ui, completer, editor.document.text(), &mut response, caret);
         if let Some(chosen) = chosen {
-            super::lookup::apply(editor, language, &chosen);
+            super::logic::lookup::insert_chosen(editor, language, &chosen);
             completed = Some(chosen.item);
             text_changed = true;
             st.last_activity = now;

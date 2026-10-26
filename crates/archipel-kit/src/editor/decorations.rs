@@ -184,3 +184,14 @@ pub struct HoverInfo {
     /// `offset`.
     pub highlight: Option<usize>,
 }
+
+impl HoverInfo {
+    /// What the pointer rests on, without its screen position: the renderer-independent part
+    /// the terminal editor reports too.
+    pub fn target(&self) -> super::logic::hover::HoverTarget {
+        super::logic::hover::HoverTarget {
+            offset: self.offset,
+            highlight: self.highlight,
+        }
+    }
+}

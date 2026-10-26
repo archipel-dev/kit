@@ -10,11 +10,7 @@ use crate::icons::Icon;
 use std::collections::HashMap;
 use std::ops::Range;
 
-/// Whether `c` belongs to an identifier: the characters that open the popup when typed and
-/// narrow it while it is open.
-pub(crate) fn is_identifier_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
-}
+pub(crate) use crate::editor::logic::lookup::is_identifier_char;
 
 /// How well the typed text matches an item. Best first: the derived order is the sort order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

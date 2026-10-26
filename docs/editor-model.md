@@ -105,6 +105,19 @@ completion) return `None`: the application handles them. Find, Replace and Find 
 chords of the widget's find bar (see `docs/components/code.md`), which uses
 `model::search` for the matching.
 
+## Shared logic beyond the model
+
+`archipel_kit::editor::logic` is the other renderer-independent half: what an editor
+*component* decides, which the GUI `EditorComponent` and the terminal editor of
+`archipel-kit-tui` both run (`docs/tui-editor-parity.md` has the table).
+
+| Module | Use it for |
+|---|---|
+| `logic::find` | `FindSession`: the find bar's state and rules over a `model::Editor`. Fill `query`, `options`, `scope`, push `FindCmd`s, call `apply` each frame with the matches; it selects, steps, wraps (with the hint), replaces and reports what the view must do (`FindOut`). |
+| `logic::lookup` | `LookupState`: the completion list as a state machine. Feed it a `LookupInput` (text, caret, the keys, the time), draw the `LookupFrame` it answers, insert `frame.chosen` with `insert_chosen` (at every caret, one undo step). |
+| `logic::hover` | `Rest` (where the pointer rests, with delays), `highlight_at`, `messages_at`, `stripe_hit`, `preview_lines`, `HighlightSeverity::rank`. |
+| `logic::brace`, `logic::guides`, `logic::folds`, `logic::occurrences`, `logic::gestures` | Brace pairs, indent guide columns, bracket fold regions, occurrences of the selection, mouse gesture rules. |
+
 ## Defaults
 
 `EditorSettings::default()` has the IntelliJ defaults:

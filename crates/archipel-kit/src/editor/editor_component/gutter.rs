@@ -116,28 +116,7 @@ impl GutterLayout {
     }
 }
 
-/// The fold region drawn at a line, as an index into the model's regions.
-pub(crate) fn region_at_line(editor: &Editor, line: usize) -> Option<usize> {
-    let doc = &editor.document;
-    let start = doc.line_start_offset(line);
-    let end = doc.line_end_offset(line);
-    let regions = editor.folding.regions();
-    let first = regions.partition_point(|r| r.start < start);
-    let mut found = None;
-    for (i, region) in regions.iter().enumerate().skip(first) {
-        if region.start > end {
-            break;
-        }
-        if editor.folding.is_offset_folded(region.start) {
-            continue;
-        }
-        if !region.expanded {
-            return Some(i);
-        }
-        found.get_or_insert(i);
-    }
-    found
-}
+pub(crate) use crate::editor::logic::gestures::region_at_line;
 
 /// What to paint.
 pub(crate) struct GutterInput<'a> {

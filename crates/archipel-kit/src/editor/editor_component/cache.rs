@@ -4,10 +4,8 @@
 //! and is rebuilt when the document changes.
 
 use crate::editor::highlight::{Span, SyntaxHighlighter};
-use crate::editor::model::{
-    Document, FoldRegion, MAX_SEARCH_RESULTS, SearchOptions, SearchResults, find_all,
-};
-use crate::tokens::editor::MAX_SELECTION_OCCURRENCES;
+use crate::editor::logic::{BracketRegion, bracket_regions, occurrences_of};
+use crate::editor::model::{Document, MAX_SEARCH_RESULTS, SearchOptions, SearchResults, find_all};
 use egui::{Context, Id};
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -31,14 +29,6 @@ struct Inner {
     widths: Option<Arc<Vec<u32>>>,
     found: Option<(FindKey, Arc<SearchResults>)>,
     occurrences: Option<(Range<usize>, Ranges)>,
-}
-
-/// A bracket pair spanning several lines: the range from the opener to just after the closer.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct BracketRegion {
-    pub start: usize,
-    pub end: usize,
-    pub opener: char,
 }
 
 pub(crate) struct DocCache {
@@ -192,61 +182,13 @@ impl DocCache {
         widths
     }
 
-    /// Bracket pairs (`{}` and `[]`) whose closer is on a later line than the opener, sorted by
-    /// start, one per opener line (the longest). Strings in double quotes are skipped.
+    /// Bracket pairs that span lines (see [`bracket_regions`]), cached with the document.
     pub fn brackets(&self, doc: &Document) -> Arc<Vec<BracketRegion>> {
         let mut inner = self.inner();
         if let Some(brackets) = &inner.brackets {
             return brackets.clone();
         }
-        let text = doc.text();
-        let bytes = text.as_bytes();
-        let mut stack: Vec<(usize, usize, u8)> = Vec::new();
-        let mut regions: Vec<(usize, usize, usize, u8)> = Vec::new();
-        let mut line_start = 0;
-        for (line, piece) in text.split('\n').enumerate() {
-            let (mut in_string, mut escaped) = (false, false);
-            for (i, &b) in piece.as_bytes().iter().enumerate() {
-                if in_string {
-                    match b {
-                        _ if escaped => escaped = false,
-                        b'\\' => escaped = true,
-                        b'"' => in_string = false,
-                        _ => {}
-                    }
-                } else {
-                    match b {
-                        b'"' => in_string = true,
-                        b'{' | b'[' => stack.push((line_start + i, line, b)),
-                        b'}' | b']' => {
-                            if let Some((open, open_line, opener)) = stack.pop()
-                                && open_line < line
-                            {
-                                regions.push((open, line_start + i + 1, open_line, opener));
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            line_start += piece.len() + 1;
-        }
-        let _ = bytes;
-        regions.sort_unstable_by_key(|&(start, end, _, _)| (start, std::cmp::Reverse(end)));
-        let mut out: Vec<BracketRegion> = Vec::new();
-        let mut last_line = usize::MAX;
-        for (start, end, open_line, opener) in regions {
-            if open_line == last_line {
-                continue;
-            }
-            last_line = open_line;
-            out.push(BracketRegion {
-                start,
-                end,
-                opener: opener as char,
-            });
-        }
-        let out = Arc::new(out);
+        let out = Arc::new(bracket_regions(doc));
         inner.brackets = Some(out.clone());
         out
     }
@@ -287,19 +229,7 @@ impl DocCache {
         {
             return found.clone();
         }
-        let needle = doc.slice(selection.start, selection.end);
-        let mut found = Vec::new();
-        if !needle.is_empty() {
-            for (at, m) in doc.text().match_indices(needle) {
-                if at != selection.start {
-                    found.push(at..at + m.len());
-                }
-                if found.len() > MAX_SELECTION_OCCURRENCES {
-                    found.clear();
-                    break;
-                }
-            }
-        }
+        let found = occurrences_of(doc, selection.clone());
         let found = Arc::new(found);
         inner.occurrences = Some((selection, found.clone()));
         found
@@ -336,26 +266,6 @@ fn tokenize(
     Some(spans)
 }
 
-/// The fold regions for `brackets`, keeping the collapsed state of regions in `old` that
-/// start at the same offset.
-pub(crate) fn fold_regions(brackets: &[BracketRegion], old: &[FoldRegion]) -> Vec<FoldRegion> {
-    brackets
-        .iter()
-        .map(|b| {
-            let expanded = old
-                .iter()
-                .find(|r| r.start == b.start)
-                .is_none_or(|r| r.expanded);
-            FoldRegion {
-                start: b.start,
-                end: b.end,
-                placeholder: if b.opener == '{' { "{...}" } else { "[...]" }.to_owned(),
-                expanded,
-            }
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,56 +273,6 @@ mod tests {
 
     fn cache_of(doc: &Document) -> Arc<DocCache> {
         DocCache::get(&Context::default(), Id::new("t"), doc, &PlainText, 4)
-    }
-
-    #[test]
-    fn occurrences_skip_the_selection_itself() {
-        let doc = Document::new("foo bar foo baz foo");
-        let found = cache_of(&doc).occurrences(&doc, 0..3);
-        assert_eq!(*found, vec![8..11, 16..19]);
-    }
-
-    #[test]
-    fn more_than_fifty_occurrences_highlight_nothing() {
-        let text = "ab ".repeat(60);
-        let doc = Document::new(&text);
-        assert!(cache_of(&doc).occurrences(&doc, 0..2).is_empty());
-        let text = "ab ".repeat(51);
-        let doc = Document::new(&text);
-        assert_eq!(cache_of(&doc).occurrences(&doc, 0..2).len(), 50);
-    }
-
-    #[test]
-    fn bracket_regions_span_lines_one_per_opener_line() {
-        let doc = Document::new("{\n  \"a\": [1,\n  2],\n  \"b\": \"}\"\n}\n[ 1 ]");
-        let brackets = cache_of(&doc).brackets(&doc);
-        let spans: Vec<_> = brackets
-            .iter()
-            .map(|b| (b.start, b.end, b.opener))
-            .collect();
-        // The object spans lines 0..=4; the array lines 1..=2; `[ 1 ]` is on one line and the
-        // `}` inside the string does not close anything.
-        assert_eq!(spans.len(), 2, "{spans:?}");
-        assert_eq!(spans[0].2, '{');
-        assert_eq!(doc.line_number(spans[0].1), 4);
-        assert_eq!(spans[1].2, '[');
-    }
-
-    #[test]
-    fn fold_regions_keep_what_was_collapsed() {
-        let doc = Document::new("{\n  [\n  1\n  ]\n}");
-        let brackets = cache_of(&doc).brackets(&doc);
-        let first = fold_regions(&brackets, &[]);
-        assert!(first.iter().all(|r| r.expanded));
-        let mut old = first.clone();
-        old[1].expanded = false;
-        let again = fold_regions(&brackets, &old);
-        assert_eq!(
-            again.iter().map(|r| r.expanded).collect::<Vec<_>>(),
-            [true, false]
-        );
-        assert_eq!(again[0].placeholder, "{...}");
-        assert_eq!(again[1].placeholder, "[...]");
     }
 
     #[test]

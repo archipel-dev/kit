@@ -67,7 +67,6 @@ pub use key_value::{
 pub use link::ActionLink;
 pub use list::{CellRendererResponse, ColoredListCellRenderer};
 pub use loading_panel::JBLoadingPanel;
-pub(crate) use lookup::is_identifier_char;
 pub use lookup::{LookupElementPresentation, LookupStats, MatchKind, PrefixMatch, PrefixMatcher};
 pub use number_field::{Integer, JBIntSpinner};
 pub use progress::{AsyncProcessIcon, ProgressBar, ProgressState};
