@@ -18,6 +18,13 @@
 use egui::Color32;
 use std::sync::Arc;
 
+mod catalog;
+// Written by `tools/themes` (see `docs/theming.md`); not reformatted.
+#[rustfmt::skip]
+mod generated;
+
+pub use catalog::{EditorScheme, Effect, EffectKind, TextAttributes, ThemeInfo, ThemeSource};
+
 const fn rgb(value: u32) -> Color32 {
     Color32::from_rgb((value >> 16) as u8, (value >> 8) as u8, value as u8)
 }
@@ -48,6 +55,9 @@ pub struct Theme {
     /// dropdowns, close buttons). Default: the pointing hand. Rows, tabs and menu items
     /// keep the arrow. See `docs/cursors.md`.
     pub action_cursor: egui::CursorIcon,
+    /// The bundled IntelliJ tables this theme was built from (for [`Theme::ui_color`] and
+    /// [`Theme::text_attributes`]); empty for a theme built by hand.
+    pub source: ThemeSource,
 }
 
 /// Background and border of a banner or callout of one severity.
@@ -414,6 +424,7 @@ impl Theme {
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
+            source: ThemeSource::new("islands_dark", "islands_dark"),
             editor: EditorColors {
                 background: rgb(0x191A1C),
                 text: rgb(0xBCBEC4),
@@ -556,6 +567,7 @@ impl Theme {
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
+            source: ThemeSource::new("islands_light", "new_ui_light"),
             editor: EditorColors {
                 background: rgb(0xFFFFFF),
                 text: rgb(0x080808),

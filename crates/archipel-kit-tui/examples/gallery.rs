@@ -47,7 +47,7 @@ impl App {
         ];
         StatusBar::new(look, &hints)
             .mode(PAGES[self.page])
-            .right(if look.theme.dark { "dark" } else { "light" })
+            .right(&look.theme.name)
             .render(Rect::new(0, area.height - 1, area.width, 1), buf);
         let inner = Rect::new(
             inner.x,
@@ -207,11 +207,13 @@ impl App {
                 }
             }
             KeyCode::Char('t') => {
-                self.look = if self.look.theme.dark {
-                    Look::light()
-                } else {
-                    Look::dark()
-                };
+                // Cycles through every bundled theme (`Theme::all()`).
+                let themes = archipel_kit_tui::Theme::all();
+                let at = themes
+                    .iter()
+                    .position(|info| info.name == self.look.theme.name)
+                    .unwrap_or(0);
+                self.look = Look::new((themes[(at + 1) % themes.len()].constructor)());
             }
             _ => {}
         }

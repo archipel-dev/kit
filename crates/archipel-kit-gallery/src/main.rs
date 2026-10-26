@@ -5,8 +5,9 @@
 //! ```
 
 mod pages;
-use archipel_kit::{Theme, egui, tokens};
+use archipel_kit::{EditorScheme, Theme, egui, tokens};
 use archipel_kit::{
+    openapi::ui::ComboBox,
     ui::{Avatar, ColoredListCellRenderer, OnOffButton, SeparatorComponent, Tag},
     wm::{IdeFrameDecorator, MainToolbar, SimpleToolWindowPanel},
 };
@@ -35,9 +36,15 @@ fn main() -> eframe::Result {
     )
 }
 
+/// First entry of the editor scheme picker: the scheme the UI theme selects itself.
+const THEME_SCHEME: &str = "Theme's own scheme";
+
 struct Gallery {
     page: Page,
-    dark: bool,
+    /// Name of the picked UI theme (`Theme::all()`).
+    theme: String,
+    /// Name of the picked editor scheme, or [`THEME_SCHEME`].
+    scheme: String,
     enabled: bool,
     pages: Pages,
     chrome: IdeFrameDecorator,
@@ -46,7 +53,8 @@ impl Default for Gallery {
     fn default() -> Self {
         Self {
             page: Page::Buttons,
-            dark: true,
+            theme: Theme::dark().name,
+            scheme: THEME_SCHEME.into(),
             enabled: true,
             pages: Pages::default(),
             chrome: IdeFrameDecorator::Integrated,
@@ -63,6 +71,28 @@ impl eframe::App for Gallery {
 }
 
 impl Gallery {
+    /// The theme of the pickers: the UI theme, with the picked editor scheme if any.
+    fn picked(&self) -> Theme {
+        let mut theme = Theme::all()
+            .iter()
+            .find(|info| info.name == self.theme)
+            .map_or_else(Theme::dark, |info| (info.constructor)());
+        if let Some(scheme) = EditorScheme::all()
+            .iter()
+            .find(|scheme| scheme.name() == self.scheme)
+        {
+            theme = theme.with_editor_scheme(*scheme);
+        }
+        theme
+    }
+
+    /// Applies the pickers' theme, keeping the app's language icon style.
+    fn pick(&self, ctx: &egui::Context) {
+        let mut theme = self.picked();
+        theme.language_icons = Theme::current(ctx).language_icons;
+        theme.apply(ctx);
+    }
+
     fn show(&mut self, ctx: &egui::Context) {
         let colors = Theme::colors(ctx);
         MainToolbar::new("toolbar")
@@ -80,15 +110,29 @@ impl Gallery {
                         ui.add(Tag::new(concat!("v", env!("CARGO_PKG_VERSION"))));
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        let mut dark = self.dark;
-                        if ui.add(OnOffButton::new(&mut dark, "Dark")).changed() {
-                            self.dark = dark;
-                            let mut theme = if dark { Theme::dark() } else { Theme::light() };
-                            theme.language_icons = Theme::current(ui.ctx()).language_icons;
-                            theme.apply(ui.ctx());
-                        }
-                        ui.add(SeparatorComponent);
                         ui.add(OnOffButton::new(&mut self.enabled, "Enabled"));
+                        ui.add(SeparatorComponent);
+                        let schemes = std::iter::once(THEME_SCHEME.to_owned())
+                            .chain(EditorScheme::all().iter().map(|s| s.name().to_owned()));
+                        let scheme = ui.add(
+                            ComboBox::new("editor-scheme", &mut self.scheme, schemes)
+                                .label("Editor scheme")
+                                .separators([1])
+                                .width(170.0),
+                        );
+                        let themes = Theme::all().iter().map(|info| info.name.to_owned());
+                        let theme = ui.add(
+                            ComboBox::new("ui-theme", &mut self.theme, themes)
+                                .label("UI theme")
+                                .separators([2])
+                                .width(170.0),
+                        );
+                        if theme.changed() || scheme.changed() {
+                            if theme.changed() {
+                                self.scheme = THEME_SCHEME.into();
+                            }
+                            self.pick(ui.ctx());
+                        }
                     });
                 });
             });
@@ -174,7 +218,7 @@ mod tests {
             for (page, label, _) in Page::ALL {
                 let mut gallery = Gallery {
                     page,
-                    dark,
+                    theme: if dark { Theme::dark() } else { Theme::light() }.name,
                     chrome: IdeFrameDecorator::Native,
                     ..Gallery::default()
                 };
@@ -211,6 +255,28 @@ mod tests {
             }
         }
         results.unwrap();
+    }
+
+    /// The two pickers combine any UI theme with any editor scheme.
+    #[test]
+    fn pickers_combine_a_theme_with_a_scheme() {
+        let mut gallery = Gallery::default();
+        assert_eq!(
+            gallery.picked(),
+            Theme::dark(),
+            "the default is Archipel Dark"
+        );
+        gallery.theme = "Darcula".into();
+        assert_eq!(
+            gallery.picked(),
+            Theme::darcula(),
+            "THEME_SCHEME keeps the theme's own"
+        );
+        gallery.scheme = "Monokai".into();
+        let theme = gallery.picked();
+        assert_eq!(theme.name, "Darcula");
+        assert_eq!(theme.editor_scheme().map(|s| s.name()), Some("Monokai"));
+        assert_eq!(theme.colors, Theme::darcula().colors);
     }
 
     /// Every page passes the kit's UX audit: named controls, big enough targets, no
