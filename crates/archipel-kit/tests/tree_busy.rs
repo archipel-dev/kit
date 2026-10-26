@@ -1,13 +1,13 @@
 //! Loading rows preserve their names and keyboard navigation.
 use archipel_kit::{
     Glyph, Theme, Tone,
-    components::{Tree, TreeRow},
     testing::{self, Queryable, Role},
+    ui::{Tree, TreeNode},
 };
 
 #[test]
 fn busy_parent_is_named_and_keyboard_reachable() {
-    let rows = [TreeRow::new("collections", 0)
+    let rows = [TreeNode::new("collections", 0)
         .icon(Glyph::Folder)
         .icon_tone(Tone::Warning)
         .busy(true)
@@ -32,12 +32,12 @@ fn busy_parent_is_named_and_keyboard_reachable() {
 fn snapshots() {
     testing::snapshot_themes("tree_busy", "../../docs/components/img", |ui| {
         let rows = [
-            TreeRow::new("Collections", 0)
+            TreeNode::new("Collections", 0)
                 .icon(Glyph::Folder)
                 .icon_tone(Tone::Warning)
                 .busy(true)
                 .parent(false),
-            TreeRow::new("users", 1).icon(Glyph::Database),
+            TreeNode::new("users", 1).icon(Glyph::Database),
         ];
         Tree::new("loading", &rows, &mut None).height(80.0).show(ui);
     });
@@ -46,7 +46,7 @@ fn snapshots() {
 #[test]
 fn double_clicking_a_parent_keeps_tree_keyboard_focus() {
     let mut h = testing::harness_state(Theme::dark(), (None, false), |ui, (selected, open)| {
-        let rows = [TreeRow::new("src", 0).parent(*open)];
+        let rows = [TreeNode::new("src", 0).parent(*open)];
         if Tree::new("project", &rows, selected).show(ui).toggled == Some(0) {
             *open = !*open;
         }

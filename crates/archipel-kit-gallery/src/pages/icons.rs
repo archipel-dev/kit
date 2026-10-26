@@ -7,11 +7,11 @@ pub(super) struct State {
 
 impl State {
     fn show(&mut self, ui: &mut egui::Ui, _enabled: bool) {
-        ui.add(TextField::search(&mut self.icon_filter).placeholder("Search icons"));
-        ui.add(SectionHeader::new("Language icon style"));
+        ui.add(JBTextField::search(&mut self.icon_filter).placeholder("Search icons"));
+        ui.add(TitledSeparator::new("Language icon style"));
         let mut style = Theme::current(ui.ctx()).language_icons;
         let styles = LanguageStyle::ALL.map(|style| (style, style.name()));
-        if ui.add(SegmentedControl::new(&mut style, styles)).changed() {
+        if ui.add(SegmentedButton::new(&mut style, styles)).changed() {
             let mut theme = (*Theme::current(ui.ctx())).clone();
             theme.language_icons = style;
             theme.apply(ui.ctx());
@@ -27,7 +27,7 @@ impl State {
             if glyphs.is_empty() {
                 continue;
             }
-            ui.add(SectionHeader::new(category.label()));
+            ui.add(TitledSeparator::new(category.label()));
             egui::Grid::new(category.label())
                 .num_columns(4)
                 .spacing([24.0, 8.0])
@@ -55,7 +55,7 @@ impl State {
             })
             .collect();
         if !languages.is_empty() {
-            ui.add(SectionHeader::new("Languages"));
+            ui.add(TitledSeparator::new("Languages"));
             egui::Grid::new("languages")
                 .num_columns(4)
                 .spacing([24.0, 8.0])
@@ -81,7 +81,7 @@ impl State {
                 });
         }
         if query.is_empty() || "symbol".contains(&query) {
-            ui.add(SectionHeader::new("Symbols"));
+            ui.add(TitledSeparator::new("Symbols"));
             ui.horizontal_wrapped(|ui| {
                 for kind in SymbolKind::ALL {
                     archipel_kit::icons::show(ui, kind, 16.0, color).on_hover_text(kind.name());
@@ -89,7 +89,7 @@ impl State {
             });
         }
         if matches.is_empty() && languages.is_empty() {
-            EmptyState::new("No icons match")
+            StatusText::new("No icons match")
                 .hint("Try a keyword such as \"http\" or \"trash\".")
                 .show(ui);
         }

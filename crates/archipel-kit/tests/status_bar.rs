@@ -1,30 +1,38 @@
-//! `StatusBarItem` and `Surface::Chrome` tests.
+//! `StatusBarWidget` and `Surface::Chrome` tests.
 
 mod common;
 
-use archipel_kit::components::{IconButton, StatusBarItem, Tooltip};
 use archipel_kit::parts::Surface;
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme, Tone};
+use archipel_kit::{action_system::ActionButton, ide::HelpTooltip, wm::StatusBarWidget};
 
 #[test]
 fn status_bar_snapshot() {
-    testing::snapshot_themes("status_bar_item", common::IMG, |ui| {
+    testing::snapshot_themes("status_bar_widget", common::IMG, |ui| {
         ui.set_width(420.0);
         Surface::Chrome.frame(ui.ctx()).show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.add(IconButton::new(Glyph::Run, "Run").tone(Tone::Run));
-                ui.add(StatusBarItem::new("app").icon(Glyph::Folder).chevron(true));
+                ui.add(ActionButton::new(Glyph::Run, "Run").tone(Tone::Run));
+                ui.add(
+                    StatusBarWidget::new("app")
+                        .icon(Glyph::Folder)
+                        .chevron(true),
+                );
             });
         });
         Surface::Chrome.frame(ui.ctx()).show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.add(StatusBarItem::new("main").icon(Glyph::Branch).chevron(true));
-                ui.add(StatusBarItem::new("UTF-8"));
-                ui.add(StatusBarItem::new("2 errors").tone(Tone::Error));
-                ui.add(StatusBarItem::new("Offline").enabled(false));
                 ui.add(
-                    StatusBarItem::new("A very long branch name that cannot fit here")
+                    StatusBarWidget::new("main")
+                        .icon(Glyph::Branch)
+                        .chevron(true),
+                );
+                ui.add(StatusBarWidget::new("UTF-8"));
+                ui.add(StatusBarWidget::new("2 errors").tone(Tone::Error));
+                ui.add(StatusBarWidget::new("Offline").enabled(false));
+                ui.add(
+                    StatusBarWidget::new("A very long branch name that cannot fit here")
                         .max_width(90.0),
                 );
             });
@@ -36,7 +44,11 @@ fn status_bar_snapshot() {
 fn item_is_a_named_button_that_clicks() {
     let mut harness = testing::harness_state(Theme::dark(), 0, |ui, clicks| {
         if ui
-            .add(StatusBarItem::new("main").icon(Glyph::Branch).chevron(true))
+            .add(
+                StatusBarWidget::new("main")
+                    .icon(Glyph::Branch)
+                    .chevron(true),
+            )
             .clicked()
         {
             *clicks += 1;
@@ -53,7 +65,7 @@ fn item_is_a_named_button_that_clicks() {
 fn disabled_item_ignores_clicks() {
     let mut harness = testing::harness_state(Theme::dark(), 0, |ui, clicks| {
         if ui
-            .add(StatusBarItem::new("Offline").enabled(false))
+            .add(StatusBarWidget::new("Offline").enabled(false))
             .clicked()
         {
             *clicks += 1;
@@ -69,7 +81,7 @@ fn disabled_item_ignores_clicks() {
 fn long_text_is_elided_and_shown_in_full_as_the_tooltip() {
     let long = "A very long branch name that cannot fit here";
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        ui.add(StatusBarItem::new(long).max_width(90.0));
+        ui.add(StatusBarWidget::new(long).max_width(90.0));
     });
     harness.run();
     let width = harness.get_by_label(long).rect().width();
@@ -88,9 +100,9 @@ fn caller_tooltip_replaces_the_elision_tooltip() {
     let long = "A very long branch name that cannot fit here";
     let mut harness = testing::harness(Theme::dark(), |ui| {
         ui.add(
-            StatusBarItem::new(long)
+            StatusBarWidget::new(long)
                 .max_width(90.0)
-                .with(Tooltip::new("Git branch")),
+                .with(HelpTooltip::new("Git branch")),
         );
     });
     harness.run();
@@ -107,7 +119,7 @@ fn caller_tooltip_replaces_the_elision_tooltip() {
 #[test]
 fn caller_tooltip_is_accepted() {
     let mut harness = testing::harness(Theme::dark(), |ui| {
-        ui.add(StatusBarItem::new("main").with(Tooltip::new("Git branch: main")));
+        ui.add(StatusBarWidget::new("main").with(HelpTooltip::new("Git branch: main")));
     });
     harness.get_by_label("main").hover();
     harness.run_steps(40);
@@ -118,7 +130,7 @@ fn caller_tooltip_is_accepted() {
 fn item_conforms_and_passes_the_audit() {
     testing::conformance("main", |ui, enabled| {
         ui.add(
-            StatusBarItem::new("main")
+            StatusBarWidget::new("main")
                 .icon(Glyph::Branch)
                 .chevron(true)
                 .enabled(enabled),
@@ -128,8 +140,12 @@ fn item_conforms_and_passes_the_audit() {
     let mut harness = testing::harness(Theme::light(), |ui| {
         Surface::Chrome.frame(ui.ctx()).show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.add(StatusBarItem::new("main").icon(Glyph::Branch).chevron(true));
-                ui.add(StatusBarItem::new("UTF-8"));
+                ui.add(
+                    StatusBarWidget::new("main")
+                        .icon(Glyph::Branch)
+                        .chevron(true),
+                );
+                ui.add(StatusBarWidget::new("UTF-8"));
             });
         });
     });

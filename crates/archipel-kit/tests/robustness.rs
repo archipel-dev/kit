@@ -1,10 +1,12 @@
 //! Components never panic when a layout runs out of room: negative widths, tiny areas.
 
-use archipel_kit::components::{
-    Button, Checkbox, CodeEditor, Dropdown, Form, KeyValueEntry, KeyValueTable, TextField,
-};
 use archipel_kit::testing::{self};
 use archipel_kit::{Theme, egui};
+use archipel_kit::{
+    editor::{EditorComponent, model::Editor},
+    openapi::ui::ComboBox,
+    ui::{Button, JBTextField, KeyValueEntry, KeyValueTable, dsl::panel},
+};
 
 #[test]
 fn negative_widths_and_tiny_areas_do_not_panic() {
@@ -16,17 +18,24 @@ fn negative_widths_and_tiny_areas_do_not_panic() {
             "GET",
             vec![KeyValueEntry::new("a", "1")],
             true,
+            Editor::new("let a = 1;"),
         ),
-        |ui, (text, method, rows, on)| {
-            ui.add(TextField::new(text).width(-25.0));
-            ui.add(Dropdown::new("m", method, ["GET", "POST"]).width(-25.0));
+        |ui, (text, method, rows, on, editor)| {
+            ui.add(JBTextField::new(text).width(-25.0));
+            ui.add(ComboBox::new("m", method, ["GET", "POST"]).width(-25.0));
             ui.add(Button::primary("Send").min_width(-10.0));
             KeyValueTable::new("kv", rows).show(ui);
-            Form::new().show(ui, |form| {
-                form.add(Checkbox::new(on, "A long label").comment("And a comment that wraps"));
-                form.row("Label:", |ui| ui.add(TextField::new(text)));
+            let mut other = String::new();
+            panel(ui, |p| {
+                p.unlabeled_row(|r| {
+                    r.check_box(on, "A long label")
+                        .comment("And a comment that wraps");
+                });
+                p.row("Label:", |r| {
+                    r.text_field(&mut other);
+                });
             });
-            ui.add(CodeEditor::new(text).height(-5.0));
+            ui.add(EditorComponent::new(editor).height(-5.0));
         },
     );
     h.run();

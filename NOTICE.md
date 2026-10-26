@@ -17,9 +17,35 @@ and color scheme data files of **IntelliJ Community**
 the Apache License 2.0. Upstream notice: "This software includes code from IntelliJ IDEA.
 Copyright (C) JetBrains s.r.o."
 
-Only color values were taken. No source code, icons, images or other artwork were copied;
-the icons in `icons.rs` are original drawings. IntelliJ and JetBrains are trademarks of
-JetBrains s.r.o.; Archipel is not affiliated with or endorsed by JetBrains.
+The bundled themes and editor color schemes (`Theme::islands_dark()` and the other
+constructors, `EditorScheme::all()`, `crates/archipel-kit/src/theme/generated/`) are generated
+by `tools/themes` from these data files of the same checkout (tag `idea/262.10968.63`, commit
+`8062c061ff33e22041d9f1844db5b8b8a6b5e4d7`), also licensed under the Apache License 2.0:
+
+- UI themes, in `platform/platform-resources/src/themes/`: `darcula.theme.json`,
+  `intellijlaf.theme.json`, `Light.theme.json`, `HighContrast.theme.json`,
+  `expUI/expUI_dark.theme.json`, `expUI/expUI_light.theme.json`,
+  `expUI/expUI_light_with_light_header.theme.json`, `islands/ManyIslandsDark.theme.json`,
+  `islands/ManyIslandsLight.theme.json`, `islands/ManyIslandsDarcula.theme.json` and
+  `islands/HighContrast.theme.json`; and in `plugins/laf/`:
+  `macos/resources/macintellijlaf.theme.json` and `win10/resources/win10intellijlaf.theme.json`.
+- Editor color schemes: `platform/platform-resources/src/DefaultColorSchemesManager.xml`
+  (Default, Darcula), and in `platform/platform-resources/src/themes/`: `Light.xml`,
+  `highContrastScheme.xml`, `expUI/expUI_darkScheme.xml`, `expUI/expUI_lightScheme.xml`,
+  `expUI/expUI_darculaContrastScheme.xml`, `islands/IslandSchemeDark.xml` and
+  `islands/highContrastScheme.xml`; and the bundled scheme plugins in
+  `plugins/color-schemes/` (`monokai`, `twilight`, `blackboard`, `cobalt`,
+  `all-hallows-eve`, `warm-neon`, `github`, `vibrant-ink` and `rails-casts`, each
+  `resources/colorSchemes/*.xml`). These plugins are part of the same repository, name
+  JetBrains as their vendor and carry no license file of their own; the scheme names refer to
+  well-known editor themes, and only the color values of JetBrains' files are used.
+- Registration files read for theme ids and paths: `platform/platform-resources/src/META-INF/PlatformExtensions.xml`
+  and the `META-INF/plugin.xml` of the macOS and Windows 10 laf plugins.
+
+Only color values (and, for the UI themes, numeric metrics such as arc radii and row heights)
+were taken. No source code, icons, images or other artwork were copied; the icons in `icons.rs`
+are original drawings. IntelliJ and JetBrains are trademarks of JetBrains s.r.o.; Archipel is
+not affiliated with or endorsed by JetBrains.
 
 ## Language colors and file associations
 

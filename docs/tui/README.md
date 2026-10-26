@@ -1,25 +1,27 @@
 # Archipel Kit TUI
 
-`archipel-kit-tui` is Archipel Kit for the terminal, built on [ratatui](https://ratatui.rs).
-It keeps the GUI kit's theme colors, icons and component names, in the flat style of modern
-Neovim setups such as NvChad. Panels are blocks of color without borders. Titles are pills.
-Open files are a tab line of buffers, and the status line has a mode block. Input fields look
-like prompts. It looks like Archipel, but it should feel like a good terminal app, not like a
-GUI squeezed into cells.
+`archipel-kit-tui` is Archipel Kit for the terminal, built on [ratatui](https://ratatui.rs). It
+**looks like NvChad** (the Neovim distribution) and **behaves like an IntelliJ app**: the same
+component names, the same actions (`action_system`), the same keymap, the same selection and
+speed search models and the same timings as the GUI kit. An app built on the kit can ship a
+terminal version next to its GUI.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/ide.dark.svg">
-  <img alt="An IDE screen in the terminal: project tree, editor with tabs, run panel" src="img/ide.light.svg" width="840">
+  <img alt="The terminal IDE: project tree, editor tabs, run window, status line" src="img/ide.light.svg" width="840">
 </picture>
+
+Run it: `cargo run -p archipel-kit-tui --example ide`. The smaller `gallery` example shows the
+controls.
 
 ## Font: use a Nerd Font
 
 All icons in the TUI are [Nerd Font](https://www.nerdfonts.com) characters: codicons for kit
 glyphs and symbols, language logos for files, Material Design checkbox and switch icons, and
-Powerline half circles for the pill shapes in the status bar and chips. Set your terminal font to a Nerd Font. We recommend **JetBrainsMono Nerd Font**: it is
-JetBrains Mono, the GUI kit's code font, with the icons added. Use the plain variant, not
-"Mono", because the Mono variant shrinks the icons to one cell. The components leave a space
-after every icon for it to draw into.
+Powerline half circles for the rounded ends of status segments and chips. Set the terminal font
+to a Nerd Font. We recommend **JetBrainsMono Nerd Font** (the plain variant, not "Mono": the
+Mono variant shrinks the icons to one cell). The components leave a space after every icon for
+it to draw into.
 
 ```bash
 # macOS
@@ -27,35 +29,105 @@ brew install --cask font-jetbrains-mono-nerd-font
 # Linux: download JetBrainsMono.zip from the Nerd Fonts releases into ~/.local/share/fonts
 ```
 
-Use a terminal with 24-bit color, such as WezTerm, kitty, Ghostty, iTerm2, Windows Terminal,
-Alacritty or GNOME Terminal.
+Use a terminal with 24-bit color: WezTerm, kitty, Ghostty, iTerm2, Windows Terminal, Alacritty,
+GNOME Terminal.
 
-The images on this page are SVG snapshots from the tests. Nerd Font characters can't be text
-in them, because a browser has no Nerd Font and the kit ships no third-party artwork. So icon
-cells show the matching Archipel icon, and the half circles, box marks and frame lines are
-drawn as shapes.
-In a terminal, the font draws the codicons and logos. The two look alike.
+The images on this page are SVG snapshots from the tests. A browser has no Nerd Font, so icon
+cells show the matching Archipel icon, and half circles, box marks and frame lines are drawn as
+shapes. In a terminal the font draws them; the two look alike.
 
 ## How the GUI maps to cells
 
-The colors and icons come straight from the GUI. The shapes follow terminal conventions.
+The colors and icons come from the GUI theme; the look is NvChad's. Every IntelliJ theme works:
+`Look::new(theme)` derives NvChad's color roles ([`NvChadPalette`]) from any kit `Theme`, so all
+bundled themes and editor schemes give a consistent terminal look.
 
-| GUI | Terminal |
+| GUI | Terminal (NvChad) |
 |---|---|
-| Floating islands on the frame color | `Island`: a flat block of the island color, one cell apart on a `Frame`; no borders |
-| Tool window header, active tool window | A title pill on the first row, in the accent when the panel has focus (like Telescope titles) |
-| Editor tabs | `TabBar`, a tab line like NvChad's tabufline: buffers on the frame color, the selected one in the island color so it joins the editor |
-| Status bar | `StatusBar`: a mode block in the accent ending in a half circle, key hints, and a status block on the right |
-| Text field | A prompt: a pill of the field color with the label pill (or a search icon) inside, the error on the next row |
-| Selected row (inset pill) | A full-width bar in the selection color; quieter when the list isn't focused |
-| Hover | The hover color on the focused row (keyboard focus stands in for the mouse) |
-| Rounded buttons | A filled label with one cell of padding; the shortcut key is underlined; focus shows `❯ … ❮` |
-| Banner | One row: an edge in the severity color, icon and text on the tint, actions as bold links |
-| Theme colors (`Theme::colors`) | 24-bit colors from the same `Theme`; translucent colors are blended over the island |
-| Glyphs, language and symbol icons | Nerd Font codicons and logos in the same colors (language colors lifted to 3:1 contrast) |
+| Islands on a frame color | Flat full-bleed panes edge to edge, no gaps and no rounded blocks: the editor on `black`, side bars and the bottom pane on `darker_black`, separated by a thin `│` or `─` in the `line` color |
+| Tool windows (left, right, bottom) | A side bar like nvim-tree, a bottom pane like a toggled terminal split; a header row with a title block (accent when focused, like a Telescope title); a narrow stripe of icon buttons |
+| Editor tabs (`JBTabs`) | The tabufline: `  <icon> name  󰅖` per buffer, the active one on the editor background with bright bold text, inactive ones on `black2` with grey text, a green dot for a modified buffer, theme and close-all buttons at the right end |
+| Status bar and widgets | The default NvChad statusline: a mode block with a rounded end, file, git branch with `+ ~ -` counts, message in the center, diagnostics counts, language server, working directory and cursor position as colored segments; lower-priority segments drop first when narrow |
+| Text field | A Telescope prompt: `black2` background, a colored title block as the label (or a search icon), a block caret |
+| Selected row | The cursor line: a full-width bar on `one_bg3` (quieter on `black2` when the list has no focus); matches of the speed search are bold and underlined |
+| `ListPopup`, Search Everywhere, combo list, dialogs | Telescope-style floats: a centered float, a colored title block, the prompt row, the results on `darker_black` with the selected row highlighted, borderless |
+| `ActionPopupMenu`, `ComboBox` list | The completion menu (nvim-cmp): a raised surface, the selected item filled with the accent, kind icons in color, shortcuts grey at the right, submenus as adjacent floats |
+| `HelpTooltip` | An LSP hover float: raised surface, thin rounded border, title, shortcut and description |
+| Notification balloons | nvim-notify floats in the top-right corner with a rounded border in the severity color |
+| Pending two-stroke shortcut | A which-key list at the bottom with the keys that complete the chord |
+| Editor area | A number column in grey with the current line bright, the cursor line on `black2`, indent guides as thin `│` in the `line` color; a dashboard (nvdash style) when no file is open |
+| Buttons | A filled label with one cell of padding; the mnemonic underlined; focus shows `❯ … ❮` |
+| `InlineBanner` | One row: an edge in the severity color, icon and text, actions as bold links |
 
-The kit `Theme` is the single source: `Look::new(theme)` turns any GUI theme, including a
-custom one, into a terminal look.
+## Interaction model
+
+The runtime is an immediate mode loop like the GUI's, driven by events. Components are **stateless
+like the GUI components**: they borrow state you own and say what happened. The state types are
+the GUI kit's wherever they could be reused: `ListSelectionModel`, `SpeedSearchState`,
+`ToolWindowPaneState`, `ToolWindow`/`ContentManager`, `NotificationsManager`, `PopupStep`,
+`ActionGroup`, `DataContext`, `Keymap`, `ValidationInfo`, `ExitCode`.
+
+- **[`App`]** is the trait you implement: `event`, `draw`, optionally `tick` and `deadline`.
+  `runtime::run_app` sets the terminal up (raw mode, alternate screen, mouse capture, bracketed
+  paste, focus reporting, the kitty keyboard protocol when available), runs the loop and restores
+  the terminal, also on panic.
+- **[`Runtime`]** carries what components need: the `Look`, the `Keymap`, the clock `now` in
+  seconds, the `HitMap`, the `FocusManager`, the clipboard and the tooltip state. The delays are
+  the GUI's (`tokens::motion`): tooltip 500 ms, submenu 250 ms, popup auto-selection 500 ms,
+  reopen guard 200 ms, dialog validation 300 ms, balloon 10 s, second key of a chord 2 s.
+- **Events** ([`Event`]): key press, key release (kitty terminals), mouse, resize, paste, focus
+  gained and lost. `Runtime::preprocess` resolves each key event through the **same `Keymap` the
+  GUI uses**, two-stroke chords included (`rt.actions()`), and each mouse event into a `Pointer`
+  with click counts and the widget under it.
+- **Hit map and focus**: while drawing, every interactive widget registers its rectangle
+  (`rt.widget(id, rect)`); mouse events are resolved against that map, the topmost wins, and a
+  modal layer blocks what is below. `rt.widget` also puts the widget in the focus order
+  (Tab and Shift+Tab); a press on a focusable widget focuses it.
+- **Layers** ([`overlay::Layers`]): popups, dialogs, tooltips and balloons above the app. The
+  top modal layer gets every key and mouse event first; **Esc unwinds the top layer first**;
+  balloons are above the app but below dialogs.
+- **Clipboard**: copying publishes the text with the OSC 52 sequence; pasting arrives as a
+  bracketed paste event from the terminal.
+
+### Keys
+
+Shortcuts are the GUI's. A legacy terminal cannot send some combos, so `terminal_keymap` adds
+fallbacks (all also work in kitty-protocol terminals), and tooltips and menus show the shortcut
+the terminal can send (`Runtime::shortcut_text`).
+
+| Action | GUI shortcut | Terminal fallback |
+|---|---|---|
+| Activate tool window 1..9 | Alt+1..9 | Ctrl+W, then 1..9 (Option+digit types a symbol on macOS) |
+| Hide active tool window | Shift+Esc | none needed |
+| Hide all tool windows | Ctrl+Shift+F12 | Ctrl+W, then H |
+| Maximize tool window | Ctrl+Shift+' | Ctrl+W, then M |
+| Resize tool window | Ctrl+Alt+Shift+arrows | Ctrl+W, then an arrow |
+| Back to the editor | Esc | none needed |
+| Jump to last tool window | F12 | none needed |
+| Go to Action / Search Everywhere | Ctrl+Shift+A, double Shift | Ctrl+P, Ctrl+K then A; double Shift needs modifier key reporting (kitty protocol) |
+| Find in Path | Ctrl+Shift+F | Ctrl+K, then F |
+| Redo | Ctrl+Shift+Z | Ctrl+K, then Z |
+| Switcher | Ctrl+Tab | Ctrl+K, then T |
+| Close active tab | Ctrl+Shift+F4 | Ctrl+K, then W (Ctrl+F4 works too) |
+| Next / previous tab | Alt+Right / Alt+Left | none needed |
+| Copy, Cut, Paste, Select All, Undo | Ctrl+C, X, V, A, Z | none needed (the terminal's own paste arrives as a paste event) |
+
+Chords show a which-key list after the first stroke and time out after two seconds.
+
+### Mouse
+
+Click, double click, drag, wheel and right click work everywhere (mouse capture is on):
+
+| Where | Mouse |
+|---|---|
+| Buttons, check boxes, switches | press and release inside clicks; dragging off cancels |
+| Lists, trees, tables | click selects, Ctrl+click toggles, Shift+click and drag extend, double click activates or expands, the wheel scrolls three rows, right click selects the row unless it is selected and asks for a context menu, the chevron toggles a node, header click sorts, the column divider drags |
+| Popups | hover selects (not on the first move), resting 250 ms opens a submenu, a click chooses on release, the chevron opens without choosing, a press outside cancels |
+| Tabs | a press selects at once, middle click or Shift+click closes, the close icon closes after 150 ms of hover, dragging reorders, the wheel scrolls, right click asks for the menu |
+| Tool windows | stripe buttons toggle (middle or Shift+click hides, right click asks for a menu), header double click maximizes, the minimize button hides, separators drag, double click on a separator resets it |
+| Status bar | slots highlight on hover, show tooltips, report clicks; right click asks for the widget menu |
+| Text fields | click places the caret, double click selects a word, triple click all, drag selects |
+| Balloons | hover pauses the timer, the close icon dismisses, links run actions |
 
 ## Getting started
 
@@ -64,118 +136,180 @@ custom one, into a terminal look.
 archipel-kit-tui = { git = "https://github.com/archipel-dev/kit" }
 ```
 
-Components are ratatui `Widget`s that borrow a `Look`. They are stateless like the GUI
-components: your app owns the state and passes it in on every frame.
+An app is a state, an event handler and a draw function:
 
 ```rust
-use archipel_kit_tui::components::{Button, Checkbox, Frame, Island};
+use archipel_kit_tui::components::{Pane, PaneKind};
+use archipel_kit_tui::controls::{ButtonControl, ButtonState};
 use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
-use archipel_kit_tui::{Glyph, Look};
+use archipel_kit_tui::{App, Event, Id, Look, Runtime};
 
-fn draw(look: &Look, format_on_save: bool, area: Rect, buf: &mut Buffer) {
-    Frame::new(look).render(area, buf);
-    let island = Island::new(look).title("Settings");
-    let panel = Rect::new(1, 1, area.width - 2, area.height - 2);
-    let inner = island.inner(panel);
-    island.render(panel, buf);
-    Checkbox::new(look, format_on_save, "Format on save")
-        .render(Rect::new(inner.x, inner.y, inner.width, 1), buf);
-    let run = Button::primary(look, "Apply").icon(Glyph::Success);
-    let width = run.width();
-    run.render(Rect::new(inner.x, inner.y + 2, width, 1), buf);
+const OK: Id = Id::new("ok");
+
+#[derive(Default)]
+struct Hello {
+    button: ButtonState,
+    clicks: u32,
 }
 
-let look = Look::dark();
-let area = Rect::new(0, 0, 40, 8);
-let mut buf = Buffer::empty(area);
-draw(&look, true, area, &mut buf);
+impl App for Hello {
+    fn event(&mut self, rt: &mut Runtime, event: &Event) {
+        if ButtonControl::new(OK, "Say hi").primary().handle(rt, &mut self.button, event) {
+            self.clicks += 1;
+        }
+        if rt.is_action("Exit") {
+            rt.quit = true;
+        }
+    }
+
+    fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) {
+        Pane::new(&rt.look).kind(PaneKind::Editor).render(area, buf);
+        ButtonControl::new(OK, "Say hi").primary().show(rt, &self.button, 2, 1, buf);
+    }
+}
+
+// In `main`: archipel_kit_tui::runtime::run_app(Look::dark(), &mut Hello::default(), Default::default())
 ```
 
-In an app, draw inside `terminal.draw(|frame| draw(&look, …, frame.area(), frame.buffer_mut()))`
-and handle keys with crossterm, which ratatui re-exports. The [gallery](#gallery) is a small
-complete example.
+Test the same code without a terminal: `testing::Harness` runs an `App` against an in-memory screen
+with synthetic keys and mouse events and a manual clock.
+
+```rust
+use archipel_kit_tui::testing::Harness;
+# use archipel_kit_tui::components::{Pane, PaneKind};
+# use archipel_kit_tui::controls::{ButtonControl, ButtonState};
+# use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+# use archipel_kit_tui::{App, Event, Id, Runtime};
+# const OK: Id = Id::new("ok");
+# #[derive(Default)]
+# struct Hello { button: ButtonState, clicks: u32 }
+# impl App for Hello {
+#     fn event(&mut self, rt: &mut Runtime, event: &Event) {
+#         if ButtonControl::new(OK, "Say hi").primary().handle(rt, &mut self.button, event) {
+#             self.clicks += 1;
+#         }
+#     }
+#     fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) {
+#         Pane::new(&rt.look).kind(PaneKind::Editor).render(area, buf);
+#         ButtonControl::new(OK, "Say hi").primary().show(rt, &self.button, 2, 1, buf);
+#     }
+# }
+let mut harness = Harness::new(Hello::default(), 30, 4);
+harness.click(5, 1);
+assert_eq!(harness.app.clicks, 1);
+```
 
 ## Components
 
-Each component shows dark and light; the images are SVG snapshots from the tests.
+Each component has a render-only widget in `components` (the images below) and, where it takes
+input, an interactive counterpart with the GUI's name and rules.
 
-### Island and Frame
+| Component | Module | Notes |
+|---|---|---|
+| `Pane`, `Separator` | `components` | NvChad panes and the window separator line |
+| `Button`, `ActionButton` | `components`, `controls`, `toolbar` | default (primary) button, Enter and Space, Alt+mnemonic |
+| `ActionToolbar` | `toolbar` | from an `ActionGroup` with a `DataContext` and `ActionPlace`; performs through the action system; drop-down groups; overflow; tooltips with shortcuts; the description goes to the status bar |
+| `ActionPopupMenu`, `ListPopup` | `popup` | arrows wrap, Home/End, Enter, Right/Left submenus, Esc back, Shift+Esc close all, speed search, mnemonics; the GUI's `PopupStep` |
+| `ComboBox` | `combo` | Up/Down change, Alt+Down, F4, Enter, Space open |
+| `JBTextField`, `SearchTextField` | `controls` | caret, selection, undo, clipboard, word movement, placeholder, clear button, history |
+| `JBCheckBox`, `JBRadioButton`, `OnOffButton`, `SegmentedButton` | `controls` | tri-state, group arrows |
+| `JBList`, `Tree`, `JBTable` | `collections` | `ListSelectionModel`, `SpeedSearchState` and the camel-hump matcher of the kit |
+| `JBTabs` | `tabs` | the tabufline |
+| `ToolWindowPane`, stripes | `workbench` | `ToolWindowPaneState`; Alt+digit, Esc, Shift+Esc, Ctrl+Shift+F12, splitters |
+| `StatusBar` | `components`, `statusbar` | NvChad statusline slots, clickable |
+| `HelpTooltip` | `tooltip` | hover with delay and focus |
+| `NotificationsManager` | `balloon` | nvim-notify balloons with the GUI timings |
+| `DialogWrapper`, `Messages` | `dialog` | Enter, Esc, Left/Right, Y/N, validation |
+| `InlineBanner` | `components`, `controls` | |
 
-`Frame` fills the background, and `Island::new(look).title("Project").focused(true)` is a
-panel. `inner(area)` is its content area. Leave one cell of frame between panels, as in the
-GUI. The IDE screen at the top shows the layout.
-
-### Button
-
-`Button::primary`, `secondary`, `ghost` and `danger`, with an optional icon and `key` (the
-underlined shortcut), plus `focused` and `enabled`. `width()` gives the cells it needs,
-focus markers included.
+### Panes, buttons and choices
 
 <img alt="Buttons in the terminal" src="img/button.dark.svg" width="538"> <img alt="Buttons, light" src="img/button.light.svg" width="538">
 
-### Checkbox, Radio, Toggle
-
-`Checkbox` (checked, unchecked, `mixed`, disabled), `Radio` and the `Toggle` switch. A
-`focused` row gets the hover color.
-
 <img alt="Checkboxes, radio buttons and toggles" src="img/choice.dark.svg" width="403"> <img alt="Choices, light" src="img/choice.light.svg" width="403">
 
-### TextField
+<img alt="Text fields: placeholder, focused with selection, error, clear button" src="img/text-field.dark.svg" width="386"> <img alt="Text fields, light" src="img/text-field.light.svg" width="386">
 
-A prompt-style input: the label in a pill (a search icon without a label), a placeholder
-while empty, an accent pill and a cursor while focused, and a red pill with the message on
-the next row on error. `height()` is 1, or 2 with an error.
-
-<img alt="Text fields: placeholder, focused, error" src="img/text-field.dark.svg" width="370"> <img alt="Text fields, light" src="img/text-field.light.svg" width="370">
-
-### ListRow
-
-Rows of lists and trees: `depth`, an `expanded` chevron, an icon (`Glyph`, `Language` or
-`Symbol`), `secondary` text, and `selected`, shown as a full-width bar. Use
-`active(false)` for a selection in a list that doesn't have focus.
-
-<img alt="A project tree and a structure view" src="img/list-row.dark.svg" width="336"> <img alt="List rows, light" src="img/list-row.light.svg" width="336">
-
-### TabBar
-
-The tab line of open buffers. Each tab has its language icon. A green dot marks a modified
-buffer, and the selected tab has a red close icon. Put it directly above the editor panel.
-
-<img alt="Editor tabs" src="img/tab-bar.dark.svg" width="504"> <img alt="Editor tabs, light" src="img/tab-bar.light.svg" width="504">
-
-### Banner
-
-Info, success, warning and error messages with actions on the right.
+<img alt="Interactive controls" src="img/controls.dark.svg" width="504"> <img alt="Controls, light" src="img/controls.light.svg" width="504">
 
 <img alt="Banners in four severities" src="img/banner.dark.svg" width="538"> <img alt="Banners, light" src="img/banner.light.svg" width="538">
 
-### StatusBar
-
-The status line: `mode` (the accent block at the left), key hints as (key, action), and the
-`right` status block.
-
-<img alt="Status bar with mode, key hints and position" src="img/status-bar.dark.svg" width="605"> <img alt="Status bar, light" src="img/status-bar.light.svg" width="605">
-
-### SegmentedControl, ProgressBar, Kbd, Chip
-
 <img alt="Segmented control, progress bar, key caps and chips" src="img/misc.dark.svg" width="437"> <img alt="Misc, light" src="img/misc.light.svg" width="437">
+
+### Lists, trees, tables and speed search
+
+Up/Down move (no wrap), Shift extends, Ctrl moves the lead, Ctrl+Space toggles, Home/End and
+PageUp/PageDown jump, Ctrl+A selects all, Enter activates. In a tree Right expands or selects the
+first child, Left collapses or selects the parent. Typing starts the speed search (letters,
+digits and ``*_-+"'/.#$>:,;?!@%^&``): it matches camel humps and word starts, highlights the
+matches, selects the first match, Up and Down move between matches, Backspace edits, Ctrl+Backspace
+clears, Esc closes it, and Enter, Left, Right and Page keys close it and act.
+
+<img alt="List with speed search, tree and table" src="img/collections.dark.svg" width="504"> <img alt="Collections, light" src="img/collections.light.svg" width="504">
+
+<img alt="A project tree and a structure view" src="img/list-row.dark.svg" width="336"> <img alt="List rows, light" src="img/list-row.light.svg" width="336">
+
+### Popups and menus
+
+<img alt="Action popup menu with a submenu and a Telescope-style list" src="img/popup.dark.svg" width="605"> <img alt="Popups, light" src="img/popup.light.svg" width="605">
+
+### Toolbar, tabs and combo box
+
+<img alt="Toolbar with a tooltip, tab line and combo box" src="img/toolbar.dark.svg" width="672"> <img alt="Toolbar, light" src="img/toolbar.light.svg" width="672">
+
+<img alt="Editor tabs" src="img/tab-bar.dark.svg" width="504"> <img alt="Editor tabs, light" src="img/tab-bar.light.svg" width="504">
+
+### Tool windows
+
+`Workbench` draws stripes, headers and separators around the editor and implements the key and
+mouse rules; you draw the content into the rectangles it returns.
+
+<img alt="Workbench: project, editor, run window, notifications, stripes" src="img/workbench.dark.svg" width="840"> <img alt="Workbench, light" src="img/workbench.light.svg" width="840">
+
+### Status bar
+
+<img alt="Status bar: mode, file, branch, message, diagnostics, language server, directory, position" src="img/status-bar.dark.svg" width="924"> <img alt="Status bar, light" src="img/status-bar.light.svg" width="924">
+
+### Dialogs, notifications and tooltips
+
+<img alt="A dialog with validation, balloons and the status line" src="img/overlays.dark.svg" width="840"> <img alt="Overlays, light" src="img/overlays.light.svg" width="840">
+
+### Search Everywhere
+
+<img alt="Search Everywhere as a Telescope float" src="img/ide-search.dark.svg" width="840">
 
 ### Icons
 
-`LanguageIcon`, `SymbolIcon`, and `Look::glyph` with `Look::glyph_color`. The character
-tables are in `archipel_kit_tui::glyphs`: every `Glyph`, `Language` and `SymbolKind` has a
-Nerd Font character, and a test checks that none is missing.
+`LanguageIcon`, `SymbolIcon`, and `Look::glyph` with `Look::glyph_color`. The character tables are
+in `archipel_kit_tui::glyphs`: every `Glyph`, `Language` and `SymbolKind` has a Nerd Font
+character, and a test checks that none is missing.
 
-<img alt="Language logos, symbol icons and glyphs" src="img/icons.dark.svg" width="605"> <img alt="Icons, light" src="img/icons.light.svg" width="605">
+<img alt="Language logos, symbols and glyphs" src="img/icons.dark.svg" width="605"> <img alt="Icons, light" src="img/icons.light.svg" width="605">
+
+## Terminal limits
+
+- **Keys**: legacy terminals send Ctrl+Shift+letter as Ctrl+letter, no Ctrl+Tab, no Ctrl+digit,
+  and no Super; on macOS Option+digit types a symbol. The fallbacks above cover the bound
+  actions. With the kitty keyboard protocol (kitty, WezTerm, Ghostty, foot, recent Alacritty and
+  iTerm2) every combo works, key release is reported, and double Shift can be detected.
+- **Mouse**: terminals report cells, not pixels. Hover needs any-motion tracking (on). Some
+  terminals keep Shift+drag for their own selection.
+- **Clipboard**: copy uses OSC 52 (kitty, WezTerm, iTerm2, Ghostty, Alacritty, Windows Terminal,
+  tmux with `set-clipboard on`); paste arrives through the terminal's own paste.
+- **Cursor and focus**: the caret is a drawn block; focus events need terminal support, without
+  them balloon timers run while the window is in the background.
+- **Fonts**: icons need a Nerd Font.
 
 ## Testing
 
-`archipel_kit_tui::testing` renders widgets into an in-memory buffer without a terminal:
+`archipel_kit_tui::testing` renders without a terminal:
 
-- `render(width, height, |area, buf| …)` draws into a fresh buffer.
-- `lines(&buf)` gives the text of each row, for behavior assertions.
-- `snapshot(name, &buf)` compares the buffer, as SVG, with `docs/tui/img/<name>.svg`.
-  `UPDATE_SNAPSHOTS=1 cargo test -p archipel-kit-tui` accepts changes.
+- `Harness` runs an `App` with synthetic events (`press`, `type_text`, `click`, `double_click`,
+  `drag`, `scroll`, `hover`, `advance`) and a manual clock; `find` and `screen` read the result.
+- `render(width, height, |area, buf| …)` draws a widget into a fresh buffer, `lines(&buf)` gives
+  the text of each row, and `snapshot(name, &buf)` compares the buffer, as SVG, with
+  `docs/tui/img/<name>.svg` (`UPDATE_SNAPSHOTS=1 cargo test -p archipel-kit-tui` accepts
+  changes). The SVG snapshots need no GPU.
 
 ```rust
 use archipel_kit_tui::components::Button;
@@ -188,26 +322,11 @@ let buf = render(12, 1, |area, buf| Button::secondary(&look, "OK").render(area, 
 assert_eq!(lines(&buf), ["  OK"]);
 ```
 
-The SVG snapshots need no GPU, so they run everywhere.
+## What is next
 
-## Gallery
-
-```bash
-cargo run -p archipel-kit-tui --example gallery
-```
-
-The gallery has four pages: Controls, Lists, Feedback and Icons. Keys: `←`/`→` (or `h`/`l`,
-`Tab`) switch pages, `↑`/`↓` (or `j`/`k`) move, `Space` toggles, `t` switches between dark and
-light, and `q` quits.
-
-## Roadmap
-
-- **Same app, two front ends.** The IDE, Nexus HTTP and Mongo Raabit describe their screens
-  once and render them with the GUI kit or the TUI kit (`archipel-ide --tui`). This needs the
-  declarative view layer from the kit roadmap, so a screen isn't written twice by hand.
-- **Interaction helpers**: focus order, mouse hit testing and scrolling lists, shared by all
-  components.
-- **More components**: Dropdown and menus as popups, Toast, dialogs, tooltips (on focus), and a
-  split layout with draggable dividers.
-- **`archipel-theme` crate**: the theme and tokens without egui, so the TUI doesn't compile
-  egui.
+- The terminal editor component on the kit's `editor::model::Editor` (the read-only `TextArea`
+  is a placeholder).
+- Backend-agnostic kit modules so the TUI reuses more of the GUI's logic (see the extraction list
+  in the TUI hand-off notes): popup chain, notification timers, speed search over rows, tool window
+  pane model.
+- `archipel-theme` crate: the theme and tokens without egui, so the TUI does not compile egui.

@@ -33,13 +33,13 @@ Two helpers let a parent take part:
   area.
 
 ```rust
-use archipel_kit::components::{Button, Link};
+use archipel_kit::ui::{Button, ActionLink};
 use archipel_kit::{cursor, egui::{self, CursorIcon}};
 
 fn panel(ui: &mut egui::Ui, loading: bool) {
     cursor::override_in(ui, loading.then_some(CursorIcon::Progress), |ui| {
         cursor::fallback_in(ui, CursorIcon::Grab, |ui| {
-            ui.add(Link::new("Configure…")); // hand, unless loading
+            ui.add(ActionLink::new("Configure…")); // hand, unless loading
             ui.add(Button::primary("Run")); // hand, unless loading
             ui.add_space(40.0); // grab, unless loading
         });

@@ -1,9 +1,9 @@
-//! `TextField::completer`: the kit draws and operates the completion list.
+//! `JBTextField::completer`: the kit draws and operates the completion list.
 
 use archipel_kit::Theme;
-use archipel_kit::components::{Completion, Completions, TextField};
 use archipel_kit::egui::Key;
 use archipel_kit::testing::{self, Queryable};
+use archipel_kit::ui::{Completion, Completions, JBTextField};
 
 const VARIABLES: [&str; 3] = ["base_url", "user_id", "user_name"];
 
@@ -28,7 +28,7 @@ fn complete(text: &str, caret: usize) -> Option<Completions> {
 
 fn harness() -> testing::Harness<'static, String> {
     testing::harness_state(Theme::dark(), String::new(), |ui, url| {
-        ui.add(TextField::new(url).name("URL").completer(&complete));
+        ui.add(JBTextField::new(url).name("URL").completer(&complete));
     })
 }
 
@@ -91,7 +91,7 @@ fn escape_closes_and_a_click_inserts() {
 #[test]
 fn enter_without_a_list_still_submits() {
     let mut h = testing::harness_state(Theme::dark(), (String::new(), false), |ui, (url, sent)| {
-        let out = TextField::new(url)
+        let out = JBTextField::new(url)
             .name("URL")
             .completer(&complete)
             .show(ui);
@@ -111,14 +111,14 @@ fn snapshot() {
         pub const IMG: &str = "../../docs/components/img";
     }
     testing::snapshot_themes_after(
-        "text_field_completion",
+        "jb_text_field_completion",
         common::IMG,
         |ui| {
             ui.set_width(360.0);
             let id = archipel_kit::egui::Id::new("completion-snapshot");
             let mut url = ui.data_mut(|d| d.get_temp_mut_or_default::<String>(id).clone());
             ui.add(
-                TextField::new(&mut url)
+                JBTextField::new(&mut url)
                     .name("URL")
                     .monospace(true)
                     .completer(&complete),
@@ -166,10 +166,10 @@ fn fields(text: &str, caret: usize) -> Option<Completions> {
 
 #[test]
 fn code_editor_completes_and_places_the_caret_inside() {
-    use archipel_kit::components::CodeEditor;
-    let mut h = testing::harness_state(Theme::dark(), String::from("query {\n  "), |ui, text| {
+    use archipel_kit::editor::{EditorComponent, model::Editor};
+    let mut h = testing::harness_state(Theme::dark(), Editor::new("query {\n  "), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Query")
                 .height(160.0)
                 .completer(&fields),
@@ -184,19 +184,19 @@ fn code_editor_completes_and_places_the_caret_inside() {
     assert!(h.query_by_label_contains("users").is_some(), "list is open");
     h.key_press(Key::Enter);
     h.run();
-    assert_eq!(h.state(), "query {\n  user(id: )");
+    assert_eq!(h.state().document.text(), "query {\n  user(id: )");
     // The caret is between the parentheses.
     h.get_by_label("Query").type_text("7");
     h.run();
-    assert_eq!(h.state(), "query {\n  user(id: 7)");
+    assert_eq!(h.state().document.text(), "query {\n  user(id: 7)");
 }
 
 #[test]
 fn ctrl_space_opens_the_list_in_a_code_editor() {
-    use archipel_kit::components::CodeEditor;
-    let mut h = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
+    use archipel_kit::editor::{EditorComponent, model::Editor};
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(""), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Query")
                 .height(160.0)
                 .completer(&fields),
@@ -213,7 +213,7 @@ fn ctrl_space_opens_the_list_in_a_code_editor() {
 /// Waits for a typed letter, but lists everything when asked.
 struct Patient;
 
-impl archipel_kit::components::Completer for Patient {
+impl archipel_kit::ui::Completer for Patient {
     fn complete(&self, text: &str, caret: usize) -> Option<Completions> {
         let typed = text
             .chars()
@@ -236,10 +236,10 @@ impl archipel_kit::components::Completer for Patient {
 
 #[test]
 fn a_patient_completer_opens_on_request_only() {
-    use archipel_kit::components::CodeEditor;
-    let mut h = testing::harness_state(Theme::dark(), String::new(), |ui, text| {
+    use archipel_kit::editor::{EditorComponent, model::Editor};
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(""), |ui, editor| {
         ui.add(
-            CodeEditor::new(text)
+            EditorComponent::new(editor)
                 .label("Query")
                 .height(160.0)
                 .completer(&Patient),

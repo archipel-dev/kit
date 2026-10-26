@@ -7,15 +7,15 @@
 //!
 //! ```
 //! # egui::__run_test_ui(|ui| {
-//! use archipel_kit::behaviour::{ContextMenu, WidgetExt};
-//! use archipel_kit::components::{IconButton, MenuItem, Tooltip};
+//! use archipel_kit::behaviour::{PopupHandler, WidgetExt};
+//! use archipel_kit::{action_system::{ActionButton, ActionMenuItem}, ide::HelpTooltip};
 //! use archipel_kit::Glyph;
 //!
 //! ui.add(
-//!     IconButton::new(Glyph::Run, "Run")
-//!         .with(Tooltip::new("Run 'app'").shortcut("Shift+F10"))
-//!         .with(ContextMenu::new(|ui| {
-//!             ui.add(MenuItem::new("Edit Configuration…"));
+//!     ActionButton::new(Glyph::Run, "Run")
+//!         .with(HelpTooltip::new("Run 'app'").shortcut("Shift+F10"))
+//!         .with(PopupHandler::new(|ui| {
+//!             ui.add(ActionMenuItem::new("Edit Configuration…"));
 //!         })),
 //! );
 //! # });
@@ -25,7 +25,7 @@
 //! Write a behaviour as a type implementing [`Behaviour`], or as a closure
 //! `|ui, response| { …; response }`.
 
-use crate::components::Tooltip;
+use crate::ide::HelpTooltip;
 use crate::parts::Surface;
 use crate::theme::Theme;
 use crate::tokens::radius;
@@ -149,7 +149,7 @@ impl<W: Widget, B: Behaviour> Widget for With<W, B> {
     }
 }
 
-impl Behaviour for Tooltip {
+impl Behaviour for HelpTooltip {
     fn attach(self, _ui: &mut Ui, response: Response) -> Response {
         self.show_for(&response);
         response
@@ -161,31 +161,123 @@ impl Behaviour for Tooltip {
 }
 
 /// A context menu on secondary click (right click, or Ctrl+click on macOS), on the popup
-/// surface. Fill it with [`MenuItem`](crate::components::MenuItem)s; a click on a `MenuItem`
-/// closes it (call `ui.close()` for other widgets).
-pub struct ContextMenu<'a> {
-    add: Box<dyn FnOnce(&mut Ui) + 'a>,
+/// surface.
+///
+/// [`PopupHandler::for_group`] shows an [`ActionGroup`](crate::action_system::ActionGroup) as
+/// an [`ActionPopupMenu`](crate::action_system::ActionPopupMenu): the rows follow the actions'
+/// presentations, submenus, keys, timings and the reopen guard are the list popup's (see
+/// [`ListPopup`](crate::ui::popup::ListPopup)), and choosing a row performs the action. The
+/// menu opens with the top-left corner at the pointer and selects nothing until a key is
+/// pressed or the pointer moves.
+///
+/// [`PopupHandler::new`] takes a closure that fills an egui menu with
+/// [`ActionMenuItem`](crate::action_system::ActionMenuItem)s (a click on an `ActionMenuItem`
+/// closes it; call `ui.close()` for other widgets): for content that is not actions.
+pub struct PopupHandler<'a> {
+    add: Option<MenuContent<'a>>,
+    group: Option<GroupMenu<'a>>,
 }
 
-impl<'a> ContextMenu<'a> {
+/// The closure that fills an egui context menu.
+type MenuContent<'a> = Box<dyn FnOnce(&mut Ui) + 'a>;
+
+/// An action group a [`PopupHandler`] shows.
+struct GroupMenu<'a> {
+    group: &'a dyn crate::action_system::ActionGroup,
+    context: &'a crate::action_system::DataContext,
+    place: crate::action_system::ActionPlace,
+    keymap: Option<(&'a crate::action_system::Keymap, bool)>,
+}
+
+/// What the context menu of a widget remembers in the egui context.
+#[derive(Clone, Default)]
+struct MenuMemory {
+    chain: crate::ui::popup::PopupChain,
+    pos: egui::Pos2,
+}
+
+impl<'a> PopupHandler<'a> {
     /// A context menu drawn by `add`.
     pub fn new(add: impl FnOnce(&mut Ui) + 'a) -> Self {
-        Self { add: Box::new(add) }
+        Self {
+            add: Some(Box::new(add)),
+            group: None,
+        }
+    }
+
+    /// A context menu showing `group` for `place` (IntelliJ `PopupHandler.installPopupMenu`
+    /// with an action group).
+    pub fn for_group(
+        group: &'a dyn crate::action_system::ActionGroup,
+        context: &'a crate::action_system::DataContext,
+        place: crate::action_system::ActionPlace,
+    ) -> Self {
+        Self {
+            add: None,
+            group: Some(GroupMenu {
+                group,
+                context,
+                place,
+                keymap: None,
+            }),
+        }
+    }
+
+    /// Shows the actions' first keyboard shortcuts from `keymap` (group menus only).
+    pub fn keymap(mut self, keymap: &'a crate::action_system::Keymap, mac: bool) -> Self {
+        if let Some(group) = &mut self.group {
+            group.keymap = Some((keymap, mac));
+        }
+        self
     }
 }
 
-impl Behaviour for ContextMenu<'_> {
+impl Behaviour for PopupHandler<'_> {
     fn attach(self, _ui: &mut Ui, response: Response) -> Response {
+        if let Some(menu) = self.group {
+            let ctx = response.ctx.clone();
+            let id = response.id.with("archipel-popup-handler");
+            let mut memory: MenuMemory = ctx.data(|d| d.get_temp(id)).unwrap_or_default();
+            let now = ctx.input(|i| i.time);
+            let mac_click =
+                cfg!(target_os = "macos") && response.clicked() && ctx.input(|i| i.modifiers.ctrl);
+            if response.secondary_clicked() || mac_click {
+                // A new menu at the pointer, also when one is open somewhere else.
+                if let Some(pos) = ctx.input(|i| i.pointer.interact_pos()) {
+                    memory.chain.close(now);
+                    memory.chain.forget_close();
+                    memory.chain.open(now, false);
+                    memory.pos = pos;
+                }
+            }
+            if memory.chain.is_open() {
+                let mut popup = crate::action_system::ActionPopupMenu::new(
+                    id.with("menu"),
+                    menu.group,
+                    menu.context,
+                    menu.place,
+                );
+                if let Some((keymap, mac)) = menu.keymap {
+                    popup = popup.keymap(keymap, mac);
+                }
+                popup.show_at(&ctx, &mut memory.chain, memory.pos);
+            }
+            ctx.data_mut(|d| d.insert_temp(id, memory));
+            return response;
+        }
+        let Some(add) = self.add else {
+            return response;
+        };
         let frame = Surface::Popup.frame(&response.ctx);
         egui::Popup::context_menu(&response)
             .frame(frame)
-            // Clicks inside stay open so a submenu item can open its menu; a `MenuItem` closes
+            // Clicks inside stay open so a submenu item can open its menu; a `ActionMenuItem` closes
             // the menu itself when it is clicked (other widgets: call `ui.close()`).
             .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
             .show(|ui| {
                 // Menu items touch: 24 pt apart, as in Android Studio.
                 ui.spacing_mut().item_spacing.y = 0.0;
-                (self.add)(ui)
+                add(ui)
             });
         response
     }

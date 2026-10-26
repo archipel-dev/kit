@@ -16,7 +16,7 @@ plugin or an app can do the same.
 | Need | Part |
 |---|---|
 | Hover, press, focus, selection, disabled → colors | [`State`](../crates/archipel-kit/src/parts/state.rs) |
-| Icon, label and dimmed secondary text, aligned like every row | [`RowContent`](../crates/archipel-kit/src/parts/row.rs) |
+| Icon, label and dimmed secondary text, aligned like every row | [`SimpleColoredComponent`](../crates/archipel-kit/src/parts/row.rs) |
 | The caller's content at the right end (count, action) | [`Slot`](../crates/archipel-kit/src/parts/slot.rs) |
 | Rounded row highlight, focus ring | `row_pill`, `focus_ring` |
 | Cursor | `cursor::on_hover` (rows keep the arrow; actions use `cursor::on_hover_action`) |
@@ -35,7 +35,7 @@ interaction that is not part of its look.
 
 ```rust
 use archipel_kit::behaviour::{Behaviour, Behaviours};
-use archipel_kit::parts::{RowContent, Slot, State, focus_ring, row_pill};
+use archipel_kit::parts::{SimpleColoredComponent, Slot, State, focus_ring, row_pill};
 use archipel_kit::tokens::size;
 use archipel_kit::{Icon, Theme, cursor, egui};
 use egui::{Rect, Response, Sense, Ui, WidgetInfo, WidgetType, pos2, vec2};
@@ -109,10 +109,10 @@ impl<'a> ResultRow<'a> {
             if state.focused && !state.selected {
                 focus_ring(ui.painter(), rect.shrink(size::ROW_PILL_INSET), 4, &colors);
             }
-            let content = RowContent {
+            let content = SimpleColoredComponent {
                 icon: Some(self.icon),
                 secondary: Some(self.path),
-                ..RowContent::new(self.file)
+                ..SimpleColoredComponent::new(self.file)
             };
             content.paint(ui, rect, rect.left() + size::ROW_PILL_INSET + 8.0, state);
         }
@@ -131,10 +131,10 @@ impl<'a> ResultRow<'a> {
 }
 
 # egui::__run_test_ui(|ui| {
-use archipel_kit::components::Tooltip;
+use archipel_kit::ide::HelpTooltip;
 let row = ResultRow::new("main.rs", "src/")
     .trailing(Slot::text("3"))
-    .with(Tooltip::new("3 matches"))
+    .with(HelpTooltip::new("3 matches"))
     .show(ui);
 # let _ = row;
 # });
@@ -184,19 +184,19 @@ testing::conformance("main.rs src/", |ui, enabled| {
 - <kbd>Tab</kbd> reaches every focusable element.
 
 Run it on the component with its slots filled, because that is where compositions break.
-An icon button in a row is the classic case: a regular `IconButton` (26 points) sticks out
-of a 24-point row, and the audit reports the overlap. `IconButton::small` fits.
+An icon button in a row is the classic case: a regular `ActionButton` (26 points) sticks out
+of a 24-point row, and the audit reports the overlap. `ActionButton::small` fits.
 
 ```rust,no_run
-use archipel_kit::components::{IconButton, ListRow};
+use archipel_kit::{action_system::ActionButton, ui::ColoredListCellRenderer};
 use archipel_kit::parts::Slot;
 use archipel_kit::testing::{self, Problem};
 use archipel_kit::{Glyph, Theme};
 
 let mut harness = testing::harness(Theme::dark(), |ui| {
-    ListRow::new("app")
+    ColoredListCellRenderer::new("app")
         .trailing(Slot::ui(|ui| {
-            ui.add(IconButton::new(Glyph::Close, "Remove app").small(true));
+            ui.add(ActionButton::new(Glyph::Close, "Remove app").small(true));
         }))
         .show(ui);
 });

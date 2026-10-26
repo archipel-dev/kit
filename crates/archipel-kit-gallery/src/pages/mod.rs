@@ -1,17 +1,28 @@
-use archipel_kit::behaviour::ContextMenu;
-use archipel_kit::components::code::{Json, TemplateHighlighter, TemplateToken};
-use archipel_kit::components::{
-    Avatar, Banner, Bucket, Button, Cell, ChartColor, Checkbox, CodeEditor, CodeView, Column,
-    Counter, Dialog, Dropdown, EmptyState, Form, Histogram, IconButton, Kbd, KeyValueEntry,
-    KeyValueTable, Link, ListRow, MenuItem, MenuSeparator, Panel, ProgressBar, PropertyGrid, Radio,
-    SectionHeader, SegmentedControl, Separator, Severity, Side, SortOrder, Sparkline, Spinner,
-    SplitPane, StatusBarItem, Tab, TabBar, Table, Tag, TextField, Toast, Toggle, Tooltip,
-    TooltipExt, Tree, TreeRow, TreeTable,
-};
+use archipel_kit::behaviour::PopupHandler;
+use archipel_kit::editor::{Json, TemplateHighlighter, TemplateToken};
 use archipel_kit::egui::{Key, Modifiers};
 use archipel_kit::icons::{Category, Language, LanguageStyle, SymbolKind};
-use archipel_kit::parts::{Popover, Slot, Surface};
+use archipel_kit::parts::{Slot, Surface};
+use archipel_kit::ui::popup::JBPopup;
 use archipel_kit::{Glyph, Icon, Theme, Tone, ValueKind, cursor, egui, tokens};
+use archipel_kit::{
+    action_system::{ActionButton, ActionMenuItem},
+    editor::EditorComponent,
+    ide::{HelpTooltip, HelpTooltipExt},
+    notification::Notification,
+    openapi::ui::{ComboBox, DialogWrapper, Side, Splitter},
+    ui::popup::ListSeparator,
+    ui::tabs::{JBTabs, TabInfo},
+    ui::{
+        ActionLink, AsyncProcessIcon, Avatar, Bucket, Button, Cell, ChartColor,
+        ColoredListCellRenderer, ColumnInfo, Counter, Extension, Histogram, InlineBanner,
+        JBCheckBox, JBIntSpinner, JBTable, JBTextField, Kbd, KeyValueEntry, KeyValueTable,
+        OnOffButton, ProgressBar, PropertyGrid, SearchHistory, SearchTextField, SegmentedButton,
+        SeparatorComponent, SortOrder, Sparkline, Status, StatusText, Tag, TitledSeparator, Tree,
+        TreeNode, TreeTable,
+    },
+    wm::{SimpleToolWindowPanel, StatusBarWidget},
+};
 
 mod buttons;
 mod charts;
@@ -41,7 +52,7 @@ pub(super) enum Page {
     Overlays,
     Code,
     Icons,
-    Workbench,
+    ToolWindowPane,
 }
 
 impl Page {
@@ -58,7 +69,7 @@ impl Page {
         (Page::Overlays, "Tooltips & dialogs", Glyph::Info),
         (Page::Code, "Code", Glyph::Code),
         (Page::Icons, "Icons", Glyph::Sparkle),
-        (Page::Workbench, "Workbench", Glyph::Layers),
+        (Page::ToolWindowPane, "Workbench", Glyph::Layers),
     ];
 }
 
@@ -94,7 +105,7 @@ impl Pages {
             Page::Code => code::show(ui, &mut self.code, enabled),
             Page::Icons => icons::show(ui, &mut self.icons, enabled),
             Page::Charts => charts::show(ui, &mut self.charts, enabled),
-            Page::Workbench => workbench::show(ui, &mut self.workbench, enabled),
+            Page::ToolWindowPane => workbench::show(ui, &mut self.workbench, enabled),
         });
     }
 }

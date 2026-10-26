@@ -1,38 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="504.0" height="54.0" viewBox="0 0 504.0 54.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
-<rect x="0.0" y="0.0" width="117.6" height="18" fill="#191A1C"/>
-<rect x="117.6" y="0.0" width="386.4" height="18" fill="#26282C"/>
+<rect x="0.0" y="0.0" width="126.0" height="18" fill="#191A1C"/>
+<rect x="126.0" y="0.0" width="294.0" height="18" fill="#222325"/>
+<rect x="420.0" y="0.0" width="84.0" height="18" fill="#141416"/>
 <svg x="17.3" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#DEA584" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#DEA584" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#DEA584"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#000000">Rs</text></svg>
-<text x="33.6" y="13.5" fill="#DFE1E5" font-weight="bold">m</text>
-<text x="42.0" y="13.5" fill="#DFE1E5" font-weight="bold">a</text>
-<text x="50.4" y="13.5" fill="#DFE1E5" font-weight="bold">i</text>
-<text x="58.8" y="13.5" fill="#DFE1E5" font-weight="bold">n</text>
-<text x="67.2" y="13.5" fill="#DFE1E5" font-weight="bold">.</text>
-<text x="75.6" y="13.5" fill="#DFE1E5" font-weight="bold">r</text>
-<text x="84.0" y="13.5" fill="#DFE1E5" font-weight="bold">s</text>
-<svg x="101.3" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#F57E84" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#F57E84" stroke-width="1"/></svg>
-<svg x="134.9" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#A96248" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#A96248" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#9C4221"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="6.2" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">Tml</text></svg>
-<text x="151.2" y="13.5" fill="#73767C">C</text>
-<text x="159.6" y="13.5" fill="#73767C">a</text>
-<text x="168.0" y="13.5" fill="#73767C">r</text>
-<text x="176.4" y="13.5" fill="#73767C">g</text>
-<text x="184.8" y="13.5" fill="#73767C">o</text>
-<text x="193.2" y="13.5" fill="#73767C">.</text>
-<text x="201.6" y="13.5" fill="#73767C">t</text>
-<text x="210.0" y="13.5" fill="#73767C">o</text>
-<text x="218.4" y="13.5" fill="#73767C">m</text>
-<text x="226.8" y="13.5" fill="#73767C">l</text>
-<text x="243.6" y="13.5" fill="#6DB083">●</text>
-<svg x="277.7" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="3.5 1.5 9.5 1.5 12.5 4.5 12.5 14.5 3.5 14.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 7.5 10.5 7.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 9.5 10.5 9.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 11.5 8.5 11.5" fill="none" stroke="#CED0D6" stroke-width="1"/></svg>
-<text x="294.0" y="13.5" fill="#73767C">R</text>
-<text x="302.4" y="13.5" fill="#73767C">E</text>
-<text x="310.8" y="13.5" fill="#73767C">A</text>
-<text x="319.2" y="13.5" fill="#73767C">D</text>
-<text x="327.6" y="13.5" fill="#73767C">M</text>
-<text x="336.0" y="13.5" fill="#73767C">E</text>
-<text x="344.4" y="13.5" fill="#73767C">.</text>
-<text x="352.8" y="13.5" fill="#73767C">m</text>
-<text x="361.2" y="13.5" fill="#73767C">d</text>
-<svg x="378.5" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#73767C" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#73767C" stroke-width="1"/></svg>
+<text x="33.6" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">m</text>
+<text x="42.0" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">a</text>
+<text x="50.4" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">i</text>
+<text x="58.8" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">n</text>
+<text x="67.2" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">.</text>
+<text x="75.6" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">r</text>
+<text x="84.0" y="13.5" fill="#BCBEC4" font-weight="bold" text-decoration="underline">s</text>
+<svg x="109.7" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#F57E84" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#F57E84" stroke-width="1"/></svg>
+<svg x="143.3" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#A25B42" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#A25B42" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#9C4221"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="6.2" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">Tml</text></svg>
+<text x="159.6" y="13.5" fill="#737478">C</text>
+<text x="168.0" y="13.5" fill="#737478">a</text>
+<text x="176.4" y="13.5" fill="#737478">r</text>
+<text x="184.8" y="13.5" fill="#737478">g</text>
+<text x="193.2" y="13.5" fill="#737478">o</text>
+<text x="201.6" y="13.5" fill="#737478">.</text>
+<text x="210.0" y="13.5" fill="#737478">t</text>
+<text x="218.4" y="13.5" fill="#737478">o</text>
+<text x="226.8" y="13.5" fill="#737478">m</text>
+<text x="235.2" y="13.5" fill="#737478">l</text>
+<text x="260.4" y="13.5" fill="#6DB083">●</text>
+<svg x="294.5" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="3.5 1.5 9.5 1.5 12.5 4.5 12.5 14.5 3.5 14.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 7.5 10.5 7.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 9.5 10.5 9.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 11.5 8.5 11.5" fill="none" stroke="#CED0D6" stroke-width="1"/></svg>
+<text x="310.8" y="13.5" fill="#737478">R</text>
+<text x="319.2" y="13.5" fill="#737478">E</text>
+<text x="327.6" y="13.5" fill="#737478">A</text>
+<text x="336.0" y="13.5" fill="#737478">D</text>
+<text x="344.4" y="13.5" fill="#737478">M</text>
+<text x="352.8" y="13.5" fill="#737478">E</text>
+<text x="361.2" y="13.5" fill="#737478">.</text>
+<text x="369.6" y="13.5" fill="#737478">m</text>
+<text x="378.0" y="13.5" fill="#737478">d</text>
+<svg x="403.7" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#5D5F63" stroke-width="1"/></svg>
 <rect x="0.0" y="18.0" width="504.0" height="18" fill="#191A1C"/>
 <rect x="0.0" y="36.0" width="504.0" height="18" fill="#191A1C"/>
 </svg>

@@ -1,30 +1,36 @@
-//! `Dropdown`, `MenuItem` and `Link` tests.
+//! `ComboBox`, `ActionMenuItem` and `ActionLink` tests.
 
 mod common;
 
-use archipel_kit::components::{Dropdown, Link, MenuHeader, MenuItem, MenuSeparator};
 use archipel_kit::parts::Surface;
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme};
+use archipel_kit::{
+    action_system::ActionMenuItem, openapi::ui::ComboBox, ui::ActionLink, ui::popup::ListSeparator,
+};
 
 #[test]
 fn menu_snapshot() {
-    testing::snapshot_themes("menu_item", common::IMG, |ui| {
+    testing::snapshot_themes("action_menu_item", common::IMG, |ui| {
         Surface::Popup.frame(ui.ctx()).show(ui, |ui| {
             ui.set_width(260.0);
-            ui.add(MenuItem::new("Copy").icon(Glyph::Copy).shortcut("Ctrl+C"));
             ui.add(
-                MenuItem::new("Find in Files…")
+                ActionMenuItem::new("Copy")
+                    .icon(Glyph::Copy)
+                    .shortcut("Ctrl+C"),
+            );
+            ui.add(
+                ActionMenuItem::new("Find in Files…")
                     .icon(Glyph::FindInFiles)
                     .shortcut("Ctrl+Shift+F"),
             );
-            ui.add(MenuSeparator);
-            ui.add(MenuItem::new("Soft-Wrap").checked(true));
-            ui.add(MenuItem::new("Run").icon(Glyph::Run).enabled(false));
-            ui.add(MenuSeparator);
-            ui.add(MenuHeader::new("Open Projects"));
+            ui.add(ListSeparator::new());
+            ui.add(ActionMenuItem::new("Soft-Wrap").checked(true));
+            ui.add(ActionMenuItem::new("Run").icon(Glyph::Run).enabled(false));
+            ui.add(ListSeparator::new());
+            ui.add(ListSeparator::with_text("Open Projects"));
             ui.add(
-                MenuItem::new("archipel")
+                ActionMenuItem::new("archipel")
                     .icon(Glyph::Folder)
                     .description("~/code/archipel"),
             );
@@ -33,12 +39,18 @@ fn menu_snapshot() {
 }
 
 #[test]
-fn menu_item_clicks_and_reports_check_state() {
+fn action_menu_item_clicks_and_reports_check_state() {
     let mut harness = testing::harness_state(Theme::dark(), (0, true), |ui, (copies, wrap)| {
-        if ui.add(MenuItem::new("Copy").shortcut("Ctrl+C")).clicked() {
+        if ui
+            .add(ActionMenuItem::new("Copy").shortcut("Ctrl+C"))
+            .clicked()
+        {
             *copies += 1;
         }
-        if ui.add(MenuItem::new("Soft-Wrap").checked(*wrap)).clicked() {
+        if ui
+            .add(ActionMenuItem::new("Soft-Wrap").checked(*wrap))
+            .clicked()
+        {
             *wrap = !*wrap;
         }
     });
@@ -52,11 +64,11 @@ fn menu_item_clicks_and_reports_check_state() {
 }
 
 #[test]
-fn dropdown_snapshot() {
-    testing::snapshot_themes("dropdown", common::IMG, |ui| {
-        ui.add(Dropdown::new("method", &mut "GET", ["GET", "POST"]).width(120.0));
+fn combo_box_snapshot() {
+    testing::snapshot_themes("combo_box", common::IMG, |ui| {
+        ui.add(ComboBox::new("method", &mut "GET", ["GET", "POST"]).width(120.0));
         ui.add(
-            Dropdown::new("off", &mut "Disabled", ["Disabled"])
+            ComboBox::new("off", &mut "Disabled", ["Disabled"])
                 .width(120.0)
                 .enabled(false),
         );
@@ -64,9 +76,9 @@ fn dropdown_snapshot() {
 }
 
 #[test]
-fn dropdown_picks_an_option() {
+fn combo_box_picks_an_option() {
     let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {
-        ui.add(Dropdown::new("method", method, ["GET", "POST", "PUT"]));
+        ui.add(ComboBox::new("method", method, ["GET", "POST", "PUT"]));
     });
     // Make room for the popup below the button.
     harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 240.0));
@@ -82,10 +94,10 @@ fn dropdown_picks_an_option() {
 
 #[test]
 fn link_snapshot() {
-    testing::snapshot_themes("link", common::IMG, |ui| {
+    testing::snapshot_themes("action_link", common::IMG, |ui| {
         ui.horizontal(|ui| {
             ui.label("Gradle JVM is not set.");
-            ui.add(Link::new("Configure…"));
+            ui.add(ActionLink::new("Configure…"));
         });
     });
 }
@@ -93,7 +105,7 @@ fn link_snapshot() {
 #[test]
 fn link_has_link_role() {
     let mut harness = testing::harness_state(Theme::dark(), false, |ui, clicked| {
-        *clicked |= ui.add(Link::new("Open docs")).clicked();
+        *clicked |= ui.add(ActionLink::new("Open docs")).clicked();
     });
     let node = harness.get_by_label("Open docs");
     assert_eq!(node.role(), Role::Link);
@@ -103,10 +115,10 @@ fn link_has_link_role() {
 }
 
 mod submenu {
-    use archipel_kit::behaviour::ContextMenu;
-    use archipel_kit::components::{ListRow, MenuItem};
+    use archipel_kit::behaviour::PopupHandler;
     use archipel_kit::testing::{self, NodeExt, NodeT, Queryable};
     use archipel_kit::{Glyph, Theme};
+    use archipel_kit::{action_system::ActionMenuItem, ui::ColoredListCellRenderer};
     use egui::Key;
 
     /// A row whose context menu has "Open" and a "New" submenu with two items; the state
@@ -114,21 +126,24 @@ mod submenu {
     fn harness() -> testing::Harness<'static, Vec<&'static str>> {
         let mut harness = testing::harness_state(Theme::dark(), Vec::new(), |ui, clicked| {
             let cell = std::cell::RefCell::new(Vec::new());
-            ListRow::new("src")
-                .with(ContextMenu::new(|ui| {
-                    if ui.add(MenuItem::new("Open").icon(Glyph::Folder)).clicked() {
+            ColoredListCellRenderer::new("src")
+                .with(PopupHandler::new(|ui| {
+                    if ui
+                        .add(ActionMenuItem::new("Open").icon(Glyph::Folder))
+                        .clicked()
+                    {
                         cell.borrow_mut().push("open");
                     }
-                    ui.add(MenuItem::new("New").submenu(|ui| {
-                        if ui.add(MenuItem::new("File…")).clicked() {
+                    ui.add(ActionMenuItem::new("New").submenu(|ui| {
+                        if ui.add(ActionMenuItem::new("File…")).clicked() {
                             cell.borrow_mut().push("file");
                         }
-                        ui.add(MenuItem::new("Directory…"));
+                        ui.add(ActionMenuItem::new("Directory…"));
                     }));
                     ui.add(
-                        MenuItem::new("Locked")
+                        ActionMenuItem::new("Locked")
                             .submenu(|ui| {
-                                ui.add(MenuItem::new("Never shown"));
+                                ui.add(ActionMenuItem::new("Never shown"));
                             })
                             .enabled(false),
                     );
@@ -249,9 +264,9 @@ mod submenu {
     fn submenu_item_conforms() {
         testing::conformance("New", |ui, enabled| {
             ui.add(
-                MenuItem::new("New")
+                ActionMenuItem::new("New")
                     .submenu(|ui| {
-                        ui.add(MenuItem::new("File…"));
+                        ui.add(ActionMenuItem::new("File…"));
                     })
                     .enabled(enabled),
             )
@@ -267,12 +282,16 @@ mod submenu {
             let mut harness = testing::harness(theme, |ui| {
                 egui::Frame::popup(ui.style()).show(ui, |ui| {
                     ui.set_width(200.0);
-                    ui.add(MenuItem::new("Open").icon(Glyph::Folder).shortcut("Enter"));
-                    ui.add(MenuItem::new("New").submenu(|ui| {
-                        ui.add(MenuItem::new("File…").icon(Glyph::File));
-                        ui.add(MenuItem::new("Directory…").icon(Glyph::Folder));
+                    ui.add(
+                        ActionMenuItem::new("Open")
+                            .icon(Glyph::Folder)
+                            .shortcut("Enter"),
+                    );
+                    ui.add(ActionMenuItem::new("New").submenu(|ui| {
+                        ui.add(ActionMenuItem::new("File…").icon(Glyph::File));
+                        ui.add(ActionMenuItem::new("Directory…").icon(Glyph::Folder));
                     }));
-                    ui.add(MenuItem::new("Delete").shortcut("Del"));
+                    ui.add(ActionMenuItem::new("Delete").shortcut("Del"));
                 });
             });
             harness.set_size(egui::vec2(460.0, 150.0));
@@ -286,7 +305,7 @@ mod submenu {
             assert!(harness.query_by_label("File…").is_some());
             harness
                 .try_snapshot_options(
-                    format!("menu_item_submenu.{suffix}"),
+                    format!("action_menu_item_submenu.{suffix}"),
                     &testing::SnapshotOptions::new().output_path(super::common::IMG),
                 )
                 .expect("snapshot matches");
@@ -310,9 +329,9 @@ fn highlighted(harness: &egui_kittest::Harness<'_>, label: &str) -> bool {
 
 fn three_items() -> egui_kittest::Harness<'static> {
     testing::harness(Theme::dark(), |ui| {
-        ui.add(MenuItem::new("New Project…"));
-        ui.add(MenuItem::new("Open…"));
-        ui.add(MenuItem::new("Clone Repository…"));
+        ui.add(ActionMenuItem::new("New Project…"));
+        ui.add(ActionMenuItem::new("Open…"));
+        ui.add(ActionMenuItem::new("Clone Repository…"));
     })
 }
 

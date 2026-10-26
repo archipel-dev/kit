@@ -25,11 +25,11 @@ design tools.
 In an Archipel Kit app, glyphs work wherever an icon is expected:
 
 ```rust
-use archipel_kit::components::{Button, IconButton};
+use archipel_kit::{ui::Button, action_system::ActionButton};
 use archipel_kit::{Glyph, egui};
 
 fn toolbar(ui: &mut egui::Ui) {
-    ui.add(IconButton::new(Glyph::Refresh, "Reload"));
+    ui.add(ActionButton::new(Glyph::Refresh, "Reload"));
     ui.add(Button::secondary("Connect").icon(Glyph::Plug));
 }
 ```

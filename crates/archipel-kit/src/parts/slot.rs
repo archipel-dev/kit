@@ -1,7 +1,7 @@
 //! Slots: places in a component that take the caller's content.
 
 use super::{State, Tone};
-use crate::components::common;
+use crate::common;
 use crate::icons::{self, Icon};
 use crate::theme::Theme;
 use crate::tokens::{size, typography};
@@ -14,16 +14,16 @@ use egui::{Layout, Rect, Ui, UiBuilder, pos2, vec2};
 ///
 /// ```
 /// # egui::__run_test_ui(|ui| {
-/// use archipel_kit::components::{IconButton, ListRow};
+/// use archipel_kit::{action_system::ActionButton, ui::ColoredListCellRenderer};
 /// use archipel_kit::parts::Slot;
 /// use archipel_kit::Glyph;
 ///
-/// ListRow::new("build.gradle.kts")
+/// ColoredListCellRenderer::new("build.gradle.kts")
 ///     .trailing(Slot::text("modified"))
 ///     .show(ui);
-/// ListRow::new("app")
+/// ColoredListCellRenderer::new("app")
 ///     .trailing(Slot::ui(|ui| {
-///         ui.add(IconButton::new(Glyph::Close, "Remove app").small(true));
+///         ui.add(ActionButton::new(Glyph::Close, "Remove app").small(true));
 ///     }))
 ///     .show(ui);
 /// # });
@@ -64,7 +64,7 @@ impl<'a> Slot<'a> {
     }
 
     /// Widgets drawn by `add` in a square one row high: room for one small icon button
-    /// (`IconButton::small`). Use [`Slot::ui_width`] for more.
+    /// (`ActionButton::small`). Use [`Slot::ui_width`] for more.
     pub fn ui(add: impl FnOnce(&mut Ui) + 'a) -> Self {
         Self::ui_width(size::ROW_HEIGHT, add)
     }
@@ -73,6 +73,14 @@ impl<'a> Slot<'a> {
     pub fn ui_width(width: f32, add: impl FnOnce(&mut Ui) + 'a) -> Self {
         Self {
             kind: SlotKind::Ui(width, Box::new(add)),
+        }
+    }
+
+    /// The icon of an icon slot (a list of rows that only has room for icons shows these).
+    pub(crate) fn icon_of(&self) -> Option<Icon> {
+        match &self.kind {
+            SlotKind::Icon(icon, _) => Some(*icon),
+            _ => None,
         }
     }
 

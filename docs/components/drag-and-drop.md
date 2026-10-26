@@ -3,7 +3,7 @@
 Drag and drop in the kit is one protocol with three parts:
 
 - [`DragSource(payload)`](../behaviours.md) — a behaviour that makes a widget draggable:
-  `ListRow::new("price").with(DragSource(Field("price")))`.
+  `ColoredListCellRenderer::new("price").with(DragSource(Field("price")))`.
 - [`DropTarget`](../behaviours.md) — a behaviour that makes an existing widget a target (a
   folder row in a tree).
 - `DropZone` — an area of its own that takes a payload type, with a hint while it is empty: the
@@ -18,7 +18,7 @@ Drag and drop in the kit is one protocol with three parts:
 
 ```rust
 use archipel_kit::behaviour::DragSource;
-use archipel_kit::components::{DropZone, ListRow};
+use archipel_kit::ui::{DropZone, ColoredListCellRenderer};
 use archipel_kit::egui;
 
 #[derive(Clone)]
@@ -26,7 +26,7 @@ struct Field(String);
 
 fn builder(ui: &mut egui::Ui, fields: &[String], filter: &mut Vec<String>) {
     for name in fields {
-        let row = ListRow::new(name.as_str())
+        let row = ColoredListCellRenderer::new(name.as_str())
             .with(DragSource(Field(name.clone())))
             .show(ui);
         // The keyboard way to the same result.
@@ -59,7 +59,7 @@ fn builder(ui: &mut egui::Ui, fields: &[String], filter: &mut Vec<String>) {
 
 ## Behavior
 
-- A `ListRow` with a `DragSource` shows a grab cursor on hover and a grabbing one while
+- A `ColoredListCellRenderer` with a `DragSource` shows a grab cursor on hover and a grabbing one while
   dragged. It stays in place at 40 % opacity; a card with its icon and label follows the
   pointer at 85 %, held where it was grabbed. Clicks and double-clicks still reach the row.
 - While a matching payload is dragged, every zone that takes it shows a 1 pt focus-color
@@ -74,6 +74,6 @@ Dragging is a pointer gesture. An app that offers it also offers a keyboard way 
 result: a double-click or <kbd>Enter</kbd> on the row, or a menu item. The zone is exposed with
 its hint as its name; the row keeps its role and name.
 
-Source: [`components/drag.rs`](../../crates/archipel-kit/src/components/drag.rs),
+Source: [`ui/drag.rs`](../../crates/archipel-kit/src/ui/drag.rs),
 [`behaviour.rs`](../../crates/archipel-kit/src/behaviour.rs) ·
 Tests: [`tests/drag.rs`](../../crates/archipel-kit/tests/drag.rs)

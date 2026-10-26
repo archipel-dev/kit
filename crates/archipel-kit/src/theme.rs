@@ -18,6 +18,13 @@
 use egui::Color32;
 use std::sync::Arc;
 
+mod catalog;
+// Written by `tools/themes` (see `docs/theming.md`); not reformatted.
+#[rustfmt::skip]
+mod generated;
+
+pub use catalog::{EditorScheme, Effect, EffectKind, TextAttributes, ThemeInfo, ThemeSource};
+
 const fn rgb(value: u32) -> Color32 {
     Color32::from_rgb((value >> 16) as u8, (value >> 8) as u8, value as u8)
 }
@@ -48,6 +55,9 @@ pub struct Theme {
     /// dropdowns, close buttons). Default: the pointing hand. Rows, tabs and menu items
     /// keep the arrow. See `docs/cursors.md`.
     pub action_cursor: egui::CursorIcon,
+    /// The bundled IntelliJ tables this theme was built from (for [`Theme::ui_color`] and
+    /// [`Theme::text_attributes`]); empty for a theme built by hand.
+    pub source: ThemeSource,
 }
 
 /// Background and border of a banner or callout of one severity.
@@ -71,6 +81,9 @@ pub struct Colors {
     pub popup: Color32,
     /// Popup, menu and dialog outline.
     pub popup_border: Color32,
+    /// The mnemonic or number hint at the start of a popup list row (`Popup.mnemonicForeground`,
+    /// `Gray.x78` dark / `Gray.x99` light; IntelliJ spec §5.3).
+    pub popup_mnemonic: Color32,
     /// Text field and other input backgrounds.
     pub field: Color32,
     /// Notification balloon background.
@@ -113,7 +126,7 @@ pub struct Colors {
     pub border: Color32,
     /// Toolbar and menu separators.
     pub separator: Color32,
-    /// Line after a group title in settings forms ([`SectionHeader`](crate::components::SectionHeader)).
+    /// Line after a group title in settings forms ([`TitledSeparator`](crate::ui::TitledSeparator)).
     pub group_separator: Color32,
     /// Selected editor tab fill.
     pub tab_selected: Color32,
@@ -144,6 +157,16 @@ pub struct Colors {
     pub selection_inactive: Color32,
     /// Hover fill of list and tree rows (subtler than [`Colors::hover`]).
     pub row_hover: Color32,
+    /// Background of the part of a row text that matches the speed search
+    /// (`SimpleTextAttributes::STYLE_SEARCH_MATCH`; IntelliJ spec §3.4 `SearchMatch` Yellow7).
+    pub search_match: Color32,
+    /// Fill of the speed search popup (IntelliJ spec §3.4, §15.3 `SpeedSearch.background`).
+    pub speed_search_background: Color32,
+    /// 1 pt border of the speed search popup (IntelliJ spec §3.4 `SpeedSearch.borderColor`).
+    pub speed_search_border: Color32,
+    /// Veil over content that is loading ([`JBLoadingPanel`](crate::ui::JBLoadingPanel);
+    /// IntelliJ spec §13.7: rgba(200,200,200,240) light).
+    pub loading_veil: Color32,
     /// Fill of non-editable dropdowns.
     pub combo: Color32,
     /// Dropdown arrow.
@@ -212,6 +235,12 @@ pub struct Colors {
     /// Sequential ramp from "little" to "much" (heatmaps, histograms). Luminance moves away
     /// from `island` as the value grows. Use [`Colors::ramp`] to sample it.
     pub sequential: [Color32; 5],
+
+    // Got-it tooltips (IntelliJ spec section 11.2, Islands `got-it-bg` and `got-it-border`).
+    /// Fill of a got-it tooltip: white on light, `#2E4D89` on dark.
+    pub got_it: Color32,
+    /// Outline of a got-it tooltip (`feedback-border`).
+    pub got_it_border: Color32,
 }
 
 /// Code editor colors.
@@ -287,6 +316,32 @@ pub struct EditorColors {
     pub invalid: Color32,
     /// The current find match, stronger than `search_result`.
     pub search_result_current: Color32,
+
+    // Editor component (IntelliJ editor spec §4.4, §5, §6, §8.1).
+    /// Text selection while the editor does not have the focus (`SELECTION_BACKGROUND_INACTIVE`).
+    pub selection_inactive: Color32,
+    /// Text of a collapsed fold region (`FOLDED_TEXT_ATTRIBUTES`).
+    pub folded_text: Color32,
+    /// Background of a collapsed fold region.
+    pub folded_background: Color32,
+    /// The 2 px ring inside a collapsed fold region (`FOLDED_TEXT_BORDER_COLOR`).
+    pub folded_border: Color32,
+    /// The right margin guide (`RIGHT_MARGIN_COLOR`).
+    pub right_margin: Color32,
+    /// The indent guide of the caret's block (`SELECTED_INDENT_GUIDE`).
+    pub indent_guide_selected: Color32,
+    /// Dots and lines that show whitespace (`WHITESPACES`).
+    pub whitespace: Color32,
+    /// Fold chevrons in the gutter.
+    pub fold_marker: Color32,
+    /// Text-search marks in the error stripe (`ERROR_STRIPE_COLOR` of text search results).
+    pub search_stripe: Color32,
+    /// Gutter change marker: added lines.
+    pub change_added: Color32,
+    /// Gutter change marker: modified lines.
+    pub change_modified: Color32,
+    /// Gutter change marker: deleted lines.
+    pub change_deleted: Color32,
 }
 
 impl Colors {
@@ -321,6 +376,8 @@ impl Theme {
                 island: rgb(0x191A1C),
                 popup: rgb(0x26282C),
                 popup_border: rgb(0x33353B),
+                // IntelliJ spec §5.3: `Popup.mnemonicForeground` Gray.x78 in dark themes.
+                popup_mnemonic: rgb(0x787878),
                 field: rgb(0x191A1C),
                 notification: rgb(0x33353B),
                 tooltip: rgb(0x33353B),
@@ -355,6 +412,15 @@ impl Theme {
                 control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0x33353B),
                 row_hover: rgba(0xFFFFFF10),
+                // Spec §3.4 lists only the light Yellow7 (#FEE6B1); dark uses the Islands
+                // warning border (#694820, spec §15.2) so the dark text stays readable.
+                search_match: rgb(0x694820),
+                // Spec §15.3 has the light values; dark takes the tool window background and
+                // the popup border of §15.2.
+                speed_search_background: rgb(0x191A1C),
+                speed_search_border: rgb(0x33353B),
+                // Spec §13.7 gives the light veil only; dark is the island color at 240/255.
+                loading_veil: rgba(0x191A1CF0),
                 combo: rgb(0x26282C),
                 combo_arrow: rgb(0x9A9DA1),
                 clear_icon: rgb(0x676B71),
@@ -411,9 +477,13 @@ impl Theme {
                     rgb(0x78B0EE),
                     rgb(0xBFDDFF),
                 ],
+                // IntelliJ spec section 15.2: got-it-bg #2E4D89, feedback-border #33353B.
+                got_it: rgb(0x2E4D89),
+                got_it_border: rgb(0x33353B),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
+            source: ThemeSource::new("islands_dark", "islands_dark"),
             editor: EditorColors {
                 background: rgb(0x191A1C),
                 text: rgb(0xBCBEC4),
@@ -449,6 +519,18 @@ impl Theme {
                 variable: rgb(0x56A8F5),
                 invalid: rgb(0xFA6675),
                 search_result_current: rgb(0x1F7C94),
+                selection_inactive: rgb(0x4C4F56),
+                folded_text: rgb(0x868991),
+                folded_background: rgb(0x393B40),
+                folded_border: rgb(0x2B2D30),
+                right_margin: rgb(0x323438),
+                indent_guide_selected: rgb(0x4E5157),
+                whitespace: rgb(0x6F737A),
+                fold_marker: rgb(0x6F737A),
+                search_stripe: rgb(0x72D6D6),
+                change_added: rgb(0x549159),
+                change_modified: rgb(0x375FAD),
+                change_deleted: rgb(0x868A91),
             },
         }
     }
@@ -463,6 +545,8 @@ impl Theme {
                 island: rgb(0xFFFFFF),
                 popup: rgb(0xFFFFFF),
                 popup_border: rgb(0xD1D3D9),
+                // IntelliJ spec §5.3: `Popup.mnemonicForeground` Gray.x99 in light themes.
+                popup_mnemonic: rgb(0x999999),
                 field: rgb(0xFFFFFF),
                 notification: rgb(0xFFFFFF),
                 tooltip: rgb(0xFFFFFF),
@@ -497,6 +581,10 @@ impl Theme {
                 control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0xE9EAEE),
                 row_hover: rgba(0x00000008),
+                search_match: rgb(0xFEE6B1),
+                speed_search_background: rgb(0xFFFFFF),
+                speed_search_border: rgb(0xEBECF0),
+                loading_veil: rgba(0xC8C8C8F0),
                 combo: rgb(0xFFFFFF),
                 combo_arrow: rgb(0x6E6E6E),
                 clear_icon: rgb(0xB0B4C3),
@@ -553,9 +641,13 @@ impl Theme {
                     rgb(0x2A63C2),
                     rgb(0x0F3A82),
                 ],
+                // IntelliJ spec section 15.2: got-it-bg #FFFFFF, feedback-border #D1D3D9.
+                got_it: rgb(0xFFFFFF),
+                got_it_border: rgb(0xD1D3D9),
             },
             language_icons: archipel_icons::LanguageStyle::FileBand,
             action_cursor: egui::CursorIcon::PointingHand,
+            source: ThemeSource::new("islands_light", "new_ui_light"),
             editor: EditorColors {
                 background: rgb(0xFFFFFF),
                 text: rgb(0x080808),
@@ -591,6 +683,18 @@ impl Theme {
                 variable: rgb(0x00627A),
                 invalid: rgb(0xF50000),
                 search_result_current: rgb(0xF2A33A),
+                selection_inactive: rgb(0xB5B7BD),
+                folded_text: rgb(0x414D41),
+                folded_background: rgb(0xE9F5E6),
+                folded_border: rgb(0xADD9C7),
+                right_margin: rgb(0xEBECF0),
+                indent_guide_selected: rgb(0xAEB3C2),
+                whitespace: rgb(0xADADAD),
+                fold_marker: rgb(0xA8ADBD),
+                search_stripe: rgb(0xC47233),
+                change_added: rgb(0x7FC784),
+                change_modified: rgb(0x88ADF7),
+                change_deleted: rgb(0x767A8A),
             },
         }
     }

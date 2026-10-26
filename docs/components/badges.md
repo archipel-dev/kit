@@ -11,7 +11,7 @@ Small inline labels: **counters** for numbers of items, **tags** for statuses an
 ## Usage
 
 ```rust
-use archipel_kit::components::{Avatar, Counter, Kbd, Tag};
+use archipel_kit::ui::{Avatar, Counter, Kbd, Tag};
 use archipel_kit::{Theme, Tone, egui};
 
 fn header(ui: &mut egui::Ui, problems: usize) {
@@ -40,5 +40,5 @@ fn header(ui: &mut egui::Ui, problems: usize) {
 Each is a label: counters read their number, key caps the shortcut (`Ctrl+K`), avatars the
 full name.
 
-Source: [`components/badges.rs`](../../crates/archipel-kit/src/components/badges.rs) ·
+Source: [`ui/badges.rs`](../../crates/archipel-kit/src/ui/badges.rs) ·
 Tests: [`tests/data.rs`](../../crates/archipel-kit/tests/data.rs)

@@ -12,14 +12,14 @@ checks the ones a machine can check; reviews check the rest.
 |---|---|
 | No color literals (`Color32::from_rgb`, `from_gray`, `from_black_alpha` …) | A `Theme::colors(ctx)` field or a `Tone`. A missing color is measured in Islands Dark **and** Light and added to both themes. |
 | No corner radius literals | `tokens::radius`. |
-| No stock egui controls (`ui.button`, `egui::Checkbox`, `egui::Slider` …) | The kit's `Button`, `Checkbox`, `Toggle`, `TextField`, `Dropdown` … |
-| No egui tooltips (`on_hover_text`) | `Tooltip` (surface, shortcut, placement, delay). |
+| No stock egui controls (`ui.button`, `egui::Checkbox`, `egui::Slider` …) | The kit's `Button`, `JBCheckBox`, `OnOffButton`, `JBTextField`, `ComboBox` … |
+| No egui tooltips (`on_hover_text`) | `HelpTooltip` (surface, shortcut, placement, delay). |
 | No literal animation durations | `tokens::motion`. |
 | Every interactive component passes `testing::conformance` | Add it to `tests/conformance.rs`, or list it in `NOT_INTERACTIVE` with why. |
 
 ## The Islands look and feel
 
-- **Islands, gaps, frame.** Content lives in islands (`Panel`, `Workbench`) on the window
+- **Islands, gaps, frame.** Content lives in islands (`SimpleToolWindowPanel`, `ToolWindowPane`) on the window
   frame, 4 pt apart. Gaps have no lines; they are the splitters. Tool windows have stripes.
 - **Headers are 40 pt.** A tool window's title bar and an editor's tab bar have the same
   height. Header actions are hidden until the pointer is over the island or focus is in it;
@@ -28,9 +28,13 @@ checks the ones a machine can check; reviews check the rest.
 - **Rows have no hover.** Trees, lists and tables show only the selection: blue with focus,
   gray without. Popup rows (menus, completion lists) highlight under the pointer instead,
   with one highlight per menu shared with the keyboard.
-- **Buttons don't react to hover or press.** Only focus shows: the border becomes a 2 pt
-  focus-colored border, one point of it outside. Flat toolbar controls (icon buttons, toolbar
-  and status bar widgets, stripe buttons, tabs) do show a hover fill.
+- **Buttons don't react to hover.** Focus shows: the border becomes a 2 pt focus-colored
+  border, one point of it outside. A press darkens a push button: Android Studio showed no
+  press change, but the IntelliJ spec (section 13.2) says pressed follows Swing's button
+  model, so the spec wins here (the amount, 12%, is the kit's own). Flat toolbar controls
+  (icon buttons, toolbar and status bar widgets, stripe buttons, tabs) do show a hover fill.
+- **Keys activate like Swing.** <kbd>Space</kbd> acts on release; <kbd>Enter</kbd> clicks a push
+  button but not a checkbox, radio or toggle (it belongs to a dialog's default button).
 - **Checkboxes and radios** have their own blue and no hover change.
 - **Menus**: 24 pt rows that touch, 8 pt popup padding, pills inset 8 pt, icons 8 pt inside
   the pill, text 4 pt after the icon; first pointer move after opening ignored.

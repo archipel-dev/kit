@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="672.0" height="252.0" viewBox="0 0 672.0 252.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="18.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="18.0" width="25.2" height="18" fill="#27282A"/>
+<rect x="42.0" y="18.0" width="630.0" height="18" fill="#191A1C"/>
+<svg x="25.7" y="20.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="3.5 2.5 12.5 8 3.5 13.5" fill="#4E9D6C"/></svg>
+<svg x="50.9" y="20.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6.000 4.500 A2 2 0 0 1 10.000 4.500" fill="none" stroke="#5D5F63" stroke-width="1"/><rect x="5" y="4.5" width="6" height="8" rx="3" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="8 7.5 8 12.5" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="5 6.5 2.5 5" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="5 9.5 2.5 9.5" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="5 11.5 2.5 13" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="11 6.5 13.5 5" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="11 9.5 13.5 9.5" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="11 11.5 13.5 13" fill="none" stroke="#5D5F63" stroke-width="1"/></svg>
+<svg x="76.1" y="20.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="#C54E58"/></svg>
+<path d="M96.6 18.0V36.0" fill="none" stroke="#2B2C2E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<svg x="109.7" y="20.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="2.5 2.5 13.5 2.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="2.5 6.5 11 6.5" fill="none" stroke="#CED0D6" stroke-width="1"/><path d="M11.000 6.500 A2.5 2.5 0 0 1 11.000 11.500" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="11 11.5 8.5 11.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="10 10 8.5 11.5 10 13" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="2.5 11.5 5.5 11.5" fill="none" stroke="#CED0D6" stroke-width="1"/></svg>
+<text x="134.4" y="31.5" fill="#737478">M</text>
+<text x="142.8" y="31.5" fill="#737478">o</text>
+<text x="151.2" y="31.5" fill="#737478">r</text>
+<text x="159.6" y="31.5" fill="#737478">e</text>
+<svg x="176.9" y="20.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 8 9.5 11.5 6" fill="none" stroke="#737478" stroke-width="1"/></svg>
+<rect x="0.0" y="36.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="36.0" width="210.0" height="18" fill="#27282A"/>
+<rect x="226.8" y="36.0" width="445.2" height="18" fill="#191A1C"/>
+<path d="M25.2 45.0H25.2A4.2 4.2 0 0 0 21.0 49.2V54.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M25.2 45.0H33.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M33.6 45.0H42.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M42.0 45.0H50.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M50.4 45.0H58.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M58.8 45.0H67.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M67.2 45.0H75.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M75.6 45.0H84.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M84.0 45.0H92.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M92.4 45.0H100.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M100.8 45.0H109.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M109.2 45.0H117.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M117.6 45.0H126.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M126.0 45.0H134.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M134.4 45.0H142.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M142.8 45.0H151.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M151.2 45.0H159.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M159.6 45.0H168.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M168.0 45.0H176.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M176.4 45.0H184.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M184.8 45.0H193.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M193.2 45.0H201.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M201.6 45.0H210.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M210.0 45.0H218.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M218.4 45.0H218.4A4.2 4.2 0 0 1 222.6 49.2V54.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="54.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="54.0" width="210.0" height="18" fill="#27282A"/>
+<rect x="226.8" y="54.0" width="336.0" height="18" fill="#222325"/>
+<rect x="562.8" y="54.0" width="25.2" height="18" fill="#141416"/>
+<rect x="588.0" y="54.0" width="84.0" height="18" fill="#191A1C"/>
+<path d="M21.0 54.0V72.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="33.6" y="67.5" fill="#BCBEC4" font-weight="bold">R</text>
+<text x="42.0" y="67.5" fill="#BCBEC4" font-weight="bold">u</text>
+<text x="50.4" y="67.5" fill="#BCBEC4" font-weight="bold">n</text>
+<path d="M222.6 54.0V72.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="226.8" y="67.5" fill="#737478">m</text>
+<text x="235.2" y="67.5" fill="#737478">l</text>
+<text x="260.4" y="67.5" fill="#6DB083">●</text>
+<svg x="294.5" y="56.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="3.5 1.5 9.5 1.5 12.5 4.5 12.5 14.5 3.5 14.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 7.5 10.5 7.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 9.5 10.5 9.5" fill="none" stroke="#CED0D6" stroke-width="1"/><polyline points="5.5 11.5 8.5 11.5" fill="none" stroke="#CED0D6" stroke-width="1"/></svg>
+<text x="310.8" y="67.5" fill="#737478">R</text>
+<text x="319.2" y="67.5" fill="#737478">E</text>
+<text x="327.6" y="67.5" fill="#737478">A</text>
+<text x="336.0" y="67.5" fill="#737478">D</text>
+<text x="344.4" y="67.5" fill="#737478">M</text>
+<text x="352.8" y="67.5" fill="#737478">E</text>
+<text x="361.2" y="67.5" fill="#737478">.</text>
+<text x="369.6" y="67.5" fill="#737478">m</text>
+<text x="378.0" y="67.5" fill="#737478">d</text>
+<svg x="403.7" y="56.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#5D5F63" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#5D5F63" stroke-width="1"/></svg>
+<svg x="437.3" y="56.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#DEA584" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#DEA584" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#DEA584"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#000000">Rs</text></svg>
+<text x="453.6" y="67.5" fill="#737478">p</text>
+<text x="462.0" y="67.5" fill="#737478">i</text>
+<text x="470.4" y="67.5" fill="#737478">n</text>
+<text x="478.8" y="67.5" fill="#737478">n</text>
+<text x="487.2" y="67.5" fill="#737478">e</text>
+<text x="495.6" y="67.5" fill="#737478">d</text>
+<text x="504.0" y="67.5" fill="#737478">.</text>
+<text x="512.4" y="67.5" fill="#737478">r</text>
+<text x="520.8" y="67.5" fill="#737478">s</text>
+<svg x="546.5" y="56.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5.5 2.5 10.5 2.5 9.5 6.5 11.5 9.5 4.5 9.5 6.5 6.5" fill="none" stroke="#737478" stroke-width="1"/><polyline points="8 9.5 8 14" fill="none" stroke="#737478" stroke-width="1"/></svg>
+<rect x="0.0" y="72.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="72.0" width="210.0" height="18" fill="#27282A"/>
+<rect x="226.8" y="72.0" width="445.2" height="18" fill="#191A1C"/>
+<path d="M21.0 72.0V90.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<text x="33.6" y="85.5" fill="#737478">R</text>
+<text x="42.0" y="85.5" fill="#737478">u</text>
+<text x="50.4" y="85.5" fill="#737478">n</text>
+<text x="67.2" y="85.5" fill="#737478">t</text>
+<text x="75.6" y="85.5" fill="#737478">h</text>
+<text x="84.0" y="85.5" fill="#737478">e</text>
+<text x="100.8" y="85.5" fill="#737478">c</text>
+<text x="109.2" y="85.5" fill="#737478">o</text>
+<text x="117.6" y="85.5" fill="#737478">n</text>
+<text x="126.0" y="85.5" fill="#737478">f</text>
+<text x="134.4" y="85.5" fill="#737478">i</text>
+<text x="142.8" y="85.5" fill="#737478">g</text>
+<text x="151.2" y="85.5" fill="#737478">u</text>
+<text x="159.6" y="85.5" fill="#737478">r</text>
+<text x="168.0" y="85.5" fill="#737478">a</text>
+<text x="176.4" y="85.5" fill="#737478">t</text>
+<text x="184.8" y="85.5" fill="#737478">i</text>
+<text x="193.2" y="85.5" fill="#737478">o</text>
+<text x="201.6" y="85.5" fill="#737478">n</text>
+<path d="M222.6 72.0V90.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="90.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="90.0" width="210.0" height="18" fill="#27282A"/>
+<rect x="226.8" y="90.0" width="445.2" height="18" fill="#191A1C"/>
+<path d="M21.0 90.0V94.8A4.2 4.2 0 0 0 25.2 99.0H25.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M25.2 99.0H33.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M33.6 99.0H42.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M42.0 99.0H50.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M50.4 99.0H58.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M58.8 99.0H67.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M67.2 99.0H75.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M75.6 99.0H84.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M84.0 99.0H92.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M92.4 99.0H100.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M100.8 99.0H109.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M109.2 99.0H117.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M117.6 99.0H126.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M126.0 99.0H134.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M134.4 99.0H142.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M142.8 99.0H151.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M151.2 99.0H159.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M159.6 99.0H168.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M168.0 99.0H176.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M176.4 99.0H184.8" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M184.8 99.0H193.2" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M193.2 99.0H201.6" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M201.6 99.0H210.0" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M210.0 99.0H218.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<path d="M222.6 90.0V94.8A4.2 4.2 0 0 1 218.4 99.0H218.4" fill="none" stroke="#4A4B4E" stroke-width="1" shape-rendering="geometricPrecision"/>
+<rect x="0.0" y="108.0" width="16.8" height="18" fill="#191A1C"/>
+<rect x="16.8" y="108.0" width="168.0" height="18" fill="#222325"/>
+<rect x="184.8" y="108.0" width="487.2" height="18" fill="#191A1C"/>
+<rect x="16.8" y="108.0" width="4.2" height="18.0" fill="#3871E1"/>
+<text x="33.6" y="121.5" fill="#BCBEC4" font-weight="bold">L</text>
+<text x="42.0" y="121.5" fill="#BCBEC4" font-weight="bold">i</text>
+<text x="50.4" y="121.5" fill="#BCBEC4" font-weight="bold">g</text>
+<text x="58.8" y="121.5" fill="#BCBEC4" font-weight="bold">h</text>
+<text x="67.2" y="121.5" fill="#BCBEC4" font-weight="bold">t</text>
+<svg x="160.1" y="110.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 8 9.5 11.5 6" fill="none" stroke="#737478" stroke-width="1"/></svg>
+<rect x="0.0" y="126.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="144.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="162.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="180.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="198.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="216.0" width="672.0" height="18" fill="#191A1C"/>
+<rect x="0.0" y="234.0" width="672.0" height="18" fill="#191A1C"/>
+</svg>

@@ -20,7 +20,7 @@ feel like one suite instead of a pile of widgets.
    light image), a usage example, an API table, behavior, accessibility, and links to the
    source and tests; a row in `docs/README.md`.
 8. **Gallery**: the component on its gallery page, with its states.
-9. **Built from parts**: `State` for colors, `RowContent`/`Surface`/`Popover` where they
+9. **Built from parts**: `State` for colors, `SimpleColoredComponent`/`Surface`/`JBPopup` where they
    fit, sizes from `tokens`, cursor via `cursor::on_hover` / `on_hover_action`. No
    one-off painting for something a part does. See
    [building a component](building-components.md).

@@ -9,7 +9,10 @@
 //!
 //! `UPDATE_SNAPSHOTS=1 cargo test -p archipel-kit-tui` rewrites changed snapshots.
 
+use crate::Look;
 use crate::glyphs;
+use crate::input::{Event, KeyCode, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use crate::runtime::{App, Runtime};
 use archipel_icons::{Glyph, Language, LanguageStyle, Symbol, SymbolKind, Tones, parts_to_svg};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -382,4 +385,288 @@ pub fn snapshot(name: &str, buf: &Buffer) {
         path.display(),
         lines(buf).join("\n")
     );
+}
+
+/// Writes `text` at (`x`, `y`) in `fg` on `bg`, clipped to `area`: for test apps that label the
+/// areas they got.
+pub fn put_text(
+    buf: &mut Buffer,
+    area: Rect,
+    x: u16,
+    y: u16,
+    text: &str,
+    fg: ratatui::style::Color,
+    bg: ratatui::style::Color,
+) {
+    crate::components::put(
+        buf,
+        area,
+        x,
+        y,
+        text,
+        ratatui::style::Style::default().fg(fg).bg(bg),
+    );
+}
+
+/// An [`App`] made of closures over some state, for tests and small examples.
+pub struct FnApp<S, E, D> {
+    /// The state the closures share.
+    pub state: S,
+    on_event: E,
+    on_draw: D,
+}
+
+/// An [`App`] from `state`, an event handler and a draw function.
+pub fn app_fn<S, E, D>(state: S, on_event: E, on_draw: D) -> FnApp<S, E, D>
+where
+    E: FnMut(&mut S, &mut Runtime, &Event),
+    D: FnMut(&mut S, &mut Runtime, Rect, &mut Buffer),
+{
+    FnApp {
+        state,
+        on_event,
+        on_draw,
+    }
+}
+
+impl<S, E, D> App for FnApp<S, E, D>
+where
+    E: FnMut(&mut S, &mut Runtime, &Event),
+    D: FnMut(&mut S, &mut Runtime, Rect, &mut Buffer),
+{
+    fn event(&mut self, rt: &mut Runtime, event: &Event) {
+        (self.on_event)(&mut self.state, rt, event);
+    }
+
+    fn draw(&mut self, rt: &mut Runtime, area: Rect, buf: &mut Buffer) {
+        (self.on_draw)(&mut self.state, rt, area, buf);
+    }
+}
+
+/// Runs an [`App`] against an in-memory screen with synthetic events and a manual clock: the
+/// same code path as [`crate::runtime::run`], without a terminal. Every input redraws, as the
+/// real loop does, so the hit map is always the one of the last frame.
+pub struct Harness<A: App> {
+    /// The app under test.
+    pub app: A,
+    /// The runtime: look, keymap, clock, hit map, focus.
+    pub rt: Runtime,
+    buffer: Buffer,
+}
+
+impl<A: App> Harness<A> {
+    /// An app on a `width` × `height` screen in the dark look.
+    pub fn new(app: A, width: u16, height: u16) -> Self {
+        Self::with_runtime(app, Runtime::new(Look::dark()), width, height)
+    }
+
+    /// An app with a prepared runtime.
+    pub fn with_runtime(app: A, rt: Runtime, width: u16, height: u16) -> Self {
+        let mut harness = Self {
+            app,
+            rt,
+            buffer: Buffer::empty(Rect::new(0, 0, width, height)),
+        };
+        harness.draw();
+        harness
+    }
+
+    /// Draws a frame and returns the screen.
+    pub fn draw(&mut self) -> &Buffer {
+        let area = self.buffer.area;
+        self.buffer = Buffer::empty(area);
+        self.rt.begin_frame(area);
+        self.app.draw(&mut self.rt, area, &mut self.buffer);
+        let look = self.rt.look.clone();
+        self.rt.tooltip.draw(&look, area, &mut self.buffer);
+        self.rt.end_frame();
+        &self.buffer
+    }
+
+    /// The last drawn screen.
+    pub fn buffer(&self) -> &Buffer {
+        &self.buffer
+    }
+
+    /// The text of each screen row, trailing spaces trimmed.
+    pub fn screen(&self) -> Vec<String> {
+        lines(&self.buffer)
+    }
+
+    /// The screen as one string, rows joined by newlines.
+    pub fn text(&self) -> String {
+        self.screen().join("\n")
+    }
+
+    /// The cell where `needle` first appears on the screen.
+    pub fn find(&self, needle: &str) -> Option<(u16, u16)> {
+        for (y, line) in self.screen().iter().enumerate() {
+            if let Some(byte) = line.find(needle) {
+                let x = unicode_width::UnicodeWidthStr::width(&line[..byte]);
+                return Some((x as u16, y as u16));
+            }
+        }
+        None
+    }
+
+    /// Sends `event` (preprocessed like the real loop does) and redraws.
+    pub fn send(&mut self, event: Event) -> &mut Self {
+        self.rt.preprocess(&event);
+        self.app.event(&mut self.rt, &event);
+        self.draw();
+        self
+    }
+
+    /// A key press.
+    pub fn press(&mut self, code: KeyCode) -> &mut Self {
+        self.send(crate::input::key(code))
+    }
+
+    /// A key press with modifiers.
+    pub fn press_with(&mut self, code: KeyCode, mods: KeyModifiers) -> &mut Self {
+        self.send(crate::input::key_with(code, mods))
+    }
+
+    /// Ctrl plus a character.
+    pub fn ctrl(&mut self, c: char) -> &mut Self {
+        self.send(crate::input::ctrl(c))
+    }
+
+    /// Alt plus a navigation key.
+    pub fn alt_arrow(&mut self, code: KeyCode) -> &mut Self {
+        self.send(crate::input::key_with(code, KeyModifiers::ALT))
+    }
+
+    /// Alt plus a character.
+    pub fn alt(&mut self, c: char) -> &mut Self {
+        self.send(crate::input::alt(c))
+    }
+
+    /// Types `text`, one key press per character.
+    pub fn type_text(&mut self, text: &str) -> &mut Self {
+        for event in crate::input::typing(text) {
+            self.send(event);
+        }
+        self
+    }
+
+    fn mouse(&mut self, kind: MouseEventKind, x: u16, y: u16, mods: KeyModifiers) -> &mut Self {
+        self.send(Event::Mouse(MouseEvent {
+            kind,
+            column: x,
+            row: y,
+            modifiers: mods,
+        }))
+    }
+
+    /// Moves the pointer.
+    pub fn hover(&mut self, x: u16, y: u16) -> &mut Self {
+        self.mouse(MouseEventKind::Moved, x, y, KeyModifiers::NONE)
+    }
+
+    /// Presses and releases the left button.
+    pub fn click(&mut self, x: u16, y: u16) -> &mut Self {
+        self.click_with(x, y, KeyModifiers::NONE)
+    }
+
+    /// A left click with modifiers held.
+    pub fn click_with(&mut self, x: u16, y: u16, mods: KeyModifiers) -> &mut Self {
+        self.mouse(MouseEventKind::Down(MouseButton::Left), x, y, mods);
+        self.mouse(MouseEventKind::Up(MouseButton::Left), x, y, mods)
+    }
+
+    /// Two left clicks in a row (no time passes between them).
+    pub fn double_click(&mut self, x: u16, y: u16) -> &mut Self {
+        self.click(x, y);
+        self.click(x, y)
+    }
+
+    /// A click of the middle button.
+    pub fn middle_click(&mut self, x: u16, y: u16) -> &mut Self {
+        self.mouse(
+            MouseEventKind::Down(MouseButton::Middle),
+            x,
+            y,
+            KeyModifiers::NONE,
+        );
+        self.mouse(
+            MouseEventKind::Up(MouseButton::Middle),
+            x,
+            y,
+            KeyModifiers::NONE,
+        )
+    }
+
+    /// A click of the right button (a context menu request).
+    pub fn right_click(&mut self, x: u16, y: u16) -> &mut Self {
+        self.mouse(
+            MouseEventKind::Down(MouseButton::Right),
+            x,
+            y,
+            KeyModifiers::NONE,
+        );
+        self.mouse(
+            MouseEventKind::Up(MouseButton::Right),
+            x,
+            y,
+            KeyModifiers::NONE,
+        )
+    }
+
+    /// Presses the left button at `from`, drags to `to` in single steps, and releases.
+    pub fn drag(&mut self, from: (u16, u16), to: (u16, u16)) -> &mut Self {
+        self.mouse(
+            MouseEventKind::Down(MouseButton::Left),
+            from.0,
+            from.1,
+            KeyModifiers::NONE,
+        );
+        let steps = from.0.abs_diff(to.0).max(from.1.abs_diff(to.1)).max(1);
+        for i in 1..=steps {
+            let lerp = |a: u16, b: u16| {
+                (i32::from(a) + (i32::from(b) - i32::from(a)) * i32::from(i) / i32::from(steps))
+                    as u16
+            };
+            self.mouse(
+                MouseEventKind::Drag(MouseButton::Left),
+                lerp(from.0, to.0),
+                lerp(from.1, to.1),
+                KeyModifiers::NONE,
+            );
+        }
+        self.mouse(
+            MouseEventKind::Up(MouseButton::Left),
+            to.0,
+            to.1,
+            KeyModifiers::NONE,
+        )
+    }
+
+    /// Turns the wheel at (`x`, `y`): negative scrolls up.
+    pub fn scroll(&mut self, x: u16, y: u16, rows: i32) -> &mut Self {
+        let kind = if rows < 0 {
+            MouseEventKind::ScrollUp
+        } else {
+            MouseEventKind::ScrollDown
+        };
+        for _ in 0..rows.unsigned_abs() {
+            self.mouse(kind, x, y, KeyModifiers::NONE);
+        }
+        self
+    }
+
+    /// Lets `seconds` pass: advances the clock, runs the timers and redraws.
+    pub fn advance(&mut self, seconds: f64) -> &mut Self {
+        self.rt.now += seconds;
+        self.rt.tick();
+        self.app.tick(&mut self.rt);
+        self.draw();
+        self
+    }
+
+    /// Resizes the screen.
+    pub fn resize(&mut self, width: u16, height: u16) -> &mut Self {
+        self.buffer = Buffer::empty(Rect::new(0, 0, width, height));
+        self.send(Event::Resize(width, height))
+    }
 }
