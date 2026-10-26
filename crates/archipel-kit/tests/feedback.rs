@@ -1,22 +1,25 @@
-//! `Banner`, `Toast`, `Spinner`, `ProgressBar` and `EmptyState` tests.
+//! `InlineBanner`, `Notification`, `AsyncProcessIcon`, `ProgressBar` and `StatusText` tests.
 
 mod common;
 
-use archipel_kit::components::{Banner, EmptyState, ProgressBar, Severity, Spinner, Toast};
 use archipel_kit::testing::{self, NodeExt, Queryable, Role};
 use archipel_kit::{Glyph, Theme};
+use archipel_kit::{
+    notification::Notification,
+    ui::{AsyncProcessIcon, InlineBanner, ProgressBar, Status, StatusText},
+};
 
 #[test]
-fn banner_snapshot() {
-    testing::snapshot_themes("banner", common::IMG, |ui| {
-        Banner::new(Severity::Info, "Indexing finished: 1,204 files")
+fn inline_banner_snapshot() {
+    testing::snapshot_themes("inline_banner", common::IMG, |ui| {
+        InlineBanner::new(Status::Info, "Indexing finished: 1,204 files")
             .dismissible(true)
             .show(ui);
-        Banner::new(Severity::Success, "Gradle sync succeeded").show(ui);
-        Banner::new(Severity::Warning, "Project JDK is not defined")
+        InlineBanner::new(Status::Success, "Gradle sync succeeded").show(ui);
+        InlineBanner::new(Status::Warning, "Project JDK is not defined")
             .action("Set up JDK")
             .show(ui);
-        Banner::new(Severity::Error, "Build failed with 3 errors")
+        InlineBanner::new(Status::Error, "Build failed with 3 errors")
             .action("Show")
             .action("Retry")
             .show(ui);
@@ -24,10 +27,10 @@ fn banner_snapshot() {
 }
 
 #[test]
-fn banner_reports_actions_and_dismissal() {
+fn inline_banner_reports_actions_and_dismissal() {
     let mut harness =
         testing::harness_state(Theme::dark(), (None, false), |ui, (action, dismissed)| {
-            let out = Banner::new(Severity::Error, "Build failed")
+            let out = InlineBanner::new(Status::Error, "Build failed")
                 .action("Show")
                 .action("Retry")
                 .dismissible(true)
@@ -46,10 +49,10 @@ fn banner_reports_actions_and_dismissal() {
 }
 
 #[test]
-fn long_banner_text_wraps() {
+fn long_inline_banner_text_wraps() {
     let harness = testing::harness(Theme::dark(), |ui| {
-        Banner::new(
-            Severity::Warning,
+        InlineBanner::new(
+            Status::Warning,
             "The Gradle wrapper version is outdated and does not support the selected JDK; update it to continue.",
         )
         .action("Update")
@@ -61,23 +64,23 @@ fn long_banner_text_wraps() {
 }
 
 #[test]
-fn toast_snapshot() {
-    testing::snapshot_themes("toast", common::IMG, |ui| {
-        Toast::new(Severity::Success, "Build finished")
+fn notification_snapshot() {
+    testing::snapshot_themes("notification", common::IMG, |ui| {
+        Notification::new(Status::Success, "Build finished")
             .body("3 modules compiled in 4.2 s")
             .action("Open log")
             .action("Run again")
             .show(ui);
-        Toast::new(Severity::Error, "Connection refused")
+        Notification::new(Status::Error, "Connection refused")
             .body("mongodb://localhost:27017")
             .show(ui);
     });
 }
 
 #[test]
-fn toast_reports_actions() {
+fn notification_reports_actions() {
     let mut harness = testing::harness_state(Theme::dark(), None, |ui, action| {
-        let out = Toast::new(Severity::Info, "Update available")
+        let out = Notification::new(Status::Info, "Update available")
             .action("Restart")
             .show(ui);
         if out.action.is_some() {
@@ -95,7 +98,7 @@ fn toast_reports_actions() {
 fn progress_snapshot() {
     testing::snapshot_themes("progress", common::IMG, |ui| {
         ui.horizontal(|ui| {
-            ui.add(Spinner::new());
+            ui.add(AsyncProcessIcon::new());
             ui.label("Indexing…");
         });
         ui.add(ProgressBar::new(Some(0.0)));
@@ -109,7 +112,7 @@ fn progress_reports_percent() {
     let harness = testing::harness(Theme::dark(), |ui| {
         ui.add(ProgressBar::new(Some(0.42)).label("Downloading JDK"));
         ui.add(ProgressBar::new(None).label("Resolving"));
-        ui.add(Spinner::new().label("Indexing"));
+        ui.add(AsyncProcessIcon::new().label("Indexing"));
     });
     assert_eq!(
         harness.get_by_label("Downloading JDK").numeric_value(),
@@ -123,9 +126,9 @@ fn progress_reports_percent() {
 }
 
 #[test]
-fn empty_state_snapshot() {
-    testing::snapshot_themes("empty_state", common::IMG, |ui| {
-        EmptyState::new("No requests yet")
+fn status_text_snapshot() {
+    testing::snapshot_themes("status_text", common::IMG, |ui| {
+        StatusText::new("No requests yet")
             .icon(Glyph::Send)
             .hint("Create a request to start testing your API.")
             .action("New request")
@@ -134,9 +137,9 @@ fn empty_state_snapshot() {
 }
 
 #[test]
-fn empty_state_action_clicks() {
+fn status_text_action_clicks() {
     let mut harness = testing::harness_state(Theme::dark(), false, |ui, clicked| {
-        *clicked |= EmptyState::new("Nothing here")
+        *clicked |= StatusText::new("Nothing here")
             .action("Create")
             .show(ui)
             .clicked();
@@ -147,18 +150,18 @@ fn empty_state_action_clicks() {
 }
 
 #[test]
-fn messages_and_empty_states_pass_the_audit() {
+fn messages_and_status_texts_pass_the_audit() {
     for theme in [Theme::dark(), Theme::light()] {
         let mut harness = testing::harness(theme, |ui| {
-            let _ = Banner::new(Severity::Warning, "Project JDK is not defined")
+            let _ = InlineBanner::new(Status::Warning, "Project JDK is not defined")
                 .action("Configure")
                 .dismissible(true)
                 .show(ui);
-            let _ = Toast::new(Severity::Success, "Build finished")
+            let _ = Notification::new(Status::Success, "Build finished")
                 .body("3 modules compiled")
                 .action("Open log")
                 .show(ui);
-            let _ = EmptyState::new("No requests yet")
+            let _ = StatusText::new("No requests yet")
                 .hint("Send one to see it here")
                 .action("New request")
                 .show(ui);

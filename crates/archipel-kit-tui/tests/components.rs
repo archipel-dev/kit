@@ -1,6 +1,6 @@
 //! Behavior and SVG snapshot tests. The snapshots in `docs/tui/img/` are the docs images.
 
-use archipel_kit::components::Severity;
+use archipel_kit::ui::Status;
 use archipel_kit_tui::components::*;
 use archipel_kit_tui::ratatui::buffer::Buffer;
 use archipel_kit_tui::ratatui::layout::Rect;
@@ -74,40 +74,40 @@ fn button_width_and_focus_markers() {
 #[test]
 fn choices() {
     sheet("choice", 48, 8, |look, area, buf| {
-        Checkbox::new(look, true, "Checked").render(row(area, 0), buf);
-        Checkbox::new(look, false, "Unchecked")
+        JBCheckBox::new(look, true, "Checked").render(row(area, 0), buf);
+        JBCheckBox::new(look, false, "Unchecked")
             .focused(true)
             .render(row(area, 1), buf);
-        Checkbox::new(look, false, "Mixed")
+        JBCheckBox::new(look, false, "Mixed")
             .mixed(true)
             .render(row(area, 2), buf);
-        Checkbox::new(look, true, "Disabled")
+        JBCheckBox::new(look, true, "Disabled")
             .enabled(false)
             .render(row(area, 3), buf);
         let half = Rect::new(area.x + 22, area.y, 20, area.height);
-        Radio::new(look, true, "Selected").render(row(half, 0), buf);
-        Radio::new(look, false, "Option").render(row(half, 1), buf);
-        Toggle::new(look, true, "On").render(row(half, 3), buf);
-        Toggle::new(look, false, "Off").render(row(half, 4), buf);
+        JBRadioButton::new(look, true, "Selected").render(row(half, 0), buf);
+        JBRadioButton::new(look, false, "Option").render(row(half, 1), buf);
+        OnOffButton::new(look, true, "On").render(row(half, 3), buf);
+        OnOffButton::new(look, false, "Off").render(row(half, 4), buf);
     });
 }
 
 #[test]
 fn checkbox_marks() {
     let look = Look::dark();
-    let mark = |checkbox: Checkbox| {
+    let mark = |checkbox: JBCheckBox| {
         let buf = render(10, 1, |area, buf| checkbox.render(area, buf));
         buf[(0, 0)].symbol().chars().next()
     };
     assert_eq!(
-        mark(Checkbox::new(&look, true, "a")),
+        mark(JBCheckBox::new(&look, true, "a")),
         Some(glyphs::CHECKBOX_ON)
     );
     assert_eq!(
-        mark(Checkbox::new(&look, false, "a")),
+        mark(JBCheckBox::new(&look, false, "a")),
         Some(glyphs::CHECKBOX_OFF)
     );
-    let mixed = Checkbox::new(&look, false, "a").mixed(true);
+    let mixed = JBCheckBox::new(&look, false, "a").mixed(true);
     assert_eq!(mark(mixed), Some(glyphs::CHECKBOX_MIXED));
 }
 
@@ -115,14 +115,14 @@ fn checkbox_marks() {
 fn text_fields() {
     sheet("text-field", 44, 9, |look, area, buf| {
         let field = |n: u16, h: u16| Rect::new(area.x, area.y + n, area.width, h);
-        TextField::new(look, "")
+        JBTextField::new(look, "")
             .placeholder("Search everywhere")
             .render(field(0, 1), buf);
-        TextField::new(look, "archipel")
+        JBTextField::new(look, "archipel")
             .label("Name")
             .focused(true)
             .render(field(2, 1), buf);
-        TextField::new(look, "8o80")
+        JBTextField::new(look, "8o80")
             .label("Port")
             .error(Some("Must be a number"))
             .render(field(4, 2), buf);
@@ -132,7 +132,7 @@ fn text_fields() {
 #[test]
 fn text_field_shows_label_value_and_error() {
     let look = Look::dark();
-    let field = TextField::new(&look, "8o80")
+    let field = JBTextField::new(&look, "8o80")
         .label("Port")
         .error(Some("Must be a number"));
     assert_eq!(field.height(), 2);
@@ -146,34 +146,34 @@ fn text_field_shows_label_value_and_error() {
 fn list_rows() {
     sheet("list-row", 40, 9, |look, area, buf| {
         let full = Rect::new(area.x - 1, area.y, area.width + 2, area.height);
-        ListRow::new(look, "kit")
+        ColoredListCellRenderer::new(look, "kit")
             .icon(Glyph::Folder)
             .expanded(Some(true))
             .secondary("~/archipel")
             .render(row(full, 0), buf);
-        ListRow::new(look, "src")
+        ColoredListCellRenderer::new(look, "src")
             .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(true))
             .render(row(full, 1), buf);
-        ListRow::new(look, "main.rs")
+        ColoredListCellRenderer::new(look, "main.rs")
             .icon(Language::Rust)
             .depth(2)
             .selected(true)
             .render(row(full, 2), buf);
-        ListRow::new(look, "theme.py")
+        ColoredListCellRenderer::new(look, "theme.py")
             .icon(Language::Python)
             .depth(2)
             .render(row(full, 3), buf);
-        ListRow::new(look, "tests")
+        ColoredListCellRenderer::new(look, "tests")
             .icon(Glyph::Folder)
             .depth(1)
             .expanded(Some(false))
             .render(row(full, 4), buf);
-        ListRow::new(look, "Theme")
+        ColoredListCellRenderer::new(look, "Theme")
             .icon(Symbol::new(SymbolKind::Class))
             .render(row(full, 5), buf);
-        ListRow::new(look, "apply(ctx)")
+        ColoredListCellRenderer::new(look, "apply(ctx)")
             .icon(Symbol::new(SymbolKind::Method))
             .depth(1)
             .render(row(full, 6), buf);
@@ -190,7 +190,7 @@ fn tab_bars() {
     for (theme, look) in looks() {
         let buf = render(60, 3, |area, buf| {
             Island::new(&look).render(area, buf);
-            TabBar::new(&look, &tabs, 0).render(Rect::new(0, 0, 60, 1), buf);
+            JBTabs::new(&look, &tabs, 0).render(Rect::new(0, 0, 60, 1), buf);
         });
         snapshot(&format!("tab-bar.{theme}"), &buf);
     }
@@ -200,18 +200,19 @@ fn tab_bars() {
 fn banners() {
     sheet("banner", 64, 9, |look, area, buf| {
         let actions = ["Retry", "Dismiss"];
-        Banner::new(look, Severity::Info, "Indexing finished", &[]).render(row(area, 0), buf);
-        Banner::new(look, Severity::Success, "Build succeeded", &[]).render(row(area, 2), buf);
-        Banner::new(look, Severity::Warning, "Low disk space", &["Clean"])
+        InlineBanner::new(look, Status::Info, "Indexing finished", &[]).render(row(area, 0), buf);
+        InlineBanner::new(look, Status::Success, "Build succeeded", &[]).render(row(area, 2), buf);
+        InlineBanner::new(look, Status::Warning, "Low disk space", &["Clean"])
             .render(row(area, 4), buf);
-        Banner::new(look, Severity::Error, "Connection lost", &actions).render(row(area, 6), buf);
+        InlineBanner::new(look, Status::Error, "Connection lost", &actions)
+            .render(row(area, 6), buf);
     });
 }
 
 #[test]
 fn misc() {
     sheet("misc", 52, 9, |look, area, buf| {
-        SegmentedControl::new(look, &["Tree", "List", "Graph"], 1).render(row(area, 0), buf);
+        SegmentedButton::new(look, &["Tree", "List", "Graph"], 1).render(row(area, 0), buf);
         ProgressBar::new(look, 0.6).render(row(area, 2), buf);
         Kbd::new(look, &["Ctrl", "Shift", "A"]).render(row(area, 4), buf);
         let mut x = area.x;
@@ -304,17 +305,17 @@ fn widgets_clip_to_tiny_areas() {
             let area = Rect::new(0, 0, w, h);
             Island::new(&look).title("A long title").render(area, buf);
             Button::primary(&look, "A long label").render(area, buf);
-            TextField::new(&look, "value")
+            JBTextField::new(&look, "value")
                 .label("Label")
                 .error(Some("error"))
                 .render(area, buf);
-            Banner::new(&look, Severity::Error, "text", &["Action"]).render(area, buf);
+            InlineBanner::new(&look, Status::Error, "text", &["Action"]).render(area, buf);
             ProgressBar::new(&look, 0.5).render(area, buf);
             StatusBar::new(&look, &[("q", "quit")])
                 .mode("N")
                 .right("r")
                 .render(area, buf);
-            ListRow::new(&look, "row")
+            ColoredListCellRenderer::new(&look, "row")
                 .depth(9)
                 .icon(Language::Rust)
                 .render(area, buf);
@@ -346,7 +347,7 @@ fn ide_screen() {
                 ("flake.nix", 1, None, Language::Nix.into()),
             ];
             for (i, (label, depth, expanded, icon)) in rows.into_iter().enumerate() {
-                ListRow::new(&look, label)
+                ColoredListCellRenderer::new(&look, label)
                     .depth(depth)
                     .expanded(expanded)
                     .icon(icon)
@@ -362,7 +363,7 @@ fn ide_screen() {
                 (Some(Language::Rust.into()), "components.rs", true),
                 (Some(Language::Toml.into()), "Cargo.toml", false),
             ];
-            TabBar::new(&look, &tabs, 0).render(Rect::new(31, 0, 69, 1), buf);
+            JBTabs::new(&look, &tabs, 0).render(Rect::new(31, 0, 69, 1), buf);
             let editor = Rect::new(31, 1, 69, 15);
             Island::new(&look).render(editor, buf);
             let code = [
@@ -385,7 +386,7 @@ fn ide_screen() {
                 buf.set_string(x + a.len() as u16, y, *b, look.strong());
                 buf.set_string(x + (a.len() + b.len()) as u16, y, *d, look.text(c.text));
             }
-            Banner::new(&look, Severity::Info, "Index ready", &["Open log"])
+            InlineBanner::new(&look, Status::Info, "Index ready", &["Open log"])
                 .render(Rect::new(32, 14, 67, 1), buf);
             // Run tool window.
             let run = Rect::new(31, 17, 69, 8);

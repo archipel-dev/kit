@@ -52,7 +52,7 @@ pub mod size {
     /// Distance from a field's right edge to the center of its clear button.
     pub const CLEAR_BUTTON_INSET: f32 = 15.0;
     /// Distance from a combo box's right edge to the center of its chevron (where
-    /// [`Dropdown`](crate::components::Dropdown) draws it too).
+    /// [`ComboBox`](crate::openapi::ui::ComboBox) draws it too).
     pub const COMBO_CHEVRON_INSET: f32 = 16.0;
     /// Size the close glyph is drawn at in a clear button, so its cross is 8 pt.
     pub const CLEAR_GLYPH: f32 = 13.0;
@@ -86,11 +86,11 @@ pub mod size {
     pub const FORM_GROUP_SPACING: f32 = 20.0;
     /// Settings forms: indent of a group's rows under its title.
     pub const FORM_GROUP_INDENT: f32 = 24.0;
-    /// Padding inside a [`DropZone`](crate::components::DropZone).
+    /// Padding inside a [`DropZone`](crate::ui::DropZone).
     pub const DROP_ZONE_PADDING: f32 = 8.0;
-    /// Smallest height of a [`DropZone`](crate::components::DropZone): room for its hint.
+    /// Smallest height of a [`DropZone`](crate::ui::DropZone): room for its hint.
     pub const DROP_ZONE_MIN_HEIGHT: f32 = 40.0;
-    /// Default width of a [`NumberField`](crate::components::NumberField): room for six
+    /// Default width of a [`JBIntSpinner`](crate::ui::JBIntSpinner): room for six
     /// digits, as Android Studio's integer fields.
     pub const NUMBER_FIELD_WIDTH: f32 = 64.0;
     /// Gap between a group title and its line.
@@ -357,7 +357,7 @@ pub mod motion {
 
 /// Opacities, from 0 to 1.
 pub mod opacity {
-    /// Opacity of a row's [`tint`](crate::components::ListRow::tint) over the island.
+    /// Opacity of a row's [`tint`](crate::ui::ColoredListCellRenderer::tint) over the island.
     pub const ROW_TINT: f32 = 0.22;
     /// Multiplier of the colors of disabled code and highlighted text.
     pub const DISABLED_CODE: f32 = 0.55;
@@ -374,7 +374,7 @@ pub mod opacity {
     /// Opacity of the black scrim behind a modal dialog in light themes.
     pub const SCRIM_LIGHT: f32 = 60.0 / 255.0;
     /// Opacity of a row left in place while it is dragged (a
-    /// [`DragSource`](crate::behaviour::DragSource) on a [`ListRow`](crate::components::ListRow)).
+    /// [`DragSource`](crate::behaviour::DragSource) on a [`ColoredListCellRenderer`](crate::ui::ColoredListCellRenderer)).
     pub const DRAG_SOURCE: f32 = 0.4;
     /// Opacity of the card with a dragged row's icon and label that follows the pointer.
     pub const DRAG_IMAGE: f32 = 0.85;

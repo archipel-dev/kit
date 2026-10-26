@@ -8,7 +8,7 @@
 
 use crate::glyphs::{self, CAP_LEFT, CAP_RIGHT};
 use crate::{Glyph, Language, Look, Symbol};
-use archipel_kit::components::{ButtonVariant, Severity};
+use archipel_kit::ui::{ButtonVariant, Status};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
@@ -278,7 +278,7 @@ impl Widget for Button<'_> {
 }
 
 /// A checkbox: the box icon in the accent when checked, then the label.
-pub struct Checkbox<'a> {
+pub struct JBCheckBox<'a> {
     look: &'a Look,
     checked: bool,
     mixed: bool,
@@ -287,7 +287,7 @@ pub struct Checkbox<'a> {
     enabled: bool,
 }
 
-impl<'a> Checkbox<'a> {
+impl<'a> JBCheckBox<'a> {
     /// A checkbox showing `checked`.
     pub fn new(look: &'a Look, checked: bool, label: &'a str) -> Self {
         Self {
@@ -359,7 +359,7 @@ fn mark_row(
     );
 }
 
-impl Widget for Checkbox<'_> {
+impl Widget for JBCheckBox<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
@@ -379,7 +379,7 @@ impl Widget for Checkbox<'_> {
 }
 
 /// A radio button: a filled ring when selected.
-pub struct Radio<'a> {
+pub struct JBRadioButton<'a> {
     look: &'a Look,
     selected: bool,
     label: &'a str,
@@ -387,7 +387,7 @@ pub struct Radio<'a> {
     enabled: bool,
 }
 
-impl<'a> Radio<'a> {
+impl<'a> JBRadioButton<'a> {
     /// An option showing `selected`.
     pub fn new(look: &'a Look, selected: bool, label: &'a str) -> Self {
         Self {
@@ -412,7 +412,7 @@ impl<'a> Radio<'a> {
     }
 }
 
-impl Widget for Radio<'_> {
+impl Widget for JBRadioButton<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
@@ -432,14 +432,14 @@ impl Widget for Radio<'_> {
 }
 
 /// An on/off switch icon, green when on, then the label.
-pub struct Toggle<'a> {
+pub struct OnOffButton<'a> {
     look: &'a Look,
     on: bool,
     label: &'a str,
     focused: bool,
 }
 
-impl<'a> Toggle<'a> {
+impl<'a> OnOffButton<'a> {
     /// A switch showing `on`.
     pub fn new(look: &'a Look, on: bool, label: &'a str) -> Self {
         Self {
@@ -457,7 +457,7 @@ impl<'a> Toggle<'a> {
     }
 }
 
-impl Widget for Toggle<'_> {
+impl Widget for OnOffButton<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
@@ -474,7 +474,7 @@ impl Widget for Toggle<'_> {
 /// A prompt-style text input: one row on the field color with the label as a pill at the
 /// left (or a search icon), the value, and a cursor while focused. The pill turns accent on
 /// focus and red on error; the error message goes on the row below.
-pub struct TextField<'a> {
+pub struct JBTextField<'a> {
     look: &'a Look,
     value: &'a str,
     placeholder: &'a str,
@@ -483,7 +483,7 @@ pub struct TextField<'a> {
     focused: bool,
 }
 
-impl<'a> TextField<'a> {
+impl<'a> JBTextField<'a> {
     /// A field showing `value`.
     pub fn new(look: &'a Look, value: &'a str) -> Self {
         Self {
@@ -526,7 +526,7 @@ impl<'a> TextField<'a> {
     }
 }
 
-impl Widget for TextField<'_> {
+impl Widget for JBTextField<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
@@ -682,7 +682,7 @@ fn draw_icon(
 
 /// One row of a list or tree. The selected row is a full-width bar in the selection color;
 /// in an unfocused list it is a quieter tint.
-pub struct ListRow<'a> {
+pub struct ColoredListCellRenderer<'a> {
     look: &'a Look,
     label: &'a str,
     secondary: Option<&'a str>,
@@ -693,7 +693,7 @@ pub struct ListRow<'a> {
     active: bool,
 }
 
-impl<'a> ListRow<'a> {
+impl<'a> ColoredListCellRenderer<'a> {
     /// A row showing `label`.
     pub fn new(look: &'a Look, label: &'a str) -> Self {
         Self {
@@ -745,7 +745,7 @@ impl<'a> ListRow<'a> {
     }
 }
 
-impl Widget for ListRow<'_> {
+impl Widget for ColoredListCellRenderer<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
@@ -804,13 +804,13 @@ impl Widget for ListRow<'_> {
 /// A tab line of open buffers, as in NvChad: tabs are blocks on the frame color; the
 /// selected one has the island color, so it joins the editor below, bold text and a close
 /// icon. Modified buffers show a dot.
-pub struct TabBar<'a> {
+pub struct JBTabs<'a> {
     look: &'a Look,
     tabs: &'a [(Option<RowIcon>, &'a str, bool)],
     selected: usize,
 }
 
-impl<'a> TabBar<'a> {
+impl<'a> JBTabs<'a> {
     /// `tabs` as (icon, label, modified), with `selected` active.
     pub fn new(
         look: &'a Look,
@@ -830,7 +830,7 @@ impl<'a> TabBar<'a> {
     }
 }
 
-impl Widget for TabBar<'_> {
+impl Widget for JBTabs<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
@@ -886,16 +886,16 @@ impl Widget for TabBar<'_> {
 
 /// A one-row message: an edge in the severity color, the icon and text on a tint, and the
 /// actions as bold links on the right.
-pub struct Banner<'a> {
+pub struct InlineBanner<'a> {
     look: &'a Look,
-    severity: Severity,
+    severity: Status,
     text: &'a str,
     actions: &'a [&'a str],
 }
 
-impl<'a> Banner<'a> {
+impl<'a> InlineBanner<'a> {
     /// A banner of `severity` saying `text`, with `actions`.
-    pub fn new(look: &'a Look, severity: Severity, text: &'a str, actions: &'a [&'a str]) -> Self {
+    pub fn new(look: &'a Look, severity: Status, text: &'a str, actions: &'a [&'a str]) -> Self {
         Self {
             look,
             severity,
@@ -905,15 +905,15 @@ impl<'a> Banner<'a> {
     }
 }
 
-impl Widget for Banner<'_> {
+impl Widget for InlineBanner<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;
         let (tint, glyph) = match self.severity {
-            Severity::Info => (c.banner_info, Glyph::Info),
-            Severity::Success => (c.banner_success, Glyph::Success),
-            Severity::Warning => (c.banner_warning, Glyph::Warning),
-            Severity::Error => (c.banner_error, Glyph::Error),
+            Status::Info => (c.banner_info, Glyph::Info),
+            Status::Success => (c.banner_success, Glyph::Success),
+            Status::Warning => (c.banner_warning, Glyph::Warning),
+            Status::Error => (c.banner_error, Glyph::Error),
         };
         let bg = look.color(tint.background);
         let base = Style::default().bg(bg).fg(look.color(c.text_strong));
@@ -940,13 +940,13 @@ impl Widget for Banner<'_> {
 }
 
 /// Options in a row separated by thin bars; the selected one is bold on a tint.
-pub struct SegmentedControl<'a> {
+pub struct SegmentedButton<'a> {
     look: &'a Look,
     options: &'a [&'a str],
     selected: usize,
 }
 
-impl<'a> SegmentedControl<'a> {
+impl<'a> SegmentedButton<'a> {
     /// `options` with `selected` active.
     pub fn new(look: &'a Look, options: &'a [&'a str], selected: usize) -> Self {
         Self {
@@ -957,7 +957,7 @@ impl<'a> SegmentedControl<'a> {
     }
 }
 
-impl Widget for SegmentedControl<'_> {
+impl Widget for SegmentedButton<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let c = &self.look.theme.colors;
         let look = self.look;

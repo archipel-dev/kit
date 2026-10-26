@@ -3,8 +3,8 @@
 mod common;
 
 use archipel_kit::Theme;
-use archipel_kit::components::{Change, KeyValueEntry, KeyValueRow, KeyValueTable, ValueCell};
 use archipel_kit::testing::{self, NodeExt, NodeT, Queryable};
+use archipel_kit::ui::{Change, KeyValueEntry, KeyValueRow, KeyValueTable, ValueCell};
 use egui::Key;
 
 type Rows = Vec<KeyValueEntry>;
@@ -250,7 +250,7 @@ fn read_only_tables_have_no_trailing_row_or_delete_buttons() {
 }
 
 #[test]
-fn a_custom_value_cell_replaces_the_text_field() {
+fn a_custom_value_cell_replaces_the_jb_text_field() {
     let mut drawn = 0;
     let mut rows = params();
     let mut harness = testing::harness(Theme::dark(), |ui| {

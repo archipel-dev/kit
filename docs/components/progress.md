@@ -1,4 +1,4 @@
-# Spinner, ProgressBar
+# AsyncProcessIcon, ProgressBar
 
 Progress indicators: a **spinner** for work of unknown length that blocks a small area
 (connecting, loading a panel), a **progress bar** for downloads and builds, determinate when
@@ -12,12 +12,12 @@ the fraction is known.
 ## Usage
 
 ```rust
-use archipel_kit::components::{ProgressBar, Spinner};
+use archipel_kit::ui::{ProgressBar, AsyncProcessIcon};
 use archipel_kit::egui;
 
 fn status(ui: &mut egui::Ui, download: Option<f32>) {
     ui.horizontal(|ui| {
-        ui.add(Spinner::new().label("Indexing"));
+        ui.add(AsyncProcessIcon::new().label("Indexing"));
         ui.label("Indexing…");
     });
     ui.add(ProgressBar::new(download).label("Downloading JDK"));
@@ -28,7 +28,7 @@ fn status(ui: &mut egui::Ui, download: Option<f32>) {
 
 | Builder | Effect |
 |---|---|
-| `Spinner::new()` | `.size(f32)` (16 pt), `.label(str)` (accessible name, "Loading"). |
+| `AsyncProcessIcon::new()` | `.size(f32)` (16 pt), `.label(str)` (accessible name, "Loading"). |
 | `ProgressBar::new(Option<f32>)` | `Some(0.0..=1.0)` determinate, `None` indeterminate. `.label(str)`, `.width(f32)`. |
 
 Animated indicators request repaints only while they are visible.
@@ -37,5 +37,5 @@ Animated indicators request repaints only while they are visible.
 
 Role `ProgressIndicator`; determinate bars report their value in percent.
 
-Source: [`components/progress.rs`](../../crates/archipel-kit/src/components/progress.rs) ·
+Source: [`ui/progress.rs`](../../crates/archipel-kit/src/ui/progress.rs) ·
 Tests: [`tests/feedback.rs`](../../crates/archipel-kit/tests/feedback.rs)

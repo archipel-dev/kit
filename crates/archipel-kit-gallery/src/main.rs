@@ -5,10 +5,11 @@
 //! ```
 
 mod pages;
-use archipel_kit::components::{
-    Avatar, ListRow, Panel, Separator, Tag, Toggle, WindowChrome, WindowToolbar,
-};
 use archipel_kit::{Theme, egui, tokens};
+use archipel_kit::{
+    ui::{Avatar, ColoredListCellRenderer, OnOffButton, SeparatorComponent, Tag},
+    wm::{IdeFrameDecorator, MainToolbar, SimpleToolWindowPanel},
+};
 use pages::{Page, Pages};
 
 /// Gap between islands, in whole points for `egui::Margin`.
@@ -16,7 +17,7 @@ const GAP: i8 = tokens::size::ISLAND_GAP as i8;
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
-        viewport: WindowChrome::Integrated.viewport(
+        viewport: IdeFrameDecorator::Integrated.viewport(
             egui::ViewportBuilder::default()
                 .with_title("Archipel Kit Gallery")
                 .with_inner_size([1100.0, 760.0])
@@ -39,7 +40,7 @@ struct Gallery {
     dark: bool,
     enabled: bool,
     pages: Pages,
-    chrome: WindowChrome,
+    chrome: IdeFrameDecorator,
 }
 impl Default for Gallery {
     fn default() -> Self {
@@ -48,7 +49,7 @@ impl Default for Gallery {
             dark: true,
             enabled: true,
             pages: Pages::default(),
-            chrome: WindowChrome::Integrated,
+            chrome: IdeFrameDecorator::Integrated,
         }
     }
 }
@@ -64,7 +65,7 @@ impl eframe::App for Gallery {
 impl Gallery {
     fn show(&mut self, ctx: &egui::Context) {
         let colors = Theme::colors(ctx);
-        WindowToolbar::new("toolbar")
+        MainToolbar::new("toolbar")
             .chrome(self.chrome)
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
@@ -80,14 +81,14 @@ impl Gallery {
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let mut dark = self.dark;
-                        if ui.add(Toggle::new(&mut dark, "Dark")).changed() {
+                        if ui.add(OnOffButton::new(&mut dark, "Dark")).changed() {
                             self.dark = dark;
                             let mut theme = if dark { Theme::dark() } else { Theme::light() };
                             theme.language_icons = Theme::current(ui.ctx()).language_icons;
                             theme.apply(ui.ctx());
                         }
-                        ui.add(Separator);
-                        ui.add(Toggle::new(&mut self.enabled, "Enabled"));
+                        ui.add(SeparatorComponent);
+                        ui.add(OnOffButton::new(&mut self.enabled, "Enabled"));
                     });
                 });
             });
@@ -107,10 +108,10 @@ impl Gallery {
                     }),
             )
             .show(ctx, |ui| {
-                Panel::new("Components").show(ui, |ui| {
+                SimpleToolWindowPanel::new("Components").show(ui, |ui| {
                     ui.set_min_height(ui.available_height());
                     for (page, label, icon) in Page::ALL {
-                        let row = ListRow::new(label)
+                        let row = ColoredListCellRenderer::new(label)
                             .icon(icon)
                             .selected(self.page == page)
                             .show(ui);
@@ -137,7 +138,7 @@ impl Gallery {
                     .iter()
                     .find(|(p, ..)| *p == self.page)
                     .map_or("", |(_, l, _)| l);
-                Panel::new(title).show(ui, |ui| {
+                SimpleToolWindowPanel::new(title).show(ui, |ui| {
                     ui.set_min_height(ui.available_height());
                     archipel_kit::parts::scroll_vertical()
                         .auto_shrink(false)
@@ -174,7 +175,7 @@ mod tests {
                 let mut gallery = Gallery {
                     page,
                     dark,
-                    chrome: WindowChrome::Native,
+                    chrome: IdeFrameDecorator::Native,
                     ..Gallery::default()
                 };
                 let mut installed = false;

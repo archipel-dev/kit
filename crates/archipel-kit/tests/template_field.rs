@@ -1,14 +1,14 @@
-//! `TextField` with a highlighter: `{{variable}}` highlighting, the caret API and the
+//! `JBTextField` with a highlighter: `{{variable}}` highlighting, the caret API and the
 //! autocomplete wiring documented on the code page.
 
 mod common;
 
 use archipel_kit::Theme;
-use archipel_kit::components::code::{TemplateAt, TemplateHighlighter, TemplateToken};
-use archipel_kit::components::{MenuItem, TextField};
+use archipel_kit::editor::{TemplateAt, TemplateHighlighter, TemplateToken};
 use archipel_kit::egui::{self, Key, Modifiers};
-use archipel_kit::parts::Popover;
 use archipel_kit::testing::{self, Queryable};
+use archipel_kit::ui::popup::JBPopup;
+use archipel_kit::{action_system::ActionMenuItem, ui::JBTextField};
 
 const VARIABLES: [&str; 4] = ["base_url", "user_id", "user_name", "api_key"];
 
@@ -59,7 +59,7 @@ fn url_bar(ui: &mut egui::Ui, bar: &mut Bar, enabled: bool) {
             }
         });
     }
-    let out = TextField::new(&mut bar.url)
+    let out = JBTextField::new(&mut bar.url)
         .label("URL")
         .placeholder("https://example.com")
         .monospace(true)
@@ -104,12 +104,12 @@ fn url_bar(ui: &mut egui::Ui, bar: &mut Bar, enabled: bool) {
     if let Some(caret) = out.caret_rect {
         let (matches, selected) = (bar.matches.clone(), bar.selected);
         let mut picked = None;
-        Popover::new("url-completions", caret)
+        JBPopup::new("url-completions", caret)
             .width(220.0)
             .show(ui.ctx(), &mut bar.open, |ui| {
                 for (i, name) in matches.iter().enumerate() {
                     if ui
-                        .add(MenuItem::new(*name).highlighted(i == selected))
+                        .add(ActionMenuItem::new(*name).highlighted(i == selected))
                         .clicked()
                     {
                         picked = Some(*name);
@@ -135,7 +135,7 @@ fn snapshot_variables() {
         let highlighter = TemplateHighlighter::new(resolve);
         let mut url = "{{base_url}}/users/{{user_id}}".to_owned();
         ui.add(
-            TextField::new(&mut url)
+            JBTextField::new(&mut url)
                 .label("Resolved variables")
                 .monospace(true)
                 .clearable(true)
@@ -143,27 +143,27 @@ fn snapshot_variables() {
         );
         let mut missing = "{{base_url}}/{{missing}}".to_owned();
         ui.add(
-            TextField::new(&mut missing)
+            JBTextField::new(&mut missing)
                 .label("Unresolved")
                 .monospace(true)
                 .highlighter(&highlighter),
         );
         let mut header = "Bearer {{api_key}}".to_owned();
         ui.add(
-            TextField::new(&mut header)
+            JBTextField::new(&mut header)
                 .label("Secret in a header value")
                 .highlighter(&highlighter),
         );
         let mut empty = String::new();
         ui.add(
-            TextField::new(&mut empty)
+            JBTextField::new(&mut empty)
                 .label("Empty")
                 .placeholder("https://example.com")
                 .highlighter(&highlighter),
         );
         let mut off = "{{base_url}}/{{missing}}".to_owned();
         ui.add(
-            TextField::new(&mut off)
+            JBTextField::new(&mut off)
                 .label("Disabled")
                 .monospace(true)
                 .enabled(false)
@@ -186,18 +186,18 @@ fn snapshot_autocomplete_open() {
                 bar.open = true;
             }
             let highlighter = TemplateHighlighter::new(resolve);
-            let out = TextField::new(&mut bar.url)
+            let out = JBTextField::new(&mut bar.url)
                 .label("URL")
                 .monospace(true)
                 .highlighter(&highlighter)
                 .show(ui);
             out.response.request_focus();
             let anchor = out.caret_rect.unwrap_or(out.response.rect);
-            Popover::new("snapshot-completions", anchor)
+            JBPopup::new("snapshot-completions", anchor)
                 .width(220.0)
                 .show(ui.ctx(), &mut bar.open, |ui| {
-                    ui.add(MenuItem::new("user_id").highlighted(true));
-                    ui.add(MenuItem::new("user_name"));
+                    ui.add(ActionMenuItem::new("user_id").highlighted(true));
+                    ui.add(ActionMenuItem::new("user_name"));
                 });
         },
     );
@@ -349,7 +349,7 @@ fn field_conforms_enabled_and_disabled() {
     let mut text = String::from("{{base_url}}/{{missing}}");
     testing::conformance("URL", move |ui, enabled| {
         ui.add(
-            TextField::new(&mut text)
+            JBTextField::new(&mut text)
                 .label("URL")
                 .enabled(enabled)
                 .highlighter(&highlighter),
@@ -367,13 +367,13 @@ fn highlighted_fields_pass_the_audit() {
     let mut header = String::new();
     let mut harness = testing::harness(Theme::dark(), |ui| {
         ui.add(
-            TextField::new(&mut url)
+            JBTextField::new(&mut url)
                 .label("URL")
                 .clearable(true)
                 .highlighter(&highlighter),
         );
         ui.add(
-            TextField::new(&mut header)
+            JBTextField::new(&mut header)
                 .label("Header value")
                 .highlighter(&highlighter)
                 .error(Some("Unknown variable")),

@@ -7,15 +7,15 @@
 //!
 //! ```
 //! # egui::__run_test_ui(|ui| {
-//! use archipel_kit::behaviour::{ContextMenu, WidgetExt};
-//! use archipel_kit::components::{IconButton, MenuItem, Tooltip};
+//! use archipel_kit::behaviour::{PopupHandler, WidgetExt};
+//! use archipel_kit::{action_system::{ActionButton, ActionMenuItem}, ide::HelpTooltip};
 //! use archipel_kit::Glyph;
 //!
 //! ui.add(
-//!     IconButton::new(Glyph::Run, "Run")
-//!         .with(Tooltip::new("Run 'app'").shortcut("Shift+F10"))
-//!         .with(ContextMenu::new(|ui| {
-//!             ui.add(MenuItem::new("Edit Configuration…"));
+//!     ActionButton::new(Glyph::Run, "Run")
+//!         .with(HelpTooltip::new("Run 'app'").shortcut("Shift+F10"))
+//!         .with(PopupHandler::new(|ui| {
+//!             ui.add(ActionMenuItem::new("Edit Configuration…"));
 //!         })),
 //! );
 //! # });
@@ -25,7 +25,7 @@
 //! Write a behaviour as a type implementing [`Behaviour`], or as a closure
 //! `|ui, response| { …; response }`.
 
-use crate::components::Tooltip;
+use crate::ide::HelpTooltip;
 use crate::parts::Surface;
 use crate::theme::Theme;
 use crate::tokens::radius;
@@ -149,7 +149,7 @@ impl<W: Widget, B: Behaviour> Widget for With<W, B> {
     }
 }
 
-impl Behaviour for Tooltip {
+impl Behaviour for HelpTooltip {
     fn attach(self, _ui: &mut Ui, response: Response) -> Response {
         self.show_for(&response);
         response
@@ -161,25 +161,25 @@ impl Behaviour for Tooltip {
 }
 
 /// A context menu on secondary click (right click, or Ctrl+click on macOS), on the popup
-/// surface. Fill it with [`MenuItem`](crate::components::MenuItem)s; a click on a `MenuItem`
+/// surface. Fill it with [`ActionMenuItem`](crate::action_system::ActionMenuItem)s; a click on a `ActionMenuItem`
 /// closes it (call `ui.close()` for other widgets).
-pub struct ContextMenu<'a> {
+pub struct PopupHandler<'a> {
     add: Box<dyn FnOnce(&mut Ui) + 'a>,
 }
 
-impl<'a> ContextMenu<'a> {
+impl<'a> PopupHandler<'a> {
     /// A context menu drawn by `add`.
     pub fn new(add: impl FnOnce(&mut Ui) + 'a) -> Self {
         Self { add: Box::new(add) }
     }
 }
 
-impl Behaviour for ContextMenu<'_> {
+impl Behaviour for PopupHandler<'_> {
     fn attach(self, _ui: &mut Ui, response: Response) -> Response {
         let frame = Surface::Popup.frame(&response.ctx);
         egui::Popup::context_menu(&response)
             .frame(frame)
-            // Clicks inside stay open so a submenu item can open its menu; a `MenuItem` closes
+            // Clicks inside stay open so a submenu item can open its menu; a `ActionMenuItem` closes
             // the menu itself when it is clicked (other widgets: call `ui.close()`).
             .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
             .show(|ui| {

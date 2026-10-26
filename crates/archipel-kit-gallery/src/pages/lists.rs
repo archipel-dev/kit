@@ -5,7 +5,7 @@ pub(super) struct State {
     expanded: [bool; 2],
     selected: usize,
     loading_selected: Option<usize>,
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     row: Option<usize>,
     sort: Option<(usize, SortOrder)>,
     column_order: Vec<usize>,
@@ -21,10 +21,10 @@ impl Default for State {
             selected: 2,
             loading_selected: None,
             columns: vec![
-                Column::new("#", 70.0).right(),
-                Column::new("Request", 200.0).mono(),
-                Column::new("Status", 64.0).right(),
-                Column::new("Time", 80.0).right(),
+                ColumnInfo::new("#", 70.0).right(),
+                ColumnInfo::new("Request", 200.0).mono(),
+                ColumnInfo::new("Status", 64.0).right(),
+                ColumnInfo::new("Time", 80.0).right(),
             ],
             row: None,
             sort: None,
@@ -37,8 +37,8 @@ impl Default for State {
 
 impl State {
     fn show(&mut self, ui: &mut egui::Ui, enabled: bool) {
-        ui.add(SectionHeader::new("Tree"));
-        let mut row = |ui: &mut egui::Ui, index: usize, row: ListRow| {
+        ui.add(TitledSeparator::new("Tree"));
+        let mut row = |ui: &mut egui::Ui, index: usize, row: ColoredListCellRenderer| {
             let out = row
                 .selected(self.selected == index)
                 .enabled(enabled)
@@ -51,7 +51,7 @@ impl State {
         if row(
             ui,
             0,
-            ListRow::new("archipel")
+            ColoredListCellRenderer::new("archipel")
                 .icon(Glyph::Project)
                 .expanded(Some(self.expanded[0])),
         ) {
@@ -61,7 +61,7 @@ impl State {
             if row(
                 ui,
                 1,
-                ListRow::new("src")
+                ColoredListCellRenderer::new("src")
                     .icon(Glyph::Folder)
                     .depth(1)
                     .expanded(Some(self.expanded[1])),
@@ -72,14 +72,14 @@ impl State {
                 row(
                     ui,
                     2,
-                    ListRow::new("main.rs")
+                    ColoredListCellRenderer::new("main.rs")
                         .icon(Icon::for_file("main.rs"))
                         .depth(2),
                 );
                 row(
                     ui,
                     3,
-                    ListRow::new("theme.rs")
+                    ColoredListCellRenderer::new("theme.rs")
                         .icon(Icon::for_file("theme.rs"))
                         .depth(2)
                         .label_tone(Tone::Modified),
@@ -88,14 +88,14 @@ impl State {
             row(
                 ui,
                 4,
-                ListRow::new("Cargo.toml")
+                ColoredListCellRenderer::new("Cargo.toml")
                     .icon(Icon::for_file("Cargo.toml"))
                     .depth(1)
                     .secondary("1 KB"),
             );
         }
-        ui.add(SectionHeader::new("Slots and behaviours"));
-        let loading = [TreeRow::new("Collections", 0)
+        ui.add(TitledSeparator::new("Slots and behaviours"));
+        let loading = [TreeNode::new("Collections", 0)
             .icon(Glyph::Database)
             .icon_tone(Tone::Warning)
             .busy(true)
@@ -105,43 +105,43 @@ impl State {
                 .height(32.0)
                 .show(ui);
         });
-        ListRow::new("Problems")
+        ColoredListCellRenderer::new("Problems")
             .icon(Glyph::Warning)
             .trailing(Slot::text("12"))
             .enabled(enabled)
-            .with(Tooltip::new("Problems").hint("12 in 3 files"))
+            .with(HelpTooltip::new("Problems").hint("12 in 3 files"))
             .show(ui);
-        ListRow::new("app")
+        ColoredListCellRenderer::new("app")
             .icon(Glyph::Folder)
             .enabled(enabled)
             .trailing_on_hover(true)
             .trailing(Slot::ui(|ui| {
                 ui.add(
-                    IconButton::new(Glyph::Close, "Remove app")
+                    ActionButton::new(Glyph::Close, "Remove app")
                         .small(true)
                         .enabled(enabled),
                 );
             }))
-            .with(ContextMenu::new(|ui| {
-                ui.add(MenuItem::new("Open Module Settings"));
-                ui.add(MenuSeparator);
-                ui.add(MenuItem::new("Remove"));
+            .with(PopupHandler::new(|ui| {
+                ui.add(ActionMenuItem::new("Open Module Settings"));
+                ui.add(ListSeparator::new());
+                ui.add(ActionMenuItem::new("Remove"));
             }))
             .show(ui);
-        ui.add(SectionHeader::new("Row options"));
-        ListRow::new("Gradle")
+        ui.add(TitledSeparator::new("Row options"));
+        ColoredListCellRenderer::new("Gradle")
             .icon(Glyph::Folder)
             .expanded(Some(true))
             .strong(true)
             .enabled(enabled)
             .show(ui);
-        ListRow::new("Search hit in main.rs")
+        ColoredListCellRenderer::new("Search hit in main.rs")
             .icon(Icon::for_file("main.rs"))
             .depth(1)
             .tint(Tone::Warning)
             .enabled(enabled)
             .show(ui);
-        ListRow::new("app (running)")
+        ColoredListCellRenderer::new("app (running)")
             .icon(Glyph::Run)
             .icon_tone(Tone::Run)
             .strong(true)
@@ -149,12 +149,12 @@ impl State {
             .enabled(enabled)
             .show(ui);
         let mut included = self.checks[0];
-        ListRow::new("theme.rs")
+        ColoredListCellRenderer::new("theme.rs")
             .icon(Icon::for_file("theme.rs"))
             .secondary("src/")
             .leading(Slot::ui_width(22.0, |ui| {
                 ui.add(
-                    Checkbox::new(&mut included, "Include theme.rs")
+                    JBCheckBox::new(&mut included, "Include theme.rs")
                         .label_visible(false)
                         .enabled(enabled),
                 );
@@ -162,13 +162,15 @@ impl State {
             .enabled(enabled)
             .show(ui);
         self.checks[0] = included;
-        ListRow::new("A very long file name that does not fit into this row at all.kt")
-            .icon(Icon::for_file("a.kt"))
-            .secondary("with/a/long/path")
-            .trailing(Slot::text("12"))
-            .enabled(enabled)
-            .show(ui);
-        ui.add(SectionHeader::new(
+        ColoredListCellRenderer::new(
+            "A very long file name that does not fit into this row at all.kt",
+        )
+        .icon(Icon::for_file("a.kt"))
+        .secondary("with/a/long/path")
+        .trailing(Slot::text("12"))
+        .enabled(enabled)
+        .show(ui);
+        ui.add(TitledSeparator::new(
             "Virtualized table: 100 000 rows, drag headers to reorder, edit requests",
         ));
         let len = 100_000;
@@ -180,7 +182,7 @@ impl State {
             .sort
             .and_then(|(data, order_)| Some((order.iter().position(|d| *d == data)?, order_)));
         let requests = &self.requests;
-        let out = Table::new("gallery-table", &mut self.columns, len, &mut self.row)
+        let out = JBTable::new("gallery-table", &mut self.columns, len, &mut self.row)
             .sort(shown_sort)
             .reorderable(true)
             .height(220.0)
@@ -224,7 +226,9 @@ impl State {
             self.columns = new.iter().map(|&i| self.columns[i].clone()).collect();
             self.column_order = new.iter().map(|&i| order[i]).collect();
         }
-        ui.add(SectionHeader::new("Tree table: 100 000 rows, inline edit"));
+        ui.add(TitledSeparator::new(
+            "Tree table: 100 000 rows, inline edit",
+        ));
         self.documents.show(ui);
     }
 }
@@ -241,13 +245,13 @@ const FIELDS: usize = 99;
 /// open). The gallery owns it like an app would: the expanded state, the edited texts and the
 /// flattened visible rows, rebuilt when one of them changes.
 struct Documents {
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     selected: Option<usize>,
     open: Vec<bool>,
     /// Edited keys and values by (document, field).
     keys: std::collections::HashMap<(usize, usize), String>,
     values: std::collections::HashMap<(usize, usize), String>,
-    rows: Vec<TreeRow>,
+    rows: Vec<TreeNode>,
     /// The (document, field) of each visible row; `None` is the document itself.
     index: Vec<(usize, Option<usize>)>,
     last: String,
@@ -257,9 +261,9 @@ impl Documents {
     fn new() -> Self {
         let mut documents = Self {
             columns: vec![
-                Column::new("Key", 220.0),
-                Column::new("Value", 260.0).mono(),
-                Column::new("Type", 90.0),
+                ColumnInfo::new("Key", 220.0),
+                ColumnInfo::new("Value", 260.0).mono(),
+                ColumnInfo::new("Type", 90.0),
             ],
             selected: None,
             open: vec![true; DOCUMENTS],
@@ -296,7 +300,7 @@ impl Documents {
         self.index.clear();
         for doc in 0..DOCUMENTS {
             self.rows.push(
-                TreeRow::new(format!("doc{doc}"), 0)
+                TreeNode::new(format!("doc{doc}"), 0)
                     .icon(Glyph::Folder)
                     .parent(self.open[doc]),
             );
@@ -304,7 +308,7 @@ impl Documents {
             if self.open[doc] {
                 for field in 0..FIELDS {
                     self.rows
-                        .push(TreeRow::new(self.key(doc, field), 1).editable(true));
+                        .push(TreeNode::new(self.key(doc, field), 1).editable(true));
                     self.index.push((doc, Some(field)));
                 }
             }

@@ -12,14 +12,14 @@ checks the ones a machine can check; reviews check the rest.
 |---|---|
 | No color literals (`Color32::from_rgb`, `from_gray`, `from_black_alpha` …) | A `Theme::colors(ctx)` field or a `Tone`. A missing color is measured in Islands Dark **and** Light and added to both themes. |
 | No corner radius literals | `tokens::radius`. |
-| No stock egui controls (`ui.button`, `egui::Checkbox`, `egui::Slider` …) | The kit's `Button`, `Checkbox`, `Toggle`, `TextField`, `Dropdown` … |
-| No egui tooltips (`on_hover_text`) | `Tooltip` (surface, shortcut, placement, delay). |
+| No stock egui controls (`ui.button`, `egui::Checkbox`, `egui::Slider` …) | The kit's `Button`, `JBCheckBox`, `OnOffButton`, `JBTextField`, `ComboBox` … |
+| No egui tooltips (`on_hover_text`) | `HelpTooltip` (surface, shortcut, placement, delay). |
 | No literal animation durations | `tokens::motion`. |
 | Every interactive component passes `testing::conformance` | Add it to `tests/conformance.rs`, or list it in `NOT_INTERACTIVE` with why. |
 
 ## The Islands look and feel
 
-- **Islands, gaps, frame.** Content lives in islands (`Panel`, `Workbench`) on the window
+- **Islands, gaps, frame.** Content lives in islands (`SimpleToolWindowPanel`, `ToolWindowPane`) on the window
   frame, 4 pt apart. Gaps have no lines; they are the splitters. Tool windows have stripes.
 - **Headers are 40 pt.** A tool window's title bar and an editor's tab bar have the same
   height. Header actions are hidden until the pointer is over the island or focus is in it;

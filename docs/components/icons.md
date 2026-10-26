@@ -21,12 +21,12 @@ Every component that shows an icon takes `impl Into<Icon>`, so glyphs and file i
 freely:
 
 ```rust
-use archipel_kit::components::{IconButton, ListRow};
+use archipel_kit::{action_system::ActionButton, ui::ColoredListCellRenderer};
 use archipel_kit::{Glyph, Icon, Theme, egui, icons};
 
 fn file_row(ui: &mut egui::Ui, name: &str) {
-    ListRow::new(name).icon(Icon::for_file(name)).show(ui);
-    ui.add(IconButton::new(Glyph::Refresh, "Reload"));
+    ColoredListCellRenderer::new(name).icon(Icon::for_file(name)).show(ui);
+    ui.add(ActionButton::new(Glyph::Refresh, "Reload"));
 
     // Custom widgets: paint into any rect, in a theme color.
     let colors = Theme::colors(ui.ctx());

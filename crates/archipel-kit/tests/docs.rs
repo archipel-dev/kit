@@ -88,15 +88,50 @@ fn every_snapshot_is_shown_in_the_docs() {
 
 #[test]
 fn every_component_is_documented() {
-    let source = fs::read_to_string("src/components/mod.rs").expect("components module");
-    let components: BTreeSet<&str> = source
-        .lines()
-        .filter_map(|line| line.strip_prefix("pub use "))
-        .filter_map(|line| line.split_once('{').map(|(_, names)| names))
-        .flat_map(|names| names.trim_end_matches("};").split(','))
-        .map(str::trim)
-        .filter(|name| name.chars().next().is_some_and(char::is_uppercase))
-        .collect();
+    // The modules that export the widgets, with the start of the `pub use` statements that
+    // count (the editor module: its code view and editor; the action system: its widgets, not
+    // the action model).
+    let modules = [
+        ("ui/mod.rs", "pub use "),
+        ("ui/tabs/mod.rs", "pub use "),
+        ("ui/popup/mod.rs", "pub use "),
+        ("openapi/ui/mod.rs", "pub use "),
+        ("ide/mod.rs", "pub use "),
+        ("wm/mod.rs", "pub use "),
+        ("notification/mod.rs", "pub use "),
+        ("editor/mod.rs", "pub use code_"),
+        ("action_system/mod.rs", "pub use action_"),
+    ];
+    let mut components = BTreeSet::new();
+    for (module, prefix) in modules {
+        let text = fs::read_to_string(Path::new("src").join(module)).expect("module source");
+        // Whole statements: `pub use a::B;` and `pub use a::{B, C};`, also wrapped over lines.
+        let mut statement = String::new();
+        for line in text.lines() {
+            if !line.starts_with(prefix) && statement.is_empty() {
+                continue;
+            }
+            statement.push_str(line);
+            if !line.trim_end().ends_with(';') {
+                continue;
+            }
+            let list = statement
+                .trim_end()
+                .trim_end_matches(';')
+                .trim_end_matches('}');
+            let names = list.split_once('{').map_or_else(
+                || list.rsplit("::").next().unwrap_or(""),
+                |(_, names)| names,
+            );
+            components.extend(
+                names
+                    .split(',')
+                    .map(|name| name.trim().to_owned())
+                    .filter(|name| name.chars().next().is_some_and(char::is_uppercase)),
+            );
+            statement.clear();
+        }
+    }
     let docs: String = fs::read_dir(Path::new(DOCS).join("components"))
         .expect("components docs")
         .flatten()

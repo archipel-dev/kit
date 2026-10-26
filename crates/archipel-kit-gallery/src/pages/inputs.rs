@@ -34,13 +34,13 @@ impl Default for State {
 impl State {
     fn show(&mut self, ui: &mut egui::Ui, enabled: bool) {
         ui.add(
-            TextField::new(&mut self.name)
+            JBTextField::new(&mut self.name)
                 .label("Project name")
                 .placeholder("my-app")
                 .enabled(enabled),
         );
         ui.add(
-            TextField::search(&mut self.query)
+            JBTextField::search(&mut self.query)
                 .id(egui::Id::new("gallery-search"))
                 .enabled(enabled),
         );
@@ -50,34 +50,34 @@ impl State {
             .is_err()
             .then_some("Enter a number from 0 to 65535");
         ui.add(
-            TextField::new(&mut self.port)
+            JBTextField::new(&mut self.port)
                 .label("Port")
                 .error(error)
                 .enabled(enabled),
         );
         ui.add(
-            TextField::new(&mut self.password)
+            JBTextField::new(&mut self.password)
                 .label("Password")
                 .password(true)
                 .enabled(enabled),
         );
         ui.add(
-            TextField::new(&mut self.body)
+            JBTextField::new(&mut self.body)
                 .label("Request body")
                 .multiline(4)
                 .monospace(true)
                 .enabled(enabled),
         );
-        ui.add(SectionHeader::new("Key/value table"));
+        ui.add(TitledSeparator::new("Key/value table"));
         // Disabling the page makes the table read-only.
         KeyValueTable::new("params", &mut self.params)
             .key_placeholder("Add parameter")
             .value_placeholder("value")
             .read_only(!enabled)
             .show(ui);
-        ui.add(SectionHeader::new("Dropdown"));
+        ui.add(TitledSeparator::new("Dropdown"));
         ui.add(
-            Dropdown::new(
+            ComboBox::new(
                 "method",
                 &mut self.method,
                 ["GET", "POST", "PUT", "PATCH", "DELETE"],

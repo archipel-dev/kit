@@ -1,124 +1,139 @@
-//! `TextField::suggestions`: an editable combo box.
+//! `ComboBox` keyboard tests: Escape closes the popup and returns focus to the button.
+
+mod common;
 
 use archipel_kit::Theme;
-use archipel_kit::components::TextField;
-use archipel_kit::egui::Key;
-use archipel_kit::testing::{self, Queryable};
+use archipel_kit::openapi::ui::{ComboBox, DialogWrapper, ExitCode};
+use archipel_kit::testing::{self, Queryable, Role};
 
-fn fields() -> Vec<String> {
-    ["address.city", "email", "name", "tier"]
-        .map(String::from)
-        .to_vec()
-}
-
-fn harness(text: &str) -> testing::Harness<'static, String> {
-    let fields = fields();
-    testing::harness_state_sized(
-        Theme::dark(),
-        archipel_kit::egui::vec2(320.0, 240.0),
-        text.to_owned(),
-        move |ui, field| {
-            ui.add(TextField::new(field).name("Field").suggestions(&fields));
-        },
-    )
+fn open_combo_box() -> testing::Harness<'static, &'static str> {
+    let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {
+        ui.add(ComboBox::new("method", method, ["GET", "POST", "PUT"]));
+    });
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 240.0));
+    harness.run();
+    harness.get_by_role(Role::ComboBox).click();
+    harness.run();
+    assert!(harness.query_by_label("PUT").is_some(), "the popup is open");
+    harness
 }
 
 #[test]
-fn the_chevron_lists_everything_and_a_click_picks() {
-    let mut h = harness("");
-    assert!(h.query_by_label("email").is_none(), "closed at first");
-    h.get_by_label("Show suggestions").click();
-    h.run();
-    h.run();
-    for field in fields() {
-        assert!(h.query_by_label(&field).is_some(), "{field} is listed");
-    }
-    h.get_by_label("tier").click();
-    h.run();
-    h.run();
-    assert_eq!(h.state(), "tier");
-    assert!(h.query_by_label("email").is_none(), "closed after the pick");
-}
-
-#[test]
-fn typing_filters_ignoring_case_and_enter_picks() {
-    let mut h = harness("");
-    h.get_by_label("Field").focus();
-    h.get_by_label("Field").type_text("AM");
-    h.run();
-    assert!(h.query_by_label("name").is_some());
-    assert!(h.query_by_label("email").is_none(), "filtered out");
-    h.key_press(Key::Enter);
-    h.run();
-    assert_eq!(h.state(), "name", "replaces the whole text");
-}
-
-#[test]
-fn free_text_stays_and_escape_closes() {
-    let mut h = harness("");
-    h.get_by_label("Field").focus();
-    h.get_by_label("Field").type_text("e");
-    h.run();
-    assert!(h.query_by_label("email").is_some());
-    h.key_press(Key::Escape);
-    h.run();
-    assert!(h.query_by_label("email").is_none());
-    h.get_by_label("Field").type_text("xtra");
-    h.run();
-    assert_eq!(h.state(), "extra", "not a suggestion, still kept");
-}
-
-#[test]
-fn alt_down_opens_the_full_list_on_a_chosen_value() {
-    let mut h = harness("");
-    h.get_by_label("Field").focus();
-    h.get_by_label("Field").type_text("tier");
-    h.run();
+fn escape_closes_the_popup_and_refocuses_the_button() {
+    let mut harness = open_combo_box();
+    harness.key_press(egui::Key::Escape);
+    harness.run_steps(3);
     assert!(
-        h.query_by_label("email").is_none(),
-        "a full match lists nothing"
+        harness.query_by_label("PUT").is_none(),
+        "the popup is closed"
     );
-    h.key_press_modifiers(archipel_kit::egui::Modifiers::ALT, Key::ArrowDown);
-    h.run();
-    h.run();
-    assert!(h.query_by_label("email").is_some(), "everything on request");
+    assert!(harness.get_by_role(Role::ComboBox).is_focused());
+    assert_eq!(*harness.state(), "GET", "Escape picks nothing");
 }
 
 #[test]
-fn a_second_click_on_the_chevron_closes() {
-    let mut h = harness("");
-    h.get_by_label("Show suggestions").click();
-    h.run();
-    h.run();
-    assert!(h.query_by_label("email").is_some());
-    h.get_by_label("Show suggestions").click();
-    h.run();
-    h.run();
-    assert!(h.query_by_label("email").is_none());
+fn escape_in_a_combo_box_does_not_close_the_dialog() {
+    let mut harness = testing::harness_state(
+        Theme::dark(),
+        ("GET", None::<ExitCode>),
+        |ui, (method, action)| {
+            let shown = DialogWrapper::new("Request")
+                .content(|ui| {
+                    ui.add(ComboBox::new("method", method, ["GET", "POST", "PUT"]));
+                })
+                .primary("Save")
+                .show(ui.ctx());
+            if let Some(done) = shown {
+                action.get_or_insert(done);
+            }
+        },
+    );
+    harness.set_size(egui::vec2(520.0, 400.0));
+    harness.run_steps(3);
+    harness.get_by_role(Role::ComboBox).click();
+    harness.run_steps(3);
+    assert!(harness.query_by_label("PUT").is_some(), "the popup is open");
+    harness.key_press(egui::Key::Escape);
+    harness.run_steps(3);
+    assert!(
+        harness.query_by_label("PUT").is_none(),
+        "the popup is closed"
+    );
+    assert_eq!(harness.state().1, None, "the dialog stays open");
+    assert!(harness.get_by_role(Role::ComboBox).is_focused());
+    // A second Escape, with no popup open, dismisses the dialog.
+    harness.key_press(egui::Key::Escape);
+    harness.run_steps(3);
+    assert_eq!(harness.state().1, Some(ExitCode::Dismissed));
 }
 
 #[test]
-fn snapshot() {
-    const IMG: &str = "../../docs/components/img";
+fn separators_group_options_without_shifting_picks() {
+    let mut harness = testing::harness_state(Theme::dark(), "Islands Dark", |ui, theme| {
+        ui.add(
+            ComboBox::new(
+                "theme",
+                theme,
+                ["Islands Dark", "Islands Light", "Darcula", "More…"],
+            )
+            .separators([2, 3])
+            .width(180.0),
+        );
+    });
+    // Make room for the popup below the button.
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 260.0));
+    harness.run();
+    harness.get_by_label("Islands Dark").click();
+    harness.run();
+    harness.get_by_label("Darcula").click();
+    harness.run();
+    assert_eq!(*harness.state(), "Darcula");
+}
+
+#[test]
+fn tone_colors_options_and_keeps_their_names() {
+    use archipel_kit::parts::Tone;
+    let mut harness = testing::harness_state(Theme::dark(), "GET", |ui, method| {
+        ui.add(
+            ComboBox::new("method", method, ["GET", "POST", "PUT", "DELETE"])
+                .tone(|m| Tone::method(m))
+                .label("Method")
+                .width(110.0),
+        );
+    });
+    harness.set_size(egui::vec2(testing::DEFAULT_WIDTH, 220.0));
+    harness.run();
+    harness.get_by_label("Method").click();
+    harness.run();
+    harness.get_by_label("DELETE").click();
+    harness.run();
+    assert_eq!(*harness.state(), "DELETE");
+}
+
+#[test]
+fn tone_snapshot() {
+    use archipel_kit::parts::Tone;
     testing::snapshot_themes_after(
-        "text_field_suggestions",
-        IMG,
+        "combo_box_tone",
+        common::IMG,
         |ui| {
-            ui.set_width(240.0);
-            let id = archipel_kit::egui::Id::new("combo-snapshot");
-            let mut field = ui.data_mut(|d| d.get_temp_mut_or_default::<String>(id).clone());
-            let fields = fields();
+            let id = egui::Id::new("tone-snapshot");
+            let mut method = ui.data_mut(|d| *d.get_temp_mut_or_insert_with(id, || "POST"));
             ui.add(
-                TextField::new(&mut field)
-                    .name("Field")
-                    .suggestions(&fields),
+                ComboBox::new(
+                    "method",
+                    &mut method,
+                    ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                )
+                .tone(|m| Tone::method(m))
+                .label("Method")
+                .width(110.0),
             );
-            ui.data_mut(|d| d.insert_temp(id, field));
-            ui.add_space(120.0);
+            ui.data_mut(|d| d.insert_temp(id, method));
+            ui.add_space(170.0);
         },
         |h| {
-            h.get_by_label("Field").focus();
-            h.get_by_label("Field").type_text("e");
+            h.get_by_label("Method").click();
             h.run();
         },
     );

@@ -1,7 +1,7 @@
 # TreeTable
 
 A tree whose rows have columns: a MongoDB document or nested JSON as **key | value | type**.
-It is [`Tree`](collections.md) and [`Table`](collections.md) in one, with the same model, and
+It is [`Tree`](collections.md) and [`JBTable`](collections.md) in one, with the same model, and
 draws only the visible rows, so 100 000 rows stay fast.
 
 <picture>
@@ -12,10 +12,10 @@ draws only the visible rows, so 100 000 rows stay fast.
 ## The model
 
 - **You own the data**, the selection, the expanded state and the column widths. You pass the
-  *visible* rows as `TreeRow`s (as for `Tree`) and a `cell(row, column)` callback for the
+  *visible* rows as `TreeNode`s (as for `Tree`) and a `cell(row, column)` callback for the
   columns after the first.
 - **The first column is the tree column**: chevron, icon, key and dimmed secondary text come
-  from the `TreeRow`.
+  from the `TreeNode`.
 - **The widget owns the keys** and reports through the same `CollectionResponse`:
   `selection_changed`, `activated`, `toggled`, `sort_clicked`, plus `edited`.
 
@@ -28,7 +28,7 @@ draws only the visible rows, so 100 000 rows stay fast.
 
 Edit is a **cell slot plus a result**, not a callback that owns state:
 
-- Mark cells `Cell::editable(true)` (the key column with `TreeRow::editable(true)`).
+- Mark cells `Cell::editable(true)` (the key column with `TreeNode::editable(true)`).
 - <kbd>F2</kbd>, <kbd>Enter</kbd> or a double-click on an editable cell opens a text field in
   the cell (placed through a [`Slot`](../../crates/archipel-kit/src/parts/slot.rs), so it is
   a widget in the cell like any slot content).
@@ -47,11 +47,11 @@ A double-click on a *non-editable* cell toggles a parent or activates a leaf, as
 ## Usage
 
 ```rust
-use archipel_kit::components::{Cell, Column, TreeRow, TreeTable};
+use archipel_kit::ui::{Cell, ColumnInfo, TreeNode, TreeTable};
 use archipel_kit::{Glyph, ValueKind, egui};
 
 struct Doc {
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     selected: Option<usize>,
     address_open: bool,
     name: String,
@@ -59,11 +59,11 @@ struct Doc {
 
 fn document(ui: &mut egui::Ui, doc: &mut Doc) {
     let mut rows = vec![
-        TreeRow::new("name", 0),
-        TreeRow::new("address", 0).icon(Glyph::Folder).parent(doc.address_open),
+        TreeNode::new("name", 0),
+        TreeNode::new("address", 0).icon(Glyph::Folder).parent(doc.address_open),
     ];
     if doc.address_open {
-        rows.push(TreeRow::new("city", 1));
+        rows.push(TreeNode::new("city", 1));
     }
     let name = doc.name.clone();
     let out = TreeTable::new("document", &mut doc.columns, &rows, &mut doc.selected)
@@ -91,8 +91,8 @@ fn document(ui: &mut egui::Ui, doc: &mut Doc) {
 | Item | Builders and fields |
 |---|---|
 | `TreeTable::new(id, &mut columns, &rows, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.name(str)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
-| `TreeRow` | `.editable(bool)` for the key, plus `.parent`, `.icon`, `.secondary` as for `Tree` |
-| `Cell` | `.editable(bool)`, `.value_kind(ValueKind)` (values in the editor's syntax colors, see [collections](collections.md#typed-values)), plus `.icon`, `.tone`, `.muted` as for `Table` |
+| `TreeNode` | `.editable(bool)` for the key, plus `.parent`, `.icon`, `.secondary` as for `Tree` |
+| `Cell` | `.editable(bool)`, `.value_kind(ValueKind)` (values in the editor's syntax colors, see [collections](collections.md#typed-values)), plus `.icon`, `.tone`, `.muted` as for `JBTable` |
 | `CellEdit` | `row`, `column`, `text` |
 | `CollectionResponse` | `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited` |
 
@@ -106,7 +106,7 @@ fn document(ui: &mut egui::Ui, doc: &mut Doc) {
   reports `sort_clicked`. Cells clip at the column edge.
 - **Cursors.** Rows keep the arrow, headers the pointing hand, the resize handle the column
   resize cursor, and the edit field the text beam (see [cursors](../cursors.md)).
-- **States.** Hover and the selection pill as in `Table`; the selection is blue while the
+- **States.** Hover and the selection pill as in `JBTable`; the selection is blue while the
   collection has focus and gray otherwise; the focus ring shows when nothing is selected.
 
 ## Accessibility
@@ -116,7 +116,7 @@ their key and cells joined with commas (`name, Ada, String`); chevrons are butto
 (`Expand address`); headers are buttons; resize handles are splitters (`Resize Key`). The
 open editor is a text input named `Edit <column title>`.
 
-Source: [`components/collections/tree_table.rs`](../../crates/archipel-kit/src/components/collections/tree_table.rs),
-[`edit.rs`](../../crates/archipel-kit/src/components/collections/edit.rs) ·
+Source: [`ui/collections/tree_table.rs`](../../crates/archipel-kit/src/ui/collections/tree_table.rs),
+[`edit.rs`](../../crates/archipel-kit/src/ui/collections/edit.rs) ·
 Tests: [`tests/collections.rs`](../../crates/archipel-kit/tests/collections.rs),
 [`tests/conformance.rs`](../../crates/archipel-kit/tests/conformance.rs)

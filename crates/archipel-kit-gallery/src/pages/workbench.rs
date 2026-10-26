@@ -1,9 +1,9 @@
 use super::*;
-use archipel_kit::components::{Workbench, WorkbenchRegion, WorkbenchState};
+use archipel_kit::wm::{ToolWindowAnchor, ToolWindowPane, ToolWindowPaneState};
 
 #[derive(Default)]
 pub(super) struct State {
-    layout: WorkbenchState,
+    layout: ToolWindowPaneState,
 }
 
 pub(super) fn show(ui: &mut egui::Ui, state: &mut State, _enabled: bool) {
@@ -14,7 +14,7 @@ pub(super) fn show(ui: &mut egui::Ui, state: &mut State, _enabled: bool) {
             (&mut state.layout.bottom_hidden, "Messages"),
         ] {
             let mut visible = !*hidden;
-            if ui.add(Toggle::new(&mut visible, title)).changed() {
+            if ui.add(OnOffButton::new(&mut visible, title)).changed() {
                 *hidden = !visible;
             }
         }
@@ -23,21 +23,23 @@ pub(super) fn show(ui: &mut egui::Ui, state: &mut State, _enabled: bool) {
         "Hover an island to reveal its actions. Drag the gaps, or Tab to one and use arrows / Enter.",
     );
     ui.allocate_ui(egui::vec2(ui.available_width(), 400.0), |ui| {
-        Workbench::new("preview", &mut state.layout)
+        ToolWindowPane::new("preview", &mut state.layout)
             .left("Browser", |ui| {
-                ListRow::new("Examples").icon(Glyph::Folder).show(ui);
+                ColoredListCellRenderer::new("Examples")
+                    .icon(Glyph::Folder)
+                    .show(ui);
             })
-            .icon(WorkbenchRegion::Left, Glyph::Folder)
+            .icon(ToolWindowAnchor::Left, Glyph::Folder)
             .right("Details", |ui| {
                 ui.label("Format: JSON");
             })
-            .padded(WorkbenchRegion::Right, true)
-            .icon(WorkbenchRegion::Right, Glyph::Structure)
+            .padded(ToolWindowAnchor::Right, true)
+            .icon(ToolWindowAnchor::Right, Glyph::Structure)
             .bottom("Messages", |ui| {
                 ui.label("Ready");
             })
-            .padded(WorkbenchRegion::Bottom, true)
-            .icon(WorkbenchRegion::Bottom, Glyph::Terminal)
+            .padded(ToolWindowAnchor::Bottom, true)
+            .icon(ToolWindowAnchor::Bottom, Glyph::Terminal)
             .show_inside(ui, |ui| {
                 ui.add(Button::primary("Run request"));
                 ui.label("Your application content");

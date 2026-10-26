@@ -52,17 +52,17 @@ egui widgets to match. Switch themes at runtime with `Theme::light().apply(ctx)`
 Workbench layouts are islands (panels) on the frame color:
 
 ```rust
-use archipel_kit::components::{IconButton, ListRow, Panel};
+use archipel_kit::{action_system::ActionButton, ui::ColoredListCellRenderer, wm::SimpleToolWindowPanel};
 use archipel_kit::{Glyph, Icon, egui};
 
 fn sidebar(ui: &mut egui::Ui, files: &[&str], selected: &mut usize) {
-    Panel::new("Project")
+    SimpleToolWindowPanel::new("Project")
         .actions(|ui| {
-            ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
+            ui.add(ActionButton::new(Glyph::CollapseAll, "Collapse all"));
         })
         .show(ui, |ui| {
             for (index, name) in files.iter().enumerate() {
-                let row = ListRow::new(*name)
+                let row = ColoredListCellRenderer::new(*name)
                     .icon(Icon::for_file(name))
                     .selected(*selected == index)
                     .show(ui);
@@ -75,7 +75,7 @@ fn sidebar(ui: &mut egui::Ui, files: &[&str], selected: &mut usize) {
 ```
 
 Components are stateless: they borrow your state (`&mut String`, `&mut bool`) or report
-what happened (`clicked()`, `RowResponse::toggled`, `MessageResponse::action`), and your app
+what happened (`clicked()`, `CellRendererResponse::toggled`, `MessageResponse::action`), and your app
 decides what changes. That keeps undo, persistence and commands in your code, not in the
 widgets.
 

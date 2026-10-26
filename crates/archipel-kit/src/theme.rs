@@ -113,7 +113,7 @@ pub struct Colors {
     pub border: Color32,
     /// Toolbar and menu separators.
     pub separator: Color32,
-    /// Line after a group title in settings forms ([`SectionHeader`](crate::components::SectionHeader)).
+    /// Line after a group title in settings forms ([`TitledSeparator`](crate::ui::TitledSeparator)).
     pub group_separator: Color32,
     /// Selected editor tab fill.
     pub tab_selected: Color32,

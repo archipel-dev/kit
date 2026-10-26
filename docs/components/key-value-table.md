@@ -15,7 +15,7 @@ The caller owns the rows. Use the ready-made `KeyValueEntry`, or implement `KeyV
 your own model type so the table edits your rows in place, without copying them every frame.
 
 ```rust
-use archipel_kit::components::{Change, KeyValueEntry, KeyValueTable};
+use archipel_kit::ui::{Change, KeyValueEntry, KeyValueTable};
 use archipel_kit::egui;
 
 fn query_params(ui: &mut egui::Ui, params: &mut Vec<KeyValueEntry>, sent: &mut Vec<bool>) {
@@ -42,7 +42,7 @@ fn query_params(ui: &mut egui::Ui, params: &mut Vec<KeyValueEntry>, sent: &mut V
 Your own row type:
 
 ```rust
-use archipel_kit::components::{KeyValueRow, KeyValueTable};
+use archipel_kit::ui::{KeyValueRow, KeyValueTable};
 use archipel_kit::egui;
 
 #[derive(Default)]
@@ -105,7 +105,7 @@ row" and "Value, new row". A custom value cell must keep the `ValueCell::name`.
 ## Testing
 
 ```rust
-use archipel_kit::components::{KeyValueEntry, KeyValueTable};
+use archipel_kit::ui::{KeyValueEntry, KeyValueTable};
 use archipel_kit::testing::{self, Queryable};
 use archipel_kit::Theme;
 
@@ -119,5 +119,5 @@ harness.run();
 assert_eq!(harness.state()[0].key, "page");
 ```
 
-Source: [`components/key_value.rs`](../../crates/archipel-kit/src/components/key_value.rs) ·
+Source: [`ui/key_value.rs`](../../crates/archipel-kit/src/ui/key_value.rs) ·
 Tests: [`tests/key_value.rs`](../../crates/archipel-kit/tests/key_value.rs)

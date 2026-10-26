@@ -12,7 +12,7 @@ dense toolbars and banners, and **danger** for destructive actions.
 ## Usage
 
 ```rust
-use archipel_kit::components::Button;
+use archipel_kit::ui::Button;
 use archipel_kit::{Glyph, Icon, egui};
 
 fn dialog_buttons(ui: &mut egui::Ui, can_create: bool) -> bool {
@@ -54,7 +54,7 @@ Role `Button`, named by its label, with the disabled state reported.
 ## Testing
 
 ```rust
-use archipel_kit::components::Button;
+use archipel_kit::ui::Button;
 use archipel_kit::testing::{self, Queryable};
 use archipel_kit::Theme;
 
@@ -68,5 +68,5 @@ harness.run();
 assert_eq!(*harness.state(), 1);
 ```
 
-Source: [`components/button.rs`](../../crates/archipel-kit/src/components/button.rs) ·
+Source: [`ui/button.rs`](../../crates/archipel-kit/src/ui/button.rs) ·
 Tests: [`tests/button.rs`](../../crates/archipel-kit/tests/button.rs)

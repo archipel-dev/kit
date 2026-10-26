@@ -1,9 +1,11 @@
 //! Composable island headers, hover actions and keyboard accessibility.
 use archipel_kit::{
     Glyph, Theme,
-    components::{Button, IconButton, Panel, Separator},
+    action_system::ActionButton,
     egui,
     testing::{self, Harness, Queryable, SnapshotOptions, SnapshotResults},
+    ui::{Button, SeparatorComponent},
+    wm::SimpleToolWindowPanel,
 };
 
 fn harness(theme: Theme, gpu: bool) -> Harness<'static, usize> {
@@ -23,10 +25,10 @@ fn harness(theme: Theme, gpu: bool) -> Harness<'static, usize> {
                 installed = true;
             }
             egui::CentralPanel::default().show(ctx, |ui| {
-                Panel::new("Inspector")
+                SimpleToolWindowPanel::new("Inspector")
                     .header(200.0, |ui| {
                         ui.label("Inspector");
-                        ui.add(Separator::group());
+                        ui.add(SeparatorComponent::group());
                         ui.label("JSON");
                     })
                     .padded(true)
@@ -34,13 +36,13 @@ fn harness(theme: Theme, gpu: bool) -> Harness<'static, usize> {
                     .hover_actions(true)
                     .actions(|ui| {
                         if ui
-                            .add(IconButton::new(Glyph::Refresh, "Reload inspector"))
+                            .add(ActionButton::new(Glyph::Refresh, "Reload inspector"))
                             .clicked()
                         {
                             *count += 1;
                         }
-                        ui.add(Separator::group());
-                        ui.add(IconButton::new(Glyph::Search, "Find in inspector"));
+                        ui.add(SeparatorComponent::group());
+                        ui.add(ActionButton::new(Glyph::Search, "Find in inspector"));
                     })
                     .show(ui, |ui| {
                         ui.add(Button::secondary("Body action"));
@@ -113,13 +115,13 @@ fn narrow(theme: Theme) -> Harness<'static, usize> {
                     installed = true;
                 }
                 egui::CentralPanel::default().show(ctx, |ui| {
-                    Panel::new("Project")
+                    SimpleToolWindowPanel::new("Project")
                         .hover_actions(true)
                         .on_hide(|| {})
                         .actions(|ui| {
-                            ui.add(IconButton::new(Glyph::More, "Options"));
-                            ui.add(IconButton::new(Glyph::CollapseAll, "Collapse all"));
-                            ui.add(IconButton::new(Glyph::Search, "Find"));
+                            ui.add(ActionButton::new(Glyph::More, "Options"));
+                            ui.add(ActionButton::new(Glyph::CollapseAll, "Collapse all"));
+                            ui.add(ActionButton::new(Glyph::Search, "Find"));
                         })
                         .show(ui, |ui| {
                             ui.label("src/");
@@ -176,9 +178,11 @@ fn content_tabs_select_and_turn_blue_while_the_tool_window_is_active() {
                 archipel_kit::install(ctx, Theme::dark());
                 egui::CentralPanel::default().show(ctx, |ui| {
                     let tabs = ["File".to_owned(), "Project Errors".to_owned()];
-                    Panel::new("Problems").tabs(&tabs, selected).show(ui, |ui| {
-                        ui.add(Button::secondary("Inside"));
-                    });
+                    SimpleToolWindowPanel::new("Problems")
+                        .tabs(&tabs, selected)
+                        .show(ui, |ui| {
+                            ui.add(Button::secondary("Inside"));
+                        });
                 });
             },
             0usize,
@@ -207,7 +211,7 @@ fn the_title_switches_views_like_project_in_android_studio() {
                         "Packages".to_owned(),
                         "Tests".to_owned(),
                     ];
-                    Panel::new("Project")
+                    SimpleToolWindowPanel::new("Project")
                         .views(&views, selected)
                         .show(ui, |ui| {
                             ui.label("tree");
@@ -245,10 +249,10 @@ fn tabs_that_do_not_fit_go_behind_a_chevron() {
                         ["Params", "Body", "Auth", "Headers", "Tests", "Settings"]
                             .map(String::from)
                             .to_vec();
-                    Panel::new("Request")
+                    SimpleToolWindowPanel::new("Request")
                         .tabs(&tabs, selected)
                         .actions(|ui| {
-                            ui.add(archipel_kit::components::IconButton::new(
+                            ui.add(archipel_kit::action_system::ActionButton::new(
                                 archipel_kit::Glyph::Code,
                                 "Generate code",
                             ));

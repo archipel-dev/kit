@@ -1,4 +1,4 @@
-# VirtualList, Tree, Table
+# JBList, Tree, JBTable
 
 Loading tree rows retain selection and expansion keys while showing a named spinner.
 Double-clicking a parent toggles it and gives the tree keyboard focus.
@@ -14,8 +14,8 @@ Collections that draw **only the visible rows**, so they stay fast with hundreds
 thousands of items: request history, project and structure trees, query results.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/virtual_list.dark.png">
-  <img alt="A list of requests with a selected row" src="img/virtual_list.light.png" width="320">
+  <source media="(prefers-color-scheme: dark)" srcset="img/jb_list.dark.png">
+  <img alt="A list of requests with a selected row" src="img/jb_list.light.png" width="320">
 </picture>
 
 <picture>
@@ -24,15 +24,15 @@ thousands of items: request history, project and structure trees, query results.
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/table.dark.png">
-  <img alt="A table of requests with method, URL, colored status and time, sorted by time" src="img/table.light.png" width="460">
+  <source media="(prefers-color-scheme: dark)" srcset="img/jb_table.dark.png">
+  <img alt="A table of requests with method, URL, colored status and time, sorted by time" src="img/jb_table.light.png" width="460">
 </picture>
 
-### Table: edit cells and reorder columns
+### JBTable: edit cells and reorder columns
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/table_edit.dark.png">
-  <img alt="A table with the URL cell of the selected row open for editing" src="img/table_edit.light.png" width="460">
+  <source media="(prefers-color-scheme: dark)" srcset="img/jb_table_edit.dark.png">
+  <img alt="A table with the URL cell of the selected row open for editing" src="img/jb_table_edit.light.png" width="460">
 </picture>
 
 Two opt-in extensions, both backward compatible (a table that uses neither behaves as before):
@@ -41,7 +41,7 @@ Two opt-in extensions, both backward compatible (a table that uses neither behav
   <kbd>F2</kbd>, <kbd>Enter</kbd> or a double-click opens a field in the cell, <kbd>Enter</kbd>
   commits, <kbd>Escape</kbd> cancels. A commit arrives as `CollectionResponse::edited`
   (`CellEdit` with row, column and text). The table never changes your data.
-- **Column reorder**: `Table::reorderable(true)` makes the headers drag sources and drop
+- **Column reorder**: `JBTable::reorderable(true)` makes the headers drag sources and drop
   targets (`behaviour::DragSource` / `DropTarget`). Dropping a header on another one reports
   the new order in `CollectionResponse::column_order` (`order[new_position] = old_index`).
   You own the column order: apply it to your columns, and map the column indices your cell
@@ -49,11 +49,11 @@ Two opt-in extensions, both backward compatible (a table that uses neither behav
   still resizes.
 
 ```rust
-use archipel_kit::components::{Cell, Column, Table};
+use archipel_kit::ui::{Cell, ColumnInfo, JBTable};
 use archipel_kit::egui;
 
 struct Grid {
-    columns: Vec<Column>,
+    columns: Vec<ColumnInfo>,
     /// The data column shown at each position.
     order: Vec<usize>,
     selected: Option<usize>,
@@ -63,7 +63,7 @@ struct Grid {
 fn grid(ui: &mut egui::Ui, grid: &mut Grid) {
     let order = grid.order.clone();
     let names = grid.names.clone();
-    let out = Table::new("grid", &mut grid.columns, names.len(), &mut grid.selected)
+    let out = JBTable::new("grid", &mut grid.columns, names.len(), &mut grid.selected)
         .reorderable(true)
         .show(ui, |row, position| match order[position] {
             0 => Cell::new(row.to_string()).muted(),
@@ -82,13 +82,13 @@ fn grid(ui: &mut egui::Ui, grid: &mut Grid) {
 ### Typed values
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="img/table_value_kinds.dark.png">
-  <img alt="A table with one row per value kind, each value in its editor syntax color" src="img/table_value_kinds.light.png" width="460">
+  <source media="(prefers-color-scheme: dark)" srcset="img/jb_table_value_kinds.dark.png">
+  <img alt="A table with one row per value kind, each value in its editor syntax color" src="img/jb_table_value_kinds.light.png" width="460">
 </picture>
 
 `Cell::value_kind(ValueKind)` colors a cell like the code editor colors the same kind of value
 (`String`, `Number`, `Boolean`, `Null`, `Date`, `Id`, `Binary`, `Key`, `Punctuation`; see
-[theming](../theming.md)): for document and JSON views, in `Table` and `TreeTable`. Like
+[theming](../theming.md)): for document and JSON views, in `JBTable` and `TreeTable`. Like
 `.tone(Tone)` the color stays when the row is selected, and the last of the two calls wins.
 Use a tone for meaning (a 500 in red) and a kind for the type of data.
 
@@ -111,15 +111,13 @@ the IDE.
 ## Usage
 
 ```rust
-use archipel_kit::components::{
-    Cell, Column, ListRow, SortOrder, Table, Tree, TreeRow, VirtualList,
-};
+use archipel_kit::ui::{Cell, ColumnInfo, ColoredListCellRenderer, SortOrder, JBTable, Tree, TreeNode, JBList};
 use archipel_kit::{Glyph, egui};
 
 fn history(ui: &mut egui::Ui, urls: &[String], selected: &mut Option<usize>) {
-    let out = VirtualList::new("history", urls.len(), selected)
+    let out = JBList::new("history", urls.len(), selected)
         .height(240.0)
-        .show(ui, |i| ListRow::new(&urls[i]).icon(Glyph::Send));
+        .show(ui, |i| ColoredListCellRenderer::new(&urls[i]).icon(Glyph::Send));
     if let Some(i) = out.activated {
         println!("open {}", urls[i]);
     }
@@ -132,8 +130,8 @@ struct Node {
 }
 
 /// Flattens the expanded part of the tree into rows, remembering the path to each row.
-fn flatten<'a>(node: &'a Node, depth: usize, rows: &mut Vec<TreeRow>, paths: &mut Vec<Vec<usize>>, path: Vec<usize>) {
-    let mut row = TreeRow::new(&node.name, depth);
+fn flatten<'a>(node: &'a Node, depth: usize, rows: &mut Vec<TreeNode>, paths: &mut Vec<Vec<usize>>, path: Vec<usize>) {
+    let mut row = TreeNode::new(&node.name, depth);
     if !node.children.is_empty() {
         row = row.icon(Glyph::Folder).parent(node.expanded);
     }
@@ -163,12 +161,12 @@ fn project(ui: &mut egui::Ui, root: &mut Node, selected: &mut Option<usize>) {
 
 fn results(
     ui: &mut egui::Ui,
-    columns: &mut [Column],
+    columns: &mut [ColumnInfo],
     docs: &[(String, u32)],
     selected: &mut Option<usize>,
     sort: &mut Option<(usize, SortOrder)>,
 ) {
-    let out = Table::new("results", columns, docs.len(), selected)
+    let out = JBTable::new("results", columns, docs.len(), selected)
         .sort(*sort)
         .show(ui, |row, col| match col {
             0 => Cell::new(&docs[row].0),
@@ -188,12 +186,12 @@ fn results(
 
 | Item | Builders and fields |
 |---|---|
-| `VirtualList::new(id, len, &mut selected)` | `.height(f32)`, `.show(ui, \|index\| ListRow)` |
-| `VirtualList` as a tree | Rows with `.expanded(Some(..))` report `toggled` on <kbd>→</kbd> (collapsed) and <kbd>←</kbd> (expanded). |
+| `JBList::new(id, len, &mut selected)` | `.height(f32)`, `.show(ui, \|index\| ColoredListCellRenderer)` |
+| `JBList` as a tree | Rows with `.expanded(Some(..))` report `toggled` on <kbd>→</kbd> (collapsed) and <kbd>←</kbd> (expanded). |
 | `Tree::new(id, &rows, &mut selected)` | `.height(f32)`, `.show(ui)`, `.show_with(ui, \|index, row\| row)` |
-| `TreeRow::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.icon_tone(Tone)`, `.busy(bool)`, `.secondary(str)` |
-| `Table::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.reorderable(bool)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
-| `Column::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
+| `TreeNode::new(label, depth)` | `.parent(expanded)`, `.icon(Icon)`, `.icon_tone(Tone)`, `.busy(bool)`, `.secondary(str)` |
+| `JBTable::new(id, &mut columns, len, &mut selected)` | `.sort(Option<(column, SortOrder)>)`, `.reorderable(bool)`, `.height(f32)`, `.show(ui, \|row, column\| Cell)` |
+| `ColumnInfo::new(title, width)` | `.right()`, `.mono()`; `width` is public and changes when the user drags a header edge |
 | `Cell::new(text)` | `.value_kind(ValueKind)`, `.editable(bool)`, `.icon(Icon)`, `.color(Color32)`, `.muted()`; `&str` and `String` convert into cells |
 | `CollectionResponse` | `response`, `selection_changed`, `activated`, `toggled`, `sort_clicked`, `edited`, `column_order` |
 
@@ -202,8 +200,8 @@ fn results(
 - **Trees.** You flatten your tree into the visible rows and keep the expanded state.
   <kbd>→</kbd> expands a collapsed node, or moves to its first child when it is already
   expanded. <kbd>←</kbd> collapses an expanded node, or moves to its parent. The chevron and
-  a double-click on a parent toggle it too. Each of these reports `toggled`. A `VirtualList`
-  of `ListRow`s with an expanded state toggles on <kbd>→</kbd>/<kbd>←</kbd> the same way (it
+  a double-click on a parent toggle it too. Each of these reports `toggled`. A `JBList`
+  of `ColoredListCellRenderer`s with an expanded state toggles on <kbd>→</kbd>/<kbd>←</kbd> the same way (it
   has no parent or child to walk to, as it does not know the tree).
 - **Per-row behaviours.** `Tree::show_with` hands each visible row to your closure before it
   is drawn: add a context menu, a drag source or a drop target with `.with(...)`, or a tint,
@@ -222,8 +220,8 @@ fn results(
 ## Accessibility
 
 Rows are selectable labels, named by their text, with their selected state. A table row is
-named by its cells joined with commas, for example `GET, /api/users/1, 201, 49 ms`. Table
+named by its cells joined with commas, for example `GET, /api/users/1, 201, 49 ms`. JBTable
 headers are buttons. Only visible rows are in the accessibility tree, like the pixels.
 
-Source: [`components/collections/`](../../crates/archipel-kit/src/components/collections/mod.rs) ·
+Source: [`ui/collections/`](../../crates/archipel-kit/src/ui/collections/mod.rs) ·
 Tests: [`tests/collections.rs`](../../crates/archipel-kit/tests/collections.rs)

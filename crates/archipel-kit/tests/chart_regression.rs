@@ -1,8 +1,8 @@
 //! Regressions found during native gallery and PR review.
 use archipel_kit::{
     Theme,
-    components::{Bucket, Histogram},
     testing::{self, Queryable},
+    ui::{Bucket, Histogram},
 };
 
 #[test]
