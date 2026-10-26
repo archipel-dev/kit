@@ -66,6 +66,8 @@ pub struct Runtime {
     pub clipboard: Clipboard,
     /// Tooltips (show after 500 ms of hover or focus).
     pub tooltip: TooltipState,
+    /// The description of the hovered action, for the status bar (set while drawing).
+    pub hint: Option<String>,
     /// Set to true to leave the loop.
     pub quit: bool,
     /// The screen area of the last frame.
@@ -75,6 +77,7 @@ pub struct Runtime {
     tracker: PointerTracker,
     pointer: Option<Pointer>,
     pointer_pos: Option<(u16, u16)>,
+    hover_id: Option<Id>,
     pending: Option<PendingStroke>,
     resolution: Option<KeyResolution>,
     double_shift: DoubleShift,
@@ -99,12 +102,14 @@ impl Runtime {
             focus: FocusManager::new(),
             clipboard: Clipboard::new(),
             tooltip: TooltipState::default(),
+            hint: None,
             quit: false,
             screen: Rect::default(),
             window_focused: true,
             tracker: PointerTracker::default(),
             pointer: None,
             pointer_pos: None,
+            hover_id: None,
             pending: None,
             resolution: None,
             double_shift: DoubleShift::default(),
@@ -118,11 +123,13 @@ impl Runtime {
         self.hits.clear();
         self.focus.begin_frame();
         self.tooltip.begin_frame();
+        self.hint = None;
     }
 
     /// Ends a frame.
     pub fn end_frame(&mut self) {
         self.focus.end_frame();
+        self.hover_id = self.pointer_pos.and_then(|(x, y)| self.hits.hit(x, y));
     }
 
     /// Registers a focusable, clickable widget: its `rect` in the hit map and `id` in the
@@ -167,6 +174,9 @@ impl Runtime {
                     self.focus.focus(id);
                 }
                 self.pointer_pos = Some((pointer.x, pointer.y));
+                self.hover_id = pointer.target;
+                self.tooltip
+                    .update(self.now, pointer.target, self.focus.current());
                 self.pointer = Some(pointer);
             }
             Event::Resize(w, h) => self.screen = Rect::new(0, 0, *w, *h),
@@ -198,8 +208,7 @@ impl Runtime {
 
     /// The widget under the pointer (as of the last frame's hit map).
     pub fn hovered(&self) -> Option<Id> {
-        let (x, y) = self.pointer_pos?;
-        self.hits.hit(x, y)
+        self.hover_id
     }
 
     /// The ids of the actions the current key event triggers in the keymap.

@@ -36,6 +36,7 @@
 
 pub mod clipboard;
 pub mod collections;
+pub mod combo;
 pub mod components;
 pub mod controls;
 pub mod focus;
@@ -46,7 +47,9 @@ pub mod palette;
 pub mod pointer;
 pub mod popup;
 pub mod runtime;
+pub mod tabs;
 pub mod testing;
+pub mod toolbar;
 pub mod tooltip;
 
 pub use archipel_icons::{Glyph, Language, Symbol, SymbolKind};

@@ -225,3 +225,7 @@ light, and `q` quits.
 ## Popups and menus
 
 <img alt="Action popup menu with a submenu, and a Telescope-style list" src="img/popup.dark.svg" width="605"> <img alt="Popups, light" src="img/popup.light.svg" width="605">
+
+## Toolbar, tabs and combo box
+
+<img alt="Toolbar with a tooltip, tab line and combo box" src="img/toolbar.dark.svg" width="672"> <img alt="Toolbar, light" src="img/toolbar.light.svg" width="672">

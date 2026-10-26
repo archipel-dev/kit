@@ -933,8 +933,13 @@ impl PopupChain {
             + chevron_w;
         let min_w = if telescope { 44 } else { 18 };
         let query_w = text_width(&level.query) + 8;
+        let anchor_w = match (depth, placement) {
+            (0, Placement::Below(anchor)) => anchor.width,
+            _ => 0,
+        };
         let width = content
             .max(min_w)
+            .max(anchor_w)
             .max(
                 title_w
                     + if show_prompt {
