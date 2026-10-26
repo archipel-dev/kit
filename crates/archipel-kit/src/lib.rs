@@ -27,9 +27,11 @@
 //! Every component reports its role and label to AccessKit, so screen readers and the
 //! testing harness find it by its visible text.
 
+pub mod action_system;
 pub mod behaviour;
 pub mod components;
 pub mod cursor;
+pub mod host;
 pub mod icons;
 pub mod parts;
 mod style;
@@ -62,6 +64,7 @@ mod docs {
         GettingStarted = "getting-started.md";
         Theming = "theming.md";
         Testing = "testing.md";
+        ActionSystem = "action-system.md";
         Cursors = "cursors.md";
         Behaviours = "behaviours.md";
         BuildingComponents = "building-components.md";
