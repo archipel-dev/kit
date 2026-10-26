@@ -201,3 +201,42 @@ fn the_ide_in_both_themes() {
     h.type_text("th");
     snapshot("ide-search.dark", h.buffer());
 }
+
+#[test]
+fn the_editor_edits_shows_the_position_and_the_modified_dot_until_saved() {
+    let mut h = harness();
+    h.press(KeyCode::Down);
+    h.press(KeyCode::End);
+    assert!(h.text().contains("Ln 2, Col 1"), "{}", h.text());
+    assert!(h.text().contains("EDIT"));
+    h.type_text("hi");
+    assert!(h.text().contains("Ln 2, Col 3"), "{}", h.text());
+    assert!(h.app.is_modified(0));
+    h.ctrl('z');
+    assert!(!h.app.is_modified(0), "undo back to the saved text");
+    h.type_text("x");
+    h.ctrl('s');
+    assert!(!h.app.is_modified(0));
+    // Find works inside the IDE.
+    h.ctrl('f');
+    h.type_text("NvChad");
+    assert!(h.text().contains("Find"), "{}", h.text());
+    h.press(KeyCode::Esc);
+}
+
+#[test]
+fn the_editor_in_the_ide_with_a_selection_and_the_find_bar() {
+    for (name, theme) in [("dark", 0usize), ("light", 1usize)] {
+        let mut h = harness_with(theme, 130, 36);
+        h.alt('1');
+        h.type_text("lib.rs");
+        h.press(KeyCode::Enter);
+        h.press(KeyCode::Esc);
+        for _ in 0..12 {
+            h.press(KeyCode::Down);
+        }
+        h.ctrl('f');
+        h.type_text("look");
+        h.snapshot(&format!("ide-editor.{name}"));
+    }
+}

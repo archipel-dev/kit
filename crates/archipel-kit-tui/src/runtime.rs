@@ -47,6 +47,31 @@ pub trait App {
     }
 }
 
+/// The shape of the terminal cursor ([`Runtime::cursor`]), sent with DECSCUSR.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum CursorShape {
+    /// A vertical bar: insert mode.
+    Bar,
+    /// A block: overwrite mode.
+    Block,
+    /// An underline.
+    Underline,
+}
+
+/// Where the terminal cursor goes this frame, and its shape. A component that edits text
+/// sets it while drawing ([`Runtime::set_cursor`]); the last one wins. The loop shows the
+/// real terminal cursor there, and hides it when nothing set it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CursorRequest {
+    /// Column.
+    pub x: u16,
+    /// Row.
+    pub y: u16,
+    /// Shape.
+    pub shape: CursorShape,
+}
+
 /// What every component needs to draw and to handle input.
 pub struct Runtime {
     /// The theme as terminal colors.
@@ -74,12 +99,21 @@ pub struct Runtime {
     pub screen: Rect,
     /// Whether the terminal window has focus (notification timers pause when it has not).
     pub window_focused: bool,
+    /// Where the terminal cursor goes this frame (set while drawing, cleared by
+    /// [`begin_frame`](Self::begin_frame)).
+    pub cursor: Option<CursorRequest>,
+    /// Whether the terminal draws curly underlines (SGR 4:3, kitty, WezTerm, Ghostty, Alacritty,
+    /// foot, iTerm2, Windows Terminal, VTE). Cells with an underline color are then drawn as
+    /// undercurl after each frame; without it they keep the plain underline. Detected by
+    /// [`detect_undercurl`]; false in tests.
+    pub undercurl: bool,
     tracker: PointerTracker,
     pointer: Option<Pointer>,
     pointer_pos: Option<(u16, u16)>,
     hover_id: Option<Id>,
     pending: Option<PendingStroke>,
     resolution: Option<KeyResolution>,
+    chord_second: bool,
     double_shift: DoubleShift,
     double_shift_fired: bool,
 }
@@ -106,12 +140,15 @@ impl Runtime {
             quit: false,
             screen: Rect::default(),
             window_focused: true,
+            cursor: None,
+            undercurl: false,
             tracker: PointerTracker::default(),
             pointer: None,
             pointer_pos: None,
             hover_id: None,
             pending: None,
             resolution: None,
+            chord_second: false,
             double_shift: DoubleShift::default(),
             double_shift_fired: false,
         }
@@ -124,6 +161,12 @@ impl Runtime {
         self.focus.begin_frame();
         self.tooltip.begin_frame();
         self.hint = None;
+        self.cursor = None;
+    }
+
+    /// Asks for the terminal cursor at (`x`, `y`) in `shape`.
+    pub fn set_cursor(&mut self, x: u16, y: u16, shape: CursorShape) {
+        self.cursor = Some(CursorRequest { x, y, shape });
     }
 
     /// Ends a frame.
@@ -154,6 +197,7 @@ impl Runtime {
     pub fn preprocess(&mut self, event: &Event) {
         self.pointer = None;
         self.resolution = None;
+        self.chord_second = false;
         self.double_shift_fired = self.double_shift.feed(event, self.now);
         match event {
             Event::Key(key) => {
@@ -192,8 +236,25 @@ impl Runtime {
 
     fn resolve(&mut self, key: &KeyEvent) {
         if let Some(stroke) = input::key_stroke(key) {
-            self.resolution = Some(self.keymap.feed(&mut self.pending, stroke, self.now));
+            let fresh = self
+                .pending
+                .filter(|p| self.now - p.at <= SECOND_KEYSTROKE_TIMEOUT.as_secs_f64());
+            let resolution = self.keymap.feed(&mut self.pending, stroke, self.now);
+            self.chord_second = match (&fresh, &resolution) {
+                (Some(first), KeyResolution::Matched(ids)) => {
+                    *ids == self.keymap.action_ids_for(&first.first, Some(&stroke))
+                }
+                _ => false,
+            };
+            self.resolution = Some(resolution);
         }
+    }
+
+    /// Whether the current key event is the second stroke of a chord that matched: its
+    /// [`actions`](Self::actions) belong to the chord, and the key must not also act as the
+    /// plain key it is (the `Up` of `Ctrl+K, Up`).
+    pub fn chord_completed(&self) -> bool {
+        self.chord_second
     }
 
     /// The pointer of the current mouse event.
@@ -329,6 +390,7 @@ pub fn setup(options: RunOptions) -> io::Result<(CrosstermTerminal, Caps)> {
 }
 
 fn restore_modes() {
+    use ratatui::crossterm::cursor::{SetCursorStyle, Show};
     use ratatui::crossterm::event::{
         DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, PopKeyboardEnhancementFlags,
     };
@@ -336,6 +398,8 @@ fn restore_modes() {
     let mut out = io::stdout();
     let _ = execute!(
         out,
+        SetCursorStyle::DefaultUserShape,
+        Show,
         PopKeyboardEnhancementFlags,
         DisableFocusChange,
         DisableBracketedPaste,
@@ -358,9 +422,88 @@ pub fn restore() {
 pub fn run_app(look: Look, app: &mut impl App, options: RunOptions) -> io::Result<()> {
     let (mut terminal, caps) = setup(options)?;
     let mut rt = Runtime::with(look, input::terminal_keymap(caps.os), caps);
+    rt.undercurl = detect_undercurl();
     let result = run(&mut terminal, &mut rt, app, options);
     restore();
     result
+}
+
+/// Whether the terminal draws curly underlines (SGR `4:3` with the color in `58`): kitty,
+/// WezTerm, Ghostty, Alacritty, foot, Contour, iTerm2, Windows Terminal and VTE 0.52 or newer
+/// (GNOME Terminal). Judged from the environment; `ARCHIPEL_UNDERCURL=1` or `=0` overrides.
+/// Inside tmux it is off unless overridden (tmux needs `terminal-overrides` for it).
+pub fn detect_undercurl() -> bool {
+    use std::env::var;
+    if let Ok(value) = var("ARCHIPEL_UNDERCURL") {
+        return value != "0" && !value.is_empty();
+    }
+    if var("TMUX").is_ok() {
+        return false;
+    }
+    let term = var("TERM").unwrap_or_default().to_lowercase();
+    let program = var("TERM_PROGRAM").unwrap_or_default().to_lowercase();
+    let known = [
+        "kitty",
+        "wezterm",
+        "ghostty",
+        "alacritty",
+        "foot",
+        "contour",
+    ];
+    if known
+        .iter()
+        .any(|k| term.contains(k) || program.contains(k))
+    {
+        return true;
+    }
+    if program.contains("iterm") || var("WT_SESSION").is_ok() || var("KITTY_WINDOW_ID").is_ok() {
+        return true;
+    }
+    var("VTE_VERSION")
+        .ok()
+        .and_then(|v| v.parse::<u32>().ok())
+        .is_some_and(|v| v >= 5200)
+}
+
+/// The escape sequences that draw the cells of `buf` that have an underline color as
+/// curly underlines: for each such cell, move there, set colors, `4:3` and the underline
+/// color, and print the symbol again. The plain underline ratatui drew first stays as the
+/// fallback for terminals without support.
+pub fn undercurl_sequences(buf: &Buffer) -> String {
+    use ratatui::style::{Color, Modifier};
+    use std::fmt::Write as _;
+    let mut out = String::new();
+    let area = buf.area;
+    for y in area.top()..area.bottom() {
+        for x in area.left()..area.right() {
+            let cell = &buf[(x, y)];
+            if !cell.modifier.contains(Modifier::UNDERLINED) || cell.symbol().is_empty() {
+                continue;
+            }
+            let Color::Rgb(ur, ug, ub) = cell.underline_color else {
+                continue;
+            };
+            let _ = write!(out, "\x1b[{};{}H\x1b[0m", y + 1, x + 1);
+            if let Color::Rgb(r, g, b) = cell.fg {
+                let _ = write!(out, "\x1b[38;2;{r};{g};{b}m");
+            }
+            if let Color::Rgb(r, g, b) = cell.bg {
+                let _ = write!(out, "\x1b[48;2;{r};{g};{b}m");
+            }
+            if cell.modifier.contains(Modifier::BOLD) {
+                out.push_str("\x1b[1m");
+            }
+            if cell.modifier.contains(Modifier::ITALIC) {
+                out.push_str("\x1b[3m");
+            }
+            let _ = write!(
+                out,
+                "\x1b[4:3m\x1b[58:2::{ur}:{ug}:{ub}m{}\x1b[0m",
+                cell.symbol()
+            );
+        }
+    }
+    out
 }
 
 /// Like [`run_app`], with a keymap built for the detected operating system.
@@ -376,6 +519,7 @@ pub fn run_app_with_keymap(
 ) -> io::Result<()> {
     let (mut terminal, caps) = setup(options)?;
     let mut rt = Runtime::with(look, keymap(caps.os), caps);
+    rt.undercurl = detect_undercurl();
     let result = run(&mut terminal, &mut rt, app, options);
     restore();
     result
@@ -396,20 +540,45 @@ pub fn run<B: Backend>(
 where
     io::Error: From<B::Error>,
 {
+    use ratatui::crossterm::cursor::SetCursorStyle;
     use ratatui::crossterm::event as ct;
+    use ratatui::crossterm::execute;
     let start = Instant::now();
+    let mut shape: Option<CursorShape> = None;
     loop {
         rt.now = start.elapsed().as_secs_f64();
         rt.tick();
         app.tick(rt);
-        terminal.draw(|frame| {
+        let completed = terminal.draw(|frame| {
             let area = frame.area();
             rt.begin_frame(area);
             app.draw(rt, area, frame.buffer_mut());
             rt.end_frame();
+            if let Some(cursor) = rt.cursor {
+                frame.set_cursor_position((cursor.x, cursor.y));
+            }
         })?;
+        let curls = rt.undercurl.then(|| undercurl_sequences(completed.buffer));
+        let mut out = io::stdout();
+        if let Some(curls) = curls.filter(|c| !c.is_empty()) {
+            out.write_all(curls.as_bytes())?;
+            // The cursor goes back where the frame put it.
+            if let Some(cursor) = rt.cursor {
+                write!(out, "\x1b[{};{}H", cursor.y + 1, cursor.x + 1)?;
+            }
+            out.flush()?;
+        }
+        let wanted = rt.cursor.map(|c| c.shape);
+        if wanted != shape {
+            match wanted {
+                Some(CursorShape::Bar) => execute!(out, SetCursorStyle::SteadyBar)?,
+                Some(CursorShape::Block) => execute!(out, SetCursorStyle::SteadyBlock)?,
+                Some(CursorShape::Underline) => execute!(out, SetCursorStyle::SteadyUnderScore)?,
+                None => {}
+            }
+            shape = wanted;
+        }
         if let Some(sequence) = rt.clipboard.take_sequence() {
-            let mut out = io::stdout();
             out.write_all(sequence.as_bytes())?;
             out.flush()?;
         }

@@ -277,8 +277,23 @@ fn nerd_preview(ch: char, px: f32, py: f32, fg: u32, bg: u32) -> Option<String> 
     Some(icon.replacen("<svg ", &format!("<svg x=\"{ix:.1}\" y=\"{iy:.1}\" "), 1))
 }
 
+/// The foreground and background of a cell as a terminal draws them: swapped when reversed.
+fn cell_colors(cell: &ratatui::buffer::Cell) -> (Color, Color) {
+    if cell.modifier.contains(Modifier::REVERSED) {
+        (cell.bg, cell.fg)
+    } else {
+        (cell.fg, cell.bg)
+    }
+}
+
 /// `buf` as an SVG image.
 pub fn to_svg(buf: &Buffer) -> String {
+    to_svg_with_cursor(buf, None)
+}
+
+/// `buf` as an SVG image with the terminal cursor drawn where `cursor` says: a bar, a block or
+/// an underline over the cell.
+pub fn to_svg_with_cursor(buf: &Buffer, cursor: Option<crate::runtime::CursorRequest>) -> String {
     let area = buf.area;
     let (w, h) = (area.width as f32 * CELL_W, area.height as f32 * CELL_H);
     let mut svg = format!(
@@ -291,9 +306,9 @@ pub fn to_svg(buf: &Buffer) -> String {
         // Background runs.
         let mut x = area.left();
         while x < area.right() {
-            let bg = hex(buf[(x, y)].bg, 0);
+            let bg = hex(cell_colors(&buf[(x, y)]).1, 0);
             let start = x;
-            while x < area.right() && hex(buf[(x, y)].bg, 0) == bg {
+            while x < area.right() && hex(cell_colors(&buf[(x, y)]).1, 0) == bg {
                 x += 1;
             }
             let _ = writeln!(
@@ -310,8 +325,9 @@ pub fn to_svg(buf: &Buffer) -> String {
             let symbol = cell.symbol();
             let width = unicode_width::UnicodeWidthStr::width(symbol).max(1) as u16;
             let px = (x - area.x) as f32 * CELL_W;
-            let fg = rgb(cell.fg).unwrap_or(0xDFE1E5);
-            let bg = rgb(cell.bg).unwrap_or(0);
+            let (cell_fg, cell_bg) = cell_colors(cell);
+            let fg = rgb(cell_fg).unwrap_or(0xDFE1E5);
+            let bg = rgb(cell_bg).unwrap_or(0);
             let mut chars = symbol.chars();
             let single = match (chars.next(), chars.next()) {
                 (Some(ch), None) => Some(ch),
@@ -341,7 +357,12 @@ pub fn to_svg(buf: &Buffer) -> String {
                 if cell.modifier.contains(Modifier::BOLD) {
                     attrs += " font-weight=\"bold\"";
                 }
-                if cell.modifier.contains(Modifier::UNDERLINED) {
+                if cell.modifier.contains(Modifier::ITALIC) {
+                    attrs += " font-style=\"italic\"";
+                }
+                if cell.modifier.contains(Modifier::UNDERLINED)
+                    && rgb(cell.underline_color).is_none()
+                {
                     attrs += " text-decoration=\"underline\"";
                 }
                 let _ = writeln!(
@@ -351,8 +372,45 @@ pub fn to_svg(buf: &Buffer) -> String {
                     escape(symbol)
                 );
             }
+            if cell.modifier.contains(Modifier::UNDERLINED)
+                && let Some(color) = rgb(cell.underline_color)
+            {
+                // Undercurl: one wave period per cell, in the underline color.
+                let y = py + CELL_H - 2.5;
+                let _ = writeln!(
+                    svg,
+                    "<polyline points=\"{:.1},{y:.1} {:.1},{:.1} {:.1},{y:.1} {:.1},{:.1} {:.1},{y:.1}\" \
+                     fill=\"none\" stroke=\"#{color:06X}\" stroke-width=\"1.2\" \
+                     shape-rendering=\"geometricPrecision\"/>",
+                    px,
+                    px + CELL_W * 0.25,
+                    y - 1.5,
+                    px + CELL_W * 0.5,
+                    px + CELL_W * 0.75,
+                    y + 1.5,
+                    px + CELL_W,
+                );
+            }
             x += width;
         }
+    }
+    if let Some(cursor) = cursor
+        && cursor.x >= area.left()
+        && cursor.x < area.right()
+        && cursor.y >= area.top()
+        && cursor.y < area.bottom()
+    {
+        let px = (cursor.x - area.x) as f32 * CELL_W;
+        let py = (cursor.y - area.y) as f32 * CELL_H;
+        let (x, y, w, h, opacity) = match cursor.shape {
+            crate::runtime::CursorShape::Bar => (px, py + 1.0, 1.6, CELL_H - 2.0, 0.95),
+            crate::runtime::CursorShape::Block => (px, py, CELL_W, CELL_H, 0.7),
+            _ => (px, py + CELL_H - 2.5, CELL_W, 1.6, 0.95),
+        };
+        let _ = writeln!(
+            svg,
+            "<rect x=\"{x:.1}\" y=\"{y:.1}\" width=\"{w:.1}\" height=\"{h:.1}\" fill=\"#DFE1E5\" fill-opacity=\"{opacity}\"/>"
+        );
     }
     svg.push_str("</svg>\n");
     svg
@@ -369,8 +427,22 @@ fn snapshot_dir() -> PathBuf {
 ///
 /// When the snapshot is missing or differs.
 pub fn snapshot(name: &str, buf: &Buffer) {
+    snapshot_with_cursor(name, buf, None);
+}
+
+/// Like [`snapshot`], with the terminal cursor drawn at `cursor` (what a terminal shows for
+/// [`Runtime::cursor`](crate::runtime::Runtime::cursor)).
+///
+/// # Panics
+///
+/// When the snapshot is missing or differs.
+pub fn snapshot_with_cursor(
+    name: &str,
+    buf: &Buffer,
+    cursor: Option<crate::runtime::CursorRequest>,
+) {
     let path = snapshot_dir().join(format!("{name}.svg"));
-    let svg = to_svg(buf);
+    let svg = to_svg_with_cursor(buf, cursor);
     let current = std::fs::read_to_string(&path).ok();
     if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
         if current.as_deref() != Some(svg.as_str()) {
@@ -486,6 +558,12 @@ impl<A: App> Harness<A> {
     /// The last drawn screen.
     pub fn buffer(&self) -> &Buffer {
         &self.buffer
+    }
+
+    /// Compares the last drawn screen, with the terminal cursor the app asked for, against the
+    /// snapshot `name` (see [`snapshot`]).
+    pub fn snapshot(&self, name: &str) {
+        snapshot_with_cursor(name, &self.buffer, self.rt.cursor);
     }
 
     /// The text of each screen row, trailing spaces trimmed.

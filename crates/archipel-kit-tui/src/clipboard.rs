@@ -9,6 +9,7 @@
 #[derive(Debug, Clone, Default)]
 pub struct Clipboard {
     text: String,
+    whole_line: bool,
     outbox: Option<String>,
 }
 
@@ -20,8 +21,21 @@ impl Clipboard {
 
     /// Copies `text`: keeps it for in-app paste and queues the OSC 52 sequence.
     pub fn set(&mut self, text: impl Into<String>) {
+        self.set_content(text, false);
+    }
+
+    /// Copies `text`; `whole_line` says it is whole lines copied from an empty selection
+    /// (the editor then pastes it above the caret line, like IntelliJ).
+    pub fn set_content(&mut self, text: impl Into<String>, whole_line: bool) {
         self.text = text.into();
+        self.whole_line = whole_line;
         self.outbox = Some(osc52(&self.text));
+    }
+
+    /// Whether the text is whole lines copied from an empty selection and has not changed
+    /// since.
+    pub fn is_whole_line(&self) -> bool {
+        self.whole_line
     }
 
     /// The last copied text (or pasted by the terminal into the app).
@@ -32,7 +46,11 @@ impl Clipboard {
     /// Records text that arrived from the system clipboard (a bracketed paste) so that an
     /// in-app paste action pastes the same.
     pub fn remember(&mut self, text: impl Into<String>) {
-        self.text = text.into();
+        let text = text.into();
+        if text != self.text {
+            self.whole_line = false;
+        }
+        self.text = text;
     }
 
     /// The OSC 52 sequence to write to the terminal, if a copy is waiting.
