@@ -24,7 +24,7 @@ behavioral reference; no third-party UI code or artwork is copied.
 | Lists and trees | ColoredListCellRenderer, JBList, Tree, TreeNode | Settings tree and project browser | Active/inactive selection; Up/Down/Home/End/Page; expand/collapse by chevron, double-click and Left/Right; focus retained; loading does not block navigation; virtualization preserves identity. |
 | Data grids | JBTable, TreeTable, ColumnInfo, Cell, PropertyGrid | Structured data and settings tables | Sort, resize and reorder headers; row selection; F2/Enter edit; Enter commits, Escape cancels; clicks on children do not also activate the row. |
 | Editable pairs | KeyValueTable, ValueCell | Repeated properties | Stable row identity; add/remove; per-row enablement; edit navigation; read-only remains readable and inert. |
-| Text/code documents | EditorComponent, Highlighter | Editor and text previews | Select/copy; caret and scrolling; find; folds; code indentation belongs to the editor (`tab_indents`), ordinary multi-line JBTextField uses Tab to leave. |
+| Text/code documents | EditorComponent, SyntaxHighlighter | Editor and text previews | Select/copy; caret and scrolling; find; folds; code indentation belongs to the editor (`tab_indents`), ordinary multi-line JBTextField uses Tab to leave. |
 | Menus and hints | ActionMenuItem, ListSeparator, HelpTooltip, behaviours | Context menu, submenus, hover hints | Submenu Right/Left; Escape unwinds the top layer first; disabled reasons visible; tooltips do not flicker; no hidden hover-only essential action. |
 | Dialogs | DialogWrapper, Surface::Dialog | Settings/confirmation dialogs | Named modal; focus stays inside; sensible initial/default action; Escape dismisses; popup Escape and Enter consumed before dialog shortcuts; narrow content wraps. |
 | Status and feedback | StatusBarWidget, InlineBanner, Notification, AsyncProcessIcon, ProgressBar | Status bar and notifications | Status items are named, keyboard reachable actions; messages keep semantic tone; dismiss/secondary actions work; progress exposes value; animations stop when invisible. |
@@ -135,6 +135,38 @@ pointer and keyboard and recording the screen at 60 fps. The kit reproduces each
 | Editor banner | 39 pt, inset 6 pt in the editor island under the tabs; 16 pt before the icon, 10 pt to the text; actions are links 22 pt apart, underlined on hover; 20 pt at the end; info `#233558` / `#2E4D89` | `InlineBanner`, `tokens::size::BANNER_*` |
 | Notifications | 370 pt card, 12 pt padding, icon on the title line, semibold title, body in the text color, links below; dismiss button in the corner on hover | `Notification`, `tokens::size::NOTIFICATION_*` |
 | Navigation path | Crumbs with icons, 4 pt padding, dimmed chevrons between | `BreadcrumbsComponent` |
+
+### Editor
+
+Values from the IntelliJ editor behavior notes (`editor-ux-spec`, section numbers in the
+Source column) unless the Kit column says the value was kept from an Android Studio
+measurement. Pixel metrics and timings marked [verify] in the notes are the source values, to be
+confirmed with `tools/reference/` before they are frozen.
+
+| Situation | IntelliJ / Android Studio | Kit | Source |
+|---|---|---|---|
+| Font and rows | JetBrains Mono 13, line spacing 1.2: a row is `ceil(font height x 1.2)` | 20 pt row (the kit's measured value; equals JetBrains Mono 13 x 1.2 up to rounding) `tokens::size::CODE_LINE_HEIGHT` | §0, §4.4 |
+| Selection shape | One outline per block of rows, outer corners radius row height / 6 (about 3), concave fillets of the same radius where rows differ, a one-`M` tail on a selected line break; rectangles in column mode | `selection_shape`, `tokens::editor::SELECTION_RADIUS_DIVISOR` | §8.1 |
+| Selection colors | `#214283` / `#A6D2FF`; without the focus `#4C4F56` / `#B5B7BD` | `EditorColors::selection`, `selection_inactive` | §8.1 |
+| Caret | Bar 2 pt wide with rounded ends, as tall as the font (shorter than the row), `#CED0D6` / black; block of the character's width in overwrite mode; every caret painted | `tokens::editor::CARET_WIDTH`, `CARET_RADIUS` | §1.9 |
+| Caret blink | Shown 500 ms, hidden 500 ms, counted from the last caret activity; typing, moving and clicking restart it visible | `motion::CARET_BLINK`, `state::caret_visible` | §0, §1.9 |
+| Caret row | Always painted on the row of every caret, under the selection and the search highlights; `#1F2024` / `#F5F8FE` | `EditorColors::caret_row` | §1.9 |
+| Scroll to caret | Margin 1 line vertically, 3 columns horizontally; jumps center (a third from the top); eased jumps of up to 100 ms, none for one line or less; scroll past the end 5 lines and 3 columns | `model::scroll_to_caret`, `motion::EDITOR_SCROLL_JUMP` | §4.1 |
+| Drag autoscroll | Timer tick 100 ms [verify]; every `floor(20 / d) + 1` ticks the head moves `1 + floor(d / 20)` lines, `d` the pixels beyond the edge | `state::autoscroll_tick`, `motion::EDITOR_AUTOSCROLL_TICK` | §2.3 |
+| Multi-click | Double: the word (on blanks the line's text); triple: the line with its break; the interval is the system's (500 ms) | `motion::MULTI_CLICK_INTERVAL` | §2.1, §2.2 |
+| Gutter order | Annotation gap 4, gap 4, line numbers, gap 4, change markers 8, icon lanes of 17 each, gap 4 after the icons, the fold column | `tokens::editor::GUTTER_*`; the fold column is the kit's measured 16 pt (`FOLD_COLUMN`) around the 9 pt chevron | §5 |
+| Line numbers | The editor font minus 1 pt, right-aligned, the caret row's number `#A1A3AB` / `#767A8A`, others `#4B5059` / `#AEB3C2` | `EditorColors::line_number`, `line_number_caret`, `NUMBER_FONT_DELTA` | §5 |
+| Fold chevrons | 9 pt chevron, 1 pt stroke `#6F737A` / `#A8ADBD`; expanded ones only while the pointer is over the gutter (fade in 130 ms, out after 140 ms over 150 ms); collapsed ones always | `motion::FOLD_CHEVRON_*`, `EditorColors::fold_marker` | §5 |
+| Fold placeholder | The placeholder text on `#393B40` / `#E9F5E6`, a 2 pt square ring `#2B2D30` / `#ADD9C7`, full row height, preview after 300 ms | `EditorColors::folded_*`, `tokens::editor::FOLD_BORDER`, `motion::FOLD_PREVIEW_DELAY` | §6 |
+| Change markers | Added `#549159` / `#7FC784`, modified `#375FAD` / `#88ADF7`, deleted `#868A91` / `#767A8A`; widths [verify] | `EditorColors::change_*`, `tokens::editor::CHANGE_MARKER*` | §5 |
+| Error stripe | 14 pt track beside the scroll bar, marks proportional to the document, at least 2 pt [verify], error `#D64D5B`, warning `#C29E4A`, text search `#72D6D6` / `#C47233` | `tokens::editor::STRIPE_*`, `EditorColors::error_stripe`, `warning_stripe`, `search_stripe` | §5, §8.1 |
+| Matched brace | Background `#43454A` / `#93D9D9` on both braces (bold in the dark scheme is not drawn), the unmatched brace in the error color; only with one caret and no selection | `EditorColors::matched_brace`, `invalid` | §8.1 |
+| Selection occurrences | Other occurrences of a single-line, non-blank selection, at most 50, `#373B39` / `#EDEBFC` | `EditorColors::rename_occurrence`, `editor::MAX_SELECTION_OCCURRENCES` | §8.1 |
+| Guides | Indent guides `#323438` / `#EBECF0`, the caret's block `#4E5157` / `#AEB3C2`; right margin at column 120 `#323438` / `#EBECF0`; whitespace `#6F737A` / `#ADADAD` | `EditorColors::indent_guide`, `indent_guide_selected`, `right_margin`, `whitespace` | §4.4 |
+| Tooltip delay | 500 ms after the pointer rests on text | `motion::EDITOR_TOOLTIP_DELAY` | §0, §8.1 |
+
+Not reproduced yet: sticky lines (they need scope information), drag and drop of selected text,
+Ctrl+wheel zoom (off by default in IntelliJ), inlays, soft-wrap-aware Home/End.
 
 ## Fixed invariants
 

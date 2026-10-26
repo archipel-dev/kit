@@ -1,6 +1,6 @@
 //! `{{name}}` template variables: highlighting and caret detection for single-line inputs.
 
-use super::highlight::{Highlighter, PlainText, Span, TokenKind};
+use super::highlight::{PlainText, Span, SyntaxHighlighter, TextAttributesKey};
 use std::ops::Range;
 
 /// What a `{{name}}` resolves to, decided by the caller's resolver.
@@ -15,11 +15,11 @@ pub enum TemplateToken {
 }
 
 impl TemplateToken {
-    fn kind(self) -> TokenKind {
+    fn kind(self) -> TextAttributesKey {
         match self {
-            TemplateToken::Resolved => TokenKind::Resolved,
-            TemplateToken::Unresolved => TokenKind::Unresolved,
-            TemplateToken::Secret => TokenKind::Secret,
+            TemplateToken::Resolved => TextAttributesKey::Resolved,
+            TemplateToken::Unresolved => TextAttributesKey::Unresolved,
+            TemplateToken::Secret => TextAttributesKey::Secret,
         }
     }
 }
@@ -31,7 +31,7 @@ impl TemplateToken {
 /// the variable color, [`Unresolved`](TemplateToken::Unresolved) ones the invalid color (with
 /// a dotted underline in a [`JBTextField`](crate::ui::JBTextField)),
 /// [`Secret`](TemplateToken::Secret) ones the string color on a tint of it. These come from
-/// [`TokenKind::color`](crate::editor::TokenKind::color), so a variable looks the same in a field, a
+/// [`TextAttributesKey::color`](crate::editor::TextAttributesKey::color), so a variable looks the same in a field, a
 /// view and an editor. A variable still being typed (`{{ba`) is drawn as a plain variable. Names are
 /// trimmed: `{{ name }}` resolves `"name"`.
 ///
@@ -64,9 +64,9 @@ impl<F: Fn(&str) -> TemplateToken> TemplateHighlighter<F> {
     }
 }
 
-impl<F: Fn(&str) -> TemplateToken, H: Highlighter> TemplateHighlighter<F, H> {
+impl<F: Fn(&str) -> TemplateToken, H: SyntaxHighlighter> TemplateHighlighter<F, H> {
     /// Highlights the text between variables with `inner` (a URL, JSON …).
-    pub fn inner<I: Highlighter>(self, inner: I) -> TemplateHighlighter<F, I> {
+    pub fn inner<I: SyntaxHighlighter>(self, inner: I) -> TemplateHighlighter<F, I> {
         TemplateHighlighter {
             resolver: self.resolver,
             inner,
@@ -74,7 +74,9 @@ impl<F: Fn(&str) -> TemplateToken, H: Highlighter> TemplateHighlighter<F, H> {
     }
 }
 
-impl<F: Fn(&str) -> TemplateToken, H: Highlighter> Highlighter for TemplateHighlighter<F, H> {
+impl<F: Fn(&str) -> TemplateToken, H: SyntaxHighlighter> SyntaxHighlighter
+    for TemplateHighlighter<F, H>
+{
     fn highlight_line(&self, line: &str, state: &mut u32, out: &mut Vec<Span>) {
         let mut inner = Vec::new();
         self.inner.highlight_line(line, state, &mut inner);
@@ -111,7 +113,7 @@ impl<F: Fn(&str) -> TemplateToken, H: Highlighter> Highlighter for TemplateHighl
             let kind = if f.closed {
                 (self.resolver)(&f.name).kind()
             } else {
-                TokenKind::Variable
+                TextAttributesKey::Variable
             };
             spans.push(Span {
                 start: f.range.start,
@@ -355,12 +357,12 @@ mod tests {
         assert_eq!(
             kinds,
             vec![
-                (0, 2, TokenKind::String),
-                (2, 7, TokenKind::Resolved),
-                (7, 8, TokenKind::String),
-                (9, 14, TokenKind::Secret),
-                (15, 20, TokenKind::Unresolved),
-                (21, 23, TokenKind::Variable),
+                (0, 2, TextAttributesKey::String),
+                (2, 7, TextAttributesKey::Resolved),
+                (7, 8, TextAttributesKey::String),
+                (9, 14, TextAttributesKey::Secret),
+                (15, 20, TextAttributesKey::Unresolved),
+                (21, 23, TextAttributesKey::Variable),
             ]
         );
         assert!(out.windows(2).all(|w| w[0].end <= w[1].start));

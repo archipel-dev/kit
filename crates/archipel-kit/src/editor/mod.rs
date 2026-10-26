@@ -1,11 +1,11 @@
 //! The code editor: [`EditorComponent`] shows and edits a [`model::Editor`] with token
-//! highlighting from a [`Highlighter`]; with `viewer(true)` it is a read-only code view.
+//! highlighting from a [`SyntaxHighlighter`]; with `viewer(true)` it is a read-only code view.
 //!
 //! | Item | Use it for |
 //! |---|---|
 //! | [`EditorComponent`], [`EditorComponentResponse`] | The editor widget: editable code, or a read-only view of large text with folding and find. |
 //! | [`GutterIcon`], [`ChangeMarker`], [`RangeHighlight`], [`GutterClick`], [`NavigationRequest`], [`HoverInfo`] | What the caller hands to it (gutter icons, markers, highlights) and what it reports back. |
-//! | [`Highlighter`], [`TokenKind`], [`Span`] | The highlighter interface. |
+//! | [`SyntaxHighlighter`], [`TextAttributesKey`], [`Span`] | The highlighter interface. |
 //! | [`PlainText`], [`Json`], [`ExtendedJson`], [`JavaScript`], [`GraphQl`], [`Xml`] | Ready-made highlighters. |
 //! | [`TemplateHighlighter`], [`TemplateToken`], [`TemplateAt`], [`template_at`] | `{{variable}}` templates over any highlighter. |
 //! | [`model`] | The JetBrains-faithful, UI-free editing logic: document, carets, actions, undo, keymap. |
@@ -24,7 +24,8 @@ pub use decorations::{
 };
 pub use editor_component::{EditorComponent, EditorComponentResponse};
 pub use highlight::{
-    ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
+    ExtendedJson, GraphQl, JavaScript, Json, PlainText, Span, SyntaxHighlighter, TextAttributesKey,
+    Xml,
 };
 pub(crate) use highlight::{styled_job, token_format};
 pub use template::{TemplateAt, TemplateHighlighter, TemplateToken, template_at};

@@ -16,6 +16,46 @@ pub(crate) struct ScrollAnim {
     pub duration: f64,
 }
 
+impl ScrollAnim {
+    /// The offset at `now`, and whether the animation is over: an ease-out (cubic) from `from`
+    /// to `to` over the duration.
+    pub fn at(&self, now: f64) -> (Vec2, bool) {
+        let t = if self.duration <= 0.0 {
+            1.0
+        } else {
+            ((now - self.start) / self.duration).clamp(0.0, 1.0) as f32
+        };
+        let eased = 1.0 - (1.0 - t).powi(3);
+        (self.from + (self.to - self.from) * eased, t >= 1.0)
+    }
+}
+
+/// Whether the caret is drawn at `now` (spec §1.9): visible for `blink` seconds from the last
+/// caret activity, then hidden for `blink`, and so on; any activity restarts it visible.
+pub(crate) fn caret_visible(now: f64, last_activity: f64, blink: f64) -> bool {
+    let phase = ((now - last_activity) / blink).max(0.0);
+    (phase.floor() as u64).is_multiple_of(2)
+}
+
+/// One tick of the drag autoscroll timer (spec §2.3) with the pointer `distance` pixels beyond
+/// the viewport's edge: a step happens every `floor(20 / d) + 1` ticks and moves
+/// `1 + floor(d / 20)` lines. `counter` counts the ticks since the last step.
+pub(crate) fn autoscroll_tick(counter: &mut u32, distance: f32, unit: f32) -> Option<usize> {
+    let d = distance.abs();
+    if d <= 0.0 {
+        *counter = 0;
+        return None;
+    }
+    *counter += 1;
+    let every = (unit / d).floor() as u32 + 1;
+    if *counter >= every {
+        *counter = 0;
+        Some(1 + (d / unit).floor() as usize)
+    } else {
+        None
+    }
+}
+
 /// A mouse gesture in progress.
 #[derive(Clone, Debug)]
 pub(crate) enum Drag {
@@ -26,8 +66,9 @@ pub(crate) enum Drag {
     Word { start: usize, end: usize },
     /// Extending by whole lines around the original line `start..end`.
     Line { start: usize, end: usize },
-    /// A rectangular selection (Alt+drag, middle-drag).
-    Column,
+    /// A rectangular selection (Alt+drag, middle-drag); a middle press that does not move
+    /// is a middle click.
+    Column { middle: bool, press: Pos2 },
     /// Dragging in the line number column: selects lines. Starts after the drag sensitivity.
     GutterLines {
         anchor_line: usize,
@@ -193,5 +234,63 @@ impl Geo {
 
     pub fn last_visible_row(&self, total_rows: usize) -> usize {
         (self.row_at(self.area.max.y).max(0) as usize).min(total_rows.saturating_sub(1))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use egui::vec2;
+
+    #[test]
+    fn the_caret_blinks_every_500_ms_from_the_last_activity() {
+        assert!(caret_visible(10.0, 10.0, 0.5), "visible at once");
+        assert!(caret_visible(10.49, 10.0, 0.5));
+        assert!(!caret_visible(10.5, 10.0, 0.5), "hidden after 500 ms");
+        assert!(!caret_visible(10.99, 10.0, 0.5));
+        assert!(caret_visible(11.0, 10.0, 0.5), "visible again after 1 s");
+        // Activity restarts the cycle: at 10.6 it was hidden, a keystroke at 10.6 shows it.
+        assert!(caret_visible(10.6, 10.6, 0.5));
+    }
+
+    #[test]
+    fn the_scroll_animation_eases_out_and_arrives() {
+        let anim = ScrollAnim {
+            from: vec2(0.0, 0.0),
+            to: vec2(0.0, 1000.0),
+            start: 5.0,
+            duration: 0.1,
+        };
+        let (at_start, done) = anim.at(5.0);
+        assert_eq!((at_start.y, done), (0.0, false));
+        let (half, _) = anim.at(5.05);
+        assert!(
+            half.y > 500.0,
+            "ease-out: more than half done at half the time, {}",
+            half.y
+        );
+        let (end, done) = anim.at(5.1);
+        assert_eq!((end.y, done), (1000.0, true));
+        let (late, done) = anim.at(9.0);
+        assert_eq!((late.y, done), (1000.0, true));
+    }
+
+    #[test]
+    fn autoscroll_speed_grows_with_the_distance() {
+        // 10 px beyond the edge: a line every 3 ticks.
+        let mut counter = 0;
+        let steps: Vec<_> = (0..6)
+            .map(|_| autoscroll_tick(&mut counter, 10.0, 20.0))
+            .collect();
+        assert_eq!(steps, [None, None, Some(1), None, None, Some(1)]);
+        // 40 px: three lines on every tick.
+        let mut counter = 0;
+        for _ in 0..3 {
+            assert_eq!(autoscroll_tick(&mut counter, 40.0, 20.0), Some(3));
+        }
+        // Inside the viewport nothing happens and the count restarts.
+        let mut counter = 2;
+        assert_eq!(autoscroll_tick(&mut counter, 0.0, 20.0), None);
+        assert_eq!(counter, 0);
     }
 }

@@ -3,7 +3,7 @@
 //! the occurrences of the selected text. It lives in the egui context under the component's id
 //! and is rebuilt when the document changes.
 
-use crate::editor::highlight::{Highlighter, Span};
+use crate::editor::highlight::{Span, SyntaxHighlighter};
 use crate::editor::model::{Document, FoldRegion};
 use crate::tokens::editor::MAX_SELECTION_OCCURRENCES;
 use egui::{Context, Id};
@@ -69,7 +69,7 @@ impl DocCache {
         ctx: &Context,
         id: Id,
         doc: &Document,
-        highlighter: &dyn Highlighter,
+        highlighter: &dyn SyntaxHighlighter,
         tab_size: usize,
     ) -> Arc<DocCache> {
         let key = fingerprint(doc, tab_size, highlighter.name());
@@ -116,8 +116,13 @@ impl DocCache {
         self.inner.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    /// Highlighter state at the start of `line`.
-    pub fn state_at(&self, doc: &Document, highlighter: &dyn Highlighter, line: usize) -> u32 {
+    /// SyntaxHighlighter state at the start of `line`.
+    pub fn state_at(
+        &self,
+        doc: &Document,
+        highlighter: &dyn SyntaxHighlighter,
+        line: usize,
+    ) -> u32 {
         if highlighter.stateless() {
             return 0;
         }
@@ -146,7 +151,7 @@ impl DocCache {
     pub fn spans(
         &self,
         doc: &Document,
-        highlighter: &dyn Highlighter,
+        highlighter: &dyn SyntaxHighlighter,
         line: usize,
         state: &mut u32,
         out: &mut Vec<Span>,
@@ -289,7 +294,7 @@ impl DocCache {
 fn tokenize(
     inner: &mut Inner,
     doc: &Document,
-    highlighter: &dyn Highlighter,
+    highlighter: &dyn SyntaxHighlighter,
     line: usize,
     state: &mut u32,
     out: &mut Vec<Span>,
@@ -373,4 +378,77 @@ pub(crate) fn fold_regions(brackets: &[BracketRegion], old: &[FoldRegion]) -> Ve
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::editor::PlainText;
+
+    fn cache_of(doc: &Document) -> Arc<DocCache> {
+        DocCache::get(&Context::default(), Id::new("t"), doc, &PlainText, 4)
+    }
+
+    #[test]
+    fn occurrences_skip_the_selection_itself() {
+        let doc = Document::new("foo bar foo baz foo");
+        let found = cache_of(&doc).occurrences(&doc, 0..3);
+        assert_eq!(*found, vec![8..11, 16..19]);
+    }
+
+    #[test]
+    fn more_than_fifty_occurrences_highlight_nothing() {
+        let text = "ab ".repeat(60);
+        let doc = Document::new(&text);
+        assert!(cache_of(&doc).occurrences(&doc, 0..2).is_empty());
+        let text = "ab ".repeat(51);
+        let doc = Document::new(&text);
+        assert_eq!(cache_of(&doc).occurrences(&doc, 0..2).len(), 50);
+    }
+
+    #[test]
+    fn bracket_regions_span_lines_one_per_opener_line() {
+        let doc = Document::new("{\n  \"a\": [1,\n  2],\n  \"b\": \"}\"\n}\n[ 1 ]");
+        let brackets = cache_of(&doc).brackets(&doc);
+        let spans: Vec<_> = brackets
+            .iter()
+            .map(|b| (b.start, b.end, b.opener))
+            .collect();
+        // The object spans lines 0..=4; the array lines 1..=2; `[ 1 ]` is on one line and the
+        // `}` inside the string does not close anything.
+        assert_eq!(spans.len(), 2, "{spans:?}");
+        assert_eq!(spans[0].2, '{');
+        assert_eq!(doc.line_number(spans[0].1), 4);
+        assert_eq!(spans[1].2, '[');
+    }
+
+    #[test]
+    fn fold_regions_keep_what_was_collapsed() {
+        let doc = Document::new("{\n  [\n  1\n  ]\n}");
+        let brackets = cache_of(&doc).brackets(&doc);
+        let first = fold_regions(&brackets, &[]);
+        assert!(first.iter().all(|r| r.expanded));
+        let mut old = first.clone();
+        old[1].expanded = false;
+        let again = fold_regions(&brackets, &old);
+        assert_eq!(
+            again.iter().map(|r| r.expanded).collect::<Vec<_>>(),
+            [true, false]
+        );
+        assert_eq!(again[0].placeholder, "{...}");
+        assert_eq!(again[1].placeholder, "[...]");
+    }
+
+    #[test]
+    fn find_is_ascii_case_insensitive_and_exact_for_other_text() {
+        assert_eq!(search("Foo fOO bar", "foo"), vec![0..3, 4..7]);
+        assert_eq!(search("café CAFÉ", "café"), vec![0..5]);
+        assert!(search("abc", "").is_empty());
+    }
+
+    #[test]
+    fn the_longest_line_is_measured_in_columns() {
+        let doc = Document::new("ab\n\tx\nabcd");
+        assert_eq!(cache_of(&doc).max_cols, 5);
+    }
 }

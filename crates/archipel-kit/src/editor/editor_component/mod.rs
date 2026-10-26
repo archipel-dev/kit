@@ -17,10 +17,10 @@ use super::decorations::{
     ChangeMarker, GutterClick, GutterIcon, HoverInfo, NavigationRequest, RangeHighlight,
 };
 use super::find::{self, FindState};
-use super::highlight::{Highlighter, PlainText};
+use super::highlight::{PlainText, SyntaxHighlighter};
 use super::model::{
-    ContentSize, Editor, EditorAction, Language, Os, ScrollRequest, ScrollType, Viewport,
-    clamp_first_line, scroll_to_caret,
+    ContentSize, Editor, Language, Os, ScrollRequest, ScrollType, Viewport, clamp_first_line,
+    scroll_to_caret,
 };
 use super::{A11Y_VALUE_LIMIT, code_font, paint_background, paint_border};
 use crate::parts::desktop;
@@ -70,7 +70,7 @@ pub struct EditorComponent<'a> {
     editor: &'a mut Editor,
     label: Option<String>,
     placeholder: Option<String>,
-    highlighter: &'a dyn Highlighter,
+    highlighter: &'a dyn SyntaxHighlighter,
     language: Option<&'a Language>,
     line_numbers: bool,
     wrap: bool,
@@ -175,8 +175,8 @@ impl<'a> EditorComponent<'a> {
         self
     }
 
-    /// The [`Highlighter`] that colors the text (default: none).
-    pub fn highlighter(mut self, highlighter: &'a dyn Highlighter) -> Self {
+    /// The [`SyntaxHighlighter`] that colors the text (default: none).
+    pub fn highlighter(mut self, highlighter: &'a dyn SyntaxHighlighter) -> Self {
         self.highlighter = highlighter;
         self
     }
@@ -342,7 +342,7 @@ fn build_frame(
     ctx: &egui::Context,
     id: Id,
     editor: &Editor,
-    highlighter: &dyn Highlighter,
+    highlighter: &dyn SyntaxHighlighter,
     wrap_cols: Option<usize>,
 ) -> Frame {
     let tab = editor.settings.tab_size;
@@ -571,6 +571,8 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             overlay: st.overlay,
             icons: gutter_icons,
             os,
+            viewer,
+            language,
             gutter_click_selects_line,
         };
         let mut out = mouse::MouseOut::default();
@@ -579,6 +581,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
             resp_text.request_focus();
         }
         navigation = out.navigation;
+        text_changed |= out.text_changed;
         gutter_clicks.extend(out.gutter_clicks);
         scroll_request = out.scroll;
         // The cursor.
@@ -589,40 +592,10 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         } else if resp_text.hovered() {
             ctx.set_cursor_icon(CursorIcon::Text);
         }
-        // Middle click on Linux pastes the primary selection.
-        if !viewer
-            && os == Os::WindowsLinux
-            && !st.primary.is_empty()
-            && resp_text.hovered()
-            && ui.input(|i| i.pointer.button_released(egui::PointerButton::Middle))
-            && st
-                .click_pos
-                .distance(ui.input(|i| i.pointer.hover_pos().unwrap_or_default()))
-                < 4.0
-            && editor.carets.block.is_none()
-        {
-            let text = st.primary.clone();
-            let at = mouse::locate(editor, &geo, &frame, st.click_pos).offset;
-            editor.carets.set_caret(&editor.document, at);
-            let context = crate::editor::model::ActionContext::new(language);
-            let content = crate::editor::model::ClipboardContent::text(text);
-            let outcome = editor.execute(
-                &EditorAction::PasteSimple,
-                &context.with_clipboard(&content),
-            );
-            text_changed |= outcome.text_changed;
-        }
     }
     if ui.rect_contains_pointer(gutter_rect) && gutter_w > 0.0 {
         ctx.set_cursor_icon(CursorIcon::Default);
     }
-    if os == Os::MacOs
-        && let Some(nav) = navigation
-        && ui.input(|i| i.pointer.button_released(egui::PointerButton::Middle))
-    {
-        navigation = Some(nav);
-    }
-
     // Keyboard, text and clipboard.
     let focused_now = enabled && ctx.memory(|m| m.has_focus(id));
     if focused_now {
@@ -826,10 +799,9 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         }
     }
     if let Some(anim) = st.anim {
-        let t = ((now - anim.start) / anim.duration).clamp(0.0, 1.0) as f32;
-        let eased = 1.0 - (1.0 - t).powi(3);
-        override_offset = Some(anim.from + (anim.to - anim.from) * eased);
-        if t >= 1.0 {
+        let (offset, done) = anim.at(now);
+        override_offset = Some(offset);
+        if done {
             st.anim = None;
         } else {
             ctx.request_repaint();
@@ -837,10 +809,7 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
     }
 
     // The scroll area with the visible rows.
-    let caret_visible = {
-        let phase = ((now - st.last_activity) / motion::CARET_BLINK as f64).max(0.0);
-        (phase.floor() as u64).is_multiple_of(2)
-    };
+    let caret_visible = state::caret_visible(now, st.last_activity, motion::CARET_BLINK as f64);
     if focused_now {
         let phase = (now - st.last_activity).max(0.0) % motion::CARET_BLINK as f64;
         ctx.request_repaint_after(Duration::from_secs_f64(
@@ -1071,12 +1040,15 @@ fn run(spec: EditorComponent<'_>, ui: &mut Ui) -> EditorComponentResponse {
         if text_changed {
             response.mark_changed();
         }
-        let caret = paint_out.caret_rect.map(|rect| {
-            let offset = editor.carets.primary().offset;
-            (editor.document.text()[..offset].chars().count(), rect)
-        });
-        let text = editor.document.text().to_owned();
-        let chosen = list.end_with(ui, completer, &text, &mut response, caret);
+        // The caret in chars costs a scan of the text: only while the list can be open.
+        let caret = (focused_now || list_open)
+            .then_some(paint_out.caret_rect)
+            .flatten()
+            .map(|rect| {
+                let offset = editor.carets.primary().offset;
+                (editor.document.text()[..offset].chars().count(), rect)
+            });
+        let chosen = list.end_with(ui, completer, editor.document.text(), &mut response, caret);
         if let Some((start, end, item)) = chosen {
             apply_completion(editor, language, start, end, &item);
             text_changed = true;

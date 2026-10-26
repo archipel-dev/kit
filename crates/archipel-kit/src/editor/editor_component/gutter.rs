@@ -283,7 +283,7 @@ pub(crate) fn show(ui: &mut Ui, st: &mut ViewState, input: GutterInput<'_>) -> G
                 rect,
                 id.with(("gutter-icon", icon.lane, icon.line)),
                 if enabled {
-                    Sense::click()
+                    Sense::CLICK
                 } else {
                     Sense::hover()
                 },
@@ -326,7 +326,7 @@ pub(crate) fn show(ui: &mut Ui, st: &mut ViewState, input: GutterInput<'_>) -> G
                 rect,
                 id.with(("fold", region.start)),
                 if enabled {
-                    Sense::click()
+                    Sense::CLICK
                 } else {
                     Sense::hover()
                 },

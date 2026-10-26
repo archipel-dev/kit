@@ -1,4 +1,4 @@
-//! Token highlighting: the [`Highlighter`] trait and the built-in tokenizers.
+//! Token highlighting: the [`SyntaxHighlighter`] trait and the built-in tokenizers.
 
 use crate::parts::ValueKind;
 use crate::theme::EditorColors;
@@ -9,7 +9,7 @@ use egui::text::{LayoutJob, TextFormat};
 /// What a piece of code is, which decides its color (from [`EditorColors`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[non_exhaustive]
-pub enum TokenKind {
+pub enum TextAttributesKey {
     /// Unstyled text.
     #[default]
     Plain,
@@ -45,45 +45,45 @@ pub enum TokenKind {
     Value(ValueKind),
 }
 
-impl TokenKind {
+impl TextAttributesKey {
     /// The fill drawn behind this kind (transparent for most): secrets sit on a tint of the
     /// string color.
     pub fn background(self, colors: &EditorColors) -> Color32 {
         match self {
-            TokenKind::Secret => colors.string.gamma_multiply(opacity::TINT_FILL),
+            TextAttributesKey::Secret => colors.string.gamma_multiply(opacity::TINT_FILL),
             _ => Color32::TRANSPARENT,
         }
     }
 
     /// Whether this kind is drawn with a dotted underline (by
-    /// [`JBTextField`](crate::ui::JBTextField)): [`Unresolved`](TokenKind::Unresolved).
+    /// [`JBTextField`](crate::ui::JBTextField)): [`Unresolved`](TextAttributesKey::Unresolved).
     pub fn dotted_underline(self) -> bool {
-        self == TokenKind::Unresolved
+        self == TextAttributesKey::Unresolved
     }
 
     /// The color of this kind in `colors`.
     pub fn color(self, colors: &EditorColors) -> Color32 {
         match self {
-            TokenKind::Plain => colors.text,
-            TokenKind::Keyword => colors.keyword,
-            TokenKind::String => colors.string,
-            TokenKind::Number => colors.number,
-            TokenKind::Comment => colors.comment,
-            TokenKind::Punctuation => colors.punctuation,
-            TokenKind::Property => colors.property,
-            TokenKind::Tag => colors.tag,
-            TokenKind::Attribute => colors.attribute,
-            TokenKind::Variable => colors.variable,
-            TokenKind::Error | TokenKind::Unresolved => colors.invalid,
-            TokenKind::Resolved => colors.variable,
-            TokenKind::Secret => colors.string,
-            TokenKind::Value(kind) => kind.editor_color(colors),
+            TextAttributesKey::Plain => colors.text,
+            TextAttributesKey::Keyword => colors.keyword,
+            TextAttributesKey::String => colors.string,
+            TextAttributesKey::Number => colors.number,
+            TextAttributesKey::Comment => colors.comment,
+            TextAttributesKey::Punctuation => colors.punctuation,
+            TextAttributesKey::Property => colors.property,
+            TextAttributesKey::Tag => colors.tag,
+            TextAttributesKey::Attribute => colors.attribute,
+            TextAttributesKey::Variable => colors.variable,
+            TextAttributesKey::Error | TextAttributesKey::Unresolved => colors.invalid,
+            TextAttributesKey::Resolved => colors.variable,
+            TextAttributesKey::Secret => colors.string,
+            TextAttributesKey::Value(kind) => kind.editor_color(colors),
         }
     }
 }
 
 /// A styled byte range of a line. Spans are sorted and don't overlap; the gaps are
-/// [`TokenKind::Plain`].
+/// [`TextAttributesKey::Plain`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     /// First byte, relative to the start of the line (or text).
@@ -91,7 +91,7 @@ pub struct Span {
     /// One past the last byte.
     pub end: usize,
     /// What it is.
-    pub kind: TokenKind,
+    pub kind: TextAttributesKey,
 }
 
 /// Maps code to styled [`Span`]s. Implement it to plug your own tokenizer (a tree-sitter
@@ -102,18 +102,18 @@ pub struct Span {
 /// Constructs that span lines (block comments, template strings) carry a `state` from
 /// each line to the next: `0` at the start of the text, and whatever the tokenizer wants
 /// afterwards. A tokenizer without multi-line constructs overrides
-/// [`stateless`](Highlighter::stateless) so the views never scan the lines above the
+/// [`stateless`](SyntaxHighlighter::stateless) so the views never scan the lines above the
 /// visible ones.
 ///
 /// ```
-/// use archipel_kit::editor::{Highlighter, Span, TokenKind};
+/// use archipel_kit::editor::{SyntaxHighlighter, Span, TextAttributesKey};
 ///
 /// /// Marks `TODO` in comments.
 /// struct Todo;
-/// impl Highlighter for Todo {
+/// impl SyntaxHighlighter for Todo {
 ///     fn highlight_line(&self, line: &str, _state: &mut u32, out: &mut Vec<Span>) {
 ///         for (start, word) in line.match_indices("TODO") {
-///             out.push(Span { start, end: start + word.len(), kind: TokenKind::Keyword });
+///             out.push(Span { start, end: start + word.len(), kind: TextAttributesKey::Keyword });
 ///         }
 ///     }
 ///     fn stateless(&self) -> bool { true }
@@ -122,7 +122,7 @@ pub struct Span {
 /// Todo.highlight_line("// TODO: later", &mut 0, &mut spans);
 /// assert_eq!(spans.len(), 1);
 /// ```
-pub trait Highlighter {
+pub trait SyntaxHighlighter {
     /// Appends the spans of `line` (without its line break) to `out`, in order.
     /// `state` is `0` for the first line and the value this method left for the previous
     /// one afterwards; set it when a construct continues on the next line.
@@ -139,7 +139,7 @@ pub trait Highlighter {
     }
 
     /// The spans of a whole text, with byte offsets into `text`. Defaults to running
-    /// [`highlight_line`](Highlighter::highlight_line) over its lines; override it when
+    /// [`highlight_line`](SyntaxHighlighter::highlight_line) over its lines; override it when
     /// the tokenizer wants the whole text (a syntax tree).
     fn highlight_text(&self, text: &str, out: &mut Vec<Span>) {
         let mut state = 0;
@@ -162,7 +162,7 @@ pub trait Highlighter {
 
 /// The format of `kind` for [`styled_job`]: its color and fill, dimmed when `!enabled`.
 pub(crate) fn token_format(
-    kind: TokenKind,
+    kind: TextAttributesKey,
     font: &egui::FontId,
     colors: &EditorColors,
     line_height: Option<f32>,
@@ -185,14 +185,14 @@ pub(crate) fn token_format(
 }
 
 /// The layout of `slice`, the text from byte `offset` on of the text `spans` describe:
-/// each span in the format of its kind, the gaps as [`TokenKind::Plain`]. Spans outside the
+/// each span in the format of its kind, the gaps as [`TextAttributesKey::Plain`]. Spans outside the
 /// slice or off char boundaries are skipped. Shared by the view, the editor and the field.
 pub(crate) fn styled_job(
     slice: &str,
     offset: usize,
     spans: &[Span],
     wrap_width: f32,
-    mut format: impl FnMut(TokenKind) -> TextFormat,
+    mut format: impl FnMut(TextAttributesKey) -> TextFormat,
 ) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.wrap.max_width = wrap_width;
@@ -210,20 +210,20 @@ pub(crate) fn styled_job(
             job.append(
                 &slice[at - offset..a - offset],
                 0.0,
-                format(TokenKind::Plain),
+                format(TextAttributesKey::Plain),
             );
         }
         job.append(&slice[a - offset..b - offset], 0.0, format(span.kind));
         at = b;
     }
     if at < end || slice.is_empty() {
-        job.append(&slice[at - offset..], 0.0, format(TokenKind::Plain));
+        job.append(&slice[at - offset..], 0.0, format(TextAttributesKey::Plain));
     }
     job
 }
 
-fn push(out: &mut Vec<Span>, start: usize, end: usize, kind: TokenKind) {
-    if kind == TokenKind::Plain || start >= end {
+fn push(out: &mut Vec<Span>, start: usize, end: usize, kind: TextAttributesKey) {
+    if kind == TextAttributesKey::Plain || start >= end {
         return;
     }
     if let Some(last) = out.last_mut()
@@ -286,7 +286,7 @@ fn number_end(bytes: &[u8], mut i: usize) -> usize {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PlainText;
 
-impl Highlighter for PlainText {
+impl SyntaxHighlighter for PlainText {
     fn highlight_line(&self, _: &str, _: &mut u32, _: &mut Vec<Span>) {}
     fn stateless(&self) -> bool {
         true
@@ -298,7 +298,7 @@ impl Highlighter for PlainText {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Json;
 
-impl Highlighter for Json {
+impl SyntaxHighlighter for Json {
     fn highlight_line(&self, line: &str, _: &mut u32, out: &mut Vec<Span>) {
         let bytes = line.as_bytes();
         let mut i = 0;
@@ -313,17 +313,17 @@ impl Highlighter for Json {
                     };
                     let next = skip_ws(bytes, end);
                     let kind = if !closed {
-                        TokenKind::Error
+                        TextAttributesKey::Error
                     } else if bytes.get(next) == Some(&b':') {
-                        TokenKind::Property
+                        TextAttributesKey::Property
                     } else {
-                        TokenKind::String
+                        TextAttributesKey::String
                     };
                     push(out, i, end, kind);
                     i = end;
                 }
                 b'{' | b'}' | b'[' | b']' | b',' | b':' => {
-                    push(out, i, i + 1, TokenKind::Punctuation);
+                    push(out, i, i + 1, TextAttributesKey::Punctuation);
                     i += 1;
                 }
                 b'-' | b'0'..=b'9' => {
@@ -335,9 +335,9 @@ impl Highlighter for Json {
                         i,
                         end,
                         if valid {
-                            TokenKind::Number
+                            TextAttributesKey::Number
                         } else {
-                            TokenKind::Error
+                            TextAttributesKey::Error
                         },
                     );
                     i = end;
@@ -348,16 +348,16 @@ impl Highlighter for Json {
                         end += 1;
                     }
                     let kind = if matches!(&line[i..end], "true" | "false" | "null") {
-                        TokenKind::Keyword
+                        TextAttributesKey::Keyword
                     } else {
-                        TokenKind::Error
+                        TextAttributesKey::Error
                     };
                     push(out, i, end, kind);
                     i = end;
                 }
                 _ => {
                     let len = char_len(line, i);
-                    push(out, i, i + len, TokenKind::Error);
+                    push(out, i, i + len, TextAttributesKey::Error);
                     i += len;
                 }
             }
@@ -422,13 +422,13 @@ const JS_KEYWORDS: &[&str] = &[
 /// are properties, `true`/`false` booleans, `null` null. `//` starts a comment.
 ///
 /// ```
-/// use archipel_kit::editor::{ExtendedJson, Highlighter, Span, TokenKind};
+/// use archipel_kit::editor::{ExtendedJson, SyntaxHighlighter, Span, TextAttributesKey};
 /// use archipel_kit::parts::ValueKind;
 ///
 /// let mut spans = Vec::new();
 /// ExtendedJson.highlight_line(r#"{ _id: ObjectId("65f0") }"#, &mut 0, &mut spans);
-/// assert!(spans.contains(&Span { start: 2, end: 5, kind: TokenKind::Property }));
-/// assert!(spans.contains(&Span { start: 7, end: 23, kind: TokenKind::Value(ValueKind::Id) }));
+/// assert!(spans.contains(&Span { start: 2, end: 5, kind: TextAttributesKey::Property }));
+/// assert!(spans.contains(&Span { start: 7, end: 23, kind: TextAttributesKey::Value(ValueKind::Id) }));
 /// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ExtendedJson;
@@ -495,11 +495,11 @@ impl ExtendedJson {
     }
 }
 
-impl Highlighter for ExtendedJson {
+impl SyntaxHighlighter for ExtendedJson {
     fn highlight_line(&self, line: &str, _state: &mut u32, out: &mut Vec<Span>) {
         let bytes = line.as_bytes();
         let mut i = 0;
-        let mut push = |start: usize, end: usize, kind: TokenKind| {
+        let mut push = |start: usize, end: usize, kind: TextAttributesKey| {
             out.push(Span { start, end, kind });
         };
         while i < bytes.len() {
@@ -508,15 +508,15 @@ impl Highlighter for ExtendedJson {
             match b {
                 b if b.is_ascii_whitespace() => i += 1,
                 b'/' if bytes.get(i + 1) == Some(&b'/') => {
-                    push(start, bytes.len(), TokenKind::Comment);
+                    push(start, bytes.len(), TextAttributesKey::Comment);
                     i = bytes.len();
                 }
                 b'"' | b'\'' => {
                     i = Self::string_end(bytes, i);
                     let kind = if Self::before_colon(bytes, i) {
-                        TokenKind::Property
+                        TextAttributesKey::Property
                     } else {
-                        TokenKind::String
+                        TextAttributesKey::String
                     };
                     push(start, i, kind);
                 }
@@ -532,7 +532,7 @@ impl Highlighter for ExtendedJson {
                     {
                         i += 1;
                     }
-                    push(start, i, TokenKind::Number);
+                    push(start, i, TextAttributesKey::Number);
                 }
                 b if b.is_ascii_alphabetic() || b == b'_' || b == b'$' => {
                     let word_end = |from: usize| {
@@ -568,17 +568,17 @@ impl Highlighter for ExtendedJson {
                     if let (Some(kind), Some(open)) = (constructor_kind(word), open)
                         && let Some(end) = Self::call_end(bytes, open)
                     {
-                        push(start, end, TokenKind::Value(kind));
+                        push(start, end, TextAttributesKey::Value(kind));
                         i = end;
                     } else if Self::before_colon(bytes, i) {
-                        push(start, i, TokenKind::Property);
+                        push(start, i, TextAttributesKey::Property);
                     } else {
                         match word {
                             "true" | "false" => {
-                                push(start, i, TokenKind::Value(ValueKind::Boolean))
+                                push(start, i, TextAttributesKey::Value(ValueKind::Boolean))
                             }
                             "null" | "undefined" => {
-                                push(start, i, TokenKind::Value(ValueKind::Null))
+                                push(start, i, TextAttributesKey::Value(ValueKind::Null))
                             }
                             _ => {}
                         }
@@ -586,7 +586,7 @@ impl Highlighter for ExtendedJson {
                 }
                 b'{' | b'}' | b'[' | b']' | b',' | b':' | b'(' | b')' => {
                     i += 1;
-                    push(start, i, TokenKind::Punctuation);
+                    push(start, i, TextAttributesKey::Punctuation);
                 }
                 _ => i += line[i..].chars().next().map_or(1, char::len_utf8),
             }
@@ -606,7 +606,7 @@ const JS_TEMPLATE: u32 = 2;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct JavaScript;
 
-impl Highlighter for JavaScript {
+impl SyntaxHighlighter for JavaScript {
     fn highlight_line(&self, line: &str, state: &mut u32, out: &mut Vec<Span>) {
         let bytes = line.as_bytes();
         let mut i = 0;
@@ -614,23 +614,23 @@ impl Highlighter for JavaScript {
         match *state {
             JS_BLOCK_COMMENT => match line.find("*/") {
                 Some(at) => {
-                    push(out, 0, at + 2, TokenKind::Comment);
+                    push(out, 0, at + 2, TextAttributesKey::Comment);
                     i = at + 2;
                     *state = 0;
                 }
                 None => {
-                    push(out, 0, line.len(), TokenKind::Comment);
+                    push(out, 0, line.len(), TextAttributesKey::Comment);
                     return;
                 }
             },
             JS_TEMPLATE => match template_end(bytes, 0) {
                 Some(end) => {
-                    push(out, 0, end, TokenKind::String);
+                    push(out, 0, end, TextAttributesKey::String);
                     i = end;
                     *state = 0;
                 }
                 None => {
-                    push(out, 0, line.len(), TokenKind::String);
+                    push(out, 0, line.len(), TextAttributesKey::String);
                     return;
                 }
             },
@@ -641,49 +641,49 @@ impl Highlighter for JavaScript {
             match b {
                 b' ' | b'\t' | b'\r' => i += 1,
                 b'/' if bytes.get(i + 1) == Some(&b'/') => {
-                    push(out, i, bytes.len(), TokenKind::Comment);
+                    push(out, i, bytes.len(), TextAttributesKey::Comment);
                     return;
                 }
                 b'/' if bytes.get(i + 1) == Some(&b'*') => match line[i + 2..].find("*/") {
                     Some(at) => {
-                        push(out, i, i + 2 + at + 2, TokenKind::Comment);
+                        push(out, i, i + 2 + at + 2, TextAttributesKey::Comment);
                         i += 2 + at + 2;
                     }
                     None => {
-                        push(out, i, bytes.len(), TokenKind::Comment);
+                        push(out, i, bytes.len(), TextAttributesKey::Comment);
                         *state = JS_BLOCK_COMMENT;
                         return;
                     }
                 },
                 b'"' | b'\'' => match quoted_end(bytes, i, b) {
                     Some(end) => {
-                        push(out, i, end, TokenKind::String);
+                        push(out, i, end, TextAttributesKey::String);
                         i = end;
                     }
                     None => {
-                        push(out, i, bytes.len(), TokenKind::Error);
+                        push(out, i, bytes.len(), TextAttributesKey::Error);
                         return;
                     }
                 },
                 b'`' => match template_end(bytes, i + 1) {
                     Some(end) => {
-                        push(out, i, end, TokenKind::String);
+                        push(out, i, end, TextAttributesKey::String);
                         i = end;
                     }
                     None => {
-                        push(out, i, bytes.len(), TokenKind::String);
+                        push(out, i, bytes.len(), TextAttributesKey::String);
                         *state = JS_TEMPLATE;
                         return;
                     }
                 },
                 b'0'..=b'9' => {
                     let end = number_end(bytes, i);
-                    push(out, i, end, TokenKind::Number);
+                    push(out, i, end, TextAttributesKey::Number);
                     i = end;
                 }
                 b'.' if bytes.get(i + 1).is_some_and(u8::is_ascii_digit) => {
                     let end = number_end(bytes, i + 1);
-                    push(out, i, end, TokenKind::Number);
+                    push(out, i, end, TextAttributesKey::Number);
                     i = end;
                 }
                 b if is_ident_start(b) => {
@@ -694,19 +694,19 @@ impl Highlighter for JavaScript {
                     let word = &line[i..end];
                     let member = line[..i].trim_end().ends_with('.');
                     let kind = if member {
-                        TokenKind::Property
+                        TextAttributesKey::Property
                     } else if JS_KEYWORDS.contains(&word) {
-                        TokenKind::Keyword
+                        TextAttributesKey::Keyword
                     } else if bytes.get(skip_ws(bytes, end)) == Some(&b'(') {
-                        TokenKind::Variable
+                        TextAttributesKey::Variable
                     } else {
-                        TokenKind::Plain
+                        TextAttributesKey::Plain
                     };
                     push(out, i, end, kind);
                     i = end;
                 }
                 _ if b.is_ascii_punctuation() => {
-                    push(out, i, i + 1, TokenKind::Punctuation);
+                    push(out, i, i + 1, TextAttributesKey::Punctuation);
                     i += 1;
                 }
                 _ => i += char_len(line, i),
@@ -757,19 +757,19 @@ const GQL_BLOCK_STRING: u32 = 1;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GraphQl;
 
-impl Highlighter for GraphQl {
+impl SyntaxHighlighter for GraphQl {
     fn highlight_line(&self, line: &str, state: &mut u32, out: &mut Vec<Span>) {
         let bytes = line.as_bytes();
         let mut i = 0;
         if *state == GQL_BLOCK_STRING {
             match line.find("\"\"\"") {
                 Some(at) => {
-                    push(out, 0, at + 3, TokenKind::String);
+                    push(out, 0, at + 3, TextAttributesKey::String);
                     i = at + 3;
                     *state = 0;
                 }
                 None => {
-                    push(out, 0, line.len(), TokenKind::String);
+                    push(out, 0, line.len(), TextAttributesKey::String);
                     return;
                 }
             }
@@ -779,33 +779,33 @@ impl Highlighter for GraphQl {
             match b {
                 b' ' | b'\t' | b'\r' => i += 1,
                 b'#' => {
-                    push(out, i, bytes.len(), TokenKind::Comment);
+                    push(out, i, bytes.len(), TextAttributesKey::Comment);
                     return;
                 }
                 b'"' if line[i..].starts_with("\"\"\"") => match line[i + 3..].find("\"\"\"") {
                     Some(at) => {
-                        push(out, i, i + 3 + at + 3, TokenKind::String);
+                        push(out, i, i + 3 + at + 3, TextAttributesKey::String);
                         i += 3 + at + 3;
                     }
                     None => {
-                        push(out, i, bytes.len(), TokenKind::String);
+                        push(out, i, bytes.len(), TextAttributesKey::String);
                         *state = GQL_BLOCK_STRING;
                         return;
                     }
                 },
                 b'"' => match quoted_end(bytes, i, b'"') {
                     Some(end) => {
-                        push(out, i, end, TokenKind::String);
+                        push(out, i, end, TextAttributesKey::String);
                         i = end;
                     }
                     None => {
-                        push(out, i, bytes.len(), TokenKind::Error);
+                        push(out, i, bytes.len(), TextAttributesKey::Error);
                         return;
                     }
                 },
                 b'-' | b'0'..=b'9' => {
                     let end = number_end(bytes, i + 1);
-                    push(out, i, end, TokenKind::Number);
+                    push(out, i, end, TextAttributesKey::Number);
                     i = end;
                 }
                 b'$' | b'@' => {
@@ -814,20 +814,24 @@ impl Highlighter for GraphQl {
                         end += 1;
                     }
                     let kind = if b == b'$' {
-                        TokenKind::Variable
+                        TextAttributesKey::Variable
                     } else {
-                        TokenKind::Attribute
+                        TextAttributesKey::Attribute
                     };
                     push(
                         out,
                         i,
                         end,
-                        if end == i + 1 { TokenKind::Error } else { kind },
+                        if end == i + 1 {
+                            TextAttributesKey::Error
+                        } else {
+                            kind
+                        },
                     );
                     i = end;
                 }
                 b'.' if line[i..].starts_with("...") => {
-                    push(out, i, i + 3, TokenKind::Punctuation);
+                    push(out, i, i + 3, TextAttributesKey::Punctuation);
                     i += 3;
                 }
                 b if is_ident_start(b) => {
@@ -837,19 +841,19 @@ impl Highlighter for GraphQl {
                     }
                     let word = &line[i..end];
                     let kind = if GQL_KEYWORDS.contains(&word) {
-                        TokenKind::Keyword
+                        TextAttributesKey::Keyword
                     } else if bytes.get(skip_ws(bytes, end)) == Some(&b':') {
-                        TokenKind::Property
+                        TextAttributesKey::Property
                     } else if word.starts_with(|c: char| c.is_uppercase()) {
-                        TokenKind::Tag
+                        TextAttributesKey::Tag
                     } else {
-                        TokenKind::Plain
+                        TextAttributesKey::Plain
                     };
                     push(out, i, end, kind);
                     i = end;
                 }
                 _ if b.is_ascii_punctuation() => {
-                    push(out, i, i + 1, TokenKind::Punctuation);
+                    push(out, i, i + 1, TextAttributesKey::Punctuation);
                     i += 1;
                 }
                 _ => i += char_len(line, i),
@@ -869,7 +873,7 @@ const XML_CDATA: u32 = 5;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Xml;
 
-impl Highlighter for Xml {
+impl SyntaxHighlighter for Xml {
     fn highlight_line(&self, line: &str, state: &mut u32, out: &mut Vec<Span>) {
         let bytes = line.as_bytes();
         let mut i = 0;
@@ -877,9 +881,9 @@ impl Highlighter for Xml {
             match *state {
                 XML_COMMENT | XML_CDATA => {
                     let (close, kind) = if *state == XML_COMMENT {
-                        ("-->", TokenKind::Comment)
+                        ("-->", TextAttributesKey::Comment)
                     } else {
-                        ("]]>", TokenKind::String)
+                        ("]]>", TextAttributesKey::String)
                     };
                     match line[i..].find(close) {
                         Some(at) => {
@@ -897,12 +901,12 @@ impl Highlighter for Xml {
                     let quote = if *state == XML_DQ { b'"' } else { b'\'' };
                     match bytes[i..].iter().position(|&b| b == quote) {
                         Some(at) => {
-                            push(out, i, i + at + 1, TokenKind::String);
+                            push(out, i, i + at + 1, TextAttributesKey::String);
                             i += at + 1;
                             *state = XML_TAG;
                         }
                         None => {
-                            push(out, i, bytes.len(), TokenKind::String);
+                            push(out, i, bytes.len(), TextAttributesKey::String);
                             return;
                         }
                     }
@@ -912,21 +916,21 @@ impl Highlighter for Xml {
                     match b {
                         b' ' | b'\t' | b'\r' => i += 1,
                         b'>' => {
-                            push(out, i, i + 1, TokenKind::Tag);
+                            push(out, i, i + 1, TextAttributesKey::Tag);
                             i += 1;
                             *state = 0;
                         }
                         b'/' | b'?' if bytes.get(i + 1) == Some(&b'>') => {
-                            push(out, i, i + 2, TokenKind::Tag);
+                            push(out, i, i + 2, TextAttributesKey::Tag);
                             i += 2;
                             *state = 0;
                         }
                         b'=' => {
-                            push(out, i, i + 1, TokenKind::Punctuation);
+                            push(out, i, i + 1, TextAttributesKey::Punctuation);
                             i += 1;
                         }
                         b'"' | b'\'' => {
-                            push(out, i, i + 1, TokenKind::String);
+                            push(out, i, i + 1, TextAttributesKey::String);
                             i += 1;
                             *state = if b == b'"' { XML_DQ } else { XML_SQ };
                         }
@@ -942,9 +946,9 @@ impl Highlighter for Xml {
                             }
                             if end == i {
                                 end += char_len(line, i);
-                                push(out, i, end, TokenKind::Error);
+                                push(out, i, end, TextAttributesKey::Error);
                             } else {
-                                push(out, i, end, TokenKind::Attribute);
+                                push(out, i, end, TextAttributesKey::Attribute);
                             }
                             i = end;
                         }
@@ -955,11 +959,11 @@ impl Highlighter for Xml {
                     let rest = &line[i..];
                     if rest.starts_with("<!--") {
                         *state = XML_COMMENT;
-                        push(out, i, i + 4, TokenKind::Comment);
+                        push(out, i, i + 4, TextAttributesKey::Comment);
                         i += 4;
                     } else if rest.starts_with("<![CDATA[") {
                         *state = XML_CDATA;
-                        push(out, i, i + 9, TokenKind::String);
+                        push(out, i, i + 9, TextAttributesKey::String);
                         i += 9;
                     } else if rest.starts_with('<') {
                         let open_len = if rest.starts_with("</") { 2 } else { 1 };
@@ -972,11 +976,11 @@ impl Highlighter for Xml {
                             end += 1;
                         }
                         let kind = if special {
-                            TokenKind::Keyword
+                            TextAttributesKey::Keyword
                         } else {
-                            TokenKind::Tag
+                            TextAttributesKey::Tag
                         };
-                        push(out, i, name_start, TokenKind::Tag);
+                        push(out, i, name_start, TextAttributesKey::Tag);
                         push(out, name_start, end, kind);
                         i = end;
                         *state = XML_TAG;
@@ -985,7 +989,7 @@ impl Highlighter for Xml {
                         && semi <= 10
                         && !rest[1..semi].contains(char::is_whitespace)
                     {
-                        push(out, i, i + semi + 1, TokenKind::Variable);
+                        push(out, i, i + semi + 1, TextAttributesKey::Variable);
                         i += semi + 1;
                     } else {
                         i += char_len(line, i);

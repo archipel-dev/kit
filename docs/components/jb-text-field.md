@@ -37,7 +37,7 @@ fn connection_form(ui: &mut egui::Ui, host: &mut String, port: &mut String) {
 | `.password(bool)` | Masks the text. |
 | `.monospace(bool)` | Code font, for paths, URLs and ids. |
 | `.enabled(bool)` | Disabled inputs are dimmed and read-only. |
-| `.highlighter(&dyn Highlighter)` | Colors the text (URLs, `{{variables}}`); see [single-line fields](code.md#single-line-fields-and-variables). |
+| `.highlighter(&dyn SyntaxHighlighter)` | Colors the text (URLs, `{{variables}}`); see [single-line fields](code.md#single-line-fields-and-variables). |
 | `.completer(&dyn Completer)` | A completion list under the caret, operated by the kit; see [autocomplete](code.md#autocomplete). |
 | `.suggestions(&[String])` | An editable combo box: free text plus a chevron listing the suggestions; see [combo box](#combo-box). |
 | `.width(f32)` | Total width (default: the available width). |

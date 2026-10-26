@@ -1127,3 +1127,629 @@ fn change_markers_and_stripe_render_without_panicking() {
     h.run_ok();
     testing::audit(&mut h).assert_clean();
 }
+
+// ---- snapshots ------------------------------------------------------------------------
+
+/// Snapshot harnesses run at 2x: node rectangles are in physical pixels, events in points.
+fn points(rect: egui::Rect) -> egui::Rect {
+    egui::Rect::from_min_max(
+        pos2(rect.min.x / 2.0, rect.min.y / 2.0),
+        pos2(rect.max.x / 2.0, rect.max.y / 2.0),
+    )
+}
+
+/// The snapshot helpers run the same app in both themes: each theme gets its own editor.
+fn theme_index(ui: &egui::Ui) -> usize {
+    usize::from(!ui.visuals().dark_mode)
+}
+
+const SAMPLE: &str = "function total(items) {\n  let sum = 0;\n  for (const item of items) {\n    if (item.price > 0) {\n      sum += item.price * item.qty;\n    }\n  }\n  // TODO: tax\n  return sum;\n}\n";
+
+fn show_sample<'a>(editor: &'a mut Editor) -> EditorComponent<'a> {
+    EditorComponent::new(editor)
+        .label("Ed")
+        .highlighter(&archipel_kit::editor::JavaScript)
+        .line_numbers(true)
+        .height(236.0)
+}
+
+#[test]
+fn multi_caret_snapshot() {
+    let mut editors = [Editor::new(SAMPLE), Editor::new(SAMPLE)];
+    testing::snapshot_themes_after(
+        "editor_multi_caret",
+        common::IMG,
+        |ui| {
+            show_sample(&mut editors[theme_index(ui)]).show(ui);
+        },
+        |h| {
+            h.get_by_label("Ed").focus();
+            h.run_ok();
+            let rect = points(h.get_by_label("Ed").rect());
+            // Double-click `item` on line 3, then Alt+J twice adds the next two occurrences.
+            let pos = pos2(
+                rect.left() + PAD + 15.0 * CELL,
+                rect.top() + 4.0 + ROW * 2.5,
+            );
+            h.hover_at(pos);
+            for _ in 0..2 {
+                h.event(Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed: true,
+                    modifiers: Modifiers::NONE,
+                });
+                h.event(Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed: false,
+                    modifiers: Modifiers::NONE,
+                });
+            }
+            h.run_ok();
+            h.key_press_modifiers(Modifiers::ALT, Key::J);
+            h.key_press_modifiers(Modifiers::ALT, Key::J);
+            h.run_ok();
+        },
+    );
+}
+
+#[test]
+fn column_selection_snapshot() {
+    let mut editors = [Editor::new(SAMPLE), Editor::new(SAMPLE)];
+    testing::snapshot_themes_after(
+        "editor_column_selection",
+        common::IMG,
+        |ui| {
+            show_sample(&mut editors[theme_index(ui)]).show(ui);
+        },
+        |h| {
+            h.get_by_label("Ed").focus();
+            h.run_ok();
+            let rect = points(h.get_by_label("Ed").rect());
+            let from = pos2(rect.left() + PAD + 2.0 * CELL, rect.top() + 4.0 + ROW * 1.5);
+            let to = pos2(rect.left() + PAD + 9.0 * CELL, rect.top() + 4.0 + ROW * 4.5);
+            h.hover_at(from);
+            h.event(Event::PointerButton {
+                pos: from,
+                button: PointerButton::Primary,
+                pressed: true,
+                modifiers: Modifiers::ALT,
+            });
+            h.run_ok();
+            h.event(Event::PointerMoved(to));
+            h.run_ok();
+            h.event(Event::PointerButton {
+                pos: to,
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: Modifiers::ALT,
+            });
+            h.run_ok();
+        },
+    );
+}
+
+#[test]
+fn selection_and_unfocused_snapshot() {
+    let mut editor = Editor::new(SAMPLE);
+    let doc = editor.document.clone();
+    editor.carets.set_selection(&doc, 40, 120);
+    testing::snapshot_themes("editor_selection_inactive", common::IMG, |ui| {
+        show_sample(&mut editor).show(ui);
+    });
+}
+
+#[test]
+fn fold_and_gutter_snapshot() {
+    let text = "fn total(items) {\n  let sum = 0;\n  for item in items {\n    sum += item;\n  }\n  return sum;\n}\n";
+    let mut editor = Editor::new(text);
+    let icons = vec![
+        GutterIcon::new(1, Glyph::Breakpoint, "Breakpoint on line 2").tone(Tone::Error),
+        GutterIcon::new(5, Glyph::Bookmark, "Bookmark on line 6").lane(1),
+    ];
+    let markers = vec![
+        ChangeMarker::new(1..2, ChangeKind::Added),
+        ChangeMarker::new(5..6, ChangeKind::Modified),
+        ChangeMarker::new(6..6, ChangeKind::Deleted),
+    ];
+    // The function body and the `for` block (collapsed).
+    let doc = editor.document.clone();
+    let outer_open = text.find('{').expect("a brace");
+    let outer_close = text.rfind('}').expect("a brace") + 1;
+    let inner_open = text[outer_open + 1..].find('{').expect("a brace") + outer_open + 1;
+    let inner_close = text.find("  }\n").expect("a brace") + 3;
+    editor
+        .folding
+        .add_region(&doc, outer_open, outer_close, "{...}", true);
+    editor
+        .folding
+        .add_region(&doc, inner_open, inner_close, "{...}", false);
+    testing::snapshot_themes_after(
+        "editor_gutter",
+        common::IMG,
+        |ui| {
+            EditorComponent::new(&mut editor)
+                .label("Ed")
+                .highlighter(&archipel_kit::editor::JavaScript)
+                .line_numbers(true)
+                .folding(true)
+                .gutter_icons(&icons)
+                .change_markers(&markers)
+                .height(180.0)
+                .show(ui);
+        },
+        |h| {
+            let rect = points(h.get_by_label("Ed").rect());
+            // The pointer over the gutter shows the chevrons of the expanded regions.
+            h.hover_at(pos2(rect.left() - 20.0, rect.top() + 100.0));
+            for _ in 0..12 {
+                h.step();
+            }
+        },
+    );
+}
+
+#[test]
+fn error_stripe_and_squiggles_snapshot() {
+    let mut editor = Editor::new(SAMPLE);
+    let highlights = vec![
+        RangeHighlight::new(33..36, HighlightSeverity::Error).message("Unexpected token"),
+        RangeHighlight::new(100..104, HighlightSeverity::Warning).message("Unused"),
+        RangeHighlight::new(150..156, HighlightSeverity::WeakWarning),
+        RangeHighlight::new(180..185, HighlightSeverity::TextSearch),
+    ];
+    testing::snapshot_themes("editor_error_stripe", common::IMG, |ui| {
+        show_sample(&mut editor).highlights(&highlights).show(ui);
+    });
+}
+
+#[test]
+fn guides_whitespace_and_margin_snapshot() {
+    let text = "fn main() {\n\tif x {\n\t\tdo_it();   \n\n\t}\n    return;\n}\n";
+    let mut editors = [Editor::new(text), Editor::new(text)];
+    for editor in &mut editors {
+        editor.settings.right_margin = 24;
+    }
+    testing::snapshot_themes_after(
+        "editor_guides",
+        common::IMG,
+        |ui| {
+            EditorComponent::new(&mut editors[theme_index(ui)])
+                .label("Ed")
+                .highlighter(&archipel_kit::editor::JavaScript)
+                .show_whitespace(true)
+                .height(160.0)
+                .show(ui);
+        },
+        |h| {
+            h.get_by_label("Ed").focus();
+            h.run_ok();
+            h.key_press(Key::ArrowDown);
+            h.key_press(Key::ArrowDown);
+            h.run_ok();
+        },
+    );
+}
+
+// ---- painting, checked on rendered pixels -----------------------------------------------
+
+fn pixel(h: &mut H<'_>, pos: Pos2) -> egui::Color32 {
+    let image = h.render().expect("the harness renders");
+    let p = image.get_pixel(pos.x as u32, pos.y as u32).0;
+    egui::Color32::from_rgb(p[0], p[1], p[2])
+}
+
+fn near(a: egui::Color32, b: egui::Color32) -> bool {
+    let d = |x: u8, y: u8| x.abs_diff(y);
+    d(a.r(), b.r()) <= 3 && d(a.g(), b.g()) <= 3 && d(a.b(), b.b()) <= 3
+}
+
+#[track_caller]
+fn assert_color(actual: egui::Color32, expected: egui::Color32, what: &str) {
+    assert!(
+        near(actual, expected),
+        "{what}: {actual:?}, expected {expected:?}"
+    );
+}
+
+fn colors() -> archipel_kit::theme::EditorColors {
+    Theme::dark().editor
+}
+
+/// How many pixels of the 16 px left of the text area, around the first row, differ from the
+/// editor background.
+fn chevron_pixels(h: &mut H<'_>, row: usize) -> usize {
+    let rect = h.get_by_label("Ed").rect();
+    let image = h.render().expect("renders");
+    let y = (rect.top() + 4.0 + ROW * row as f32 + 10.0) as u32;
+    let mut differing = 0;
+    for yy in y - 6..y + 6 {
+        for xx in rect.left() as u32 - 16..rect.left() as u32 {
+            let p = image.get_pixel(xx, yy).0;
+            if !near(
+                egui::Color32::from_rgb(p[0], p[1], p[2]),
+                colors().background,
+            ) {
+                differing += 1;
+            }
+        }
+    }
+    differing
+}
+
+#[test]
+fn a_selected_line_break_is_drawn_as_a_one_cell_tail() {
+    let mut h = focused("ab\ncd");
+    key(&mut h, CTRL, Key::A);
+    let c = colors();
+    let top = at(&h, 0, 0.0).y - 6.0;
+    let (tail, past) = (at(&h, 0, 2.5).x, at(&h, 0, 4.5).x);
+    // `ab` is two cells; the tail is a third.
+    assert_color(
+        pixel(&mut h, pos2(tail, top)),
+        c.selection,
+        "the tail of line 1",
+    );
+    assert_color(
+        pixel(&mut h, pos2(past, top)),
+        c.background,
+        "past the tail",
+    );
+    // The last line has no break to show.
+    let last = pos2(tail, at(&h, 1, 0.0).y - 6.0);
+    assert_color(
+        pixel(&mut h, last),
+        c.caret_row,
+        "no tail after the last line",
+    );
+}
+
+#[test]
+fn the_selection_is_dimmer_without_the_focus() {
+    let mut h = harness("hello world");
+    let doc = h.state().document.clone();
+    h.state_mut().carets.set_selection(&doc, 0, 5);
+    h.run_ok();
+    let c = colors();
+    let inside = pos2(at(&h, 0, 2.0).x + 3.0, at(&h, 0, 0.0).y - 9.0);
+    assert_color(
+        pixel(&mut h, inside),
+        c.selection_inactive,
+        "inactive selection",
+    );
+    h.get_by_label("Ed").focus();
+    h.run_ok();
+    assert_color(pixel(&mut h, inside), c.selection, "active selection");
+}
+
+#[test]
+fn the_caret_row_is_highlighted_without_the_focus() {
+    let mut h = harness("one\ntwo\nthree");
+    let c = colors();
+    let other = pos2(at(&h, 1, 20.0).x, at(&h, 1, 0.0).y);
+    assert_color(pixel(&mut h, other), c.background, "another row");
+    let caret_row = pos2(at(&h, 0, 20.0).x, at(&h, 0, 0.0).y);
+    assert_color(pixel(&mut h, caret_row), c.caret_row, "the caret row");
+}
+
+#[test]
+fn the_caret_is_a_two_pixel_bar_that_blinks_and_restarts_on_activity() {
+    let mut h = focused("abc");
+    key(&mut h, Modifiers::NONE, Key::ArrowRight);
+    let c = colors();
+    // The bar starts at the cell boundary and is 2 px wide.
+    let y = at(&h, 0, 0.0).y;
+    let bar = |h: &mut H<'_>, col: f32, dx: f32| pixel(h, pos2(at(h, 0, col).x + dx, y));
+    assert_color(bar(&mut h, 1.0, 0.5), c.caret, "inside the bar");
+    assert!(
+        !near(bar(&mut h, 1.0, 3.5), c.caret),
+        "the bar is narrower than 3 px"
+    );
+    // After 500 ms without activity it is hidden, after 1 s visible again.
+    for _ in 0..35 {
+        h.step();
+    }
+    assert!(
+        !near(bar(&mut h, 1.0, 0.5), c.caret),
+        "hidden in the second half"
+    );
+    for _ in 0..30 {
+        h.step();
+    }
+    assert_color(bar(&mut h, 1.0, 0.5), c.caret, "visible again");
+    // Typing shows it at once, whatever the phase.
+    for _ in 0..35 {
+        h.step();
+    }
+    h.get_by_label("Ed").type_text("x");
+    h.step();
+    h.step();
+    assert_color(bar(&mut h, 2.0, 0.5), c.caret, "restarted by typing");
+}
+
+#[test]
+fn overwrite_mode_draws_a_block_caret() {
+    let mut h = focused("abc");
+    key(&mut h, Modifiers::NONE, Key::Insert);
+    let c = colors();
+    let probe = pos2(at(&h, 0, 0.0).x + 3.0, at(&h, 0, 0.0).y - 9.0);
+    assert_color(pixel(&mut h, probe), c.caret, "inside the block");
+}
+
+#[test]
+fn a_matched_brace_pair_is_highlighted_when_the_editor_has_the_focus() {
+    let mut h = focused("(a)");
+    set_caret(&mut h, 1);
+    let c = colors();
+    // The left edge of the first and the last cell, above the glyphs.
+    let y = at(&h, 0, 0.0).y - 9.0;
+    let open = pos2(at(&h, 0, 0.0).x + 3.0, y);
+    let close = pos2(at(&h, 0, 2.0).x + 3.0, y);
+    let middle = pos2(at(&h, 0, 1.0).x + 3.0, y);
+    assert_color(pixel(&mut h, open), c.matched_brace, "the opener");
+    assert_color(pixel(&mut h, close), c.matched_brace, "the closer");
+    assert_color(pixel(&mut h, middle), c.caret_row, "between them");
+}
+
+#[test]
+fn other_occurrences_of_the_selected_text_are_highlighted() {
+    let mut h = focused("foo bar foo");
+    let doc = h.state().document.clone();
+    h.state_mut().carets.set_selection(&doc, 0, 3);
+    h.run_ok();
+    let c = colors();
+    let y = at(&h, 0, 0.0).y - 9.0;
+    let second = pos2(at(&h, 0, 8.0).x + 3.0, y);
+    assert_color(pixel(&mut h, second), c.rename_occurrence, "the second foo");
+    let bar = pos2(at(&h, 0, 4.0).x + 3.0, y);
+    assert_color(pixel(&mut h, bar), c.caret_row, "bar");
+}
+
+#[test]
+fn a_collapsed_region_is_a_pill_with_a_two_pixel_border() {
+    let text = "a {\n  b\n}\nc";
+    let mut editor = Editor::new(text);
+    let doc = editor.document.clone();
+    editor.folding.add_region(&doc, 2, 9, "{...}", false);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .folding(true)
+            .height(100.0)
+            .show(ui);
+    });
+    let c = colors();
+    let top = at(&h, 0, 0.0).y - ROW / 2.0 + 0.5;
+    let left = at(&h, 0, 2.0).x;
+    assert_color(
+        pixel(&mut h, pos2(left + 0.5, top)),
+        c.folded_border,
+        "the ring",
+    );
+    assert_color(
+        pixel(&mut h, pos2(left + 3.0, top + 3.0)),
+        c.folded_background,
+        "inside the ring",
+    );
+}
+
+#[test]
+fn error_stripe_marks_use_the_severity_colors() {
+    let highlights = vec![RangeHighlight::new(0..2, HighlightSeverity::Error)];
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(&numbered(30)), |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .highlights(&highlights)
+            .height(200.0)
+            .show(ui);
+    });
+    let rect = h.get_by_label("Ed").rect();
+    let mark = pos2(rect.right() + 7.0, rect.top() + 1.5);
+    assert_color(
+        pixel(&mut h, mark),
+        colors().error_stripe,
+        "the stripe mark",
+    );
+}
+
+#[test]
+fn the_right_margin_and_indent_guides_are_one_pixel_lines() {
+    let mut h = harness_with("a\n    b\n    c", |e| e.settings.right_margin = 10, 100.0);
+    let c = colors();
+    let y = at(&h, 3, 0.0).y;
+    let margin_x = at(&h, 0, 10.0).x;
+    let found = (-1..=1).any(|d| near(pixel(&mut h, pos2(margin_x + d as f32, y)), c.right_margin));
+    assert!(found, "the margin line near x = {margin_x}");
+    // A guide at column 0 on the indented lines.
+    let guide = at(&h, 1, 0.0);
+    // The caret is on the header of the block, so its guide is the stronger one.
+    let found = (-1..=1).any(|d| {
+        near(
+            pixel(&mut h, pos2(guide.x + d as f32, guide.y)),
+            c.indent_guide_selected,
+        )
+    });
+    assert!(found, "the selected indent guide at column 0");
+}
+
+#[test]
+fn fold_chevrons_show_on_gutter_hover_and_collapsed_ones_always() {
+    let mut editor = folding_editor();
+    let doc = editor.document.clone();
+    editor.folding.add_region(&doc, 0, 28, "{...}", true);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .line_numbers(true)
+            .folding(true)
+            .height(160.0)
+            .show(ui);
+    });
+    h.run_ok();
+    let rect = h.get_by_label("Ed").rect();
+    assert_eq!(
+        chevron_pixels(&mut h, 0),
+        0,
+        "hidden while the pointer is away"
+    );
+    h.hover_at(pos2(rect.left() - 30.0, rect.top() + 60.0));
+    for _ in 0..12 {
+        h.step();
+    }
+    assert!(
+        chevron_pixels(&mut h, 0) > 3,
+        "shown after the 130 ms fade-in"
+    );
+    h.hover_at(pos2(rect.center().x, rect.top() + 60.0));
+    for _ in 0..30 {
+        h.step();
+    }
+    assert_eq!(chevron_pixels(&mut h, 0), 0, "gone after the fade-out");
+}
+
+#[test]
+fn a_collapsed_chevron_stays_visible_without_hover() {
+    let mut editor = folding_editor();
+    editor.folding.set_expanded(0, false);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .line_numbers(true)
+            .folding(true)
+            .height(160.0)
+            .show(ui);
+    });
+    h.run_ok();
+    assert!(
+        chevron_pixels(&mut h, 0) > 3,
+        "the collapsed chevron is drawn"
+    );
+}
+
+// ---- more rules -----------------------------------------------------------------------
+
+#[test]
+fn ctrl_minus_and_ctrl_equals_fold_and_unfold_the_region_at_the_caret() {
+    let mut editor = folding_editor();
+    editor.carets.set_caret(&editor.document, 15);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        EditorComponent::new(e)
+            .label("Ed")
+            .folding(true)
+            .height(160.0)
+            .show(ui);
+    });
+    h.get_by_label("Ed").focus();
+    h.run_ok();
+    key(&mut h, CTRL, Key::Minus);
+    assert!(!h.state().folding.regions()[0].expanded);
+    assert_eq!(
+        h.state().carets.primary().offset,
+        7,
+        "the caret leaves the fold"
+    );
+    key(&mut h, CTRL, Key::Equals);
+    assert!(h.state().folding.regions()[0].expanded);
+}
+
+#[test]
+fn moving_the_caret_down_keeps_a_line_of_margin_below_it() {
+    let slot = std::cell::Cell::new(0usize);
+    let mut h = testing::harness_state(Theme::dark(), Editor::new(&numbered(50)), |ui, e| {
+        slot.set(
+            EditorComponent::new(e)
+                .label("Ed")
+                .height(100.0)
+                .show(ui)
+                .visible_lines
+                .start,
+        );
+    });
+    h.get_by_label("Ed").focus();
+    h.run_ok();
+    // Four lines and a bit fit: the caret on line 4 needs line 5 visible below it.
+    for _ in 0..5 {
+        key(&mut h, Modifiers::NONE, Key::ArrowDown);
+    }
+    for _ in 0..8 {
+        h.step();
+    }
+    assert!(
+        slot.get() >= 1,
+        "scrolled for a margin: first line {}",
+        slot.get()
+    );
+}
+
+#[test]
+fn a_middle_click_pastes_the_primary_selection_on_linux_and_navigates_on_macos() {
+    let mut h = focused("hello world");
+    let from = at(&h, 0, 0.0);
+    let to = at(&h, 0, 5.0);
+    drag(&mut h, from, to, Modifiers::NONE, PointerButton::Primary);
+    assert_eq!(selected(&h), ["hello"]);
+    let at_end = at(&h, 0, 11.0);
+    press(&mut h, at_end, PointerButton::Middle, Modifiers::NONE);
+    release(&mut h, at_end, PointerButton::Middle, Modifiers::NONE);
+    assert_eq!(text(&h), "hello worldhello");
+
+    let slot = std::cell::Cell::new(None);
+    let mut mac = testing::harness_state(Theme::dark(), Editor::new("hello world"), |ui, e| {
+        slot.set(
+            EditorComponent::new(e)
+                .label("Ed")
+                .keymap_os(Os::MacOs)
+                .height(100.0)
+                .show(ui)
+                .navigation
+                .or(slot.get()),
+        );
+    });
+    mac.get_by_label("Ed").focus();
+    mac.run_ok();
+    let pos = at(&mac, 0, 3.0);
+    press(&mut mac, pos, PointerButton::Middle, Modifiers::NONE);
+    release(&mut mac, pos, PointerButton::Middle, Modifiers::NONE);
+    assert_eq!(
+        slot.get(),
+        Some(NavigationRequest {
+            offset: 3,
+            kind: NavigationKind::Declaration
+        })
+    );
+}
+
+#[test]
+fn the_pointer_resting_on_a_fold_placeholder_reports_a_preview_after_300_ms() {
+    let mut editor = folding_editor();
+    editor.folding.set_expanded(0, false);
+    let slot = std::cell::RefCell::new(None);
+    let mut h = testing::harness_state(Theme::dark(), editor, |ui, e| {
+        *slot.borrow_mut() = EditorComponent::new(e)
+            .label("Ed")
+            .folding(true)
+            .height(160.0)
+            .show(ui)
+            .fold_preview;
+    });
+    let pos = at(&h, 0, 9.0);
+    h.hover_at(pos);
+    for _ in 0..8 {
+        h.step();
+    }
+    assert!(slot.borrow().is_none(), "not after 130 ms");
+    for _ in 0..20 {
+        h.step();
+    }
+    assert_eq!(slot.borrow().clone(), Some(7..28));
+}
+
+#[test]
+fn each_arrow_press_moves_the_caret_once() {
+    let mut h = focused("a\nb\nc\nd\ne\nf");
+    h.key_press(Key::ArrowDown);
+    h.key_press(Key::ArrowDown);
+    h.run_ok();
+    assert_eq!(h.state().document.line_number(caret(&h)), 2);
+}

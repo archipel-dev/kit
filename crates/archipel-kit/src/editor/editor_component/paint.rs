@@ -4,7 +4,7 @@
 use super::layout::LineLayout;
 use super::state::{Frame, Geo};
 use crate::editor::decorations::{HighlightSeverity, RangeHighlight};
-use crate::editor::highlight::{Highlighter, styled_job, token_format};
+use crate::editor::highlight::{SyntaxHighlighter, styled_job, token_format};
 use crate::editor::model::{Editor, Language, LogicalPosition, advance_column};
 use crate::editor::selection_shape;
 use crate::theme::EditorColors;
@@ -41,7 +41,7 @@ pub(crate) struct PaintInput<'a> {
     pub geo: &'a Geo,
     pub colors: EditorColors,
     pub font: &'a FontId,
-    pub highlighter: &'a dyn Highlighter,
+    pub highlighter: &'a dyn SyntaxHighlighter,
     pub opts: PaintOpts,
     pub find: &'a [Range<usize>],
     pub find_current: Option<usize>,
@@ -524,7 +524,7 @@ pub(crate) fn paint(input: &PaintInput<'_>) -> PaintOut {
             if let Some(c) = doc.char_at(*offset).filter(|c| *c != '\n' && *c != '\t') {
                 let job = styled_job(&c.to_string(), 0, &[], f32::INFINITY, |_| {
                     let mut format = token_format(
-                        crate::editor::TokenKind::Plain,
+                        crate::editor::TextAttributesKey::Plain,
                         font,
                         colors,
                         Some(geo.row_h),

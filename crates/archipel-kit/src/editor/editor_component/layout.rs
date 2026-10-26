@@ -3,7 +3,7 @@
 
 use super::cache::DocCache;
 use super::rows::RowMap;
-use crate::editor::highlight::{Highlighter, Span};
+use crate::editor::highlight::{Span, SyntaxHighlighter};
 use crate::editor::model::{Document, FoldRegion, advance_column};
 
 /// A piece of a visual line.
@@ -181,7 +181,7 @@ impl<'a> LineLayout<'a> {
     pub fn display(
         &self,
         cache: &DocCache,
-        highlighter: &dyn Highlighter,
+        highlighter: &dyn SyntaxHighlighter,
         from: usize,
         to: usize,
     ) -> (String, Vec<Span>) {

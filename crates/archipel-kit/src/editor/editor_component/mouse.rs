@@ -5,7 +5,10 @@ use super::gutter::GutterLayout;
 use super::input::key_modifiers;
 use super::state::{Drag, Frame, Geo, Unit, ViewState};
 use crate::editor::decorations::{GutterArea, GutterClick, NavigationKind, NavigationRequest};
-use crate::editor::model::{Editor, LogicalPosition, Os, ScrollRequest, ScrollType, word_range_at};
+use crate::editor::model::{
+    ActionContext, ClipboardContent, Editor, EditorAction, Language, LogicalPosition, Os,
+    ScrollRequest, ScrollType, word_range_at,
+};
 use crate::tokens::{editor as metrics, motion};
 use egui::{CursorIcon, Event, Modifiers, PointerButton, Pos2, Response, Ui};
 
@@ -21,6 +24,8 @@ pub(crate) struct Env<'a> {
     /// The gutter icons: they are buttons of their own.
     pub icons: &'a [crate::editor::GutterIcon],
     pub os: Os,
+    pub viewer: bool,
+    pub language: &'a Language,
     pub gutter_click_selects_line: bool,
 }
 
@@ -32,6 +37,7 @@ pub(crate) struct MouseOut {
     pub scroll: Option<ScrollRequest>,
     /// The carets were set by the mouse (so the view follows).
     pub moved: bool,
+    pub text_changed: bool,
     pub request_focus: bool,
 }
 
@@ -210,7 +216,10 @@ fn press(
                     .carets
                     .start_block_selection(&editor.document, doc_tab, position);
             }
-            st.drag = Some(Drag::Column);
+            st.drag = Some(Drag::Column {
+                middle: true,
+                press: pos,
+            });
             st.click_pos = pos;
             out.moved = true;
         }
@@ -290,7 +299,10 @@ fn primary_press(
         editor
             .carets
             .start_block_selection(&editor.document, tab, position);
-        st.drag = Some(Drag::Column);
+        st.drag = Some(Drag::Column {
+            middle: false,
+            press: pos,
+        });
         st.unit = None;
         out.moved = true;
         return;
@@ -527,7 +539,33 @@ fn release(
                 });
             }
         }
-        Drag::Char { .. } | Drag::Word { .. } | Drag::Line { .. } | Drag::Column => {
+        Drag::Column {
+            middle: true,
+            press,
+        } if pos.distance(press) < 4.0 => {
+            // A middle click: Go to Declaration on macOS, paste the primary selection on Linux.
+            let at = locate(editor, env.geo, env.frame, press);
+            match env.os {
+                Os::MacOs => {
+                    out.navigation = Some(NavigationRequest {
+                        offset: at.offset,
+                        kind: NavigationKind::Declaration,
+                    });
+                    editor.carets.set_caret(&editor.document, at.offset);
+                }
+                Os::WindowsLinux => {
+                    editor.carets.set_caret(&editor.document, at.offset);
+                    if !env.viewer && !st.primary.is_empty() {
+                        let content = ClipboardContent::text(st.primary.clone());
+                        let ctx = ActionContext::new(env.language).with_clipboard(&content);
+                        let outcome = editor.execute(&EditorAction::PasteSimple, &ctx);
+                        out.text_changed |= outcome.text_changed;
+                    }
+                }
+            }
+            out.moved = true;
+        }
+        Drag::Char { .. } | Drag::Word { .. } | Drag::Line { .. } | Drag::Column { .. } => {
             // The selection made by the mouse is the primary selection on Linux.
             let texts = editor.carets.selected_texts(&editor.document);
             if !texts.is_empty() {
@@ -570,7 +608,7 @@ fn drag(editor: &mut Editor, st: &mut ViewState, env: &Env<'_>, out: &mut MouseO
             }
             out.moved = true;
         }
-        Drag::Column => {
+        Drag::Column { .. } => {
             let position = logical_position(&at);
             editor
                 .carets
@@ -700,12 +738,13 @@ fn autoscroll(
     st.autoscroll_last += ticks as f64 * tick;
     let (mut steps_y, mut steps_x) = (0isize, 0isize);
     for _ in 0..ticks {
-        st.autoscroll_counter += 1;
         let d = dy.abs().max(dx.abs());
-        let every = (metrics::AUTOSCROLL_DISTANCE / d).floor() as u32 + 1;
-        if st.autoscroll_counter >= every {
-            st.autoscroll_counter = 0;
-            let n = 1 + (d / metrics::AUTOSCROLL_DISTANCE).floor() as isize;
+        if let Some(n) = super::state::autoscroll_tick(
+            &mut st.autoscroll_counter,
+            d,
+            metrics::AUTOSCROLL_DISTANCE,
+        ) {
+            let n = n as isize;
             if dy != 0.0 {
                 steps_y += n * dy.signum() as isize;
             }
@@ -746,7 +785,7 @@ fn autoscroll(
                 set_selection(editor, start, le, false);
             }
         }
-        Some(Drag::Column) => {
+        Some(Drag::Column { .. }) => {
             let position = LogicalPosition::new(new_layout.logical, col);
             editor
                 .carets

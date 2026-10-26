@@ -7,7 +7,8 @@ mod common;
 use archipel_kit::editor::EditorComponent;
 use archipel_kit::editor::model::Editor;
 use archipel_kit::editor::{
-    ExtendedJson, GraphQl, Highlighter, JavaScript, Json, PlainText, Span, TokenKind, Xml,
+    ExtendedJson, GraphQl, JavaScript, Json, PlainText, Span, SyntaxHighlighter, TextAttributesKey,
+    Xml,
 };
 use archipel_kit::parts::ValueKind;
 use archipel_kit::testing::{self, NodeExt, NodeT, Queryable, Role};
@@ -97,7 +98,7 @@ fn view_find_snapshot() {
 
 #[test]
 fn highlighting_snapshot() {
-    let samples: [(&str, &dyn Highlighter, &str); 6] = [
+    let samples: [(&str, &dyn SyntaxHighlighter, &str); 6] = [
         ("JSON", &Json, "{ \"ok\": true, \"n\": [1, -2.5e3, null] }"),
         (
             "Extended JSON",
@@ -142,12 +143,12 @@ fn highlighting_snapshot() {
     });
 }
 
-fn kinds(highlighter: &dyn Highlighter, line: &str) -> Vec<(String, TokenKind)> {
+fn kinds(highlighter: &dyn SyntaxHighlighter, line: &str) -> Vec<(String, TextAttributesKey)> {
     let mut spans: Vec<Span> = Vec::new();
     highlighter.highlight_line(line, &mut 0, &mut spans);
     spans
         .into_iter()
-        .filter(|s| s.kind != TokenKind::Punctuation)
+        .filter(|s| s.kind != TextAttributesKey::Punctuation)
         .map(|s| (line[s.start..s.end].to_owned(), s.kind))
         .collect()
 }
@@ -158,23 +159,35 @@ fn extended_json_colors_constructors_as_their_values() {
     assert_eq!(
         kinds(&ExtendedJson, line),
         [
-            ("_id", TokenKind::Property),
-            ("ObjectId(\"65f0\")", TokenKind::Value(ValueKind::Id)),
-            ("\"at\"", TokenKind::Property),
-            ("new Date('2026-10-12')", TokenKind::Value(ValueKind::Date)),
-            ("n", TokenKind::Property),
-            ("NumberLong(\"7\")", TokenKind::Value(ValueKind::Number)),
-            ("x", TokenKind::Property),
-            ("-1.5e3", TokenKind::Number),
-            ("b", TokenKind::Property),
-            ("BinData(0, \"AA==\")", TokenKind::Value(ValueKind::Binary)),
-            ("s", TokenKind::Property),
-            ("'it\\'s'", TokenKind::String),
-            ("ok", TokenKind::Property),
-            ("false", TokenKind::Value(ValueKind::Boolean)),
-            ("z", TokenKind::Property),
-            ("null", TokenKind::Value(ValueKind::Null)),
-            ("// last", TokenKind::Comment),
+            ("_id", TextAttributesKey::Property),
+            (
+                "ObjectId(\"65f0\")",
+                TextAttributesKey::Value(ValueKind::Id)
+            ),
+            ("\"at\"", TextAttributesKey::Property),
+            (
+                "new Date('2026-10-12')",
+                TextAttributesKey::Value(ValueKind::Date)
+            ),
+            ("n", TextAttributesKey::Property),
+            (
+                "NumberLong(\"7\")",
+                TextAttributesKey::Value(ValueKind::Number)
+            ),
+            ("x", TextAttributesKey::Property),
+            ("-1.5e3", TextAttributesKey::Number),
+            ("b", TextAttributesKey::Property),
+            (
+                "BinData(0, \"AA==\")",
+                TextAttributesKey::Value(ValueKind::Binary)
+            ),
+            ("s", TextAttributesKey::Property),
+            ("'it\\'s'", TextAttributesKey::String),
+            ("ok", TextAttributesKey::Property),
+            ("false", TextAttributesKey::Value(ValueKind::Boolean)),
+            ("z", TextAttributesKey::Property),
+            ("null", TextAttributesKey::Value(ValueKind::Null)),
+            ("// last", TextAttributesKey::Comment),
         ]
         .map(|(text, kind)| (text.to_owned(), kind))
     );
@@ -203,7 +216,7 @@ fn extended_json_survives_broken_input() {
     }
     assert_eq!(
         kinds(&ExtendedJson, "ObjectId(\"65f"),
-        [("\"65f".to_owned(), TokenKind::String)],
+        [("\"65f".to_owned(), TextAttributesKey::String)],
         "an unclosed call is no value; its argument is still a string"
     );
 }
@@ -489,11 +502,11 @@ fn wrapped_view_breaks_long_lines() {
 #[test]
 fn highlighters_color_the_expected_tokens() {
     use archipel_kit::editor::{
-        Highlighter, Span, TokenKind,
-        TokenKind::{Attribute, Comment, Error, Keyword, Number, Property, Tag, Variable},
+        Span, SyntaxHighlighter, TextAttributesKey,
+        TextAttributesKey::{Attribute, Comment, Error, Keyword, Number, Property, Tag, Variable},
     };
     use std::string::String as Text;
-    fn kinds(h: &dyn Highlighter, line: &str) -> Vec<(Text, TokenKind)> {
+    fn kinds(h: &dyn SyntaxHighlighter, line: &str) -> Vec<(Text, TextAttributesKey)> {
         let mut spans: Vec<Span> = Vec::new();
         h.highlight_line(line, &mut 0, &mut spans);
         spans
@@ -505,12 +518,12 @@ fn highlighters_color_the_expected_tokens() {
     assert!(json.contains(&("\"a\"".into(), Property)));
     assert!(json.contains(&("1".into(), Number)));
     assert!(json.contains(&("true".into(), Keyword)));
-    assert!(json.contains(&("\"s\"".into(), TokenKind::String)));
+    assert!(json.contains(&("\"s\"".into(), TextAttributesKey::String)));
     assert!(json.contains(&("nope".into(), Error)));
     let xml = kinds(&Xml, r#"<a href="x">hi &amp; bye</a>"#);
     assert!(xml.contains(&("<a".into(), Tag)));
     assert!(xml.contains(&("href".into(), Attribute)));
-    assert!(xml.contains(&("\"x\"".into(), TokenKind::String)));
+    assert!(xml.contains(&("\"x\"".into(), TextAttributesKey::String)));
     assert!(xml.contains(&("&amp;".into(), Variable)));
     let gql = kinds(&GraphQl, "query Q($id: ID!) @live { user(id: $id) }");
     assert!(gql.contains(&("query".into(), Keyword)));

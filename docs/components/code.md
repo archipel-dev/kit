@@ -48,7 +48,7 @@ fn body_panel(ui: &mut egui::Ui, request: &mut Editor, response: &mut Editor) {
 |---|---|
 | `EditorComponent::new(&mut Editor)` | The model to show and edit. |
 | `.label(str)` | Accessible name; texts up to 64 KB are also exposed as the node's value. |
-| `.highlighter(&dyn Highlighter)` | Token colors (default: none). |
+| `.highlighter(&dyn SyntaxHighlighter)` | Token colors (default: none). |
 | `.language(&Language)` | Brackets, quotes and comment prefixes the typing and the brace highlight use (default `Language::c_like()`; `Language::plain_text()` for prose). |
 | `.viewer(bool)` | Read-only (IntelliJ `isViewer`): carets, selection, multiple carets, copy, find and folds work; editing and <kbd>Tab</kbd> do not. |
 | `.enabled(bool)` | Disabled components are dimmed, inert and skipped by <kbd>Tab</kbd>. |
@@ -141,6 +141,16 @@ hand over a fold placeholder.
 
 ### Painting
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_multi_caret.dark.png">
+  <img alt="Three carets, each with its selection, after Select Next Occurrence" src="img/editor_multi_caret.light.png" width="360">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_column_selection.dark.png">
+  <img alt="A column selection over four lines, one caret per line" src="img/editor_column_selection.light.png" width="360">
+</picture>
+
 - **Selection** is the Islands selection: one outline per block of selected rows with rounded
   outer corners (radius line height / 6) and concave fillets where rows of different widths
   meet; a selected line break shows as a one-cell tail. Column selection is plain rectangles.
@@ -149,6 +159,11 @@ hand over a fold placeholder.
   activity (typing, moving, clicking restarts it visible); a block with the glyph inverted in
   overwrite mode (<kbd>Insert</kbd>). Every caret is painted. The **caret row** is highlighted
   always, under the selection.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_selection_inactive.dark.png">
+  <img alt="A selection in an editor without the focus: the dimmer color, rounded corners and the caret row under it" src="img/editor_selection_inactive.light.png" width="360">
+</picture>
+
 - **Highlights**: matched braces (the unmatched one in the invalid color), occurrences of a
   selected single-line text elsewhere (at most 50), find matches (the current one stronger),
   indent guides (the caret's block in a stronger color), the right margin line, whitespace.
@@ -165,6 +180,11 @@ animates. The content is five lines taller than the text, so the last line can s
 
 ### Gutter
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_gutter.dark.png">
+  <img alt="A gutter with line numbers, a breakpoint and a bookmark in icon lanes, change markers, the chevron of an expanded region and a collapsed one with its placeholder" src="img/editor_gutter.light.png" width="360">
+</picture>
+
 Left to right: line numbers (the editor font one size smaller, right-aligned, the caret
 line stronger), the strip of change markers (`ChangeMarker`: added, modified, deleted), the
 icon lanes (`GutterIcon { line, lane, glyph, tone, name }`, 17 px each) and the fold column.
@@ -172,6 +192,27 @@ The chevrons of expanded regions fade in over 130 ms when the pointer is over th
 out after 140 ms; collapsed regions always show theirs. Each chevron is a button named
 "Fold lines 3 to 9" (<kbd>Alt</kbd>+click also toggles the regions nested in it); each icon is
 a button named by `GutterIcon::name`, and its click comes back as a `GutterClick`.
+
+### Highlights and the error stripe
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_error_stripe.dark.png">
+  <img alt="Squiggles under three ranges and their marks on the error stripe beside the scroll bar" src="img/editor_error_stripe.light.png" width="360">
+</picture>
+
+`.highlights(&[RangeHighlight])` marks ranges the caller computed (an inspection, a search): a squiggle under the range
+(error red, warning amber, weak warning faint) and a 2 px mark on the stripe, a column of 14 px next to the scroll bar, placed
+in proportion to the document. Hovering a mark reports it in `stripe_hover` and clicking it moves the caret there and centers
+it. Resting the pointer on a range reports `hover` with the index of the highlight, so the caller can show its message in a
+`HelpTooltip`.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/editor_guides.dark.png">
+  <img alt="Indent guides, whitespace dots and tab lines, the right margin and trailing blanks" src="img/editor_guides.light.png" width="360">
+</picture>
+
+Indent guides, the right margin and whitespace are painted under the text: `.indent_guides(false)`,
+`.right_margin(false)` and `.show_whitespace(true)` switch them.
 
 ### Find
 
@@ -237,7 +278,7 @@ Beyond a few MB the per-edit scan of the longest line and the fold regions is wh
   <img alt="The built-in highlighters: JSON, Extended JSON with an ObjectId and an ISODate, XML, GraphQL, JavaScript and plain text" src="img/code_highlighting.light.png" width="360">
 </picture>
 
-A `Highlighter` maps a line to styled `Span`s by `TokenKind` (keyword, string, number, comment,
+A `SyntaxHighlighter` maps a line to styled `Span`s by `TextAttributesKey` (keyword, string, number, comment,
 punctuation, property, tag, attribute, variable, error, and `Value(ValueKind)` for typed data
 values). Colors come from the theme's `EditorColors` (`keyword`, `string`, … in dark and
 light), never from the highlighter. Built in: `Json`, `ExtendedJson` (MongoDB's shell form:
@@ -250,17 +291,17 @@ tree-sitter:
 ```rust
 use archipel_kit::editor::model::Editor;
 use archipel_kit::editor::EditorComponent;
-use archipel_kit::editor::{Highlighter, Span, TokenKind};
+use archipel_kit::editor::{SyntaxHighlighter, Span, TextAttributesKey};
 use archipel_kit::egui;
 
 /// Marks `TODO` and `FIXME` in a log.
 struct Markers;
 
-impl Highlighter for Markers {
+impl SyntaxHighlighter for Markers {
     fn highlight_line(&self, line: &str, _state: &mut u32, out: &mut Vec<Span>) {
         for word in ["TODO", "FIXME"] {
             for (start, found) in line.match_indices(word) {
-                out.push(Span { start, end: start + found.len(), kind: TokenKind::Keyword });
+                out.push(Span { start, end: start + found.len(), kind: TextAttributesKey::Keyword });
             }
         }
         out.sort_by_key(|span| span.start);
@@ -291,13 +332,13 @@ so even a one-line 10 MB body tokenizes once.
 </picture>
 
 A URL bar or a header value is a single line, so it is a [`JBTextField`](jb-text-field.md) with
-`.highlighter(&dyn Highlighter)`, not a one-line `EditorComponent`: it keeps the field's height,
+`.highlighter(&dyn SyntaxHighlighter)`, not a one-line `EditorComponent`: it keeps the field's height,
 focus ring, placeholder, clear button, leading icon and error message, so a highlighted input
 and a plain one sit side by side in a form and look the same. The text never wraps and
 <kbd>Enter</kbd> never inserts a newline: `show` reports `submitted`, and `lost_focus()` is set
-too. Any `Highlighter` works; `TokenKind` has `Resolved`, `Unresolved` and `Secret` for
+too. Any `SyntaxHighlighter` works; `TextAttributesKey` has `Resolved`, `Unresolved` and `Secret` for
 variables, drawn like in the editor: the variable color, the invalid color (with a dotted
-underline in the field) and the string color on a tint. `TokenKind` is `#[non_exhaustive]`.
+underline in the field) and the string color on a tint. `TextAttributesKey` is `#[non_exhaustive]`.
 
 `TemplateHighlighter` finds `{{name}}` tokens and asks your closure what each one is. It wraps
 an inner highlighter for the text between them (`.inner(Json)`; plain text by default). A token

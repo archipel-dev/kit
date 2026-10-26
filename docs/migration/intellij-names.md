@@ -128,8 +128,8 @@ These types keep their names; only the module changed (`archipel_kit::components
 | `CodeViewResponse` | `archipel_kit::editor::EditorComponentResponse` |
 | `CodeEditor` | `archipel_kit::editor::EditorComponent` on a `model::Editor` |
 | `CodeEditorOutput` | `archipel_kit::editor::EditorComponentResponse` (`selection` is still the byte range) |
-| `Highlighter` | `archipel_kit::editor::Highlighter` |
-| `TokenKind` | `archipel_kit::editor::TokenKind` |
+| `Highlighter` | `archipel_kit::editor::SyntaxHighlighter` |
+| `TokenKind` | `archipel_kit::editor::TextAttributesKey` |
 | `Span` | `archipel_kit::editor::Span` |
 | `PlainText` | `archipel_kit::editor::PlainText` |
 | `Json` | `archipel_kit::editor::Json` |
