@@ -70,6 +70,27 @@ pub(crate) fn text_width(text: &str) -> u16 {
     text.width().min(u16::MAX as usize) as u16
 }
 
+/// `text` cut to `max` cells, with an ellipsis when it was cut.
+pub(crate) fn clip(text: &str, max: u16) -> String {
+    if text_width(text) <= max {
+        return text.to_owned();
+    }
+    let mut out = String::new();
+    let mut used = 0u16;
+    for ch in text.chars() {
+        let w = ch.width().unwrap_or(0) as u16;
+        if used + w + 1 > max {
+            break;
+        }
+        out.push(ch);
+        used += w;
+    }
+    if max > 0 {
+        out.push('…');
+    }
+    out
+}
+
 /// `text` wrapped at spaces to lines of at most `width` cells; words longer than a line are
 /// cut.
 pub(crate) fn wrap_text(text: &str, width: u16) -> Vec<String> {

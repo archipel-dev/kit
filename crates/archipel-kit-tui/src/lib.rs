@@ -35,6 +35,7 @@
 //! [`overlay`]. The guide with images is `docs/tui/README.md`.
 
 pub mod clipboard;
+pub mod collections;
 pub mod components;
 pub mod controls;
 pub mod focus;

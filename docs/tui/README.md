@@ -217,3 +217,7 @@ light, and `q` quits.
 ## Interactive controls
 
 <img alt="Controls" src="img/controls.dark.svg" width="504"> <img alt="Controls, light" src="img/controls.light.svg" width="504">
+
+## Lists, trees, tables and speed search
+
+<img alt="List with speed search, tree and table" src="img/collections.dark.svg" width="504"> <img alt="Collections, light" src="img/collections.light.svg" width="504">
