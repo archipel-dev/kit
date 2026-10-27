@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.0](https://github.com/archipel-dev/kit/compare/v0.3.1...v0.4.0) (2026-10-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* align the kit with the IntelliJ Platform UI API and UX ([#45](https://github.com/archipel-dev/kit/issues/45))
+
+### Features
+
+* align the kit with the IntelliJ Platform UI API and UX ([#45](https://github.com/archipel-dev/kit/issues/45)) ([49e18df](https://github.com/archipel-dev/kit/commit/49e18dfd910adafb04383845c96d8e623dae1a9a))
+* **editor:** IntelliJ Lookup for code and field completion ([#46](https://github.com/archipel-dev/kit/issues/46)) ([894a77c](https://github.com/archipel-dev/kit/commit/894a77cb5a68ba72901515507ed956f35042c07b))
+* **icons:** glyphs for agent sessions and transcripts ([#51](https://github.com/archipel-dev/kit/issues/51)) ([bc92eda](https://github.com/archipel-dev/kit/commit/bc92eda27f2d9e2e6c3412efdad4c8c5d3167fc6))
+* **looks:** render every component in the Islands, New UI and Classic looks ([#48](https://github.com/archipel-dev/kit/issues/48)) ([45891da](https://github.com/archipel-dev/kit/commit/45891da64423184dbd16889003c5f4bd01a6adcc))
+* **tui:** editor parity with the GUI editor component ([#50](https://github.com/archipel-dev/kit/issues/50)) ([15ebc58](https://github.com/archipel-dev/kit/commit/15ebc58c5b0c1d38a07a33c1832c64896bdb767b))
+* **tui:** NvChad layout without stripes and main toolbar ([#49](https://github.com/archipel-dev/kit/issues/49)) ([e882fbd](https://github.com/archipel-dev/kit/commit/e882fbd2ca4278cf0786bebcb2070100b71725fa))
+* **tui:** terminal code editor on the shared editor model ([#47](https://github.com/archipel-dev/kit/issues/47)) ([88a6481](https://github.com/archipel-dev/kit/commit/88a648152cf87909b6dfaad791759c82b28028ee))
+
+
+### Bug Fixes
+
+* preserve typed drops and clip table header targets ([#43](https://github.com/archipel-dev/kit/issues/43)) ([d48b2a0](https://github.com/archipel-dev/kit/commit/d48b2a02f9ec0b318a1545333af2d0376e56ff03))
+
 ## [0.3.1](https://github.com/archipel-dev/kit/compare/v0.3.0...v0.3.1) (2026-10-12)
 
 
