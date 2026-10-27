@@ -2,7 +2,7 @@
 
 use crate::common;
 use crate::icons::{self, Glyph, Icon};
-use crate::parts::{SimpleColoredComponent, State, Tone};
+use crate::parts::{SimpleColoredComponent, SimpleTextAttributes, State, TextFragment, Tone};
 use crate::theme::Theme;
 use crate::tokens::{popup, size, typography};
 use egui::{
@@ -64,6 +64,8 @@ pub struct ActionMenuItem<'a> {
     fixed_width: Option<f32>,
     /// The label's tone (a combo box colors HTTP methods by it).
     label_tone: Tone,
+    /// The mnemonic letter, drawn underlined in the label.
+    underlined: Option<char>,
 }
 
 /// The content of a submenu.
@@ -88,6 +90,7 @@ impl<'a> ActionMenuItem<'a> {
             mnemonic: None,
             fixed_width: None,
             label_tone: Tone::Default,
+            underlined: None,
         }
     }
 
@@ -104,6 +107,28 @@ impl<'a> ActionMenuItem<'a> {
             item.description = Some(presentation.description.clone());
         }
         item
+    }
+
+    /// Draws the first `letter` of the label underlined, the item's mnemonic (case ignored; a
+    /// letter the label does not contain draws nothing). Typing it is the caller's to handle.
+    pub fn underlined(mut self, letter: char) -> Self {
+        self.underlined = Some(letter);
+        self
+    }
+
+    /// The label split around the underlined mnemonic: text before, the letter, text after.
+    fn mnemonic_split(&self) -> Option<(&str, &str, &str)> {
+        let letter = self.underlined?;
+        let (start, found) = self
+            .label
+            .char_indices()
+            .find(|(_, c)| c.eq_ignore_ascii_case(&letter))?;
+        let end = start + found.len_utf8();
+        Some((
+            &self.label[..start],
+            &self.label[start..end],
+            &self.label[end..],
+        ))
     }
 
     /// Engine use: the list owns highlight, submenus and closing.
@@ -234,12 +259,27 @@ impl Widget for ActionMenuItem<'_> {
             None => menu_icon_column(ui, icon.is_some() || self.checked.is_some()),
         };
         let has_arrow = self.submenu.is_some() || self.arrow;
+        let attributes = SimpleTextAttributes::new(self.label_tone);
+        let split = self.mnemonic_split();
+        let fragments = split.map_or_else(Vec::new, |(_, letter, after)| {
+            vec![
+                TextFragment {
+                    text: letter.to_owned(),
+                    attributes: attributes.underline(true),
+                },
+                TextFragment {
+                    text: after.to_owned(),
+                    attributes,
+                },
+            ]
+        });
         let content = SimpleColoredComponent {
+            fragments: &fragments,
             // A two-line item paints its larger icon itself.
             icon: if two_line { None } else { icon },
             icon_tone,
             reserve_icon: !two_line && reserve_icons,
-            label: &self.label,
+            label: split.map_or(self.label.as_str(), |(before, _, _)| before),
             label_tone: self.label_tone,
             secondary: None,
             trailing: self.shortcut.as_deref().filter(|_| !has_arrow),

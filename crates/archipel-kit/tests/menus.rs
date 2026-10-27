@@ -17,12 +17,14 @@ fn menu_snapshot() {
             ui.add(
                 ActionMenuItem::new("Copy")
                     .icon(Glyph::Copy)
-                    .shortcut("Ctrl+C"),
+                    .shortcut("Ctrl+C")
+                    .underlined('C'),
             );
             ui.add(
                 ActionMenuItem::new("Find in Files…")
                     .icon(Glyph::FindInFiles)
-                    .shortcut("Ctrl+Shift+F"),
+                    .shortcut("Ctrl+Shift+F")
+                    .underlined('d'),
             );
             ui.add(ListSeparator::new());
             ui.add(ActionMenuItem::new("Soft-Wrap").checked(true));
@@ -61,6 +63,24 @@ fn action_menu_item_clicks_and_reports_check_state() {
     harness.get_by_label("Soft-Wrap").click();
     harness.run();
     assert!(!harness.state().1);
+}
+
+#[test]
+fn an_underlined_mnemonic_keeps_the_label_and_clicks() {
+    let mut harness = testing::harness_state(Theme::dark(), 0, |ui, clicks| {
+        if ui
+            .add(ActionMenuItem::new("Paste").underlined('p'))
+            .clicked()
+        {
+            *clicks += 1;
+        }
+        // A letter the label lacks draws no underline and changes nothing.
+        ui.add(ActionMenuItem::new("Cut").underlined('z'));
+    });
+    harness.get_by_label("Paste").click();
+    harness.run();
+    assert_eq!(*harness.state(), 1);
+    harness.get_by_label("Cut");
 }
 
 #[test]
