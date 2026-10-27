@@ -1153,7 +1153,18 @@ pub(super) fn paint_cell(
     };
     // Text wider than the column ends in an ellipsis, as in Android Studio's tables.
     let room = (rect.width() - 2.0 * CELL_PADDING - icon_width).max(0.0);
-    let galley = common::galley_elided(ui, cell.text.as_str(), font, room);
+    let matched = search.and_then(|search| search.matching_fragments(&cell.text));
+    let galley = match &matched {
+        Some(ranges) => common::galley_elided_marked(
+            ui,
+            cell.text.as_str(),
+            font,
+            room,
+            ranges,
+            colors.search_match_text,
+        ),
+        None => common::galley_elided(ui, cell.text.as_str(), font, room),
+    };
     let content = icon_width + galley.size().x;
     let mut x = match column.align {
         Align::Max => rect.right() - CELL_PADDING - content,
@@ -1168,7 +1179,7 @@ pub(super) fn paint_cell(
         x += icon_width;
     }
     // What the speed search matched, behind the text.
-    if let Some(ranges) = search.and_then(|search| search.matching_fragments(&cell.text)) {
+    if let Some(ranges) = matched {
         crate::parts::paint_ranges(
             &painter,
             &galley,

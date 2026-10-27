@@ -565,7 +565,7 @@ impl Metrics {
         };
         let status_bar_height = match look {
             UiLook::Islands => dense(size::STATUS_BAR_HEIGHT, 25.0),
-            UiLook::NewUi => dense(31.0, 26.0),
+            UiLook::NewUi => dense(30.0, 25.0),
             UiLook::Classic => 23.0,
         };
         let island_gap = if islands {

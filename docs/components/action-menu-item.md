@@ -41,7 +41,7 @@ fn file_row(ui: &mut egui::Ui, wrap: &mut bool) {
 
 | Component | Builders |
 |---|---|
-| `ActionMenuItem::new(label)` | `.icon(Icon)`, `.shortcut(str)`, `.checked(bool)`, `.enabled(bool)`, `.description(str)` (a dimmed second line, larger icon), `.highlighted(bool)`, `.submenu(\|ui\| …)` |
+| `ActionMenuItem::new(label)` | `.icon(Icon)`, `.shortcut(str)`, `.checked(bool)`, `.enabled(bool)`, `.description(str)` (a dimmed second line, larger icon), `.highlighted(bool)`, `.underlined(char)` (the mnemonic letter drawn underlined; the caller handles typing it), `.submenu(\|ui\| …)` |
 | `ListSeparator::new()` | A line between groups; add it with `ui.add(ListSeparator::new())`. |
 | `ListSeparator::with_text(title)` | A dimmed semibold group title aligned with the icons; not focusable. |
 | `ActionMenuItem::from_presentation(&Presentation)` | Text, icon, shortcut text, description, enabled, toggle check, chevron for a popup group. |

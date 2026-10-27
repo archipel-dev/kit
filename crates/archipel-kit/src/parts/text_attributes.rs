@@ -249,7 +249,12 @@ pub(crate) fn layout_runs(
     for (piece, attributes) in runs {
         let start = text.len();
         text.push_str(piece);
-        let color = state.text(attributes.tone(), &colors);
+        // Matched text sits on the search match background and has its own color.
+        let color = if attributes.is_search_match() {
+            colors.search_match_text
+        } else {
+            state.text(attributes.tone(), &colors)
+        };
         job.sections.push(LayoutSection {
             leading_space: 0.0,
             byte_range: start..text.len(),

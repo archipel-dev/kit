@@ -73,7 +73,7 @@ measurement with `tools/reference/`.
 | `button_gradient` | no | no | yes (`Button.startBackground` → `endBackground`) |
 | `island_gap` / `island_radius` | 4 / 10 (c 3 / 8) | 0 / 0 | 0 / 0 |
 | `split_divider` | the gap | 1 | 1 |
-| `status_bar_height` | 30 (c 25) | 31 (c 26) (est.) | 23 |
+| `status_bar_height` | 30 (c 25) | 30 (c 25) (29 + 1 line, measured in IntelliJ New UI Dark) | 23 |
 | `status_top_line` | 0 | 1 | 1 |
 | `status_hover_radius` | 4 | 2 | 0 |
 | `popup_padding` / `popup_item_inset` / `popup_item_padding` | 8 / 8 / 8 | 8 / 8 / 8 | 4 / 0 / 12 |

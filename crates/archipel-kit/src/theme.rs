@@ -160,6 +160,9 @@ pub struct Colors {
     /// Background of the part of a row text that matches the speed search
     /// (`SimpleTextAttributes::STYLE_SEARCH_MATCH`; IntelliJ spec §3.4 `SearchMatch` Yellow7).
     pub search_match: Color32,
+    /// Text on [`Colors::search_match`]: dark on the dark themes' yellow so the match stays
+    /// readable (IDE UI spec UI-POP-004: `Yellow5` background with dark text).
+    pub search_match_text: Color32,
     /// Fill of the speed search popup (IntelliJ spec §3.4, §15.3 `SpeedSearch.background`).
     pub speed_search_background: Color32,
     /// 1 pt border of the speed search popup (IntelliJ spec §3.4 `SpeedSearch.borderColor`).
@@ -434,9 +437,10 @@ impl Theme {
                 control_selected: rgb(0x3574F0),
                 selection_inactive: rgb(0x33353B),
                 row_hover: rgba(0xFFFFFF10),
-                // Spec §3.4 lists only the light Yellow7 (#FEE6B1); dark uses the Islands
-                // warning border (#694820, spec §15.2) so the dark text stays readable.
-                search_match: rgb(0x694820),
+                // Measured in IntelliJ's New UI Dark (IDE UI spec UI-POP-004, `#B59252`..
+                // `#BA9752`, Yellow5) with dark text; spec §3.4 lists only the light Yellow7.
+                search_match: rgb(0xBA9752),
+                search_match_text: rgb(0x1E1F22),
                 // Spec §15.3 has the light values; dark takes the tool window background and
                 // the popup border of §15.2.
                 speed_search_background: rgb(0x191A1C),
@@ -615,6 +619,7 @@ impl Theme {
                 selection_inactive: rgb(0xE9EAEE),
                 row_hover: rgba(0x00000008),
                 search_match: rgb(0xFEE6B1),
+                search_match_text: rgb(0x000000),
                 speed_search_background: rgb(0xFFFFFF),
                 speed_search_border: rgb(0xEBECF0),
                 loading_veil: rgba(0xC8C8C8F0),

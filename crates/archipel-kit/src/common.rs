@@ -31,6 +31,42 @@ pub(crate) fn galley_elided(ui: &Ui, text: &str, font: FontId, max_width: f32) -
     ui.painter().layout_job(job)
 }
 
+/// Like [`galley_elided`], with the characters in `marked` (character ranges, ascending and
+/// disjoint) in their own color: the text of a search match.
+pub(crate) fn galley_elided_marked(
+    ui: &Ui,
+    text: &str,
+    font: FontId,
+    max_width: f32,
+    marked: &[std::ops::Range<usize>],
+    marked_color: Color32,
+) -> Arc<Galley> {
+    let mut job = egui::text::LayoutJob::default();
+    let plain = egui::TextFormat::simple(font, Color32::PLACEHOLDER);
+    let hit = egui::TextFormat::simple(plain.font_id.clone(), marked_color);
+    let mut cursor = 0;
+    let boundaries: Vec<usize> = text
+        .char_indices()
+        .map(|(index, _)| index)
+        .chain(std::iter::once(text.len()))
+        .collect();
+    let byte = |chars: usize| boundaries[chars.min(boundaries.len() - 1)];
+    for range in marked {
+        let (start, end) = (byte(range.start).max(cursor), byte(range.end));
+        if start >= end {
+            continue;
+        }
+        job.append(&text[cursor..start], 0.0, plain.clone());
+        job.append(&text[start..end], 0.0, hit.clone());
+        cursor = end;
+    }
+    job.append(&text[cursor..], 0.0, plain);
+    job.wrap.max_width = max_width;
+    job.wrap.max_rows = 1;
+    job.wrap.break_anywhere = true;
+    ui.painter().layout_job(job)
+}
+
 /// Paints `galley` at `pos` in `color`, ignoring the style's global text color override.
 pub(crate) fn text(painter: &Painter, pos: Pos2, galley: Arc<Galley>, color: Color32) {
     painter.galley_with_override_text_color(pos, galley, color);

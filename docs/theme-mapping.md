@@ -168,7 +168,7 @@ Source syntax is documented at the top of `tools/themes/mapping.py`.
 
 ## Fields without a mapping
 
-Kit fields that `mapping.py` does not list keep the measured value in every theme: `Colors::got_it`, `Colors::got_it_border`, `Colors::loading_veil`, `Colors::popup_mnemonic`, `Colors::search_match`, `Colors::speed_search_background`, `Colors::speed_search_border`, `EditorColors::change_added`, `EditorColors::change_deleted`, `EditorColors::change_modified`, `EditorColors::fold_marker`, `EditorColors::folded_background`, `EditorColors::folded_border`, `EditorColors::folded_text`, `EditorColors::indent_guide_selected`, `EditorColors::right_margin`, `EditorColors::search_stripe`, `EditorColors::selection_inactive`, `EditorColors::whitespace`.
+Kit fields that `mapping.py` does not list keep the measured value in every theme: `Colors::got_it`, `Colors::got_it_border`, `Colors::loading_veil`, `Colors::popup_mnemonic`, `Colors::search_match`, `Colors::search_match_text`, `Colors::speed_search_background`, `Colors::speed_search_border`, `EditorColors::change_added`, `EditorColors::change_deleted`, `EditorColors::change_modified`, `EditorColors::fold_marker`, `EditorColors::folded_background`, `EditorColors::folded_border`, `EditorColors::folded_text`, `EditorColors::indent_guide_selected`, `EditorColors::right_margin`, `EditorColors::search_stripe`, `EditorColors::selection_inactive`, `EditorColors::whitespace`.
 
 ## Fields that fell back to the measured values
 
