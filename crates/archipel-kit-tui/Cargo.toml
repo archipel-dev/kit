@@ -12,6 +12,7 @@ categories = ["command-line-interface"]
 [dependencies]
 archipel-icons = { path = "../archipel-icons" }
 archipel-kit = { path = "../archipel-kit" }
+archipel-kit-model = { path = "../archipel-kit-model" }
 ratatui = "0.30"
 unicode-width = "0.2"
 
