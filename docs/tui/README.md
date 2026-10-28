@@ -320,7 +320,7 @@ assert!(control.rect_of("run").is_some());
 ```
 
 The main menu: a click on a title opens its menu below it, hovering another title switches, Left
-and Right move between titles, Esc closes the menu and a second Esc collapses the bar.
+and Right move between titles, Esc closes the menu and the bar returns to the toolbar.
 
 <img alt="The main menu: File open with a submenu arrow, a check mark, shortcuts and a disabled row" src="img/chrome-menu-open.svg" width="672">
 
