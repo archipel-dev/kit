@@ -61,6 +61,14 @@ pub struct Caps {
     pub kitty: bool,
     /// The operating system, which picks the keymap and shortcut symbols.
     pub os: Os,
+    /// The terminal shows 24-bit colors (`COLORTERM=truecolor`); without it the app should
+    /// quantize to the xterm 256-color cube ([`crate::quantize`]).
+    pub truecolor: bool,
+    /// A key event has carried the Super modifier (kitty protocol terminals that report
+    /// it): Cmd shortcuts can be used.
+    pub super_reported: bool,
+    /// The terminal draws curly underlines.
+    pub curly: bool,
 }
 
 impl Caps {
@@ -69,6 +77,9 @@ impl Caps {
         Self {
             kitty: false,
             os: Os::current(),
+            truecolor: true,
+            super_reported: false,
+            curly: false,
         }
     }
 
@@ -77,6 +88,9 @@ impl Caps {
         Self {
             kitty: true,
             os: Os::current(),
+            truecolor: true,
+            super_reported: false,
+            curly: false,
         }
     }
 
@@ -282,10 +296,47 @@ pub fn alt(c: char) -> Event {
 
 /// The chord starters of [`terminal_keymap`]: <kbd>Ctrl</kbd>+<kbd>K</kbd> for editor
 /// and general actions, <kbd>Ctrl</kbd>+<kbd>W</kbd> for tool windows (as Vim's window
-/// commands).
+/// commands). A host with its own keymap sets other ones with [`Leaders`].
 pub const LEADER_GENERAL: &str = "ctrl K";
 /// See [`LEADER_GENERAL`].
 pub const LEADER_WINDOWS: &str = "ctrl W";
+
+/// The strokes that start the chord alternatives of [`terminal_keymap_with`]: one for
+/// editor and general actions, one for tool windows. A host whose keymap binds
+/// <kbd>Ctrl</kbd>+<kbd>K</kbd> or <kbd>Ctrl</kbd>+<kbd>W</kbd> (IntelliJ: Commit, Extend
+/// Selection) sets both to one free stroke, for example `ctrl \`: the chords then share
+/// one namespace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Leaders {
+    /// The leader of editor and general actions.
+    pub general: String,
+    /// The leader of tool window actions.
+    pub windows: String,
+    /// Whether <kbd>Ctrl</kbd>+<kbd>P</kbd> also opens Go to Action (the kit's own
+    /// fallback; a host whose keymap binds Ctrl+P switches it off).
+    pub ctrl_p: bool,
+}
+
+impl Default for Leaders {
+    fn default() -> Self {
+        Self {
+            general: LEADER_GENERAL.to_owned(),
+            windows: LEADER_WINDOWS.to_owned(),
+            ctrl_p: true,
+        }
+    }
+}
+
+impl Leaders {
+    /// One leader for everything and no Ctrl+P fallback.
+    pub fn single(stroke: &str) -> Self {
+        Self {
+            general: stroke.to_owned(),
+            windows: stroke.to_owned(),
+            ctrl_p: false,
+        }
+    }
+}
 
 /// The action ids for tool window activation: `ActivateToolWindow1` … `ActivateToolWindow9`
 /// (IntelliJ's `ActivateXToolWindow` family, bound to Alt+digit).
@@ -311,6 +362,12 @@ pub fn activate_tool_window_id(digit: u8) -> String {
 /// | `CloseActiveTab` | Ctrl+Shift+F4 | Ctrl+K, then W |
 /// | `ShowIntentionActions` | Alt+Enter | Ctrl+K, then Enter |
 pub fn terminal_keymap(os: Os) -> Keymap {
+    terminal_keymap_with(os, &Leaders::default())
+}
+
+/// [`terminal_keymap`] with the chords under the host's `leaders`.
+pub fn terminal_keymap_with(os: Os, leaders: &Leaders) -> Keymap {
+    let (general, windows) = (leaders.general.as_str(), leaders.windows.as_str());
     let mut keymap = Keymap::default_for(os);
     let mut add = |id: &str, text: &str| {
         if let Some(shortcut) = Shortcut::parse(text) {
@@ -321,11 +378,11 @@ pub fn terminal_keymap(os: Os) -> Keymap {
         add(&activate_tool_window_id(digit), &format!("alt {digit}"));
         add(
             &activate_tool_window_id(digit),
-            &format!("{LEADER_WINDOWS} > {digit}"),
+            &format!("{windows} > {digit}"),
         );
     }
-    add("HideAllWindows", &format!("{LEADER_WINDOWS} > H"));
-    add("MaximizeToolWindow", &format!("{LEADER_WINDOWS} > M"));
+    add("HideAllWindows", &format!("{windows} > H"));
+    add("MaximizeToolWindow", &format!("{windows} > M"));
     for (id, key) in [
         ("ResizeToolWindowLeft", "Left"),
         ("ResizeToolWindowRight", "Right"),
@@ -333,21 +390,23 @@ pub fn terminal_keymap(os: Os) -> Keymap {
         ("ResizeToolWindowDown", "Down"),
     ] {
         add(id, &format!("ctrl alt shift {key}"));
-        add(id, &format!("{LEADER_WINDOWS} > {key}"));
+        add(id, &format!("{windows} > {key}"));
     }
-    add("GotoAction", "ctrl P");
-    add("GotoAction", &format!("{LEADER_GENERAL} > A"));
-    add("FindInPath", &format!("{LEADER_GENERAL} > F"));
-    add("$Redo", &format!("{LEADER_GENERAL} > Z"));
-    add("Switcher", &format!("{LEADER_GENERAL} > T"));
-    add("CloseActiveTab", &format!("{LEADER_GENERAL} > W"));
-    add("ShowIntentionActions", &format!("{LEADER_GENERAL} > Enter"));
-    add("Exit", &format!("{LEADER_GENERAL} > Q"));
+    if leaders.ctrl_p {
+        add("GotoAction", "ctrl P");
+    }
+    add("GotoAction", &format!("{general} > A"));
+    add("FindInPath", &format!("{general} > F"));
+    add("$Redo", &format!("{general} > Z"));
+    add("Switcher", &format!("{general} > T"));
+    add("CloseActiveTab", &format!("{general} > W"));
+    add("ShowIntentionActions", &format!("{general} > Enter"));
+    add("Exit", &format!("{general} > Q"));
     // The editor's fallbacks for combos a legacy terminal cannot send.
     for chord in crate::editor::chords() {
         add(
             (chord.action)().id(),
-            &format!("{LEADER_GENERAL} > {}", chord.keys),
+            &format!("{general} > {}", chord.keys),
         );
     }
     keymap
@@ -621,10 +680,12 @@ mod tests {
         let legacy = Caps {
             kitty: false,
             os: Os::Linux,
+            ..Caps::legacy()
         };
         let kitty = Caps {
             kitty: true,
             os: Os::Linux,
+            ..Caps::legacy()
         };
         for text in ["ctrl shift A", "ctrl Tab", "ctrl 1", "cmd C"] {
             assert!(!sendable(&stroke(text), &legacy), "{text}");
@@ -640,7 +701,8 @@ mod tests {
             &stroke("alt 1"),
             &Caps {
                 kitty: false,
-                os: Os::MacOs
+                os: Os::MacOs,
+                ..Caps::legacy()
             }
         ));
     }
@@ -651,10 +713,12 @@ mod tests {
         let legacy = Caps {
             kitty: false,
             os: Os::Linux,
+            ..Caps::legacy()
         };
         let kitty = Caps {
             kitty: true,
             os: Os::Linux,
+            ..Caps::legacy()
         };
         assert_eq!(
             display_shortcut(&keymap, "GotoAction", &kitty).as_deref(),
@@ -671,6 +735,7 @@ mod tests {
         let mac = Caps {
             kitty: false,
             os: Os::MacOs,
+            ..Caps::legacy()
         };
         let mac_keymap = terminal_keymap(Os::MacOs);
         assert_eq!(

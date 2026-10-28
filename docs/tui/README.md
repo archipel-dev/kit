@@ -11,6 +11,10 @@ terminal version next to its GUI.
   <img alt="The terminal IDE: project tree, editor tabs, run window, status line" src="img/ide.light.svg" width="840">
 </picture>
 
+The chrome of an IDE (toolbar, main menu, stripes, tool window headers, editor tabs, status bar,
+breadcrumbs) is drawn from the shared component model and looks like the GUI, not like NvChad:
+see [GUI-faithful chrome](#gui-faithful-chrome).
+
 Run it: `cargo run -p archipel-kit-tui --example ide`. The smaller `gallery` example shows the
 controls.
 
@@ -221,6 +225,12 @@ input, an interactive counterpart with the GUI's name and rules.
 | `JBTabs` | `tabs` | the tabufline |
 | `ToolWindowPane`, stripes (opt-in) | `workbench` | `ToolWindowPaneState`; Alt+digit, Esc, Shift+Esc, Ctrl+Shift+F12, splitters |
 | `StatusBar` | `components`, `statusbar` | NvChad statusline slots, clickable |
+| `ToolbarControl` (`Toolbar`, `ToolbarButton`, `ToolbarDropdown`) | `bar` | the main toolbar from model props: 3-cell buttons, avatar or icon dropdowns, a segmented control, shrinks by width |
+| `MenuBarControl`, `MenuPopup` (`MenuBar`, `MenuHeader`, `MenuItem`, `MenuEntry`) | `menubar` | titles with underlined mnemonics, hover switching, submenus, shortcut column, F10 and Alt+mnemonic |
+| `ToolStripeControl` (`ToolStripe`, `StripeButton`) | `stripe` | top and bottom groups, separator, badge, active fill |
+| `PanelHeaderControl` (`PanelHeader`) | `header` | title, view selector chevron, content tabs, actions with overflow, Hide |
+| `TabBarControl` (`TabBar`, `Tab`) | `tabbar` | the editor strip: dirty dot, pin, preview, error underline, overflow list, drag |
+| `StatusItemsControl` (`StatusBar`, `StatusBarItem`), `BreadcrumbsControl` | `statusbar`, `breadcrumbs` | breadcrumbs left, widgets right by priority, spinner, progress |
 | `HelpTooltip` | `tooltip` | hover with delay and focus |
 | `NotificationsManager` | `balloon` | nvim-notify balloons with the GUI timings |
 | `DialogWrapper`, `Messages` | `dialog` | Enter, Esc, Left/Right, Y/N, validation |
@@ -277,6 +287,57 @@ unless you ask for one with `Workbench::stripes(true)` (shown in the second pair
 ### Status bar
 
 <img alt="Status bar: mode, file, branch, message, diagnostics, language server, directory, position" src="img/status-bar.dark.svg" width="924"> <img alt="Status bar, light" src="img/status-bar.light.svg" width="924">
+
+### GUI-faithful chrome
+
+An app writes its chrome once, as props of [`archipel-kit-model`](../../crates/archipel-kit-model)
+(`Toolbar`, `MenuBar`, `ToolStripe`, `PanelHeader`, `TabBar`, `StatusBar`: plain data with
+stable ids, semantic `Tone`s, `IconKey`s and `Shortcut`s, no colors and no pixels), and lets the
+egui kit or this crate render them. The components of this crate take the props, draw them and
+return the events of the same model (`ToolbarEvent`, `MenuEvent`, `StripeEvent`,
+`PanelHeaderEvent`, `TabEvent`, `StatusBarEvent`), so the application decides what a click means.
+`Look::gui(theme)` maps the tokens of `Theme::colors` one to one to 24-bit colors, blending
+translucent ones over the surface they sit on; the terminal's 256-color mode quantizes in
+CIELAB (`quantize`). Nothing here has modes: the keys are the GUI's.
+
+```
+use archipel_kit_model::{Toolbar, ToolbarButton, ToolbarItem, Tone};
+use archipel_kit_tui::bar::ToolbarControl;
+use archipel_kit_tui::ratatui::{buffer::Buffer, layout::Rect};
+use archipel_kit_tui::{Glyph, Id, Look, Runtime};
+
+let mut bar = Toolbar::new("main");
+bar.trailing.push(ToolbarItem::Button(
+    ToolbarButton::new("run", Glyph::Run, "Run").tone(Tone::Run),
+));
+let mut rt = Runtime::new(Look::gui(archipel_kit_tui::Theme::dark()));
+let area = Rect::new(0, 0, 40, 1);
+let mut buf = Buffer::empty(area);
+let mut control = ToolbarControl::new(Id::new("toolbar"));
+rt.begin_frame(area);
+control.draw(&mut rt, &bar, area, &mut buf);
+assert!(control.rect_of("run").is_some());
+```
+
+The main menu: a click on a title opens its menu below it, hovering another title switches, Left
+and Right move between titles, Esc closes the menu and a second Esc collapses the bar.
+
+<img alt="The main menu: File open with a submenu arrow, a check mark, shortcuts and a disabled row" src="img/chrome-menu-open.svg" width="672">
+
+Editor tabs: the selected tab is filled and underlined, a dot marks unsaved changes and turns into
+the close button under the pointer, a pin marks a pinned tab, a preview tab is italic and a file with
+errors has a curly underline.
+
+<img alt="Editor tabs: selected, dirty, preview, pinned with errors" src="img/chrome-tabs.svg" width="840">
+
+A tool window header with content tabs and counts:
+
+<img alt="Problems header with File and Project Errors tabs" src="img/chrome-header.svg" width="672">
+
+The status bar: breadcrumbs at the left, the widgets at the right in the GUI's order; the widget
+with the lowest priority is dropped first when the row is narrow.
+
+<img alt="Status bar: breadcrumbs, message, spinner, caret, line separator, encoding, indent, widgets" src="img/chrome-status.svg" width="924">
 
 ### Dialogs, notifications and tooltips
 

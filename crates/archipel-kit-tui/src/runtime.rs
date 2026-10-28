@@ -102,6 +102,8 @@ pub struct Runtime {
     /// Where the terminal cursor goes this frame (set while drawing, cleared by
     /// [`begin_frame`](Self::begin_frame)).
     pub cursor: Option<CursorRequest>,
+    /// The window title (OSC 2): the loop sends it when it changes.
+    pub title: Option<String>,
     /// Whether the terminal draws curly underlines (SGR 4:3, kitty, WezTerm, Ghostty, Alacritty,
     /// foot, iTerm2, Windows Terminal, VTE). Cells with an underline color are then drawn as
     /// undercurl after each frame; without it they keep the plain underline. Detected by
@@ -141,6 +143,7 @@ impl Runtime {
             screen: Rect::default(),
             window_focused: true,
             cursor: None,
+            title: None,
             undercurl: false,
             tracker: PointerTracker::default(),
             pointer: None,
@@ -322,6 +325,12 @@ impl Runtime {
     }
 }
 
+/// The OSC 2 sequence that sets the window title to `title` (control characters dropped).
+pub fn title_sequence(title: &str) -> String {
+    let clean: String = title.chars().filter(|c| !c.is_control()).collect();
+    format!("\x1b]2;{clean}\x07")
+}
+
 /// Options of [`run`].
 #[derive(Debug, Clone, Copy)]
 pub struct RunOptions {
@@ -361,6 +370,8 @@ pub fn setup(options: RunOptions) -> io::Result<(CrosstermTerminal, Caps)> {
     let kitty = supports_keyboard_enhancement().unwrap_or(false);
     let terminal = ratatui::init();
     let mut out = io::stdout();
+    // Save the window title; `restore` puts it back after the app changed it (OSC 2).
+    let _ = out.write_all(b"\x1b[22;2t");
     execute!(
         out,
         EnableMouseCapture,
@@ -385,6 +396,9 @@ pub fn setup(options: RunOptions) -> io::Result<(CrosstermTerminal, Caps)> {
     let caps = Caps {
         kitty,
         os: archipel_kit::action_system::Os::current(),
+        truecolor: detect_truecolor(),
+        super_reported: false,
+        curly: detect_undercurl(),
     };
     Ok((terminal, caps))
 }
@@ -396,6 +410,7 @@ fn restore_modes() {
     };
     use ratatui::crossterm::execute;
     let mut out = io::stdout();
+    let _ = out.write_all(b"\x1b[23;2t");
     let _ = execute!(
         out,
         SetCursorStyle::DefaultUserShape,
@@ -426,6 +441,20 @@ pub fn run_app(look: Look, app: &mut impl App, options: RunOptions) -> io::Resul
     let result = run(&mut terminal, &mut rt, app, options);
     restore();
     result
+}
+
+/// Whether the terminal shows 24-bit colors: `COLORTERM` is `truecolor` or `24bit`
+/// (`ARCHIPEL_TRUECOLOR=1` or `=0` overrides).
+pub fn detect_truecolor() -> bool {
+    if let Ok(value) = std::env::var("ARCHIPEL_TRUECOLOR") {
+        return value != "0" && !value.is_empty();
+    }
+    std::env::var("COLORTERM")
+        .map(|v| {
+            let v = v.to_ascii_lowercase();
+            v == "truecolor" || v == "24bit"
+        })
+        .unwrap_or(false)
 }
 
 /// Whether the terminal draws curly underlines (SGR `4:3` with the color in `58`): kitty,
@@ -545,6 +574,7 @@ where
     use ratatui::crossterm::execute;
     let start = Instant::now();
     let mut shape: Option<CursorShape> = None;
+    let mut shown_title: Option<String> = None;
     loop {
         rt.now = start.elapsed().as_secs_f64();
         rt.tick();
@@ -554,6 +584,9 @@ where
             rt.begin_frame(area);
             app.draw(rt, area, frame.buffer_mut());
             rt.end_frame();
+            if !rt.caps.truecolor {
+                crate::quantize::quantize_buffer(frame.buffer_mut());
+            }
             if let Some(cursor) = rt.cursor {
                 frame.set_cursor_position((cursor.x, cursor.y));
             }
@@ -581,6 +614,13 @@ where
         if let Some(sequence) = rt.clipboard.take_sequence() {
             out.write_all(sequence.as_bytes())?;
             out.flush()?;
+        }
+        if rt.title != shown_title {
+            if let Some(title) = &rt.title {
+                out.write_all(title_sequence(title).as_bytes())?;
+                out.flush()?;
+            }
+            shown_title.clone_from(&rt.title);
         }
         if rt.quit {
             return Ok(());
