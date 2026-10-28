@@ -5,7 +5,8 @@
 //! open title has the `hover` fill. A click opens its menu below the title (the menu's top
 //! edge is the row under the bar); while a menu is open, hovering another title switches to
 //! it; `Left` and `Right` move between the titles (when no submenu is open), `Esc` closes
-//! the menu and a second `Esc` collapses the bar. `Alt` plus a title's mnemonic opens it,
+//! the menu and the bar with it (the toolbar returns to row 0; `Esc` with the bar shown and
+//! no menu open collapses it too). `Alt` plus a title's mnemonic opens it,
 //! `F10` focuses the first title.
 //!
 //! The menus are [`PopupStyle::Island`] popups: a rounded box on the popup surface, a
@@ -453,16 +454,16 @@ impl MenuBarControl {
                 PopupState::Cancelled => {
                     self.popup = None;
                     self.open = None;
-                    if matches!(event, Event::Mouse(_)) {
-                        // A press outside collapses the bar, unless it hit a title.
-                        let on_title = rt.pointer().is_some_and(|p| {
+                    // Esc and a press outside close the menu and hand row 0 back to the
+                    // toolbar, unless the press hit a title.
+                    let on_title = matches!(event, Event::Mouse(_))
+                        && rt.pointer().is_some_and(|p| {
                             let at = ratatui::layout::Position::new(p.x, p.y);
                             self.placed.iter().any(|(_, _, rect)| rect.contains(at))
                         });
-                        if !on_title {
-                            self.expanded = false;
-                            out.push(MenuEvent::Closed);
-                        }
+                    if !on_title {
+                        self.expanded = false;
+                        out.push(MenuEvent::Closed);
                     }
                 }
                 PopupState::Open => {}

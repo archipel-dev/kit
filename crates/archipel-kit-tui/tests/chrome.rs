@@ -308,6 +308,7 @@ struct MenuState {
     props: MenuBar,
     bar: MenuBarControl,
     events: Vec<MenuEvent>,
+    shown: bool,
 }
 
 fn menu_harness() -> H<MenuState> {
@@ -316,6 +317,7 @@ fn menu_harness() -> H<MenuState> {
             props: menu_props(),
             bar: MenuBarControl::new(Id::new("menu")),
             events: Vec::new(),
+            shown: false,
         },
         |s: &mut MenuState, rt, e| {
             let props = s.props.clone();
@@ -323,7 +325,10 @@ fn menu_harness() -> H<MenuState> {
             s.events.extend(got);
         },
         |s, rt, area, buf| {
-            s.bar.expand();
+            if !s.shown {
+                s.shown = true;
+                s.bar.expand();
+            }
             s.bar.draw(
                 rt,
                 &s.props,
@@ -415,14 +420,25 @@ fn hovering_another_title_switches_the_menu_and_keys_move_between_titles() {
 }
 
 #[test]
-fn escape_closes_the_menu_then_collapses_the_bar() {
+fn escape_closes_the_menu_and_the_bar_returns_to_the_toolbar() {
     let mut h = menu_harness();
     h.click(6, 0);
+    assert!(h.app.state.bar.is_open());
     h.press(KeyCode::Esc);
     assert!(!h.app.state.bar.is_open());
-    assert!(h.app.state.bar.is_expanded() || true);
-    h.press(KeyCode::Esc);
+    assert!(
+        !h.app.state.bar.is_expanded(),
+        "row 0 goes back to the toolbar"
+    );
     assert!(h.app.state.events.contains(&MenuEvent::Closed));
+}
+
+#[test]
+fn escape_with_the_titles_shown_and_no_menu_collapses_the_bar() {
+    let mut h = menu_harness();
+    h.app.state.bar.expand();
+    h.press(KeyCode::Esc);
+    assert!(!h.app.state.bar.is_expanded());
 }
 
 #[test]
@@ -472,6 +488,7 @@ fn the_wheel_scrolls_a_tall_menu_with_separators_to_its_last_row() {
             props,
             bar: MenuBarControl::new(Id::new("menu")),
             events: Vec::new(),
+            shown: true,
         },
         |s: &mut MenuState, rt, e| {
             let props = s.props.clone();
