@@ -74,7 +74,7 @@
 <text x="865.2" y="31.5" fill="#5D5F63">3</text>
 <text x="873.6" y="31.5" fill="#5D5F63">/</text>
 <text x="882.0" y="31.5" fill="#5D5F63">1</text>
-<text x="890.4" y="31.5" fill="#5D5F63">2</text>
+<text x="890.4" y="31.5" fill="#5D5F63">3</text>
 <text x="924.0" y="31.5" fill="#737478">C</text>
 <text x="932.4" y="31.5" fill="#737478">c</text>
 <text x="966.0" y="31.5" fill="#737478">W</text>
@@ -146,8 +146,7 @@
 <text x="327.6" y="67.5" fill="#7A7E85">!</text>
 <rect x="1087.8" y="54.0" width="4.2" height="18.0" fill="#72D6D6"/>
 <rect x="0.0" y="72.0" width="243.6" height="18" fill="#141416"/>
-<rect x="243.6" y="72.0" width="840.0" height="18" fill="#191A1C"/>
-<rect x="1083.6" y="72.0" width="8.4" height="18" fill="#27282A"/>
+<rect x="243.6" y="72.0" width="848.4" height="18" fill="#191A1C"/>
 <path d="M12.6 72.0V90.0" fill="none" stroke="#2B2C2E" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M29.4 72.0V90.0" fill="none" stroke="#2B2C2E" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M46.2 72.0V90.0" fill="none" stroke="#2B2C2E" stroke-width="1" shape-rendering="geometricPrecision"/>

@@ -168,6 +168,9 @@ pub struct Look {
     /// Draw ASCII stand-ins instead of Nerd Font characters (`tui.glyphs = ascii`): every
     /// chrome component keeps its geometry, a glyph is still one cell.
     pub ascii: bool,
+    /// Draw overlays (dialogs) as the GUI's Islands popups: the `popup` surface in a
+    /// `popup_border` box, a bold title and the theme's text color. Set by [`Look::gui`].
+    pub island: bool,
 }
 
 impl Look {
@@ -188,6 +191,7 @@ impl Look {
             theme,
             palette,
             ascii: false,
+            island: false,
         }
     }
 
@@ -204,6 +208,7 @@ impl Look {
             theme,
             palette,
             ascii: false,
+            island: true,
         }
     }
 
