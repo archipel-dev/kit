@@ -289,6 +289,16 @@ impl EditorState {
         self.center_line = Some(line);
     }
 
+    /// Scrolls the caret into view at the next frame, by row: a caret far down a soft-wrapped
+    /// line (a 5 000-character line is dozens of rows) is shown, not only the line's first row.
+    /// The caret is centered when it is outside the margins, like a jump.
+    pub fn scroll_to_caret(&mut self) {
+        self.pending_scroll = Some(ScrollRequest::ToCaret {
+            scroll_type: ScrollType::MakeVisible,
+            animate: false,
+        });
+    }
+
     /// Opens the find bar (with the replace row when `replace`) as Ctrl+F or Ctrl+R do, for
     /// a menu entry or a button.
     pub fn open_find(&mut self, editor: &Editor, replace: bool) {

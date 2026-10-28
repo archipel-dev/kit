@@ -1363,3 +1363,36 @@ fn snapshot_completion_menu() {
         h
     });
 }
+
+/// A caret moved from outside (the IDE core typed or jumped) on the last row of a long wrapped
+/// line is scrolled into view by row, not only by line (TUI-BUG-019).
+#[test]
+fn scroll_to_caret_shows_a_caret_far_down_a_wrapped_line() {
+    let line = "x".repeat(5000);
+    let mut h = harness_with(
+        app(
+            &format!("{line} end"),
+            Cfg {
+                wrap: true,
+                ..Cfg::default()
+            },
+        ),
+        Look::dark(),
+        30,
+        10,
+    );
+    let end = h.app.editor.document.len_chars();
+    {
+        let Ed { editor, .. } = &mut h.app;
+        let doc = editor.document.clone();
+        editor.carets.set_caret(&doc, end);
+    }
+    h.app.state.scroll_to_caret();
+    h.draw();
+    let screen = h.screen();
+    assert!(
+        screen.iter().any(|row| row.contains("end")),
+        "the caret row is shown: {screen:?}"
+    );
+    assert!(h.app.state.first_row() > 0, "scrolled down");
+}
