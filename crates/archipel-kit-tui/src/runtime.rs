@@ -587,6 +587,18 @@ where
             if !rt.caps.truecolor {
                 crate::quantize::quantize_buffer(frame.buffer_mut());
             }
+            if !rt.undercurl {
+                // SGR 58 (the underline color) is not understood everywhere: xterm reads its
+                // parameters as other attributes (a cyan background). Underlines take the
+                // text color there.
+                let buffer = frame.buffer_mut();
+                let area = buffer.area;
+                for y in area.top()..area.bottom() {
+                    for x in area.left()..area.right() {
+                        buffer[(x, y)].underline_color = ratatui::style::Color::Reset;
+                    }
+                }
+            }
             if let Some(cursor) = rt.cursor {
                 frame.set_cursor_position((cursor.x, cursor.y));
             }

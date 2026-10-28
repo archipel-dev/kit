@@ -110,6 +110,14 @@ pub fn icon_cell(look: &Look, tokens: &Tokens, key: &IconKey, tone: Tone) -> (St
                 ),
             }
         }
+        IconKey::Symbol(name) => match symbol_kind(name) {
+            Some(kind) if !look.ascii => (
+                glyphs::symbol(kind).to_string(),
+                look.readable(kind.color()),
+            ),
+            _ => ("o".to_owned(), tokens.icon(look, tone)),
+        },
+        IconKey::Text(text) => (text.chars().take(1).collect(), tokens.icon(look, tone)),
         IconKey::Folder { open } => {
             let glyph = if *open {
                 Glyph::FolderOpen
@@ -123,6 +131,35 @@ pub fn icon_cell(look: &Look, tokens: &Tokens, key: &IconKey, tone: Tone) -> (St
         }
         _ => ("?".to_owned(), tokens.icon(look, tone)),
     }
+}
+
+/// The symbol kind named `name` (lowercase, as [`IconKey::Symbol`] carries it).
+pub fn symbol_kind(name: &str) -> Option<crate::SymbolKind> {
+    use crate::SymbolKind as K;
+    Some(match name {
+        "class" => K::Class,
+        "interface" => K::Interface,
+        "enum" => K::Enum,
+        "record" => K::Record,
+        "annotation" => K::Annotation,
+        "struct" => K::Struct,
+        "trait" => K::Trait,
+        "object" => K::Object,
+        "method" => K::Method,
+        "function" => K::Function,
+        "constructor" => K::Constructor,
+        "field" => K::Field,
+        "property" => K::Property,
+        "variable" => K::Variable,
+        "constant" => K::Constant,
+        "parameter" => K::Parameter,
+        "enummember" => K::EnumMember,
+        "typeparameter" => K::TypeParameter,
+        "lambda" => K::Lambda,
+        "package" => K::Package,
+        "module" => K::Module,
+        _ => return None,
+    })
 }
 
 /// Draws a badge dot at (`x`, `y`) in `tone`.

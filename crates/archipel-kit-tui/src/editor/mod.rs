@@ -289,6 +289,12 @@ impl EditorState {
         self.center_line = Some(line);
     }
 
+    /// Opens the find bar (with the replace row when `replace`) as Ctrl+F or Ctrl+R do, for
+    /// a menu entry or a button.
+    pub fn open_find(&mut self, editor: &Editor, replace: bool) {
+        find::open_with(editor, self, replace, true, true);
+    }
+
     /// Whether the find bar is open.
     pub fn find_open(&self) -> bool {
         self.find.open
