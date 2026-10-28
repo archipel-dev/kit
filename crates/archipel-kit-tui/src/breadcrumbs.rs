@@ -149,6 +149,7 @@ impl BreadcrumbsControl {
             // The label is read from the cells after the icon.
             let text_x = start + if crumb.icon.is_some() { 2 } else { 0 };
             self.placed.push(Placed {
+                label_rect: None,
                 key: crumb.id.clone(),
                 id,
                 rect: Rect::new(text_x, area.y, end.saturating_sub(text_x), 1),

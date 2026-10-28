@@ -275,6 +275,7 @@ impl TabBarControl {
             };
             entry.tooltip = tab.tooltip.as_ref().map(|t| t.text(notation));
             self.placed.push(Placed {
+                label_rect: None,
                 key: tab.id.clone(),
                 id,
                 rect: Rect::new(nx, rect.y, text_width(&tab.title), 1).intersection(rect),

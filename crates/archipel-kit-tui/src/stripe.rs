@@ -168,6 +168,7 @@ impl ToolStripeControl {
             entry.tooltip = Some(button.tooltip.text(notation));
             entry.shortcut = button.tooltip.shortcut.as_ref().map(|s| s.label(notation));
             self.placed.push(Placed {
+                label_rect: None,
                 key: button.id.clone(),
                 id,
                 rect,

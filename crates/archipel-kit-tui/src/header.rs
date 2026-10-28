@@ -62,9 +62,11 @@ impl PanelHeaderControl {
 
     /// The outline of what was drawn.
     pub fn outline(&self, buf: &Buffer) -> Outline {
-        chrome::outline_of(&self.placed, buf, |p| {
-            matches!(p.entry.role.as_str(), "title")
-        })
+        // Left to right, as the props list them (the right-aligned actions are placed from
+        // the right edge).
+        let mut placed = self.placed.clone();
+        placed.sort_by_key(|p| p.rect.x);
+        chrome::outline_of(&placed, buf, |p| matches!(p.entry.role.as_str(), "title"))
     }
 
     /// Whether the overflow menu is open.
@@ -162,6 +164,7 @@ impl PanelHeaderControl {
             entry.enabled = enabled;
             entry.tooltip = tip.map(|t| t.text(notation));
             this.placed.push(Placed {
+                label_rect: None,
                 key: key.to_owned(),
                 id,
                 rect,
@@ -259,6 +262,7 @@ impl PanelHeaderControl {
         let mut entry = OutlineEntry::new("title", props.id.clone(), props.title.clone());
         entry.expanded = props.view_selector.then_some(false);
         self.placed.push(Placed {
+            label_rect: None,
             key: "title".to_owned(),
             id: self.title_id,
             rect: Rect::new(row.x + 1, row.y, text_width(&title), 1),
@@ -329,6 +333,7 @@ impl PanelHeaderControl {
             let mut entry = OutlineEntry::new("tab", tab.id.clone(), label);
             entry.checked = Some(tab.selected);
             self.placed.push(Placed {
+                label_rect: None,
                 key: format!("tab:{}", tab.id),
                 id,
                 rect,

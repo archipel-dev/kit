@@ -182,6 +182,13 @@ pub struct MenuBarControl {
 }
 
 impl MenuBarControl {
+    /// The open menu's popup, for tests that read its rows.
+    pub fn popup(&self) -> Option<&MenuPopup> {
+        self.popup.as_ref()
+    }
+}
+
+impl MenuBarControl {
     /// A collapsed bar.
     pub fn new(id: Id) -> Self {
         Self {
@@ -327,6 +334,7 @@ impl MenuBarControl {
             let mut entry = OutlineEntry::new("menu", header.id.clone(), header.label.clone());
             entry.expanded = Some(open);
             self.headers.push(Placed {
+                label_rect: None,
                 key: header.id.clone(),
                 id,
                 rect: Rect::new(rect.x + 1, rect.y, text_width(&header.label), 1),

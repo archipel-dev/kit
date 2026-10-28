@@ -247,7 +247,9 @@ pub fn panel_header(header: &PanelHeader, notation: Notation) -> Outline {
         entries.push(e);
     }
     if header.hide {
-        entries.push(OutlineEntry::new("button", "hide", "Hide"));
+        let mut hide = OutlineEntry::new("button", "hide", "Hide");
+        hide.tooltip = Some("Hide".to_owned());
+        entries.push(hide);
     }
     Outline { entries }
 }

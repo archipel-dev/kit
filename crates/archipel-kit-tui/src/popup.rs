@@ -635,7 +635,14 @@ impl PopupChain {
             }
             PointerKind::ScrollUp | PointerKind::ScrollDown => {
                 let level = &mut self.levels[depth];
-                let total = visible_rows(&spec, &level.query).len();
+                // The lines are the rows and the separators between them.
+                let visible = visible_rows(&spec, &level.query);
+                let separators = visible
+                    .iter()
+                    .skip(1)
+                    .filter(|r| spec.rows[**r].separator.is_some())
+                    .count();
+                let total = visible.len() + separators;
                 let max = total.saturating_sub(level.page.max(1));
                 level.scroll = (level.scroll as i32 + p.wheel() * 3).clamp(0, max as i32) as usize;
                 level.scroll_to = false;

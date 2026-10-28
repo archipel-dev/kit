@@ -384,6 +384,7 @@ impl ToolbarControl {
             .and_then(|t| t.shortcut.as_ref())
             .map(|s| s.label(notation));
         self.placed.push(Placed {
+            label_rect: None,
             key: b.id.clone(),
             id,
             rect,
@@ -448,12 +449,15 @@ impl ToolbarControl {
             put(buf, rect, x, rect.y, &ch, base.fg(color));
             x += 1;
         }
+        let mut label_rect = Some(Rect::new(x, rect.y, 0, 1));
         if let Some(label) = &label {
             if x > rect.x + 1 {
                 x += 1;
             }
             let st = base.fg(t.text(look, tone));
+            let start = x;
             x = put(buf, rect, x, rect.y, label, st);
+            label_rect = Some(Rect::new(start, rect.y, x.saturating_sub(start), 1));
         }
         if d.chevron {
             put(
@@ -474,6 +478,7 @@ impl ToolbarControl {
         entry.tooltip = d.tooltip.as_ref().map(|t| t.text(notation));
         // The label on screen: the full label unless the width forced a shorter form.
         self.placed.push(Placed {
+            label_rect,
             key: d.id.clone(),
             id,
             rect,
@@ -526,6 +531,7 @@ impl ToolbarControl {
         let mut entry = OutlineEntry::new("segmented", key, options.join("|"));
         entry.checked = Some(selected < options.len());
         self.placed.push(Placed {
+            label_rect: None,
             key: key.to_owned(),
             id: chrome::child(self.id, key),
             rect,

@@ -352,6 +352,7 @@ impl StatusItemsControl {
             entry.tooltip = item.tooltip.as_ref().map(|t| t.text(notation));
             let text_rect = Rect::new(cx, row.y, text_width(text), 1).intersection(row);
             self.placed.push(Placed {
+                label_rect: None,
                 key: item.id.clone(),
                 id,
                 rect: text_rect,

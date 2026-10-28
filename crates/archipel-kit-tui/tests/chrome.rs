@@ -453,6 +453,60 @@ fn submenus_open_to_the_right_and_keys_choose_by_mnemonic() {
 }
 
 #[test]
+fn the_wheel_scrolls_a_tall_menu_with_separators_to_its_last_row() {
+    // 40 rows with a separator after every fourth: 50 lines in a screen of 14 rows. The wheel
+    // must reach the last row (it counted the rows without the separators).
+    let mut entries = Vec::new();
+    for i in 0..40 {
+        entries.push(MenuEntry::Item(MenuItem::new(
+            format!("A{i}"),
+            format!("Row {i}"),
+        )));
+        if i % 4 == 3 {
+            entries.push(MenuEntry::separator());
+        }
+    }
+    let props = MenuBar::new(vec![MenuHeader::new("M", "Menu").entries(entries)]);
+    let mut h = harness(
+        MenuState {
+            props,
+            bar: MenuBarControl::new(Id::new("menu")),
+            events: Vec::new(),
+        },
+        |s: &mut MenuState, rt, e| {
+            let props = s.props.clone();
+            let got = s.bar.handle(rt, &props, e);
+            s.events.extend(got);
+        },
+        |s, rt, area, buf| {
+            s.bar.expand();
+            s.bar.draw(
+                rt,
+                &s.props,
+                archipel_kit_tui::ratatui::layout::Rect::new(0, 0, area.width, 1),
+                4,
+                buf,
+            );
+            s.bar.draw_popup(rt, buf);
+        },
+        60,
+        14,
+    );
+    h.draw();
+    let props = h.app.state.props.clone();
+    h.app.state.bar.open_menu(&h.rt, &props, 0, true);
+    h.draw();
+    assert!(
+        h.find("Row 39").is_none(),
+        "the last row starts below the screen"
+    );
+    for _ in 0..40 {
+        h.scroll(10, 6, 1);
+    }
+    assert!(h.find("Row 39").is_some(), "{}", h.text());
+}
+
+#[test]
 fn alt_mnemonic_opens_a_menu() {
     let mut h = menu_harness();
     let rt = &h.rt;

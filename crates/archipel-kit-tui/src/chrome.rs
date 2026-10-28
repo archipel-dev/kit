@@ -196,6 +196,9 @@ pub struct Placed {
     pub rect: Rect,
     /// The outline entry the props describe.
     pub entry: OutlineEntry,
+    /// The cells that hold the text when it is only part of `rect` (a dropdown without its
+    /// icon and chevron).
+    pub label_rect: Option<Rect>,
 }
 
 /// The text of `rect` in `buf`, trailing spaces trimmed.
@@ -220,7 +223,7 @@ pub fn outline_of(placed: &[Placed], buf: &Buffer, read: impl Fn(&Placed) -> boo
             .map(|p| {
                 let mut entry = p.entry.clone();
                 if read(p) {
-                    entry.label = text_at(buf, p.rect);
+                    entry.label = text_at(buf, p.label_rect.unwrap_or(p.rect));
                 }
                 entry
             })
