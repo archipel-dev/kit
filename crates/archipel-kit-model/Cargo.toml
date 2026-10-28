@@ -1,0 +1,20 @@
+[package]
+name = "archipel-kit-model"
+description = "Archipel Kit component vocabulary as plain data: the props and events of every component, shared by the egui and the ratatui kit."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+keywords = ["ui", "components", "props", "tui", "gui"]
+categories = ["gui", "command-line-interface"]
+
+[dependencies]
+archipel-icons = { path = "../archipel-icons" }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"
+
+[lints]
+workspace = true

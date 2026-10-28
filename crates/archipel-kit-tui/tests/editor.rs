@@ -142,6 +142,7 @@ fn runtime(look: Look) -> Runtime {
     let caps = Caps {
         kitty: false,
         os: archipel_kit::action_system::Os::Linux,
+        ..Caps::legacy()
     };
     let mut rt = Runtime::with(
         look,

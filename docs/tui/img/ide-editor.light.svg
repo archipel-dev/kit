@@ -74,7 +74,7 @@
 <text x="865.2" y="31.5" fill="#979797">3</text>
 <text x="873.6" y="31.5" fill="#979797">/</text>
 <text x="882.0" y="31.5" fill="#979797">1</text>
-<text x="890.4" y="31.5" fill="#979797">0</text>
+<text x="890.4" y="31.5" fill="#979797">3</text>
 <text x="924.0" y="31.5" fill="#777777">C</text>
 <text x="932.4" y="31.5" fill="#777777">c</text>
 <text x="966.0" y="31.5" fill="#777777">W</text>
@@ -146,8 +146,7 @@
 <text x="327.6" y="67.5" fill="#7C7F8A">!</text>
 <rect x="1087.8" y="54.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="72.0" width="243.6" height="18" fill="#F4F4F4"/>
-<rect x="243.6" y="72.0" width="840.0" height="18" fill="#FFFFFF"/>
-<rect x="1083.6" y="72.0" width="8.4" height="18" fill="#EAEAEA"/>
+<rect x="243.6" y="72.0" width="848.4" height="18" fill="#FFFFFF"/>
 <path d="M12.6 72.0V90.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M29.4 72.0V90.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M46.2 72.0V90.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
@@ -239,10 +238,8 @@
 <text x="1041.6" y="85.5" fill="#7C7F8A">a</text>
 <text x="1050.0" y="85.5" fill="#7C7F8A">m</text>
 <text x="1058.4" y="85.5" fill="#7C7F8A">e</text>
-<rect x="1087.8" y="72.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="90.0" width="243.6" height="18" fill="#F4F4F4"/>
-<rect x="243.6" y="90.0" width="840.0" height="18" fill="#FFFFFF"/>
-<rect x="1083.6" y="90.0" width="8.4" height="18" fill="#EAEAEA"/>
+<rect x="243.6" y="90.0" width="848.4" height="18" fill="#FFFFFF"/>
 <path d="M12.6 90.0V108.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M29.4 90.0V108.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M46.2 90.0V108.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
@@ -326,12 +323,10 @@
 <text x="1016.4" y="103.5" fill="#7C7F8A">i</text>
 <text x="1024.8" y="103.5" fill="#7C7F8A">t</text>
 <text x="1033.2" y="103.5" fill="#7C7F8A">h</text>
-<rect x="1087.8" y="90.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="108.0" width="243.6" height="18" fill="#F4F4F4"/>
 <rect x="243.6" y="108.0" width="218.4" height="18" fill="#FFFFFF"/>
 <rect x="462.0" y="108.0" width="33.6" height="18" fill="#FCD47E"/>
-<rect x="495.6" y="108.0" width="588.0" height="18" fill="#FFFFFF"/>
-<rect x="1083.6" y="108.0" width="8.4" height="18" fill="#EAEAEA"/>
+<rect x="495.6" y="108.0" width="596.4" height="18" fill="#FFFFFF"/>
 <path d="M12.6 108.0V126.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M29.4 108.0V126.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
 <path d="M46.2 108.0V126.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
@@ -801,7 +796,6 @@
 <text x="520.8" y="265.5" fill="#7C7F8A">(</text>
 <text x="529.2" y="265.5" fill="#7C7F8A">)</text>
 <text x="537.6" y="265.5" fill="#7C7F8A">;</text>
-<rect x="1087.8" y="252.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="270.0" width="243.6" height="18" fill="#F4F4F4"/>
 <rect x="243.6" y="270.0" width="848.4" height="18" fill="#FFFFFF"/>
 <path d="M247.8 270.0V288.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
@@ -838,7 +832,6 @@
 <text x="604.8" y="283.5" fill="#7C7F8A">4</text>
 <text x="613.2" y="283.5" fill="#7C7F8A">)</text>
 <text x="621.6" y="283.5" fill="#7C7F8A">;</text>
-<rect x="1087.8" y="270.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="288.0" width="243.6" height="18" fill="#F4F4F4"/>
 <rect x="243.6" y="288.0" width="848.4" height="18" fill="#FFFFFF"/>
 <path d="M247.8 288.0V306.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
@@ -877,6 +870,7 @@
 <text x="604.8" y="301.5" fill="#7C7F8A">a</text>
 <text x="613.2" y="301.5" fill="#7C7F8A">)</text>
 <text x="621.6" y="301.5" fill="#7C7F8A">;</text>
+<rect x="1087.8" y="288.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="306.0" width="243.6" height="18" fill="#F4F4F4"/>
 <rect x="243.6" y="306.0" width="285.6" height="18" fill="#FFFFFF"/>
 <rect x="529.2" y="306.0" width="33.6" height="18" fill="#FCD47E"/>
@@ -953,6 +947,7 @@
 <text x="898.8" y="319.5" fill="#7C7F8A">"</text>
 <text x="907.2" y="319.5" fill="#7C7F8A">)</text>
 <text x="915.6" y="319.5" fill="#7C7F8A">;</text>
+<rect x="1087.8" y="306.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="324.0" width="243.6" height="18" fill="#F4F4F4"/>
 <rect x="243.6" y="324.0" width="848.4" height="18" fill="#FFFFFF"/>
 <path d="M247.8 324.0V342.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>
@@ -1125,6 +1120,7 @@
 <text x="344.4" y="391.5" fill="#7C7F8A">`</text>
 <text x="352.8" y="391.5" fill="#7C7F8A">`</text>
 <text x="361.2" y="391.5" fill="#7C7F8A">`</text>
+<rect x="1087.8" y="378.0" width="4.2" height="18.0" fill="#C47233"/>
 <rect x="0.0" y="396.0" width="243.6" height="18" fill="#F4F4F4"/>
 <rect x="243.6" y="396.0" width="848.4" height="18" fill="#FFFFFF"/>
 <path d="M247.8 396.0V414.0" fill="none" stroke="#E4E4E4" stroke-width="1" shape-rendering="geometricPrecision"/>

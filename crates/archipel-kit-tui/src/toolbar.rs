@@ -23,6 +23,8 @@ use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use std::rc::Rc;
 
+pub use crate::bar::ToolbarControl;
+
 /// What a toolbar did.
 #[derive(Debug, Clone)]
 #[non_exhaustive]

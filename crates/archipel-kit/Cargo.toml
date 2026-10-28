@@ -16,6 +16,7 @@ testing = ["dep:egui_kittest"]
 
 [dependencies]
 archipel-icons = { path = "../archipel-icons", features = ["egui"] }
+archipel-kit-model = { path = "../archipel-kit-model" }
 egui = { workspace = true, features = ["accesskit"] }
 egui_kittest = { workspace = true, optional = true }
 serde = { version = "1", features = ["derive"] }

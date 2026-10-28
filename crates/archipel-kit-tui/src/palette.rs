@@ -203,6 +203,56 @@ impl NvChadPalette {
         }
     }
 
+    /// The roles of `theme` with the GUI's surfaces and text colors, so that a component
+    /// written against the NvChad roles looks like the GUI: the editor and the tool windows
+    /// are the island, side bars are the island too, raised surfaces are the popup and its
+    /// hover and selection fills, and the status line is the window frame. [`Look::gui`]
+    /// uses it; the components of the chrome read the exact tokens from
+    /// [`Look::theme`](crate::Look::theme) instead.
+    ///
+    /// [`Look::gui`]: crate::Look::gui
+    pub fn gui(theme: &Theme) -> Self {
+        let c = &theme.colors;
+        let e = &theme.editor;
+        let island = channels(c.island, (0.0, 0.0, 0.0));
+        let over = |value: Color32, under: Rgb| channels(value, under);
+        let popup = over(c.popup, island);
+        let frame = over(c.frame, island);
+        let text = over(c.text, island);
+        let ink = |value: Color32| over(value, island);
+        let folder = ink(c.folder_fill);
+        Self {
+            dark: theme.dark,
+            white: color(text),
+            black: color(island),
+            darker_black: color(island),
+            black2: color(over(e.caret_row, island)),
+            one_bg: color(popup),
+            one_bg2: color(over(c.hover, popup)),
+            one_bg3: color(over(c.selection_popup, popup)),
+            grey: color(ink(c.text_disabled)),
+            grey_fg: color(ink(c.text_placeholder)),
+            light_grey: color(ink(c.text_secondary)),
+            line: color(ink(c.separator)),
+            statusline_bg: color(frame),
+            lightbg: color(over(c.hover, frame)),
+            pmenu_bg: color(over(c.selection_popup, popup)),
+            folder_bg: color(folder),
+            red: color(ink(c.error)),
+            baby_pink: color(mix(ink(c.error), (255.0, 255.0, 255.0), 0.45)),
+            green: color(ink(c.success)),
+            blue: color(ink(c.link)),
+            nord_blue: color(ink(c.accent)),
+            yellow: color(ink(c.warning)),
+            purple: color(ink(e.keyword)),
+            cyan: color(ink(e.property)),
+            teal: color(ink(e.type_name)),
+            orange: color(ink(e.constant)),
+            on_dark: color((22.0, 24.0, 28.0)),
+            on_light: color((250.0, 250.0, 252.0)),
+        }
+    }
+
     /// The foreground to put on a block of `background`: the editor background as NvChad
     /// does when it reads (3:1), else whichever dark or light ink has more contrast.
     pub fn on(&self, background: Color) -> Color {

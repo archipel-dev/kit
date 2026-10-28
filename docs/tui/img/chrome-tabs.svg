@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840.0" height="288.0" viewBox="0 0 840.0 288.0" font-family="'JetBrains Mono', 'DejaVu Sans Mono', monospace" font-size="14" shape-rendering="crispEdges">
+<rect x="0.0" y="0.0" width="126.0" height="18" fill="#233558"/>
+<rect x="126.0" y="0.0" width="714.0" height="18" fill="#191A1C"/>
+<svg x="8.9" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#B07219" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#B07219" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#B07219"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#000000">J</text></svg>
+<polyline points="8.4,15.5 10.5,14.0 12.6,15.5 14.7,17.0 16.8,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="25.2" y="13.5" fill="#DFE1E5">M</text>
+<polyline points="25.2,15.5 27.3,14.0 29.4,15.5 31.5,17.0 33.6,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="33.6" y="13.5" fill="#DFE1E5">a</text>
+<polyline points="33.6,15.5 35.7,14.0 37.8,15.5 39.9,17.0 42.0,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="42.0" y="13.5" fill="#DFE1E5">i</text>
+<polyline points="42.0,15.5 44.1,14.0 46.2,15.5 48.3,17.0 50.4,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="50.4" y="13.5" fill="#DFE1E5">n</text>
+<polyline points="50.4,15.5 52.5,14.0 54.6,15.5 56.7,17.0 58.8,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="58.8" y="13.5" fill="#DFE1E5">.</text>
+<polyline points="58.8,15.5 60.9,14.0 63.0,15.5 65.1,17.0 67.2,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="67.2" y="13.5" fill="#DFE1E5">j</text>
+<polyline points="67.2,15.5 69.3,14.0 71.4,15.5 73.5,17.0 75.6,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="75.6" y="13.5" fill="#DFE1E5">a</text>
+<polyline points="75.6,15.5 77.7,14.0 79.8,15.5 81.9,17.0 84.0,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="84.0" y="13.5" fill="#DFE1E5">v</text>
+<polyline points="84.0,15.5 86.1,14.0 88.2,15.5 90.3,17.0 92.4,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="92.4" y="13.5" fill="#DFE1E5">a</text>
+<polyline points="92.4,15.5 94.5,14.0 96.6,15.5 98.7,17.0 100.8,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<svg x="109.7" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 4 12 12" fill="none" stroke="#9FA2A8" stroke-width="1"/><polyline points="12 4 4 12" fill="none" stroke="#9FA2A8" stroke-width="1"/></svg>
+<polyline points="109.2,15.5 111.3,14.0 113.4,15.5 115.5,17.0 117.6,15.5" fill="none" stroke="#2E4D89" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<svg x="134.9" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#B07219" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#B07219" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#B07219"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#000000">J</text></svg>
+<text x="151.2" y="13.5" fill="#AFB1B6">U</text>
+<text x="159.6" y="13.5" fill="#AFB1B6">t</text>
+<text x="168.0" y="13.5" fill="#AFB1B6">i</text>
+<text x="176.4" y="13.5" fill="#AFB1B6">l</text>
+<text x="184.8" y="13.5" fill="#AFB1B6">.</text>
+<text x="193.2" y="13.5" fill="#AFB1B6">j</text>
+<text x="201.6" y="13.5" fill="#AFB1B6">a</text>
+<text x="210.0" y="13.5" fill="#AFB1B6">v</text>
+<text x="218.4" y="13.5" fill="#AFB1B6">a</text>
+<text x="235.2" y="13.5" fill="#71A1FE">●</text>
+<svg x="260.9" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#496DAE" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#496DAE" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#083FA1"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="7.4" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">Md</text></svg>
+<text x="277.2" y="13.5" fill="#AFB1B6" font-style="italic">R</text>
+<text x="285.6" y="13.5" fill="#AFB1B6" font-style="italic">E</text>
+<text x="294.0" y="13.5" fill="#AFB1B6" font-style="italic">A</text>
+<text x="302.4" y="13.5" fill="#AFB1B6" font-style="italic">D</text>
+<text x="310.8" y="13.5" fill="#AFB1B6" font-style="italic">M</text>
+<text x="319.2" y="13.5" fill="#AFB1B6" font-style="italic">E</text>
+<text x="327.6" y="13.5" fill="#AFB1B6" font-style="italic">.</text>
+<text x="336.0" y="13.5" fill="#AFB1B6" font-style="italic">m</text>
+<text x="344.4" y="13.5" fill="#AFB1B6" font-style="italic">d</text>
+<svg x="386.9" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3.5 6.5 3.5 1.5 9.5 1.5 12.5 4.5 12.5 6.5" fill="none" stroke="#2673B1" stroke-width="1"/><polyline points="9.5 1.5 9.5 4.5 12.5 4.5" fill="none" stroke="#2673B1" stroke-width="1"/><rect x="1" y="7.5" width="14" height="7.5" rx="2" fill="#0060AC"/><text x="8" y="11.25" font-family="Inter, system-ui, sans-serif" font-size="6.2" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="#FFFFFF">&lt;/&gt;</text></svg>
+<text x="403.2" y="13.5" fill="#AFB1B6">p</text>
+<polyline points="403.2,15.5 405.3,14.0 407.4,15.5 409.5,17.0 411.6,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="411.6" y="13.5" fill="#AFB1B6">o</text>
+<polyline points="411.6,15.5 413.7,14.0 415.8,15.5 417.9,17.0 420.0,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="420.0" y="13.5" fill="#AFB1B6">m</text>
+<polyline points="420.0,15.5 422.1,14.0 424.2,15.5 426.3,17.0 428.4,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="428.4" y="13.5" fill="#AFB1B6">.</text>
+<polyline points="428.4,15.5 430.5,14.0 432.6,15.5 434.7,17.0 436.8,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="436.8" y="13.5" fill="#AFB1B6">x</text>
+<polyline points="436.8,15.5 438.9,14.0 441.0,15.5 443.1,17.0 445.2,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="445.2" y="13.5" fill="#AFB1B6">m</text>
+<polyline points="445.2,15.5 447.3,14.0 449.4,15.5 451.5,17.0 453.6,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<text x="453.6" y="13.5" fill="#AFB1B6">l</text>
+<polyline points="453.6,15.5 455.7,14.0 457.8,15.5 459.9,17.0 462.0,15.5" fill="none" stroke="#F57E84" stroke-width="1.2" shape-rendering="geometricPrecision"/>
+<svg x="470.9" y="2.8" xmlns="http://www.w3.org/2000/svg" width="12.5" height="12.5" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5.5 2.5 10.5 2.5 9.5 6.5 11.5 9.5 4.5 9.5 6.5 6.5" fill="none" stroke="#9FA2A8" stroke-width="1"/><polyline points="8 9.5 8 14" fill="none" stroke="#9FA2A8" stroke-width="1"/></svg>
+<rect x="0.0" y="18.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="36.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="54.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="72.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="90.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="108.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="126.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="144.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="162.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="180.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="198.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="216.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="234.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="252.0" width="840.0" height="18" fill="#000000"/>
+<rect x="0.0" y="270.0" width="840.0" height="18" fill="#000000"/>
+</svg>

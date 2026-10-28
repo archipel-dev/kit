@@ -378,7 +378,9 @@ impl<M: 'static> Overlay<M> for Dialog<M> {
             .unwrap_or_default();
         let content_h = self.content.as_ref().map_or(0, |c| c.height(inner_w));
         let info_rows = self.infos.len().min(3) as u16;
-        let mut height = 2 + message_lines.len() as u16 + content_h + info_rows + 3;
+        let island = rt.look.island;
+        let pad = u16::from(island);
+        let mut height = pad + 2 + message_lines.len() as u16 + content_h + info_rows + 3;
         if !message_lines.is_empty() && content_h > 0 {
             height += 1;
         }
@@ -387,24 +389,55 @@ impl<M: 'static> Overlay<M> for Dialog<M> {
         let y = area.y + area.height.saturating_sub(height) / 3;
         let rect = Rect::new(x, y, width, height).intersection(area);
         self.rect = rect;
-        let bg = p.darker_black;
-        fill_rect(buf, rect, Style::default().bg(bg).fg(p.white));
-        rt.hits.add(rect, self.id);
-        let title_color = match self.icon {
-            Some(MessageIcon::Error) => p.red,
-            Some(MessageIcon::Warning) => p.yellow,
-            _ => p.nord_blue,
+        let colors = rt.look.theme.colors;
+        let bg = if island {
+            rt.look.over(colors.popup, colors.popup)
+        } else {
+            p.darker_black
         };
-        title_block(
-            buf,
-            rect,
-            rect.x + 1,
-            rect.y,
-            &self.title,
-            p.on(title_color),
-            title_color,
-        );
-        let mut cy = rect.y + 2;
+        let text = if island {
+            rt.look.over(colors.text, colors.popup)
+        } else {
+            p.white
+        };
+        fill_rect(buf, rect, Style::default().bg(bg).fg(text));
+        rt.hits.add(rect, self.id);
+        if island {
+            crate::popup::draw_box(
+                buf,
+                rect,
+                Style::default()
+                    .fg(rt.look.over(colors.popup_border, colors.popup))
+                    .bg(bg),
+            );
+            put(
+                buf,
+                rect,
+                rect.x + 2,
+                rect.y + 1,
+                &self.title,
+                Style::default()
+                    .fg(rt.look.over(colors.text_strong, colors.popup))
+                    .bg(bg)
+                    .add_modifier(ratatui::style::Modifier::BOLD),
+            );
+        } else {
+            let title_color = match self.icon {
+                Some(MessageIcon::Error) => p.red,
+                Some(MessageIcon::Warning) => p.yellow,
+                _ => p.nord_blue,
+            };
+            title_block(
+                buf,
+                rect,
+                rect.x + 1,
+                rect.y,
+                &self.title,
+                p.on(title_color),
+                title_color,
+            );
+        }
+        let mut cy = rect.y + 2 + pad;
         if !message_lines.is_empty() {
             if let Some(icon) = self.icon {
                 let (glyph, color) = match icon {
@@ -429,7 +462,7 @@ impl<M: 'static> Overlay<M> for Dialog<M> {
                     rect.x + 2 + icon_w,
                     cy,
                     line,
-                    Style::default().fg(p.white).bg(bg),
+                    Style::default().fg(text).bg(bg),
                 );
                 cy += 1;
             }
@@ -466,7 +499,18 @@ impl<M: 'static> Overlay<M> for Dialog<M> {
         }
         // Buttons on the last rows: tertiary at the left, secondary and primary at the right.
         let by = rect.bottom().saturating_sub(2);
-        fill(buf, rect, rect.x, by, rect.width, Style::default().bg(bg));
+        if island {
+            fill(
+                buf,
+                rect,
+                rect.x + 1,
+                by,
+                rect.width.saturating_sub(2),
+                Style::default().bg(bg),
+            );
+        } else {
+            fill(buf, rect, rect.x, by, rect.width, Style::default().bg(bg));
+        }
         let on: Color = bg;
         // Positions first (primary at the far right), then draw left to right so that the
         // focus order is the visual order.

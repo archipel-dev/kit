@@ -36,6 +36,9 @@
 //! images is `docs/tui/README.md`.
 
 pub mod balloon;
+pub mod bar;
+pub mod breadcrumbs;
+pub mod chrome;
 pub mod clipboard;
 pub mod collections;
 pub mod combo;
@@ -46,14 +49,19 @@ pub mod dialog;
 pub mod editor;
 pub mod focus;
 pub mod glyphs;
+pub mod header;
 pub mod hit;
 pub mod input;
+pub mod menubar;
 pub mod overlay;
 pub mod palette;
 pub mod pointer;
 pub mod popup;
+pub mod quantize;
 pub mod runtime;
 pub mod statusbar;
+pub mod stripe;
+pub mod tabbar;
 pub mod tabs;
 pub mod testing;
 pub mod textarea;
@@ -62,6 +70,79 @@ pub mod tooltip;
 pub mod workbench;
 
 pub use archipel_icons::{Glyph, Language, Symbol, SymbolKind};
+pub use archipel_kit_model as model;
+
+/// The model components this crate renders, as (vocabulary name, rendering type, props type).
+/// `archipel_kit_model::vocabulary::VOCABULARY` lists them all; what is missing here is in
+/// [`model::vocabulary::PENDING_TUI`].
+pub fn rendered_components() -> Vec<(&'static str, &'static str, &'static str)> {
+    use std::any::type_name as t;
+    vec![
+        (
+            "ToolbarButton",
+            t::<bar::ToolbarControl>(),
+            t::<model::ToolbarButton>(),
+        ),
+        (
+            "ToolbarDropdown",
+            t::<bar::ToolbarControl>(),
+            t::<model::ToolbarDropdown>(),
+        ),
+        ("Toolbar", t::<bar::ToolbarControl>(), t::<model::Toolbar>()),
+        (
+            "MenuBar",
+            t::<menubar::MenuBarControl>(),
+            t::<model::MenuBar>(),
+        ),
+        (
+            "MenuHeader",
+            t::<menubar::MenuBarControl>(),
+            t::<model::MenuHeader>(),
+        ),
+        (
+            "MenuItem",
+            t::<menubar::MenuPopup>(),
+            t::<model::MenuItem>(),
+        ),
+        (
+            "MenuSeparator",
+            t::<menubar::MenuPopup>(),
+            t::<model::MenuEntry>(),
+        ),
+        (
+            "ToolStripe",
+            t::<stripe::ToolStripeControl>(),
+            t::<model::ToolStripe>(),
+        ),
+        (
+            "StripeButton",
+            t::<stripe::ToolStripeControl>(),
+            t::<model::StripeButton>(),
+        ),
+        (
+            "PanelHeader",
+            t::<header::PanelHeaderControl>(),
+            t::<model::PanelHeader>(),
+        ),
+        ("TabBar", t::<tabbar::TabBarControl>(), t::<model::TabBar>()),
+        ("Tab", t::<tabbar::TabBarControl>(), t::<model::Tab>()),
+        (
+            "StatusBar",
+            t::<statusbar::StatusItemsControl>(),
+            t::<model::StatusBar>(),
+        ),
+        (
+            "StatusBarItem",
+            t::<statusbar::StatusItemsControl>(),
+            t::<model::StatusBarItem>(),
+        ),
+        (
+            "Breadcrumbs",
+            t::<breadcrumbs::BreadcrumbsControl>(),
+            t::<model::Breadcrumbs>(),
+        ),
+    ]
+}
 
 /// The code blocks of `docs/tui/README.md`, compiled and run as doctests.
 #[cfg(doctest)]
@@ -84,6 +165,12 @@ pub struct Look {
     pub theme: Theme,
     /// The NvChad color roles derived from the theme.
     pub palette: NvChadPalette,
+    /// Draw ASCII stand-ins instead of Nerd Font characters (`tui.glyphs = ascii`): every
+    /// chrome component keeps its geometry, a glyph is still one cell.
+    pub ascii: bool,
+    /// Draw overlays (dialogs) as the GUI's Islands popups: the `popup` surface in a
+    /// `popup_border` box, a bold title and the theme's text color. Set by [`Look::gui`].
+    pub island: bool,
 }
 
 impl Look {
@@ -97,10 +184,74 @@ impl Look {
         Self::new(Theme::light())
     }
 
-    /// `theme` in the terminal.
+    /// `theme` in the terminal, with the NvChad roles.
     pub fn new(theme: Theme) -> Self {
         let palette = NvChadPalette::new(&theme);
-        Self { theme, palette }
+        Self {
+            theme,
+            palette,
+            ascii: false,
+            island: false,
+        }
+    }
+
+    /// `theme` as the GUI shows it (TUI-GUI-120): every token of
+    /// [`Theme::colors`](archipel_kit::Theme) maps one to one to a 24-bit color, a
+    /// translucent token is blended over the surface it is drawn on
+    /// ([`color_over`](Self::color_over)), and the roles of the NvChad palette are filled
+    /// with the GUI's surfaces so older components follow. The chrome components of this
+    /// crate ([`menubar`], [`stripe`], [`header`], [`tabbar`], [`statusbar`]) read the tokens
+    /// through [`over`](Self::over) and [`tone`](Self::tone).
+    pub fn gui(theme: Theme) -> Self {
+        let palette = NvChadPalette::gui(&theme);
+        Self {
+            theme,
+            palette,
+            ascii: false,
+            island: true,
+        }
+    }
+
+    /// The same look drawing ASCII stand-ins for icons (see [`Look::ascii`]).
+    #[must_use]
+    pub fn with_ascii(mut self, ascii: bool) -> Self {
+        self.ascii = ascii;
+        self
+    }
+
+    /// The color of a GUI `token` drawn over `surface` (another token): opaque tokens are
+    /// their RGB, translucent ones are blended.
+    pub fn over(
+        &self,
+        token: archipel_kit::egui::Color32,
+        surface: archipel_kit::egui::Color32,
+    ) -> Color {
+        let [sr, sg, sb, _] = surface.to_srgba_unmultiplied();
+        let base = archipel_kit::egui::Color32::from_rgb(sr, sg, sb);
+        self.color_over(token, base)
+    }
+
+    /// The text or icon color of a semantic [`Tone`](model::Tone) over `surface`.
+    pub fn tone(&self, tone: model::Tone, surface: archipel_kit::egui::Color32) -> Color {
+        use model::Tone;
+        let c = &self.theme.colors;
+        let token = match tone {
+            Tone::Default => c.text,
+            Tone::Strong => c.text_strong,
+            Tone::Secondary => c.text_secondary,
+            Tone::Info => c.text_placeholder,
+            Tone::Disabled => c.text_disabled,
+            Tone::Accent => c.accent,
+            Tone::Run => c.run,
+            Tone::Stop => c.stop,
+            Tone::Error => c.error,
+            Tone::Warning => c.warning,
+            Tone::Success => c.success,
+            Tone::Modified => c.vcs_modified,
+            Tone::Link => c.link,
+            _ => c.text,
+        };
+        self.over(token, surface)
     }
 
     /// `color` as a terminal color, blended over the editor background when it is
@@ -159,6 +310,9 @@ impl Look {
 
     /// The Nerd Font character of `glyph`.
     pub fn glyph(&self, glyph: Glyph) -> String {
+        if self.ascii {
+            return glyphs::ascii(glyph).to_string();
+        }
         glyphs::nerd_font(glyph).to_string()
     }
 

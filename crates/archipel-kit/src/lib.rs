@@ -64,6 +64,7 @@ pub mod wm;
 #[cfg(feature = "testing")]
 pub mod testing;
 
+pub use archipel_kit_model as model;
 pub use egui;
 pub use icons::{Glyph, Icon};
 pub use look::{LookSettings, Metrics, UiLook, ViewMode};

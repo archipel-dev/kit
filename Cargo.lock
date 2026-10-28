@@ -237,6 +237,7 @@ version = "0.4.0"
 dependencies = [
  "archipel-icons",
  "archipel-kit",
+ "archipel-kit-model",
  "eframe",
  "egui",
  "egui_kittest",
@@ -258,11 +259,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "archipel-kit-model"
+version = "0.4.0"
+dependencies = [
+ "archipel-icons",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "archipel-kit-tui"
 version = "0.4.0"
 dependencies = [
  "archipel-icons",
  "archipel-kit",
+ "archipel-kit-model",
  "ratatui",
  "unicode-width",
 ]

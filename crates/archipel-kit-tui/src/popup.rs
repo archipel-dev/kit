@@ -59,6 +59,9 @@ pub struct RowSpec {
     pub sub: bool,
     /// The mnemonic character that chooses the row.
     pub mnemonic: Option<char>,
+    /// The index (in characters) of the letter of `text` that is underlined as the row's
+    /// mnemonic ([`PopupStyle::Island`] menus).
+    pub underline: Option<usize>,
 }
 
 /// A level of a popup: rows and options.
@@ -117,6 +120,11 @@ pub enum PopupStyle {
     Menu,
     /// A Telescope float: title block, prompt, results.
     Telescope,
+    /// The GUI's popup: a rounded box in the popup border color on the popup surface, rows
+    /// with a 2-cell icon column (the check mark of a toggle too), the text with its
+    /// underlined mnemonic, the shortcut right aligned in the secondary color and a 2-cell
+    /// column for the submenu arrow (TUI-GUI-038).
+    Island,
 }
 
 /// Where level 0 opens.
@@ -627,7 +635,14 @@ impl PopupChain {
             }
             PointerKind::ScrollUp | PointerKind::ScrollDown => {
                 let level = &mut self.levels[depth];
-                let total = visible_rows(&spec, &level.query).len();
+                // The lines are the rows and the separators between them.
+                let visible = visible_rows(&spec, &level.query);
+                let separators = visible
+                    .iter()
+                    .skip(1)
+                    .filter(|r| spec.rows[**r].separator.is_some())
+                    .count();
+                let total = visible.len() + separators;
                 let max = total.saturating_sub(level.page.max(1));
                 level.scroll = (level.scroll as i32 + p.wheel() * 3).clamp(0, max as i32) as usize;
                 level.scroll_to = false;
@@ -761,6 +776,26 @@ impl PopupChain {
 
 // ----- drawing -----
 
+/// A rounded single-line box around `rect` in `style`.
+pub(crate) fn draw_box(buf: &mut Buffer, rect: Rect, style: Style) {
+    if rect.width < 2 || rect.height < 2 {
+        return;
+    }
+    let (l, r, t, b) = (rect.x, rect.right() - 1, rect.y, rect.bottom() - 1);
+    for x in l + 1..r {
+        put(buf, rect, x, t, "─", style);
+        put(buf, rect, x, b, "─", style);
+    }
+    for y in t + 1..b {
+        put(buf, rect, l, y, "│", style);
+        put(buf, rect, r, y, "│", style);
+    }
+    put(buf, rect, l, t, "╭", style);
+    put(buf, rect, r, t, "╮", style);
+    put(buf, rect, l, b, "╰", style);
+    put(buf, rect, r, b, "╯", style);
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Line {
     Separator(usize),
@@ -806,6 +841,17 @@ fn surface(look: &Look, style: PopupStyle) -> Surface {
             selected_fg: p.white,
             disabled: p.grey_fg,
         },
+        PopupStyle::Island => {
+            let c = &look.theme.colors;
+            Surface {
+                bg: look.over(c.popup, c.island),
+                fg: look.over(c.text, c.popup),
+                muted: look.over(c.text_secondary, c.popup),
+                selected_bg: look.over(c.selection_popup, c.popup),
+                selected_fg: look.over(c.selection_text, c.selection_popup),
+                disabled: look.over(c.text_disabled, c.popup),
+            }
+        }
     }
 }
 
@@ -891,6 +937,8 @@ impl PopupChain {
         let level = &mut self.levels[depth];
         let visible = visible_rows(spec, &level.query);
         let telescope = style == PopupStyle::Telescope;
+        let gui = style == PopupStyle::Island;
+        let border = u16::from(gui);
         let show_prompt = spec.speed_search && (telescope || !level.query.is_empty());
         let show_title = !telescope && spec.title.is_some()
             || (telescope && !show_prompt && spec.title.is_some());
@@ -906,17 +954,17 @@ impl PopupChain {
         // Width.
         let rows_iter = || visible.iter().map(|r| &spec.rows[*r]);
         let text_w = rows_iter().map(|r| text_width(&r.text)).max().unwrap_or(0);
-        let check_w = if rows_iter().any(|r| r.checked.is_some()) {
+        let check_w = if !gui && rows_iter().any(|r| r.checked.is_some()) {
             2
         } else {
             0
         };
-        let icon_w = if rows_iter().any(|r| r.icon.is_some()) {
+        let icon_w = if gui || rows_iter().any(|r| r.icon.is_some()) {
             2
         } else {
             0
         };
-        let mnem_w = if spec.mnemonics { 3 } else { 0 };
+        let mnem_w = if spec.mnemonics && !gui { 3 } else { 0 };
         let sc_w = rows_iter()
             .filter_map(|r| r.shortcut.as_deref())
             .map(text_width)
@@ -924,7 +972,7 @@ impl PopupChain {
             .unwrap_or(0);
         let chevron_w = if rows_iter().any(|r| r.sub) { 2 } else { 0 };
         let title_w = spec.title.as_deref().map_or(0, |t| text_width(t) + 4);
-        let content = 2
+        let content = if gui { 2 * border } else { 2 }
             + check_w
             + icon_w
             + mnem_w
@@ -958,7 +1006,7 @@ impl PopupChain {
         }
         .min(screen.width.max(1));
         // Height.
-        let max_body = screen.height.saturating_sub(header + 1).max(1);
+        let max_body = screen.height.saturating_sub(header + 1 + 2 * border).max(1);
         let want_body = lines.len().max(1) as u16;
         let body = if centered {
             // The results area fills the float even when there are few results.
@@ -971,7 +1019,7 @@ impl PopupChain {
         } else {
             want_body.min(max_body)
         };
-        let height = (header + body).min(screen.height.max(1));
+        let height = (header + body + 2 * border).min(screen.height.max(1));
         // Position.
         let (mut x, mut y) = match (depth, origin) {
             (0, _) => match placement {
@@ -1004,6 +1052,7 @@ impl PopupChain {
         let rect = Rect::new(x, y, width, height);
         level.rect = rect;
         level.page = body as usize;
+        let body = body.min(height.saturating_sub(header + 2 * border));
         // Scroll.
         let selected_line = level.selected.and_then(|s| {
             lines
@@ -1024,7 +1073,14 @@ impl PopupChain {
         }
         // Paint.
         fill_rect(buf, rect, Style::default().bg(colors.bg).fg(colors.fg));
-        let mut y = rect.y;
+        if gui {
+            let edge = rt.look.over(
+                rt.look.theme.colors.popup_border,
+                rt.look.theme.colors.popup,
+            );
+            draw_box(buf, rect, Style::default().fg(edge).bg(colors.bg));
+        }
+        let mut y = rect.y + border;
         if show_prompt {
             let row = Rect::new(rect.x, y, rect.width, 1);
             fill(buf, row, row.x, y, row.width, Style::default().bg(p.black2));
@@ -1078,11 +1134,20 @@ impl PopupChain {
         level.row_rects.clear();
         let comparator = SpeedSearchComparator::new(&level.query);
         for (cy, line) in (y..).zip(lines.iter().skip(level.scroll).take(body as usize)) {
-            let row_rect = Rect::new(rect.x, cy, rect.width, 1);
+            let row_rect = Rect::new(rect.x + border, cy, rect.width - 2 * border, 1);
             match *line {
                 Line::Separator(row) => {
                     let caption = spec.rows[row].separator.clone().flatten();
-                    let line_style = Style::default().fg(p.line).bg(colors.bg);
+                    let line_style = Style::default()
+                        .fg(if gui {
+                            rt.look.over(
+                                rt.look.theme.colors.popup_border,
+                                rt.look.theme.colors.popup,
+                            )
+                        } else {
+                            p.line
+                        })
+                        .bg(colors.bg);
                     for sx in rect.x + 1..rect.right().saturating_sub(1) {
                         put(buf, row_rect, sx, cy, "─", line_style);
                     }
@@ -1111,7 +1176,21 @@ impl PopupChain {
                     let base = Style::default().bg(bg).fg(fg);
                     fill(buf, row_rect, row_rect.x, cy, row_rect.width, base);
                     let mut x = rect.x + 1;
-                    if check_w > 0 {
+                    if gui && r.checked == Some(true) {
+                        put(
+                            buf,
+                            row_rect,
+                            x,
+                            cy,
+                            &rt.look.glyph(crate::Glyph::Check),
+                            base.fg(if selected {
+                                fg
+                            } else {
+                                rt.look
+                                    .over(rt.look.theme.colors.accent, rt.look.theme.colors.popup)
+                            }),
+                        );
+                    } else if check_w > 0 {
                         if r.checked == Some(true) {
                             put(
                                 buf,
@@ -1124,7 +1203,7 @@ impl PopupChain {
                         }
                         x += 2;
                     }
-                    if spec.mnemonics {
+                    if spec.mnemonics && !gui {
                         if let Some(m) = r.mnemonic {
                             put(
                                 buf,
@@ -1138,7 +1217,7 @@ impl PopupChain {
                         }
                         x += 3;
                     }
-                    if let Some(icon) = r.icon {
+                    if let Some(icon) = r.icon.filter(|_| !(gui && r.checked == Some(true))) {
                         let (ch, color) = icon.char_and_color(&rt.look);
                         let color = if selected || open || !r.selectable {
                             fg
@@ -1156,7 +1235,9 @@ impl PopupChain {
                     let mut cx = x;
                     for (i, ch) in r.text.chars().enumerate() {
                         let hit = fragments.iter().any(|f| f.contains(&i));
-                        let st = if hit {
+                        let st = if gui && r.underline == Some(i) && !hit {
+                            base.add_modifier(Modifier::UNDERLINED)
+                        } else if hit {
                             base.fg(if selected { fg } else { p.orange })
                                 .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
                         } else if selected && telescope {
@@ -1217,7 +1298,7 @@ impl PopupChain {
                 put(
                     buf,
                     rect,
-                    rect.right() - 1,
+                    rect.right() - 1 - border,
                     y + (top + i) as u16,
                     "▐",
                     Style::default().fg(p.grey).bg(colors.bg),
@@ -1267,6 +1348,7 @@ impl<T: Clone + 'static> PopupSource for StepSource<T> {
                     .map(|s| s.title().map(str::to_owned)),
                 sub: step.has_substep(value),
                 mnemonic: step.mnemonic_for(value),
+                underline: None,
             });
         }
         Some(LevelSpec {
@@ -1378,6 +1460,7 @@ impl PopupSource for ActionMenuSource {
                         separator: separator.take(),
                         sub: false,
                         mnemonic: mnemonic_for(self.numbering, number),
+                        underline: None,
                     });
                 }
                 ActionRow::Group { presentation, .. } => {
@@ -1391,6 +1474,7 @@ impl PopupSource for ActionMenuSource {
                         separator: separator.take(),
                         sub: true,
                         mnemonic: mnemonic_for(self.numbering, number),
+                        underline: None,
                     });
                 }
                 _ => {}
@@ -1481,6 +1565,11 @@ pub struct PopupHost<S: PopupSource> {
 }
 
 impl<S: PopupSource> PopupHost<S> {
+    /// A popup of `source` at `placement` with `options`.
+    pub fn from_parts(source: S, placement: Placement, options: PopupOptions) -> Self {
+        Self::new(source, placement, options)
+    }
+
     fn new(source: S, placement: Placement, options: PopupOptions) -> Self {
         Self {
             source,

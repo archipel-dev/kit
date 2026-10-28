@@ -935,27 +935,42 @@ impl From<Symbol> for RowIcon {
 impl RowIcon {
     /// The character and its color in `look`.
     pub fn char_and_color(self, look: &Look) -> (char, Color) {
+        // ASCII mode: one cell, one ASCII stand-in per icon (`Look::ascii`).
+        let glyph_char = |glyph: Glyph| {
+            if look.ascii {
+                glyphs::ascii(glyph)
+            } else {
+                glyphs::nerd_font(glyph)
+            }
+        };
         match self {
-            RowIcon::Glyph(Glyph::Folder) => {
-                (glyphs::nerd_font(Glyph::Folder), look.palette.folder_bg)
-            }
+            RowIcon::Glyph(Glyph::Folder) => (glyph_char(Glyph::Folder), look.palette.folder_bg),
             RowIcon::Glyph(Glyph::FolderOpen) => {
-                (glyphs::nerd_font(Glyph::FolderOpen), look.palette.folder_bg)
+                (glyph_char(Glyph::FolderOpen), look.palette.folder_bg)
             }
-            RowIcon::Glyph(glyph) => (glyphs::nerd_font(glyph), look.glyph_color(glyph)),
+            RowIcon::Glyph(glyph) => (glyph_char(glyph), look.glyph_color(glyph)),
             RowIcon::Folder(open) => (
-                glyphs::nerd_font(if open {
+                glyph_char(if open {
                     Glyph::FolderOpen
                 } else {
                     Glyph::Folder
                 }),
                 look.palette.folder_bg,
             ),
-            RowIcon::Language(language) => {
-                (glyphs::language(language), look.readable(language.color()))
-            }
+            RowIcon::Language(language) => (
+                if look.ascii {
+                    glyphs::ascii(Glyph::File)
+                } else {
+                    glyphs::language(language)
+                },
+                look.readable(language.color()),
+            ),
             RowIcon::Symbol(symbol) => (
-                glyphs::symbol(symbol.kind),
+                if look.ascii {
+                    '*'
+                } else {
+                    glyphs::symbol(symbol.kind)
+                },
                 look.readable(symbol.kind.color()),
             ),
         }
