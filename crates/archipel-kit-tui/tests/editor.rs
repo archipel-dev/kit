@@ -1381,7 +1381,7 @@ fn scroll_to_caret_shows_a_caret_far_down_a_wrapped_line() {
         30,
         10,
     );
-    let end = h.app.editor.document.len_chars();
+    let end = h.app.editor.document.len();
     {
         let Ed { editor, .. } = &mut h.app;
         let doc = editor.document.clone();
