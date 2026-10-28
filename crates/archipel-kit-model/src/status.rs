@@ -22,6 +22,9 @@ pub struct StatusBarItem {
     pub spinner: bool,
     /// A progress bar before the text, 0.0 to 1.0.
     pub progress: Option<f32>,
+    /// The rows of the widget's menu (a click, or a right click in the GUI, opens it): its
+    /// actions and details. Empty when the widget has no menu.
+    pub menu: Vec<crate::MenuEntry>,
     /// The text may be cut with an ellipsis to the room that is left (a status message).
     pub elide: bool,
 }
@@ -40,6 +43,7 @@ impl StatusBarItem {
             spinner: false,
             progress: None,
             elide: false,
+            menu: Vec::new(),
         }
     }
 }

@@ -47,8 +47,9 @@ mod tone;
 mod toolbar;
 pub mod vocabulary;
 
+pub use archipel_icons::Glyph;
 pub use breadcrumbs::{BreadcrumbEvent, Breadcrumbs, Crumb};
-pub use icon::{Avatar, IconKey};
+pub use icon::{Avatar, IconKey, avatar_rgb};
 pub use menu::{MenuBar, MenuEntry, MenuEvent, MenuHeader, MenuItem};
 pub use outline::{Outline, OutlineEntry};
 pub use panel::{PanelHeader, PanelHeaderEvent, PanelTab};
