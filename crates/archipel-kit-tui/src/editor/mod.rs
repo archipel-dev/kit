@@ -87,6 +87,16 @@ pub struct GutterClick {
     pub modifiers: KeyModifiers,
 }
 
+/// The gutter cell the pointer is on, for hover effects the application draws itself (the
+/// preview of the breakpoint a click on the line number would set).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GutterHover {
+    /// The logical line (0-based).
+    pub line: usize,
+    /// Where in the gutter.
+    pub area: GutterArea,
+}
+
 /// What the editor did with an event or in a frame.
 #[derive(Debug, Clone, Default, PartialEq)]
 #[non_exhaustive]
@@ -101,6 +111,9 @@ pub struct EditorOutput {
     pub navigation: Option<NavigationRequest>,
     /// Clicks in the gutter the component did not use itself.
     pub gutter_clicks: Vec<GutterClick>,
+    /// The pointer moved onto this gutter cell (set by the move event itself; moving off the
+    /// gutter reports nothing, the application clears its preview on any other pointer event).
+    pub gutter_hover: Option<GutterHover>,
     /// A hint for the user ("Not found, try again to search from top").
     pub hint: Option<String>,
     /// A right press on the text at this cell (the caret was moved there unless it was in
@@ -467,6 +480,7 @@ pub struct EditorComponent<'a> {
     virtual_text: bool,
     scrollbar: Option<bool>,
     icons: &'a [GutterIcon],
+    lanes: usize,
     markers: &'a [ChangeMarker],
     highlights: &'a [RangeHighlight],
     completer: Option<&'a dyn Completer>,
@@ -495,6 +509,7 @@ pub(crate) struct Opts<'a> {
     pub virtual_text: bool,
     pub scrollbar: Option<bool>,
     pub icons: &'a [GutterIcon],
+    pub lanes: usize,
     pub markers: &'a [ChangeMarker],
     pub highlights: &'a [RangeHighlight],
     pub completer: Option<&'a dyn Completer>,
@@ -549,6 +564,7 @@ impl<'a> EditorComponent<'a> {
             virtual_text: false,
             scrollbar: None,
             icons: &[],
+            lanes: 0,
             markers: &[],
             highlights: &[],
             completer: None,
@@ -656,6 +672,14 @@ impl<'a> EditorComponent<'a> {
         self
     }
 
+    /// Reserves `count` lanes in the sign column even while no icon uses them, so the text does
+    /// not shift when an icon appears (a run arrow after a pause in typing). Icons of higher
+    /// lanes still widen the column.
+    pub fn lanes(mut self, count: usize) -> Self {
+        self.lanes = count;
+        self
+    }
+
     /// Icons in the sign column (breakpoints, bookmarks, run arrows); clicks are reported in
     /// [`EditorOutput::gutter_clicks`].
     pub fn gutter_icons(mut self, icons: &'a [GutterIcon]) -> Self {
@@ -734,6 +758,7 @@ impl<'a> EditorComponent<'a> {
             virtual_text: self.virtual_text,
             scrollbar: self.scrollbar,
             icons: self.icons,
+            lanes: self.lanes,
             markers: self.markers,
             highlights: self.highlights,
             completer: self.completer,
@@ -851,7 +876,13 @@ pub(crate) fn geometry(opts: &Opts<'_>, editor: &Editor, state: &EditorState, ar
     let stripe_on = opts.scrollbar.unwrap_or(
         !opts.highlights.is_empty() || (state.find.open && !state.find.query.is_empty()),
     ) && body.width > 12;
-    let lane_count = opts.icons.iter().map(|i| i.lane + 1).max().unwrap_or(0);
+    let lane_count = opts
+        .icons
+        .iter()
+        .map(|i| i.lane + 1)
+        .max()
+        .unwrap_or(0)
+        .max(opts.lanes);
     let has_sign = opts.line_numbers || lane_count > 0 || !opts.markers.is_empty();
     let lanes = if has_sign { lane_count.max(1) } else { 0 };
     let digits = if opts.line_numbers {

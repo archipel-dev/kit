@@ -398,11 +398,11 @@ impl File {
 `EditorState` keeps what only the view knows: the scroll position, the find bar and its
 history, a mouse gesture in progress, the completion menu, a hint. The options are the GUI's:
 `viewer`, `line_numbers`, `wrap` (soft wrap), `folding`, `show_whitespace`, `indent_guides`,
-`right_margin`, `gutter_icons`, `change_markers`, `highlights`, `completer`,
+`right_margin`, `gutter_icons`, `lanes`, `change_markers`, `highlights`, `completer`,
 `gutter_click_selects_line`, `bracket_folding`, `enabled`, `tab_indents`, `stick_to_bottom`,
 `scroll_to_line`, `placeholder`, `keymap_os`, plus `virtual_text` and `scrollbar`. What a frame
 and an event report is in `EditorOutput`: `text_changed`, `carets_moved`, `navigation`,
-`gutter_clicks`, `hint`, `hover`, `fold_preview`, `stripe_hover`, `selection`, `caret_cell`,
+`gutter_clicks`, `gutter_hover`, `hint`, `hover`, `fold_preview`, `stripe_hover`, `selection`, `caret_cell`,
 `line_count`, `visible_lines`, `matches` and `completed`. The editor has every feature of the GUI
 `EditorComponent`; `docs/tui-editor-parity.md` is the audit, and the logic both share is
 `archipel_kit::editor::logic`. Any `SyntaxHighlighter` of the

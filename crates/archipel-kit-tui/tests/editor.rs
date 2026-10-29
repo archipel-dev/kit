@@ -79,6 +79,7 @@ struct Ed {
     hl: CodeHighlighter,
     highlights: Vec<RangeHighlight>,
     icons: Vec<GutterIcon>,
+    lanes: usize,
     markers: Vec<ChangeMarker>,
     last: EditorOutput,
     clicks: Vec<GutterClick>,
@@ -92,12 +93,14 @@ macro_rules! component {
             hl,
             highlights,
             icons,
+            lanes,
             markers,
             ..
         } = $s;
         let mut c = EditorComponent::new(ID, editor)
             .highlights(highlights)
             .gutter_icons(icons)
+            .lanes(*lanes)
             .change_markers(markers)
             .viewer(cfg.viewer)
             .wrap(cfg.wrap)
@@ -161,6 +164,7 @@ fn app(text: &str, cfg: Cfg) -> Ed {
         hl: CodeHighlighter::new(CodeLanguage::Rust),
         highlights: Vec::new(),
         icons: Vec::new(),
+        lanes: 0,
         markers: Vec::new(),
         last: EditorOutput::default(),
         clicks: Vec::new(),
@@ -870,6 +874,47 @@ fn with_the_classic_rule_a_click_on_a_line_number_selects_the_line() {
     h.advance(1.0);
     h.click_with(4, 3, KeyModifiers::SHIFT);
     assert_eq!(selection(&h), Some((12, 76)));
+}
+
+#[test]
+fn the_pointer_over_the_gutter_reports_its_line_and_area() {
+    let mut h = harness(CODE, Cfg::default());
+    h.hover(4, 2);
+    assert_eq!(
+        h.app.last.gutter_hover.map(|g| (g.line, g.area)),
+        Some((2, GutterArea::LineNumber))
+    );
+    h.hover(1, 3);
+    assert_eq!(
+        h.app.last.gutter_hover.map(|g| (g.line, g.area)),
+        Some((3, GutterArea::Icon(0)))
+    );
+    h.hover(0, 1);
+    assert_eq!(
+        h.app.last.gutter_hover.map(|g| (g.line, g.area)),
+        Some((1, GutterArea::ChangeMarker))
+    );
+    // The text is not the gutter.
+    h.hover(TEXT_X + 2, 2);
+    assert_eq!(h.app.last.gutter_hover, None);
+}
+
+#[test]
+fn reserved_lanes_keep_the_text_where_it_is_when_an_icon_appears() {
+    // Two lanes reserved: the second one is empty, then an icon arrives in it.
+    let mut ed = app(CODE, Cfg::default());
+    ed.lanes = 2;
+    let mut h = harness_with(ed, Look::dark(), 48, 10);
+    let first = h.find("fn main").expect("text").0;
+    assert_eq!(first, TEXT_X + 2, "two lanes of two cells");
+    h.app.icons = vec![GutterIcon::new(0, Glyph::Run, "Run").lane(1)];
+    h.draw();
+    assert_eq!(h.find("fn main").expect("text").0, first);
+    // Without the reservation the same icon pushes the text right.
+    let mut ed = app(CODE, Cfg::default());
+    ed.icons = vec![GutterIcon::new(0, Glyph::Run, "Run").lane(1)];
+    let h = harness_with(ed, Look::dark(), 48, 10);
+    assert_eq!(h.find("fn main").expect("text").0, first);
 }
 
 #[test]

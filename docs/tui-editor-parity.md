@@ -80,6 +80,8 @@ Tests: `crates/archipel-kit-tui/tests/editor_parity.rs` (new behavior), `tests/e
 | Fold preview on hover | missing | present | `resting_on_a_fold_placeholder_previews_the_folded_lines` |
 | Line numbers, icons, change markers, fold column | present | present | |
 | Click areas, Alt+click on a chevron | present | present | |
+| Reserved icon lanes | missing | `EditorComponent::lanes(n)` keeps `n` two-cell lanes so the text does not shift when an icon appears | `reserved_lanes_keep_the_text_where_it_is_when_an_icon_appears` |
+| Gutter hover cell (the preview of a breakpoint on a line number) | missing | `gutter_hover: Option<GutterHover>` on a pointer move over the gutter | `the_pointer_over_the_gutter_reports_its_line_and_area` |
 | Gutter icon names | missing | present | the icon's `name` floats after 500 ms: `a_gutter_icon_names_itself_after_the_delay` |
 | Classic outline folding (anchors and a line along the region) | missing | by design | it belongs to the Classic look; NvChad folds with chevrons |
 
