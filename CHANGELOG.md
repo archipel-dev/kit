@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.0](https://github.com/archipel-dev/kit/compare/v0.4.0...v0.5.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **tui:** Look has a new public field `ascii`, Caps has the new fields `truecolor`, `super_reported` and `curly`, popup::RowSpec has `underline` and PopupStyle has the variant `Island`.
+
+### Features
+
+* **theme:** yellow search match with dark text, underlined menu mnemonics, New UI status bar 30 ([#52](https://github.com/archipel-dev/kit/issues/52)) ([577ce54](https://github.com/archipel-dev/kit/commit/577ce543bef1ecb2ee5ab5532198924003ef9ae1))
+* **tui:** reserved gutter lanes and gutter hover in the editor component ([#57](https://github.com/archipel-dev/kit/issues/57)) ([c38dbba](https://github.com/archipel-dev/kit/commit/c38dbba77ad8672cd6ffa8c844091df141ebe64d))
+* **tui:** shared component props and GUI-look terminal chrome components ([#54](https://github.com/archipel-dev/kit/issues/54)) ([c31a18b](https://github.com/archipel-dev/kit/commit/c31a18b605ed9efdc363a7b2d20dda5abd4f6042))
+
+
+### Bug Fixes
+
+* **tui:** Esc closes the main menu and hands row 0 back to the toolbar ([#56](https://github.com/archipel-dev/kit/issues/56)) ([b24cc47](https://github.com/archipel-dev/kit/commit/b24cc47afc0ad880fb38ec726713a2d8a0eea47d))
+* **tui:** map legacy Ctrl+4/5/6 to Ctrl+\ ] ^ so the chord leader works without the kitty protocol ([#58](https://github.com/archipel-dev/kit/issues/58)) ([c81f83d](https://github.com/archipel-dev/kit/commit/c81f83d703a9d6d53f929ff16dfa7b81f15b864c))
+* **tui:** the editor view follows the caret inside a long wrapped line ([#55](https://github.com/archipel-dev/kit/issues/55)) ([f353121](https://github.com/archipel-dev/kit/commit/f3531215823bdfe368dcdd15e252b1830dd9cbf6))
+
 ## [0.4.0](https://github.com/archipel-dev/kit/compare/v0.3.1...v0.4.0) (2026-10-26)
 
 
