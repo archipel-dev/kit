@@ -151,6 +151,14 @@ pub(crate) fn mouse(
     match p.kind {
         PointerKind::Down(button) => press(opts, editor, rt, st, &p, button, out),
         PointerKind::Up(button) => release(opts, editor, st, &p, button, out),
+        PointerKind::Move if p.target == Some(opts.gutter_id()) => {
+            let v = view(opts, editor, st);
+            let at = locate(editor, &v, st, p.x, p.y);
+            out.gutter_hover = Some(super::GutterHover {
+                line: at.logical,
+                area: v.geo.gutter_area(p.x),
+            });
+        }
         PointerKind::Drag(_) if st.drag.is_some() => {
             drag(opts, editor, rt, st, &p, out);
             out.consumed = true;

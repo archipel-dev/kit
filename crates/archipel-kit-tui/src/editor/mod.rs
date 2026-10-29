@@ -87,6 +87,16 @@ pub struct GutterClick {
     pub modifiers: KeyModifiers,
 }
 
+/// The gutter cell the pointer is on, for hover effects the application draws itself (the
+/// preview of the breakpoint a click on the line number would set).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GutterHover {
+    /// The logical line (0-based).
+    pub line: usize,
+    /// Where in the gutter.
+    pub area: GutterArea,
+}
+
 /// What the editor did with an event or in a frame.
 #[derive(Debug, Clone, Default, PartialEq)]
 #[non_exhaustive]
@@ -101,6 +111,9 @@ pub struct EditorOutput {
     pub navigation: Option<NavigationRequest>,
     /// Clicks in the gutter the component did not use itself.
     pub gutter_clicks: Vec<GutterClick>,
+    /// The pointer moved onto this gutter cell (set by the move event itself; moving off the
+    /// gutter reports nothing, the application clears its preview on any other pointer event).
+    pub gutter_hover: Option<GutterHover>,
     /// A hint for the user ("Not found, try again to search from top").
     pub hint: Option<String>,
     /// A right press on the text at this cell (the caret was moved there unless it was in

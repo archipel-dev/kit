@@ -873,6 +873,29 @@ fn with_the_classic_rule_a_click_on_a_line_number_selects_the_line() {
 }
 
 #[test]
+fn the_pointer_over_the_gutter_reports_its_line_and_area() {
+    let mut h = harness(CODE, Cfg::default());
+    h.hover(4, 2);
+    assert_eq!(
+        h.app.last.gutter_hover.map(|g| (g.line, g.area)),
+        Some((2, GutterArea::LineNumber))
+    );
+    h.hover(1, 3);
+    assert_eq!(
+        h.app.last.gutter_hover.map(|g| (g.line, g.area)),
+        Some((3, GutterArea::Icon(0)))
+    );
+    h.hover(0, 1);
+    assert_eq!(
+        h.app.last.gutter_hover.map(|g| (g.line, g.area)),
+        Some((1, GutterArea::ChangeMarker))
+    );
+    // The text is not the gutter.
+    h.hover(TEXT_X + 2, 2);
+    assert_eq!(h.app.last.gutter_hover, None);
+}
+
+#[test]
 fn a_click_on_a_gutter_icon_is_reported() {
     let mut ed = app(CODE, Cfg::default());
     ed.icons = vec![GutterIcon::new(1, Glyph::Bookmark, "Bookmark")];
