@@ -581,6 +581,12 @@ with the Read-Only toggle (Find Action or the editor's context menu).
   and no Super; on macOS Option+digit types a symbol. The fallbacks above cover the bound
   actions. With the kitty keyboard protocol (kitty, WezTerm, Ghostty, foot, recent Alacritty and
   iTerm2) every combo works, key release is reported, and double Shift can be detected.
+- **Ctrl+\\, Ctrl+], Ctrl+^**: a legacy terminal sends these as the bytes 0x1C, 0x1D and 0x1E,
+  which crossterm reports as Ctrl+4, Ctrl+5 and Ctrl+6. The runtime loop maps them back
+  (`input::normalize_legacy_ctrl`, `Event::from_crossterm_with`) when the kitty protocol is
+  off (`Caps::kitty` is false), so a chord leader on `ctrl \\`, `ctrl ]` or `ctrl ^` works in
+  xterm too. With the kitty protocol Ctrl+4/5/6 are real digit combos and stay as they are.
+  A host that decodes crossterm events itself must apply the same mapping.
 - **Mouse**: terminals report cells, not pixels. Hover needs any-motion tracking (on). Some
   terminals keep Shift+drag for their own selection.
 - **Clipboard**: copy uses OSC 52 (kitty, WezTerm, iTerm2, Ghostty, Alacritty, Windows Terminal,
