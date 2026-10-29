@@ -647,7 +647,7 @@ where
             // Deliver everything that is waiting, then draw once.
             loop {
                 rt.now = start.elapsed().as_secs_f64();
-                if let Some(event) = Event::from_crossterm(ct::read()?) {
+                if let Some(event) = Event::from_crossterm_with(ct::read()?, &rt.caps) {
                     rt.preprocess(&event);
                     app.event(rt, &event);
                 }

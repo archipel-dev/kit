@@ -38,7 +38,21 @@ pub enum Event {
 
 impl Event {
     /// The kit event for a crossterm `event`.
+    ///
+    /// Assumes a terminal with the kitty protocol, so keys are not remapped; use
+    /// [`Event::from_crossterm_with`] when the terminal may be a legacy one.
     pub fn from_crossterm(event: ct::Event) -> Option<Self> {
+        Self::from_crossterm_with(event, &Caps::kitty())
+    }
+
+    /// The kit event for a crossterm `event` from a terminal with `caps`: on a legacy
+    /// terminal, Ctrl+4/5/6 become Ctrl+`\`, Ctrl+`]` and Ctrl+`^` ([`normalize_legacy_ctrl`]).
+    /// [`crate::runtime::run_app`] decodes with this.
+    pub fn from_crossterm_with(event: ct::Event, caps: &Caps) -> Option<Self> {
+        let event = match event {
+            ct::Event::Key(key) => ct::Event::Key(normalize_legacy_ctrl(key, caps)),
+            other => other,
+        };
         Some(match event {
             ct::Event::Key(key) => match key.kind {
                 KeyEventKind::Release => Event::KeyUp(key),
@@ -51,6 +65,29 @@ impl Event {
             ct::Event::FocusLost => Event::FocusLost,
         })
     }
+}
+
+/// The key `event` as a legacy terminal's bytes really mean it. A legacy terminal sends
+/// <kbd>Ctrl</kbd>+<kbd>\\</kbd>, <kbd>Ctrl</kbd>+<kbd>]</kbd> and <kbd>Ctrl</kbd>+<kbd>^</kbd>
+/// as the control bytes 0x1C, 0x1D and 0x1E, which crossterm decodes as
+/// <kbd>Ctrl</kbd>+<kbd>4</kbd>, <kbd>Ctrl</kbd>+<kbd>5</kbd> and <kbd>Ctrl</kbd>+<kbd>6</kbd>
+/// (the digits that type the same byte). This maps them back.
+///
+/// Only with `caps.kitty == false`: with the kitty keyboard protocol `Ctrl+4` arrives as
+/// `Char('4')` with Ctrl, and is a real <kbd>Ctrl</kbd>+<kbd>4</kbd>. Other modifiers are kept.
+/// Other events are returned unchanged.
+pub fn normalize_legacy_ctrl(mut event: KeyEvent, caps: &Caps) -> KeyEvent {
+    if caps.kitty || !event.modifiers.contains(KeyModifiers::CONTROL) {
+        return event;
+    }
+    if let KeyCode::Char(c @ ('4' | '5' | '6')) = event.code {
+        event.code = KeyCode::Char(match c {
+            '4' => '\\',
+            '5' => ']',
+            _ => '^',
+        });
+    }
+    event
 }
 
 /// What the terminal can send and the operating system the keymap follows.
@@ -584,6 +621,62 @@ impl DoubleShift {
 mod tests {
     use super::*;
     use archipel_kit::action_system::KeyResolution;
+
+    fn ctrl_digit(d: char) -> KeyEvent {
+        KeyEvent::new(KeyCode::Char(d), KeyModifiers::CONTROL)
+    }
+
+    #[test]
+    fn legacy_ctrl_4_5_6_become_backslash_bracket_caret() {
+        let legacy = Caps::legacy();
+        for (digit, ch) in [('4', '\\'), ('5', ']'), ('6', '^')] {
+            assert_eq!(
+                normalize_legacy_ctrl(ctrl_digit(digit), &legacy),
+                KeyEvent::new(KeyCode::Char(ch), KeyModifiers::CONTROL)
+            );
+        }
+        let ev = Event::from_crossterm_with(ct::Event::Key(ctrl_digit('4')), &legacy);
+        assert_eq!(
+            ev,
+            Some(Event::Key(KeyEvent::new(
+                KeyCode::Char('\\'),
+                KeyModifiers::CONTROL
+            )))
+        );
+        let mapped = normalize_legacy_ctrl(ctrl_digit('5'), &legacy);
+        assert_eq!(key_stroke(&mapped), Some(stroke("ctrl CloseBracket")));
+    }
+
+    #[test]
+    fn kitty_ctrl_4_5_6_stay_digits() {
+        let kitty = Caps::kitty();
+        for d in ['4', '5', '6'] {
+            assert_eq!(normalize_legacy_ctrl(ctrl_digit(d), &kitty), ctrl_digit(d));
+        }
+        let ev = Event::from_crossterm_with(ct::Event::Key(ctrl_digit('4')), &kitty);
+        assert_eq!(ev, Some(Event::Key(ctrl_digit('4'))));
+    }
+
+    #[test]
+    fn legacy_mapping_leaves_other_keys_alone() {
+        let legacy = Caps::legacy();
+        for e in [
+            KeyEvent::new(KeyCode::Char('4'), KeyModifiers::NONE),
+            KeyEvent::new(KeyCode::Char('4'), KeyModifiers::ALT),
+            ctrl_digit('3'),
+            ctrl_digit('7'),
+            KeyEvent::new(KeyCode::Char('a'), KeyModifiers::CONTROL),
+        ] {
+            assert_eq!(normalize_legacy_ctrl(e, &legacy), e);
+        }
+        let alt_ctrl = KeyEvent::new(
+            KeyCode::Char('5'),
+            KeyModifiers::CONTROL | KeyModifiers::ALT,
+        );
+        let mapped = normalize_legacy_ctrl(alt_ctrl, &legacy);
+        assert_eq!(mapped.code, KeyCode::Char(']'));
+        assert_eq!(mapped.modifiers, KeyModifiers::CONTROL | KeyModifiers::ALT);
+    }
 
     fn stroke(text: &str) -> KeyStroke {
         KeyStroke::parse(text).expect("stroke")
